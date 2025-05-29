@@ -3,7 +3,8 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDb = require('./config/db.js');
 const Role = require('./models/role.js');
-
+const user = require('./models/user.js');
+const authRoutes = require('./routes/auth.js');
 dotenv.config();
 
 const app = express();
@@ -12,6 +13,7 @@ connectDb();
 
 app.use(cors());
 app.use(express.json());
+app.use('/api/auth', authRoutes);
 
 app.get('/', (req, res) => {
     res.send('Backend çalışıyor...');

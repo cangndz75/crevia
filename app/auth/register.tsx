@@ -43,6 +43,28 @@ export default function Register() {
         .catch(err => console.error("Rol verileri alınamadı:", err));
   }, [])
 
+  const handleRegister = async () => {
+    if (!agree) return alert("Lütfen kullanım koşullarını kabul edin.");
+    if (!username || !email || !phone || !password || !role)
+      return alert("Lütfen tüm alanları doldurun.");
+
+    try {
+      const res = await axios.post(`${process.env.EXPO_PUBLIC_API_URL}/api/auth/register`, {
+        username,
+        email,
+        phone,
+        password,
+        role,
+      });
+
+      alert("Kayıt başarılı!");
+      router.push("/auth/login");
+    } catch (err) {
+      console.log("Kayıt hatası:", err);
+    }
+  };
+
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -214,6 +236,7 @@ export default function Register() {
                   alignItems: "center",
                   marginBottom: 24,
                 }}
+                onPress={handleRegister}
               >
                 <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>
                   Kayıt Ol
