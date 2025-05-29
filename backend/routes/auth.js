@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt');
 const User = require('../models/user');
 
 router.post('/register', async (req, res) => {
-  const { username, email, phone, password, role } = req.body;
+  const { name, email, phone, password, role } = req.body;
 
   try {
     const existingEmail = await User.findOne({ email });
@@ -20,7 +20,7 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = new User({
-      username,
+      name,
       email,
       phone,
       password: hashedPassword,
@@ -28,7 +28,7 @@ router.post('/register', async (req, res) => {
     });
 
     await user.save();
-    console.log({ username, email, phone, password, role });
+    console.log({ name, email, phone, role });
     res.status(201).json({ message: 'Kullanıcı başarıyla kaydedildi.' });
   } catch (error) {
     console.error('Kayıt hatası:', error);

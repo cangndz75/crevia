@@ -50,7 +50,7 @@ export default function Register() {
 
     try {
       const res = await axios.post(`${process.env.EXPO_PUBLIC_API_URL}/api/auth/register`, {
-        username,
+        name: username,
         email,
         phone,
         password,
