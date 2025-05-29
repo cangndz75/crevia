@@ -10,7 +10,7 @@ const app = express();
 
 connectDb();
 
-app.use(cors);
+app.use(cors());
 app.use(express.json());
 
 app.get('/', (req, res) => {
@@ -48,4 +48,4 @@ app.get('/api/roles', async (req, res) => {
   }
 });
 
-Role.insertMany(defaultRoles).then(() => console.log("Roller kaydedildi"));
+// Role.insertMany(defaultRoles).then(() => console.log("Roller kaydedildi"));
