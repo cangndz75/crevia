@@ -28,8 +28,10 @@ router.post('/register', async (req, res) => {
     });
 
     await user.save();
+    console.log({ username, email, phone, password, role });
     res.status(201).json({ message: 'Kullanıcı başarıyla kaydedildi.' });
   } catch (error) {
+    console.error('Kayıt hatası:', error);
     res.status(500).json({ message: 'Kayıt sırasında hata oluştu.', error });
   }
 });

@@ -201,7 +201,10 @@ export default function Register() {
                   valueField="_id"
                   placeholder="Mesleğinizi seçin"
                   value={role}
-                  onChange={(item) => setRole(item._id)}
+                  onChange={(item) => {
+                    console.log("Seçilen Rol", item);
+                    setRole(item._id);
+                  }}
                 />
               </View>
 
