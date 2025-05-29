@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors'); 
 const dotenv = require('dotenv');
 const connectDb = require('./config/db.js');
-const role = require('./models/role.js');
+const Role = require('./models/role.js');
 
 dotenv.config();
 
@@ -35,17 +35,17 @@ app.listen(PORT, () => {
 
 app.get('/api/roles', async (req, res) => {
   try {
-    const count = await role.countDocuments();
+    const count = await Role.countDocuments();
     if (count === 0) {
-      await role.insertMany(defaultRoles);
+      await Role.insertMany(defaultRoles);
       console.log("Varsayılan roller yüklendi.");
     }
 
-    const roles = await role.find().select('label value');
+    const roles = await Role.find().select('label value');
     res.json(roles);
   } catch (err) {
     res.status(500).json({ message: 'Roller alınamadı', error: err });
   }
 });
 
-role.insertMany(defaultRoles).then(() => console.log("Roller kaydedildi"));
+Role.insertMany(defaultRoles).then(() => console.log("Roller kaydedildi"));
