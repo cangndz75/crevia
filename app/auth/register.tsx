@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   SafeAreaView,
   View,
@@ -15,15 +15,16 @@ import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { Feather } from "@expo/vector-icons";
 import { Dropdown } from "react-native-element-dropdown";
 import { router } from "expo-router";
+import axios from "axios";
 
-const roles = [
-  { label: "Tasarımcı", value: "designer" },
-  { label: "Proje Yöneticisi", value: "manager" },
-  { label: "İç Mimar", value: "interior" },
-  { label: "Peyzaj Mimarı", value: "landscape" },
-  { label: "Uygulamacı", value: "contractor" },
-  { label: "Tedarikçi", value: "supplier" },
-];
+// const roles = [
+//   { label: "Tasarımcı", value: "designer" },
+//   { label: "Proje Yöneticisi", value: "manager" },
+//   { label: "İç Mimar", value: "interior" },
+//   { label: "Peyzaj Mimarı", value: "landscape" },
+//   { label: "Uygulamacı", value: "contractor" },
+//   { label: "Tedarikçi", value: "supplier" },
+// ];
 
 export default function Register() {
   const [username, setUsername] = useState("");
@@ -33,6 +34,14 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [agree, setAgree] = useState(false);
   const [role, setRole] = useState(null);
+  const [roleList, setRoleList] = useState([]);
+
+  useEffect(() => {
+    axios
+        .get(`${process.env.EXPO_PUBLIC_API_URL}/api/roles`)
+        .then(res => setRoleList(res.data))
+        .catch(err => console.error("Rol verileri alınamadı:", err));
+  }, [])
 
   return (
     <KeyboardAvoidingView
@@ -165,12 +174,12 @@ export default function Register() {
                   }}
                   placeholderStyle={{ color: "#9CA3AF", fontSize: 16 }}
                   selectedTextStyle={{ fontSize: 16 }}
-                  data={roles}
+                  data={roleList}
                   labelField="label"
-                  valueField="value"
+                  valueField="_id"
                   placeholder="Mesleğinizi seçin"
                   value={role}
-                  onChange={(item) => setRole(item.value)}
+                  onChange={(item) => setRole(item._id)}
                 />
               </View>
 
