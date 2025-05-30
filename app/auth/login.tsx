@@ -13,12 +13,38 @@ import {
 } from 'react-native';
 import { Feather, AntDesign } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import axios from 'axios';
 
 export default function Login() {
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      return alert("Lütfen e-posta ve şifre girin.");
+    }
+
+    try {
+      const res = await axios.post(`${process.env.EXPO_PUBLIC_API_URL}/api/auth/login`, {
+        email,
+        password,
+      });
+
+      const { token, user } = res.data;
+      console.log("Giriş başarılı", user);
+
+      if (user.role.value === "manager") {
+        router.push("/admin/dashboard");
+      } else {
+        router.push("/supplier/dashboard");
+      }
+    } catch (err) {
+      console.error("Giriş hatası:", err);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -167,6 +193,7 @@ export default function Login() {
                   alignItems: 'center',
                   marginBottom: 20,
                 }}
+                onPress={handleLogin}
               >
                 <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
                   Giriş Yap

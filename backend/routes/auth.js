@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const User = require('../models/user');
+const jwt = require('jsonwebtoken'); 
 
 router.post('/register', async (req, res) => {
   const { name, email, phone, password, role } = req.body;
@@ -35,5 +36,43 @@ router.post('/register', async (req, res) => {
     res.status(500).json({ message: 'Kayıt sırasında hata oluştu.', error });
   }
 });
+
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await User.findOne({ email }).populate('role', 'label value');
+    if (!user) {
+      return res.status(400).json({ message: 'Kullanıcı bulunamadı.' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Şifre hatalı.' });
+    }
+
+    const token = jwt.sign(
+      { userId: user._id, email: user.email, role: user.role.value },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      message: 'Giriş başarılı.',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error('Giriş hatası:', error);
+    res.status(500).json({ message: 'Sunucu hatası.' });
+  }
+});
+
 
 module.exports = router;
