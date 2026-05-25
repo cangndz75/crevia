@@ -1,0 +1,219 @@
+import type { EventCard } from '@/core/models/EventCard';
+import type { GameMetrics } from '@/core/models/GameMetrics';
+import type { DailyMission } from '@/core/models/DailyMission';
+import type { OpsPulseStatus } from '@/core/models/OperationsBrief';
+import {
+  eventRecurrenceRisk,
+  eventSeverity,
+  eventVisibility,
+} from '@/core/utils/eventPriority';
+
+const LOW_SATISFACTION = 40;
+const LOW_MORALE = 40;
+const LOW_BUDGET = 35_000;
+
+export type HubDerivedInput = {
+  day: number;
+  metrics: GameMetrics;
+  activeEvents: EventCard[];
+  decisionCount: number;
+};
+
+export function deriveHubRiskScore(input: HubDerivedInput): {
+  score: number;
+  maxScore: number;
+  label: string;
+} {
+  const { metrics, activeEvents } = input;
+  let score = 20;
+
+  if (activeEvents.some((e) => eventSeverity(e) >= 4)) score += 28;
+  else if (
+    activeEvents.some(
+      (e) => eventSeverity(e) >= 3 && eventVisibility(e) >= 3,
+    )
+  ) {
+    score += 18;
+  }
+
+  if (activeEvents.length >= 3) score += 12;
+  if (metrics.publicSatisfaction < LOW_SATISFACTION) score += 14;
+  if (metrics.staffMorale < LOW_MORALE) score += 12;
+  if (metrics.budget < LOW_BUDGET) score += 10;
+
+  const clamped = Math.min(100, Math.max(0, score));
+  const label =
+    clamped >= 65
+      ? 'yüksek sıcaklık'
+      : clamped >= 42
+        ? 'denge hassas'
+        : 'yük dengede';
+
+  return { score: clamped, maxScore: 100, label };
+}
+
+export function deriveAdvisorBriefing(input: HubDerivedInput): {
+  body: string;
+  attribution: string;
+} {
+  const { metrics, activeEvents, decisionCount } = input;
+  const lines: string[] = [];
+
+  if (activeEvents.length > 0) {
+    lines.push(
+      `Bugün ${activeEvents.length} aktif olay var. Öncelik görünürlüğü yüksek sorunları büyümeden yönet.`,
+    );
+  }
+
+  if (metrics.staffMorale < LOW_MORALE) {
+    lines.push(
+      'Personel morali düşüyor. Fazla mesai kararlarını dikkatli kullan.',
+    );
+  }
+
+  if (metrics.budget < LOW_BUDGET) {
+    lines.push(
+      'Bütçe baskısı artıyor. Kalıcı çözümler için öncelik seçmen gerekebilir.',
+    );
+  }
+
+  if (activeEvents.length === 0) {
+    lines.push(
+      'Aktif olay kalmadı. Günü kapatıp operasyon raporunu inceleyebilirsin.',
+    );
+  }
+
+  if (lines.length === 0) {
+    lines.push(
+      'Operasyon hattı kontrol altında. Görünür olaylarda hızlı ama dengeli karar ver.',
+    );
+  }
+
+  if (decisionCount > 0 && activeEvents.length > 0) {
+    lines.push(`${decisionCount} karar kayıtlı; kalan olayları önceliklendir.`);
+  }
+
+  return {
+    body: lines.slice(0, 2).join(' '),
+    attribution: '— Deniz Erdem, Kentsel Operasyon Danışmanı',
+  };
+}
+
+export function deriveHubMotto(input: HubDerivedInput): string {
+  const { day, metrics, activeEvents } = input;
+
+  if (day === 1) {
+    return 'İlk operasyon gününde öncelik, görünür sorunları büyümeden yönetmek.';
+  }
+  if (activeEvents.length === 0) {
+    return 'Bugünün operasyon yükü kontrol altına alındı.';
+  }
+  if (metrics.staffMorale < LOW_MORALE) {
+    return 'Saha ekibinin temposu kritik seviyeye yaklaşıyor.';
+  }
+  if (metrics.budget < LOW_BUDGET) {
+    return 'Bütçe baskısı artıyor. Her müdahale için öncelik seçmen gerekiyor.';
+  }
+  return 'Şehir operasyon hattını görünür sorunlardan yönet.';
+}
+
+export function deriveDay1Missions(input: HubDerivedInput): DailyMission[] {
+  const { metrics, decisionCount } = input;
+  const solved = decisionCount >= 1;
+
+  return [
+    {
+      id: 'solve-one',
+      title: 'En az 1 olayı çöz',
+      description: 'Bugün en az bir operasyon kararı ver.',
+      icon: 'check',
+      current: solved ? 1 : 0,
+      target: 1,
+      xpReward: 25,
+      status: solved ? 'completed' : 'active',
+    },
+    {
+      id: 'morale-floor',
+      title: 'Personel moralini 40 altına düşürme',
+      description: 'Ekip yükünü dengeleyerek morali koru.',
+      icon: 'shield',
+      current: metrics.staffMorale >= 40 ? 1 : 0,
+      target: 1,
+      xpReward: 20,
+      status: metrics.staffMorale >= 40 ? 'completed' : 'active',
+    },
+    {
+      id: 'budget-floor',
+      title: 'Bütçeyi 30 altına düşürme',
+      description: 'Kaynakları kontrollü kullan (₺30.000 üzeri).',
+      icon: 'happy',
+      current: metrics.budget >= 30_000 ? 1 : 0,
+      target: 1,
+      xpReward: 20,
+      status: metrics.budget >= 30_000 ? 'completed' : 'active',
+    },
+  ];
+}
+
+export type CrisisQueueItem = {
+  event: EventCard;
+  priority: number;
+};
+
+export function deriveCrisisQueue(activeEvents: EventCard[]): CrisisQueueItem[] {
+  return [...activeEvents]
+    .map((event) => ({
+      event,
+      priority:
+        eventSeverity(event) * 10 +
+        eventVisibility(event) * 6 +
+        eventRecurrenceRisk(event) * 4 -
+        event.urgencyHours * 0.1,
+    }))
+    .sort((a, b) => b.priority - a.priority)
+    .slice(0, 3);
+}
+
+export type LiveOpsLine = {
+  id: string;
+  headline: string;
+  detail: string;
+  status: OpsPulseStatus;
+};
+
+export function deriveLiveOpsPulse(input: HubDerivedInput): LiveOpsLine[] {
+  const { day, metrics, activeEvents, decisionCount } = input;
+
+  return [
+    {
+      id: 'day',
+      headline: `Gün ${day}`,
+      detail: 'Operasyon takvimi',
+      status: 'steady',
+    },
+    {
+      id: 'active',
+      headline: `Aktif olay: ${activeEvents.length}`,
+      detail: 'Bekleyen müdahaleler',
+      status: activeEvents.length >= 3 ? 'hot' : 'watch',
+    },
+    {
+      id: 'solved',
+      headline: `Çözülen: ${decisionCount}`,
+      detail: 'Bugünkü karar kayıtları',
+      status: decisionCount > 0 ? 'steady' : 'watch',
+    },
+    {
+      id: 'morale',
+      headline: `Personel morali: %${metrics.staffMorale}`,
+      detail: 'Saha ekibi durumu',
+      status: metrics.staffMorale < LOW_MORALE ? 'hot' : 'steady',
+    },
+    {
+      id: 'budget',
+      headline: `Bütçe: ₺${metrics.budget.toLocaleString('tr-TR')}`,
+      detail: 'Güncel kaynak durumu',
+      status: metrics.budget < LOW_BUDGET ? 'watch' : 'steady',
+    },
+  ];
+}

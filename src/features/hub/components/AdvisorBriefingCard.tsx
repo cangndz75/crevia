@@ -1,89 +1,121 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInLeft } from 'react-native-reanimated';
 
-import { mockGameData } from '@/core/content/mockGameData';
+import { useHubDerivedInput } from '@/features/hub/hooks/useHubDerivedInput';
+import { deriveAdvisorBriefing } from '@/features/hub/utils/hubDerived';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
-import { typography } from '@/ui/theme/typography';
 
 export function AdvisorBriefingCard() {
-  const { advisor } = mockGameData.operationsBrief;
+  const input = useHubDerivedInput();
+
+  const { body, attribution } = useMemo(
+    () => deriveAdvisorBriefing(input),
+    [input],
+  );
 
   return (
-    <View style={[styles.card, shadows.card]}>
+    <Animated.View
+      entering={FadeInLeft.duration(500).delay(100)}
+      style={[styles.card, shadows.card]}
+    >
       <View style={styles.accentStripe} />
-      <View style={styles.inner}>
-        <View style={styles.top}>
-          <View style={styles.iconBadge}>
-            <Ionicons name="clipboard-outline" size={18} color={colors.authority} />
+      <View style={styles.content}>
+        <View style={styles.topRow}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>DE</Text>
           </View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={typography.eyebrow}>{advisor.eyebrow}</Text>
-            <Text style={styles.hook}>Simülasyon tavsiyesi</Text>
+          <View style={styles.nameBlock}>
+            <View style={styles.nameRow}>
+              <Text style={styles.name}>Deniz Erdem</Text>
+              <Ionicons
+                name="shield-checkmark"
+                size={14}
+                color={colors.authority}
+              />
+            </View>
+            <Text style={styles.role}>Kentsel Operasyon Danışmanı</Text>
           </View>
         </View>
-        <Text style={styles.body}>{advisor.body}</Text>
-        <Text style={styles.attr}>{advisor.attribution}</Text>
+
+        <Text style={styles.body}>{body}</Text>
+
+        <Text style={styles.attribution}>— {attribution}</Text>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: spacing.lg,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.border,
     flexDirection: 'row',
     overflow: 'hidden',
   },
   accentStripe: {
-    width: 5,
+    width: 4,
     backgroundColor: colors.authority,
-    opacity: 0.95,
   },
-  inner: {
+  content: {
     flex: 1,
-    padding: spacing.md,
-    gap: spacing.sm,
-    paddingVertical: spacing.lg,
+    padding: spacing.lg,
+    gap: spacing.md,
   },
-  top: {
+  topRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
+    alignItems: 'center',
+    gap: spacing.md,
   },
-  iconBadge: {
+  avatar: {
     width: 40,
     height: 40,
-    borderRadius: 14,
+    borderRadius: 20,
     backgroundColor: colors.authorityMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  hook: {
-    fontSize: 12,
-    fontWeight: '600',
+  avatarText: {
+    fontSize: 14,
+    fontWeight: '800',
     color: colors.authority,
-    marginTop: 4,
+  },
+  nameBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  name: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.authority,
+  },
+  role: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: colors.textSecondary,
   },
   body: {
-    ...typography.body,
     fontSize: 14,
-    lineHeight: 21,
-    color: colors.textPrimary,
     fontWeight: '500',
+    color: colors.textPrimary,
+    lineHeight: 22,
   },
-  attr: {
-    ...typography.caption,
+  attribution: {
     fontSize: 11,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    letterSpacing: 0.2,
+    fontWeight: '500',
     fontStyle: 'italic',
+    color: colors.textSecondary,
   },
 });

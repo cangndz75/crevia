@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -10,7 +10,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { mockGameData } from '@/core/content/mockGameData';
+import { useShallow } from 'zustand/react/shallow';
+
+import { useHubDerivedInput } from '@/features/hub/hooks/useHubDerivedInput';
+import { deriveHubMotto } from '@/features/hub/utils/hubDerived';
+import { useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { spacing } from '@/ui/theme/spacing';
@@ -69,31 +73,47 @@ function AnimatedXpBar({ progress }: { progress: number }) {
 
 export function HubTopBar() {
   const insets = useSafeAreaInsets();
-  const { city, player } = mockGameData;
-  const xpProgress = player.xp / player.xpToNextLevel;
+  const { day, department, cityName, role, level, xp, xpToNextLevel, notificationCount } =
+    useGameStore(
+      useShallow((s) => ({
+        day: s.gameState.city.day,
+        department: s.gameState.city.department,
+        cityName: s.gameState.city.name,
+        role: s.gameState.player.role,
+        level: s.gameState.player.level,
+        xp: s.gameState.player.xp,
+        xpToNextLevel: s.gameState.player.xpToNextLevel,
+        notificationCount: s.gameState.player.notificationCount,
+      })),
+    );
+
+  const xpProgress = xp / xpToNextLevel;
   const weekday = WEEKDAYS_TR[new Date().getDay()];
 
+  const input = useHubDerivedInput();
+  const motto = useMemo(() => deriveHubMotto(input), [input]);
+
   return (
-    <View style={[styles.wrapper, { paddingTop: insets.top + spacing.sm }]}>
+    <View style={[styles.wrapper, { paddingTop: insets.top + spacing.md }]}>
+      {/* Top Row */}
       <View style={styles.row}>
         <Pressable style={styles.iconBtn} accessibilityLabel="Menü">
           <Ionicons name="menu" size={22} color={colors.textPrimary} />
         </Pressable>
 
         <View style={styles.dayBlock}>
-          <Text style={styles.dayLabel}>GÜN {city.day}</Text>
+          <Text style={styles.dayLabel}>GÜN {day}</Text>
           <Text style={styles.daySub}>{weekday}</Text>
         </View>
 
         <View style={styles.levelBlock}>
-          <View style={styles.levelTitleRow}>
-            <Ionicons name="shield" size={14} color={colors.authority} />
-            <Text style={styles.levelLabel}>SEVİYE {player.level}</Text>
+          <View style={styles.levelPill}>
+            <Ionicons name="shield" size={13} color={colors.textInverse} />
+            <Text style={styles.levelLabel}>SEVİYE {level}</Text>
           </View>
           <AnimatedXpBar progress={xpProgress} />
           <Text style={styles.xpText}>
-            {player.xp.toLocaleString('tr-TR')} /{' '}
-            {player.xpToNextLevel.toLocaleString('tr-TR')} XP
+            {xp.toLocaleString('tr-TR')}/{xpToNextLevel.toLocaleString('tr-TR')} XP
           </Text>
         </View>
 
@@ -104,11 +124,11 @@ export function HubTopBar() {
               size={22}
               color={colors.textPrimary}
             />
-            {player.notificationCount > 0 ? (
+            {notificationCount > 0 && (
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>{player.notificationCount}</Text>
+                <Text style={styles.badgeText}>{notificationCount}</Text>
               </View>
-            ) : null}
+            )}
           </Pressable>
 
           <View style={styles.avatarWrap}>
@@ -120,13 +140,25 @@ export function HubTopBar() {
         </View>
       </View>
 
-      <View style={styles.identity}>
-        <Text style={styles.identityEyebrow}>Operasyon merkezi</Text>
-        <Text style={styles.roleTitle}>
-          <Text style={styles.roleStrong}>{player.role}</Text>
-          <Text style={styles.roleMutedSecondary}> · {city.department}</Text>
+      {/* Hero Section */}
+      <View style={styles.hero}>
+        <Text style={styles.eyebrow}>OPERASYON MERKEZİ</Text>
+        <Text style={styles.roleTitle}>{role}</Text>
+        <Text style={styles.subtitle}>
+          {cityName} · {department}
         </Text>
-        <Text style={styles.cityTag}>{city.name} · Seviye {player.level}</Text>
+
+        {/* Briefing Capsule */}
+        <View style={styles.capsule}>
+          <View style={styles.capsuleAccent} />
+          <View style={styles.capsuleContent}>
+            <View style={styles.capsuleHeader}>
+              <Ionicons name="radio-outline" size={14} color={colors.primary} />
+              <Text style={styles.capsuleLabel}>Güncel Durum</Text>
+            </View>
+            <Text style={styles.capsuleMotto}>{motto}</Text>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -136,7 +168,7 @@ const styles = StyleSheet.create({
   wrapper: {
     backgroundColor: colors.background,
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.xl,
   },
   row: {
     flexDirection: 'row',
@@ -144,9 +176,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -154,10 +186,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayBlock: {
-    minWidth: 52,
+    minWidth: 54,
   },
   dayLabel: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '800',
     color: colors.textPrimary,
   },
@@ -169,70 +201,40 @@ const styles = StyleSheet.create({
   levelBlock: {
     flex: 1,
     minWidth: 0,
-    gap: 4,
+    gap: 3,
+    alignItems: 'center',
   },
-  levelTitleRow: {
+  levelPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    backgroundColor: colors.authority,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: radius.full,
   },
   levelLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: colors.authority,
-    letterSpacing: 0.3,
+    color: colors.textInverse,
+    letterSpacing: 0.5,
   },
   xpTrack: {
-    height: 6,
-    borderRadius: 3,
+    width: '100%',
+    height: 8,
+    borderRadius: 4,
     backgroundColor: colors.authorityMuted,
     overflow: 'hidden',
   },
   xpFill: {
     height: '100%',
-    borderRadius: 3,
-    backgroundColor: colors.authority,
+    borderRadius: 4,
+    backgroundColor: colors.xpGold,
   },
   xpText: {
     fontSize: 9,
     fontWeight: '600',
     color: colors.textSecondary,
-  },
-  identity: {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    gap: 6,
-  },
-  identityEyebrow: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.25,
-    textTransform: 'uppercase',
-    color: colors.textSecondary,
-  },
-  roleTitle: {
-    fontSize: 15,
-    lineHeight: 20,
-    fontWeight: '500',
-    color: colors.textPrimary,
-  },
-  cityTag: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primary,
-    letterSpacing: 0.15,
-    fontStyle: 'italic',
-  },
-  roleStrong: {
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  roleMutedSecondary: {
-    fontWeight: '600',
-    color: colors.textSecondary,
-    fontSize: 14,
   },
   rightActions: {
     flexDirection: 'row',
@@ -262,10 +264,10 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.authorityMuted,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.purpleMuted,
     borderWidth: 2,
     borderColor: colors.surface,
     alignItems: 'center',
@@ -281,5 +283,60 @@ const styles = StyleSheet.create({
     backgroundColor: colors.success,
     borderWidth: 2,
     borderColor: colors.background,
+  },
+  hero: {
+    marginTop: spacing.xl,
+    gap: 6,
+  },
+  eyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    color: colors.textSecondary,
+  },
+  roleTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  subtitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    fontStyle: 'italic',
+    color: colors.primary,
+  },
+  capsule: {
+    flexDirection: 'row',
+    backgroundColor: colors.primaryMuted,
+    borderRadius: radius.md,
+    marginTop: spacing.md,
+    overflow: 'hidden',
+  },
+  capsuleAccent: {
+    width: 3,
+    backgroundColor: colors.primary,
+  },
+  capsuleContent: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    gap: 4,
+  },
+  capsuleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  capsuleLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
+    letterSpacing: 0.3,
+  },
+  capsuleMotto: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
+    lineHeight: 18,
   },
 });

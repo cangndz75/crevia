@@ -10,4 +10,8 @@ export type DailyReport = {
   stats: DailyReportStat[];
   rewardTitle: string;
   rewardDescription?: string;
+  summaryLines?: string[];
+  warnings?: string[];
+  highlights?: string[];
+  createdAt?: string;
 };

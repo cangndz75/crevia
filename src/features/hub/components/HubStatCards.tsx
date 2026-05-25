@@ -11,7 +11,9 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { mockGameData } from '@/core/content/mockGameData';
+import { useShallow } from 'zustand/react/shallow';
+
+import { useGameStore } from '@/store/useGameStore';
 import { CityPulseMetric } from '@/core/models/CityPulseMetric';
 import { AnimatedDonut } from '@/ui/components/AnimatedDonut';
 import { colors } from '@/ui/theme/colors';
@@ -24,25 +26,33 @@ const iconMap: Record<
   keyof typeof Ionicons.glyphMap
 > = {
   happy: 'happy-outline',
-  cash: 'layers-outline',
+  cash: 'wallet-outline',
   people: 'people-outline',
-  alert: 'notifications-outline',
+  alert: 'pulse-outline',
 };
 
-const trendColors = {
-  success: colors.success,
-  warning: colors.warning,
-  danger: colors.danger,
-  info: colors.secondary,
+const trendToneColors = {
+  success: { bg: colors.successMuted, text: colors.success },
+  warning: { bg: colors.warningMuted, text: colors.warning },
+  danger: { bg: colors.dangerMuted, text: colors.danger },
+  info: { bg: colors.secondaryMuted, text: colors.secondary },
 };
+
+function getStatusLabel(progress: number): string {
+  if (progress >= 0.6) return 'Stabil';
+  if (progress >= 0.4) return 'Dikkat';
+  return 'Kritik';
+}
 
 function AnimatedMiniBar({
   progress,
   color,
+  mutedColor,
   delay,
 }: {
   progress: number;
   color: string;
+  mutedColor: string;
   delay: number;
 }) {
   const [trackWidth, setTrackWidth] = useState(0);
@@ -83,8 +93,12 @@ function AnimatedMiniBar({
   }));
 
   return (
-    <View style={styles.miniBarTrack} onLayout={onLayout}>
-      <Animated.View style={[styles.miniBarFill, { backgroundColor: color }, fillStyle]} />
+    <View
+      style={[styles.miniBarTrack, { backgroundColor: mutedColor }]}
+      onLayout={onLayout}>
+      <Animated.View
+        style={[styles.miniBarFill, { backgroundColor: color }, fillStyle]}
+      />
     </View>
   );
 }
@@ -97,57 +111,76 @@ function StatCard({
   index: number;
 }) {
   const delay = index * 100;
-  const trendColor = trendColors[metric.trendTone];
+  const tone = trendToneColors[metric.trendTone];
+  const statusLabel = getStatusLabel(metric.progress);
 
   return (
     <Animated.View
       entering={FadeInDown.delay(delay).springify().damping(18)}
       style={[styles.card, shadows.card]}>
-      {metric.variant === 'ring' ? (
-        <AnimatedDonut
+      <View style={[styles.accentStrip, { backgroundColor: metric.color }]} />
+
+      <View style={styles.cardContent}>
+        <View style={styles.iconRow}>
+          {metric.variant === 'ring' ? (
+            <AnimatedDonut
+              progress={metric.progress}
+              color={metric.color}
+              trackColor={metric.mutedColor}
+              label={metric.value.replace('%', '')}
+              delay={delay + 100}
+              size={48}
+            />
+          ) : (
+            <View style={[styles.iconCircle, { backgroundColor: metric.mutedColor }]}>
+              <Ionicons
+                name={iconMap[metric.icon]}
+                size={18}
+                color={metric.color}
+              />
+            </View>
+          )}
+
+          <View style={[styles.trendPill, { backgroundColor: tone.bg }]}>
+            <Text style={[styles.trendPillText, { color: tone.text }]}>
+              {metric.trendValue}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={styles.cardValue} numberOfLines={1}>
+          {metric.variant === 'ring'
+            ? `${Math.round(metric.progress * 100)}%`
+            : metric.value}
+        </Text>
+
+        <Text style={styles.cardLabel} numberOfLines={1}>
+          {metric.label}
+        </Text>
+
+        <AnimatedMiniBar
           progress={metric.progress}
           color={metric.color}
-          trackColor={metric.mutedColor}
-          label={metric.value.replace('%', '')}
-          delay={delay + 100}
+          mutedColor={metric.mutedColor}
+          delay={delay + 200}
         />
-      ) : (
-        <View style={[styles.iconCircle, { backgroundColor: metric.mutedColor }]}>
-          <Ionicons
-            name={iconMap[metric.icon]}
-            size={20}
-            color={metric.color}
-          />
-        </View>
-      )}
 
-      <Text style={styles.cardLabel} numberOfLines={2}>
-        {metric.label}
-      </Text>
-
-      {metric.variant !== 'ring' ? (
-        <Text style={styles.cardValue} numberOfLines={1}>
-          {metric.value}
+        <Text style={[styles.statusLabel, { color: tone.text }]}>
+          {statusLabel}
         </Text>
-      ) : null}
-
-      <Text style={[styles.trend, { color: trendColor }]} numberOfLines={1}>
-        {metric.trendValue}
-      </Text>
-
-      <AnimatedMiniBar
-        progress={metric.progress}
-        color={metric.color}
-        delay={delay + 200}
-      />
+      </View>
     </Animated.View>
   );
 }
 
 export function HubStatCards() {
+  const cityPulse = useGameStore(
+    useShallow((s) => s.gameState.cityPulse),
+  );
+
   return (
-    <View style={styles.row}>
-      {mockGameData.cityPulse.map((metric, index) => (
+    <View style={styles.grid}>
+      {cityPulse.map((metric, index) => (
         <StatCard key={metric.id} metric={metric} index={index} />
       ))}
     </View>
@@ -155,56 +188,75 @@ export function HubStatCards() {
 }
 
 const styles = StyleSheet.create({
-  row: {
+  grid: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    flexWrap: 'wrap',
+    gap: spacing.md,
     paddingHorizontal: spacing.lg,
   },
   card: {
-    flex: 1,
-    minWidth: 0,
+    width: '48%',
+    flexGrow: 1,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.sm,
-    alignItems: 'center',
-    gap: 4,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  accentStrip: {
+    height: 4,
+    width: '100%',
+  },
+  cardContent: {
+    padding: 14,
+    gap: 6,
+  },
+  iconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardLabel: {
-    fontSize: 9,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 12,
-    minHeight: 24,
+  trendPill: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
   },
-  cardValue: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  trend: {
+  trendPillText: {
     fontSize: 10,
     fontWeight: '700',
   },
+  cardValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    marginTop: 2,
+  },
+  cardLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
   miniBarTrack: {
     width: '100%',
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: colors.background,
+    height: 6,
+    borderRadius: 3,
     overflow: 'hidden',
-    marginTop: 2,
+    marginTop: 4,
   },
   miniBarFill: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 3,
+  },
+  statusLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 2,
   },
 });

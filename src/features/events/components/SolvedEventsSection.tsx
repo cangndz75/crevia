@@ -1,8 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { mockGameData } from '@/core/content/mockGameData';
-import { SolvedEvent } from '@/core/models/EventCard';
+import type { DecisionRecord } from '@/core/models/DecisionRecord';
+import { selectDecisionHistory, useGameStore } from '@/store/useGameStore';
+import { GameChip } from '@/ui/components/GameChip';
 import { SectionHeader } from '@/ui/components/SectionHeader';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
@@ -10,23 +11,30 @@ import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 import { typography } from '@/ui/theme/typography';
 
-function SolvedRow({ item }: { item: SolvedEvent }) {
+function SolvedDecisionRow({ record }: { record: DecisionRecord }) {
   return (
     <View style={[styles.row, shadows.soft]}>
       <View style={styles.check}>
         <Ionicons name="checkmark" size={18} color={colors.success} />
       </View>
-      <Text style={styles.title}>{item.title}</Text>
-      <View style={styles.xpPill}>
-        <Ionicons name="heart" size={11} color={colors.purple} />
-        <Text style={styles.xp}>+{item.xpEarned} XP</Text>
+      <View style={styles.body}>
+        <Text style={styles.title}>{record.eventTitle}</Text>
+        <Text style={styles.decision}>{record.decisionLabel}</Text>
+        {record.neighborhoodName ? (
+          <Text style={styles.neighborhood}>{record.neighborhoodName}</Text>
+        ) : null}
       </View>
+      <GameChip label="Çözüldü" tone="success" />
     </View>
   );
 }
 
 export function SolvedEventsSection() {
-  const items = mockGameData.solvedEvents;
+  const history = useGameStore(selectDecisionHistory);
+
+  if (history.length === 0) {
+    return null;
+  }
 
   return (
     <View>
@@ -36,8 +44,8 @@ export function SolvedEventsSection() {
         iconColor={colors.success}
       />
       <View style={styles.list}>
-        {items.map((item) => (
-          <SolvedRow key={item.id} item={item} />
+        {[...history].reverse().map((record) => (
+          <SolvedDecisionRow key={record.id} record={record} />
         ))}
       </View>
     </View>
@@ -66,25 +74,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  body: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xs,
+  },
   title: {
     ...typography.subtitle,
-    flex: 1,
     fontSize: 15,
-    textDecorationLine: 'line-through',
+  },
+  decision: {
+    ...typography.body,
+    fontSize: 14,
     color: colors.textSecondary,
   },
-  xpPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-    backgroundColor: colors.purpleMuted,
-  },
-  xp: {
+  neighborhood: {
+    ...typography.caption,
     fontSize: 12,
-    fontWeight: '700',
-    color: colors.purple,
   },
 });

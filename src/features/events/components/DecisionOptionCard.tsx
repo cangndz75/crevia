@@ -28,7 +28,9 @@ export function DecisionOptionCard({
         shadows.card,
         selected && styles.cardSelected,
         pressed && styles.pressed,
-      ]}>
+      ]}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}>
       <View style={styles.header}>
         <Text style={styles.title}>{decision.title}</Text>
         {decision.recommended ? (
@@ -41,7 +43,11 @@ export function DecisionOptionCard({
 
       <Text style={styles.description}>{decision.description}</Text>
 
-      <ImpactStatGrid effects={decision.effects} />
+      <ImpactStatGrid
+        effects={decision.effects}
+        costs={decision.costs}
+        qualitative
+      />
 
       {decision.delayHint ? (
         <View style={styles.hint}>

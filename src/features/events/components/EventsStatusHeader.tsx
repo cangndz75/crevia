@@ -10,7 +10,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { formatCurrency, mockGameData } from '@/core/content/mockGameData';
+import { formatCurrency } from '@/core/content/mockGameData';
+import { selectCity, selectPlayer, useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { spacing } from '@/ui/theme/spacing';
@@ -67,7 +68,8 @@ function XpBar({ progress }: { progress: number }) {
 
 export function EventsStatusHeader() {
   const insets = useSafeAreaInsets();
-  const { city, player } = mockGameData;
+  const city = useGameStore(selectCity);
+  const player = useGameStore(selectPlayer);
   const xpProgress = player.xp / player.xpToNextLevel;
   const weekday = WEEKDAYS_TR[new Date().getDay()];
   const budgetDelta = '+8.500';

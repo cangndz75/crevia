@@ -3,118 +3,171 @@ import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import {
-  getRiskSeverityColor,
-  getRiskSeverityLabel,
-  mockGameData,
-} from '@/core/content/mockGameData';
-import { RiskIcon, RiskItem } from '@/core/models/RiskItem';
-import { GameCard } from '@/ui/components/GameCard';
-import { SectionHeader } from '@/ui/components/SectionHeader';
+import type { EventCard } from '@/core/models/EventCard';
+import { EVENT_SEVERITY } from '@/core/utils/eventPriority';
+import { deriveCrisisQueue } from '@/features/hub/utils/hubDerived';
+import { selectActiveEvents, useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { spacing } from '@/ui/theme/spacing';
-import { typography } from '@/ui/theme/typography';
 
-const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 } as const;
+type RiskLevel = EventCard['riskLevel'];
 
-const riskGlyphs: Record<RiskIcon, keyof typeof Ionicons.glyphMap> = {
-  people: 'people-outline',
-  vehicle: 'car-outline',
-  megaphone: 'megaphone-outline',
-  alert: 'alert-circle-outline',
-  document: 'document-text-outline',
+const SEVERITY_CONFIG: Record<RiskLevel, { color: string; bg: string; label: string }> = {
+  critical: { color: colors.danger, bg: colors.dangerMuted, label: 'KRİTİK' },
+  high: { color: colors.warning, bg: colors.warningMuted, label: 'YÜKSEK' },
+  medium: { color: colors.secondary, bg: colors.secondaryMuted, label: 'ORTA' },
+  low: { color: colors.success, bg: colors.successMuted, label: 'DÜŞÜK' },
 };
 
-function sortQueue(risks: RiskItem[]) {
-  return [...risks].sort(
-    (a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity],
-  );
-}
-
-function SlotRow({
-  item,
+function EventSlotRow({
+  event,
   index,
+  onPress,
 }: {
-  item: RiskItem;
+  event: EventCard;
   index: number;
+  onPress: () => void;
 }) {
-  const color = getRiskSeverityColor(item.severity);
-  const icon = riskGlyphs[item.icon];
+  const config = SEVERITY_CONFIG[event.riskLevel];
 
   return (
-    <View style={styles.slot}>
-      <View style={[styles.indexBadge, { borderColor: color }]}>
-        <Text style={[styles.indexText, { color }]}>{index + 1}</Text>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.slot, pressed && styles.slotPressed]}
+      accessibilityRole="button"
+      accessibilityLabel={`${event.title} olayına git`}>
+      <View style={[styles.indexBadge, { borderColor: config.color }]}>
+        <Text style={[styles.indexText, { color: config.color }]}>{index + 1}</Text>
       </View>
-      <View style={styles.slotIcon}>
-        <Ionicons name={icon} size={18} color={color} />
+      <View style={[styles.eventIcon, { backgroundColor: config.bg }]}>
+        <Ionicons name="alert-circle" size={18} color={config.color} />
       </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
+      <View style={styles.textCol}>
         <Text style={styles.slotTitle} numberOfLines={1}>
-          {item.title}
+          {event.title}
         </Text>
         <Text style={styles.slotSub} numberOfLines={1}>
-          {item.subtitle}
+          {event.district} · öncelik {EVENT_SEVERITY[event.riskLevel]}
         </Text>
       </View>
-      <View style={[styles.severityChip, { backgroundColor: `${color}18` }]}>
-        <Text style={[styles.severityText, { color }]}>
-          {getRiskSeverityLabel(item.severity).toUpperCase()}
+      <View style={[styles.severityChip, { backgroundColor: config.bg }]}>
+        <Text style={[styles.severityText, { color: config.color }]}>
+          {config.label}
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
 export function CrisisQueuePreview() {
   const router = useRouter();
-  const top = useMemo(
-    () => sortQueue(mockGameData.risks).slice(0, 3),
-    [],
+  const activeEvents = useGameStore(selectActiveEvents);
+  const queue = useMemo(
+    () => deriveCrisisQueue(activeEvents),
+    [activeEvents],
   );
 
   return (
-    <View style={styles.wrap}>
-      <SectionHeader
-        title="Öncelik kuyruğu"
-        subtitle="Risk defteri — bugün sırayı bozmadan takip et"
-        icon="git-branch-outline"
-        iconColor={colors.warning}
-      />
-      <GameCard padding="md" style={styles.card}>
-        <View style={styles.list}>
-          {top.map((risk, idx) => (
-            <SlotRow key={risk.id} item={risk} index={idx} />
-          ))}
-        </View>
+    <View style={styles.section}>
+      {/* Section Header */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.eyebrow}>GÖREVDEKİ OLAYLAR</Text>
+        <Text style={styles.sectionTitle}>Öncelik Kuyruğu</Text>
+        <Text style={styles.sectionSubtitle}>
+          Aktif olaylar görünürlük ve şiddete göre sıralı
+        </Text>
+      </View>
+
+      {/* Card */}
+      <View style={styles.card}>
+        {queue.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <Ionicons name="shield-checkmark" size={32} color={colors.success} />
+            <Text style={styles.emptyText}>Kritik bekleyen olay yok</Text>
+          </View>
+        ) : (
+          <View style={styles.list}>
+            {queue.map(({ event }, idx) => (
+              <EventSlotRow
+                key={event.id}
+                event={event}
+                index={idx}
+                onPress={() => router.push(`/events/${event.id}`)}
+              />
+            ))}
+          </View>
+        )}
+
+        {/* Footer CTA */}
         <Pressable
-          onPress={() => router.push('/risks')}
+          onPress={() => router.push('/events')}
           style={({ pressed }) => [
-            styles.footerLink,
-            pressed && styles.footerPressed,
+            styles.footerCta,
+            pressed && styles.footerCtaPressed,
           ]}
           accessibilityRole="button"
-          accessibilityLabel="Tüm risk kuyruğunu aç">
-          <Text style={styles.footerText}>Risk defterine git</Text>
-          <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+          accessibilityLabel="Olay merkezine git">
+          <Text style={styles.footerCtaText}>Olay merkezine git →</Text>
         </Pressable>
-      </GameCard>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    gap: 0,
+  section: {
+    gap: spacing.sm,
+  },
+  sectionHeader: {
+    paddingHorizontal: spacing.xs,
+    gap: 2,
+  },
+  eyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.textSecondary,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   card: {
-    gap: spacing.md,
-    borderColor: `${colors.warning}44`,
     backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.xl,
+    gap: spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   list: {
     gap: spacing.sm,
+  },
+  emptyWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxxl,
+    gap: spacing.sm,
+  },
+  emptyText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   slot: {
     flexDirection: 'row',
@@ -122,62 +175,66 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.xs,
   },
+  slotPressed: {
+    opacity: 0.85,
+  },
   indexBadge: {
     width: 26,
     height: 26,
-    borderRadius: 8,
+    borderRadius: 13,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.background,
   },
   indexText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
   },
-  slotIcon: {
+  eventIcon: {
     width: 36,
     height: 36,
-    borderRadius: radius.md,
-    backgroundColor: colors.background,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  textCol: {
+    flex: 1,
+    minWidth: 0,
+  },
   slotTitle: {
-    ...typography.subtitle,
     fontSize: 14,
     fontWeight: '700',
+    color: colors.textPrimary,
   },
   slotSub: {
-    ...typography.caption,
     fontSize: 11,
-    marginTop: 2,
     fontWeight: '500',
     color: colors.textSecondary,
+    marginTop: 2,
   },
   severityChip: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: radius.sm,
+    borderRadius: radius.full,
   },
   severityText: {
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.4,
   },
-  footerLink: {
+  footerCta: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    borderRadius: radius.full,
     backgroundColor: colors.primaryMuted,
   },
-  footerPressed: {
+  footerCtaPressed: {
     opacity: 0.85,
   },
-  footerText: {
+  footerCtaText: {
     fontSize: 13,
     fontWeight: '700',
     color: colors.primary,

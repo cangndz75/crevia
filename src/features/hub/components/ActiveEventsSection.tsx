@@ -1,117 +1,187 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import {
-  getRiskChipTone,
-  getRiskLevelLabel,
-  mockGameData,
-} from '@/core/content/mockGameData';
+import { getRiskChipTone, getRiskLevelLabel } from '@/core/content/mockGameData';
+import { EventCard, EventRiskLevel } from '@/core/models/EventCard';
 import { getCategoryIcon } from '@/features/events/utils/eventPresentation';
-import { EventCard } from '@/core/models/EventCard';
-import { GameButton } from '@/ui/components/GameButton';
-import { GameCard } from '@/ui/components/GameCard';
-import { GameChip } from '@/ui/components/GameChip';
-import { SectionHeader } from '@/ui/components/SectionHeader';
+import { selectActiveEvents, useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
+import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
-import { typography } from '@/ui/theme/typography';
 
-function EventPreviewCard({ event }: { event: EventCard }) {
+const riskAccentColors: Record<EventRiskLevel, string> = {
+  critical: colors.danger,
+  high: colors.warning,
+  medium: colors.secondary,
+  low: colors.success,
+};
+
+const toneColors: Record<string, { bg: string; text: string }> = {
+  success: { bg: colors.successMuted, text: colors.success },
+  warning: { bg: colors.warningMuted, text: colors.warning },
+  danger: { bg: colors.dangerMuted, text: colors.danger },
+  info: { bg: colors.secondaryMuted, text: colors.secondary },
+};
+
+function getCategoryBg(category: string): string {
+  const map: Record<string, string> = {
+    altyapı: colors.secondaryMuted,
+    güvenlik: colors.dangerMuted,
+    sağlık: colors.successMuted,
+    ulaşım: colors.warningMuted,
+    çevre: colors.primaryMuted,
+  };
+  return map[category.toLowerCase()] ?? colors.purpleMuted;
+}
+
+function getCategoryColor(category: string): string {
+  const map: Record<string, string> = {
+    altyapı: colors.secondary,
+    güvenlik: colors.danger,
+    sağlık: colors.success,
+    ulaşım: colors.warning,
+    çevre: colors.primary,
+  };
+  return map[category.toLowerCase()] ?? colors.purple;
+}
+
+function EventPreviewCard({
+  event,
+  index,
+}: {
+  event: EventCard;
+  index: number;
+}) {
   const router = useRouter();
   const { previewEffects } = event;
-  const publicColor =
-    previewEffects.publicSatisfaction >= 0
-      ? colors.success
-      : colors.danger;
-  const publicPrefix =
-    previewEffects.publicSatisfaction >= 0 ? '↑' : '↓';
-  const riskPrefix = previewEffects.risk >= 0 ? '↑' : '↓';
+  const accentColor = riskAccentColors[event.riskLevel];
+  const tone = getRiskChipTone(event.riskLevel);
+  const toneStyle = toneColors[tone] ?? toneColors.info;
+  const catColor = getCategoryColor(event.category);
+  const catBg = getCategoryBg(event.category);
+
+  const publicPositive = previewEffects.publicSatisfaction >= 0;
+  const publicColor = publicPositive ? colors.success : colors.danger;
+  const publicBg = publicPositive ? colors.successMuted : colors.dangerMuted;
+  const publicArrow = publicPositive ? '↑' : '↓';
 
   return (
-    <GameCard padding="lg" style={styles.eventCard}>
-      <View style={styles.eventHeader}>
-        <View style={styles.eventHeaderLeft}>
-          <View style={styles.eventIcon}>
-            <Ionicons
-              name={getCategoryIcon(event.category)}
-              size={20}
-              color={colors.danger}
-            />
+    <Animated.View
+      entering={FadeInDown.delay(index * 100)
+        .duration(400)
+        .springify()}
+      style={styles.card}>
+      <View style={[styles.topStrip, { backgroundColor: accentColor }]} />
+
+      <View style={styles.cardContent}>
+        <View style={styles.headerRow}>
+          <View style={styles.headerLeft}>
+            <View style={[styles.catIcon, { backgroundColor: catBg }]}>
+              <Ionicons
+                name={getCategoryIcon(event.category)}
+                size={18}
+                color={catColor}
+              />
+            </View>
+            <View style={[styles.chip, { backgroundColor: catBg }]}>
+              <Text style={[styles.chipText, { color: catColor }]}>
+                {event.category.toUpperCase()}
+              </Text>
+            </View>
+            <View style={[styles.chip, { backgroundColor: toneStyle.bg }]}>
+              <Text style={[styles.chipText, { color: toneStyle.text }]}>
+                {getRiskLevelLabel(event.riskLevel)}
+              </Text>
+            </View>
           </View>
-          <View style={styles.tags}>
-            <GameChip
-              label={event.category.toUpperCase()}
-              tone="neutral"
-            />
-            <GameChip
-              label={getRiskLevelLabel(event.riskLevel)}
-              tone={getRiskChipTone(event.riskLevel)}
-            />
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={colors.textSecondary}
+          />
+        </View>
+
+        <Text style={styles.title} numberOfLines={2}>
+          {event.title}
+        </Text>
+
+        <View style={styles.locationRow}>
+          <Ionicons
+            name="location-outline"
+            size={13}
+            color={colors.textSecondary}
+          />
+          <Text style={styles.locationText}>{event.district}</Text>
+        </View>
+
+        <Text style={styles.description} numberOfLines={2}>
+          {event.description}
+        </Text>
+
+        <View style={styles.impacts}>
+          <View style={[styles.impactBadge, { backgroundColor: publicBg }]}>
+            <Text style={[styles.impactText, { color: publicColor }]}>
+              {publicArrow} Halk {previewEffects.publicSatisfaction}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.impactBadge,
+              { backgroundColor: colors.warningMuted },
+            ]}>
+            <Text style={[styles.impactText, { color: colors.warning }]}>
+              Risk +{Math.abs(previewEffects.risk)}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.impactBadge,
+              { backgroundColor: colors.warningMuted },
+            ]}>
+            <Ionicons name="star" size={11} color={colors.warning} />
+            <Text style={[styles.impactText, { color: colors.warning }]}>
+              +{previewEffects.xp} XP
+            </Text>
           </View>
         </View>
-        <Ionicons
-          name="chevron-forward"
-          size={18}
-          color={colors.textSecondary}
-        />
-      </View>
 
-      <Text style={typography.subtitle}>{event.title}</Text>
-      <View style={styles.locationRow}>
-        <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
-        <Text style={typography.caption}>{event.district}</Text>
+        <Pressable
+          onPress={() => router.push(`/events/${event.id}`)}
+          style={({ pressed }) => [
+            styles.cta,
+            pressed && styles.ctaPressed,
+          ]}>
+          <Text style={styles.ctaText}>Karar Ver →</Text>
+        </Pressable>
       </View>
-      <Text style={[typography.caption, styles.description]} numberOfLines={2}>
-        {event.description}
-      </Text>
-
-      <View style={styles.impacts}>
-        <View style={[styles.impactBadge, styles.impactPublic]}>
-          <Text style={[styles.impactText, { color: publicColor }]}>
-            {publicPrefix} Halk {previewEffects.publicSatisfaction}
-          </Text>
-        </View>
-        <View style={[styles.impactBadge, styles.impactRisk]}>
-          <Text style={styles.impactRiskText}>
-            {riskPrefix} Risk +{Math.abs(previewEffects.risk)}
-          </Text>
-        </View>
-        <View style={[styles.impactBadge, styles.impactXp]}>
-          <Ionicons name="star" size={11} color={colors.warning} />
-          <Text style={styles.impactXpText}>XP +{previewEffects.xp}</Text>
-        </View>
-      </View>
-
-      <GameButton
-        title="Karar Ver"
-        onPress={() => router.push(`/events/${event.id}`)}
-        style={styles.cta}
-      />
-    </GameCard>
+    </Animated.View>
   );
 }
 
 export function ActiveEventsSection() {
-  const events = mockGameData.events;
+  const events = useGameStore(selectActiveEvents);
 
   return (
     <View>
-      <SectionHeader
-        title="Kararı sen ver"
-        subtitle="Sonuçlar memnuniyet, moral ve riske doğrudan yansır"
-        icon="flash"
-        iconColor={colors.danger}
-        trailing={
+      <View style={styles.header}>
+        <Text style={styles.eyebrow}>KARAR BEKLİYOR</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.sectionTitle}>Kararı Sen Ver</Text>
           <View style={styles.countBadge}>
             <Text style={styles.countText}>{events.length}</Text>
           </View>
-        }
-      />
+        </View>
+        <Text style={styles.subtitle}>
+          Sonuçlar memnuniyet, moral ve riske doğrudan yansır
+        </Text>
+      </View>
+
       <View style={styles.list}>
-        {events.map((event) => (
-          <EventPreviewCard key={event.id} event={event} />
+        {events.map((event, i) => (
+          <EventPreviewCard key={event.id} event={event} index={i} />
         ))}
       </View>
     </View>
@@ -119,64 +189,117 @@ export function ActiveEventsSection() {
 }
 
 const styles = StyleSheet.create({
-  countBadge: {
-    minWidth: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.danger,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
+  header: {
+    marginBottom: spacing.lg,
+    gap: spacing.xs,
   },
-  countText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textInverse,
+  eyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.textSecondary,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
-  list: {
-    gap: spacing.md,
-  },
-  eventCard: {
-    gap: spacing.sm,
-  },
-  eventHeader: {
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  eventHeaderLeft: {
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  subtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  countBadge: {
+    minWidth: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 7,
+  },
+  countText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textInverse,
+  },
+  list: {
+    gap: spacing.lg,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.soft,
+  },
+  topStrip: {
+    height: 4,
+  },
+  cardContent: {
+    padding: spacing.lg,
+    gap: 10,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     flex: 1,
   },
-  eventIcon: {
+  catIcon: {
     width: 40,
     height: 40,
     borderRadius: radius.md,
-    backgroundColor: colors.dangerMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    flex: 1,
+  chip: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+  },
+  chipText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.textPrimary,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
+  locationText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
   description: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textSecondary,
     lineHeight: 18,
   },
   impacts: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-    marginTop: spacing.xs,
   },
   impactBadge: {
     flexDirection: 'row',
@@ -184,33 +307,26 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    borderRadius: radius.sm,
-  },
-  impactPublic: {
-    backgroundColor: colors.dangerMuted,
-  },
-  impactRisk: {
-    backgroundColor: colors.warningMuted,
-  },
-  impactXp: {
-    backgroundColor: colors.warningMuted,
+    borderRadius: radius.full,
   },
   impactText: {
     fontSize: 11,
     fontWeight: '600',
   },
-  impactRiskText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.warning,
-  },
-  impactXpText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.warning,
-  },
   cta: {
-    marginTop: spacing.sm,
-    alignSelf: 'stretch',
+    backgroundColor: colors.primary,
+    borderRadius: radius.xl,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+  },
+  ctaPressed: {
+    opacity: 0.92,
+  },
+  ctaText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.textInverse,
   },
 });

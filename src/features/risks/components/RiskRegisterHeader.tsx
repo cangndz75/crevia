@@ -3,8 +3,8 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { selectDay, selectRole, useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
-import { radius } from '@/ui/theme/radius';
 import { spacing } from '@/ui/theme/spacing';
 import { typography } from '@/ui/theme/typography';
 
@@ -12,6 +12,8 @@ export function RiskRegisterHeader() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const showBack = router.canGoBack();
+  const day = useGameStore(selectDay);
+  const role = useGameStore(selectRole);
 
   return (
     <View style={[styles.wrapper, { paddingTop: insets.top + spacing.sm }]}>
@@ -36,7 +38,12 @@ export function RiskRegisterHeader() {
         )}
         <View style={styles.titles}>
           <Text style={typography.title}>Risk Defteri</Text>
-          <Text style={typography.caption}>Aktif tehditler ve önlemler</Text>
+          <Text style={typography.caption}>
+            Gün {day} · Aktif tehditler ve önlemler
+          </Text>
+          <Text style={styles.role} numberOfLines={1}>
+            {role}
+          </Text>
         </View>
       </View>
     </View>
@@ -73,5 +80,12 @@ const styles = StyleSheet.create({
   titles: {
     flex: 1,
     gap: 2,
+  },
+  role: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.primary,
+    fontWeight: '600',
+    marginTop: spacing.xs,
   },
 });

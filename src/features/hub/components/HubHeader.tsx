@@ -16,16 +16,23 @@ export function HubHeader() {
         <LiveOpsPulseStrip />
         <AdvisorBriefingCard />
       </View>
+      <View style={styles.separator} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    backgroundColor: colors.background,
+    backgroundColor: '#FAFAF8',
   },
   lower: {
-    gap: spacing.md,
-    paddingBottom: spacing.sm,
+    gap: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.lg,
   },
 });

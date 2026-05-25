@@ -2,10 +2,13 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PROGRESSION_UNLOCKS } from '@/features/progression/content/progressionUnlocks';
 import {
-  formatAuthorityPoints,
-  mockGameData,
-} from '@/core/content/mockGameData';
+  selectLevel,
+  selectRole,
+  selectXp,
+  useGameStore,
+} from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { spacing } from '@/ui/theme/spacing';
@@ -13,9 +16,12 @@ import { typography } from '@/ui/theme/typography';
 
 export function ProgressionHeader() {
   const insets = useSafeAreaInsets();
-  const { player } = mockGameData;
-  const unlocked = mockGameData.abilities.filter(
-    (a) => a.status !== 'locked',
+  const xp = useGameStore(selectXp);
+  const level = useGameStore(selectLevel);
+  const role = useGameStore(selectRole);
+
+  const unlocked = PROGRESSION_UNLOCKS.filter(
+    (item) => xp >= item.xpRequired,
   ).length;
 
   return (
@@ -25,18 +31,21 @@ export function ProgressionHeader() {
           <View style={styles.logo}>
             <Ionicons name="ribbon" size={20} color={colors.authority} />
           </View>
-          <View>
+          <View style={styles.brandText}>
             <Text style={styles.brandTitle}>Yetki Ağacı</Text>
             <Text style={styles.brandSub}>
-              {unlocked} yetki aktif · Seviye {player.level}
+              {unlocked} özellik açık · Seviye {level}
+            </Text>
+            <Text style={styles.role} numberOfLines={2}>
+              {role}
             </Text>
           </View>
         </View>
 
         <View style={styles.pointsCard}>
-          <Text style={styles.pointsLabel}>OTORİTE PUANI</Text>
+          <Text style={styles.pointsLabel}>OYUNCU XP</Text>
           <Text style={styles.pointsValue}>
-            {formatAuthorityPoints(player.authorityPoints)} XP
+            {xp.toLocaleString('tr-TR')} XP
           </Text>
         </View>
       </View>
@@ -54,15 +63,19 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: spacing.md,
   },
   brand: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.md,
     flex: 1,
+  },
+  brandText: {
+    flex: 1,
+    gap: 2,
   },
   logo: {
     width: 44,
@@ -79,6 +92,13 @@ const styles = StyleSheet.create({
   brandSub: {
     ...typography.caption,
     fontSize: 12,
+  },
+  role: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.primary,
+    fontWeight: '600',
+    marginTop: spacing.xs,
   },
   pointsCard: {
     backgroundColor: colors.authorityMuted,

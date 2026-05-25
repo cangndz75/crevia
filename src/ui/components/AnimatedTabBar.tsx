@@ -12,7 +12,6 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '@/ui/theme/colors';
-import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 
 type TabConfig = {
@@ -39,7 +38,7 @@ const TAB_CONFIG: Record<string, TabConfig> = {
 
 const SPRING = { damping: 22, stiffness: 220, mass: 0.8 };
 
-export const ANIMATED_TAB_BAR_HEIGHT = 64;
+export const ANIMATED_TAB_BAR_HEIGHT = 68;
 
 type TabLayout = { x: number; width: number };
 
@@ -56,6 +55,29 @@ function shouldHideTabBar(state: BottomTabBarProps['state']) {
 export function useAppTabBarHeight() {
   const insets = useSafeAreaInsets();
   return ANIMATED_TAB_BAR_HEIGHT + Math.max(insets.bottom, 10) + 16;
+}
+
+function TabIcon({ focused, config }: { focused: boolean; config: TabConfig }) {
+  const scale = useSharedValue(focused ? 1.05 : 1);
+
+  useEffect(() => {
+    scale.value = withSpring(focused ? 1.05 : 1, SPRING);
+  }, [focused]);
+
+  const iconAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={[styles.iconWrapper, iconAnimStyle]}>
+      <Ionicons
+        name={focused ? config.iconFocused : config.icon}
+        size={24}
+        color={focused ? colors.navIconActive : colors.navIconInactive}
+      />
+      {focused && <View style={styles.activeDot} />}
+    </Animated.View>
+  );
 }
 
 export function AnimatedTabBar({
@@ -129,11 +151,7 @@ export function AnimatedTabBar({
               accessibilityRole="button"
               accessibilityState={{ selected: focused }}
               accessibilityLabel={config.label}>
-              <Ionicons
-                name={focused ? config.iconFocused : config.icon}
-                size={22}
-                color={focused ? colors.navIconActive : colors.navIconInactive}
-              />
+              <TabIcon focused={focused} config={config} />
               {focused ? (
                 <Animated.Text
                   entering={FadeIn.duration(180)}
@@ -163,19 +181,21 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.navBarBg,
-    borderRadius: radius.xxl,
+    backgroundColor: '#140E30',
+    borderRadius: 28,
     height: ANIMATED_TAB_BAR_HEIGHT,
     paddingHorizontal: 6,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   indicator: {
     position: 'absolute',
     left: 0,
     top: 6,
     bottom: 6,
-    borderRadius: radius.xl,
-    backgroundColor: colors.navIndicator,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.18)',
   },
   tab: {
     flex: 1,
@@ -187,10 +207,21 @@ const styles = StyleSheet.create({
     height: '100%',
     zIndex: 1,
   },
+  iconWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: colors.navIconActive,
+    marginTop: 2,
+  },
   label: {
     color: colors.navIconActive,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     maxWidth: 72,
   },
 });

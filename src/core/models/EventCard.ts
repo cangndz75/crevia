@@ -6,6 +6,16 @@ export type EventDecisionEffect = {
   morale: number;
   risk: number;
   xp: number;
+  staffMorale?: number;
+  cleanliness?: number;
+  trust?: number;
+};
+
+export type EventDecisionCost = {
+  budget?: number;
+  morale?: number;
+  staffHours?: number;
+  vehicleUsage?: number;
 };
 
 export type DecisionStyle = 'bold' | 'balanced' | 'cautious' | 'risky';
@@ -18,6 +28,9 @@ export type EventDecision = {
   recommended?: boolean;
   delayHint?: boolean;
   effects: EventDecisionEffect;
+  costs?: EventDecisionCost;
+  /** Karar sonrası kısa sonuç metni; yoksa karar tipinden türetilir. */
+  resultText?: string;
 };
 
 export type EventPreviewEffects = {
@@ -54,6 +67,7 @@ export type EventCard = {
   category: string;
   riskLevel: EventRiskLevel;
   district: string;
+  neighborhoodId?: string;
   description: string;
   contextTag: string;
   urgencyHours: number;

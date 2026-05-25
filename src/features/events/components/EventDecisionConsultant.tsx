@@ -1,14 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { mockGameData } from '@/core/content/mockGameData';
+import { useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { spacing } from '@/ui/theme/spacing';
 import { typography } from '@/ui/theme/typography';
 
 export function EventDecisionConsultant() {
-  const advisor = mockGameData.eventAdvisor;
+  const advisor = useGameStore((s) => s.gameState.eventAdvisor);
 
   return (
     <View style={styles.card}>

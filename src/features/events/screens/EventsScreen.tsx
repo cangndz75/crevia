@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -11,14 +12,15 @@ import { EventsStatusHeader } from '@/features/events/components/EventsStatusHea
 import { FeaturedEventCard } from '@/features/events/components/FeaturedEventCard';
 import { OpportunityEventCard } from '@/features/events/components/OpportunityEventCard';
 import { SolvedEventsSection } from '@/features/events/components/SolvedEventsSection';
-import {
-  getActiveEventsExcludingFeatured,
-  getCriticalEventCount,
-  getFeaturedEvent,
-  mockGameData,
-} from '@/core/content/mockGameData';
 import { EventCard } from '@/core/models/EventCard';
+import {
+  selectActiveEvents,
+  selectEventOpportunity,
+  selectFeaturedEventId,
+  useGameStore,
+} from '@/store/useGameStore';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
+import { GameButton } from '@/ui/components/GameButton';
 import { SectionHeader } from '@/ui/components/SectionHeader';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
@@ -42,28 +44,56 @@ function matchesFilter(event: EventCard, filter: EventsFilterKey): boolean {
   return false;
 }
 
+function getCriticalEventCount(events: EventCard[]): number {
+  return events.filter(
+    (e) => e.riskLevel === 'critical' || e.riskLevel === 'high',
+  ).length;
+}
+
 export function EventsScreen() {
+  const router = useRouter();
   const tabBarHeight = useAppTabBarHeight();
   const bottomPadding = tabBarHeight + spacing.lg;
   const [filter, setFilter] = useState<EventsFilterKey>('all');
 
-  const featured = getFeaturedEvent();
-  const activeAll = getActiveEventsExcludingFeatured();
-  const eventCount = mockGameData.events.length;
-  const criticalCount = getCriticalEventCount();
+  const activeEvents = useGameStore(selectActiveEvents);
+  const featuredEventId = useGameStore(selectFeaturedEventId);
+  const eventOpportunity = useGameStore(selectEventOpportunity);
+  const endCurrentDay = useGameStore((s) => s.endCurrentDay);
+
+  const featured = useMemo(() => {
+    return (
+      activeEvents.find((e) => e.id === featuredEventId) ?? activeEvents[0]
+    );
+  }, [activeEvents, featuredEventId]);
+
+  const activeAll = useMemo(() => {
+    if (!featured) return activeEvents;
+    return activeEvents.filter((e) => e.id !== featured.id);
+  }, [activeEvents, featured]);
+
+  const eventCount = activeEvents.length;
+  const criticalCount = getCriticalEventCount(activeEvents);
 
   const showListSections = filter !== 'solved' && filter !== 'opportunity';
   const showOpportunity = filter === 'all' || filter === 'opportunity';
   const showSolved = filter === 'all' || filter === 'solved';
 
   const showFeatured =
-    showListSections && matchesFilter(featured, filter === 'all' ? 'all' : filter);
+    showListSections &&
+    featured != null &&
+    matchesFilter(featured, filter === 'all' ? 'all' : filter);
 
   const activeFiltered = useMemo(() => {
     if (!showListSections) return [];
     const f = filter === 'all' ? 'all' : filter;
     return activeAll.filter((e) => matchesFilter(e, f));
   }, [activeAll, filter, showListSections]);
+
+  const handleEndDay = () => {
+    endCurrentDay();
+    router.push('/reports');
+  };
 
   return (
     <View style={styles.root}>
@@ -97,7 +127,7 @@ export function EventsScreen() {
           <EventsFilterBar active={filter} onChange={setFilter} />
         </View>
 
-        {showFeatured ? <FeaturedEventCard event={featured} /> : null}
+        {showFeatured && featured ? <FeaturedEventCard event={featured} /> : null}
 
         {showListSections && activeFiltered.length > 0 ? (
           <View style={styles.section}>
@@ -114,6 +144,16 @@ export function EventsScreen() {
           </View>
         ) : null}
 
+        {showListSections && activeEvents.length === 0 ? (
+          <View style={styles.emptyActive}>
+            <Text style={typography.subtitle}>Aktif olay kalmadı</Text>
+            <Text style={styles.emptyBody}>
+              Bugünü bitirerek operasyon raporunu görüntüleyebilirsin.
+            </Text>
+            <GameButton title="Günü Bitir" onPress={handleEndDay} />
+          </View>
+        ) : null}
+
         {showOpportunity ? (
           <View style={styles.section}>
             <SectionHeader
@@ -121,7 +161,7 @@ export function EventsScreen() {
               icon="gift-outline"
               iconColor={colors.success}
             />
-            <OpportunityEventCard opportunity={mockGameData.eventOpportunity} />
+            <OpportunityEventCard opportunity={eventOpportunity} />
           </View>
         ) : null}
 
@@ -181,5 +221,17 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: spacing.md,
+  },
+  emptyActive: {
+    gap: spacing.md,
+    padding: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  emptyBody: {
+    ...typography.body,
+    color: colors.textSecondary,
   },
 });

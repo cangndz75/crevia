@@ -5,13 +5,17 @@ import {
   EffectChipData,
   buildEffectChips,
 } from '@/features/events/utils/eventPresentation';
-import { EventDecisionEffect } from '@/core/models/EventCard';
+import { buildQualitativeEffectChips } from '@/features/events/utils/decisionPresentation';
+import { EventDecisionCost, EventDecisionEffect } from '@/core/models/EventCard';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { spacing } from '@/ui/theme/spacing';
 
 type ImpactStatGridProps = {
   effects: EventDecisionEffect;
+  costs?: EventDecisionCost;
+  /** Karar kartlarında sayısal değer yerine Düşük/Orta/Yüksek gösterir. */
+  qualitative?: boolean;
 };
 
 const toneStyles = {
@@ -33,8 +37,14 @@ function StatBox({ chip }: { chip: EffectChipData }) {
   );
 }
 
-export function ImpactStatGrid({ effects }: ImpactStatGridProps) {
-  const chips = buildEffectChips(effects);
+export function ImpactStatGrid({
+  effects,
+  costs,
+  qualitative = false,
+}: ImpactStatGridProps) {
+  const chips = qualitative
+    ? buildQualitativeEffectChips(effects, costs)
+    : buildEffectChips(effects);
 
   return (
     <View style={styles.row}>

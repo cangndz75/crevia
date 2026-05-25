@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Pressable, StyleSheet, View, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
@@ -10,7 +10,7 @@ type GameCardProps = {
   children: ReactNode;
   padding?: keyof typeof spacing | number;
   onPress?: () => void;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   soft?: boolean;
 };
 

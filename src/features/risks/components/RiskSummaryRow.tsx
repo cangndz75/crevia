@@ -1,47 +1,49 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { mockGameData } from '@/core/content/mockGameData';
+import type { DerivedRiskSummary } from '@/features/risks/utils/deriveDay1Risks';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 import { typography } from '@/ui/theme/typography';
 
-const summaryConfig = [
-  {
-    key: 'total',
-    label: 'Toplam Risk',
-    getValue: () => String(mockGameData.riskSummary.total),
-    bg: colors.summaryDangerBg,
-    color: colors.danger,
-  },
-  {
-    key: 'active',
-    label: 'Aktif Tehdit',
-    getValue: () => String(mockGameData.riskSummary.activeThreats),
-    bg: colors.summaryWarningBg,
-    color: colors.warning,
-  },
-  {
-    key: 'critical',
-    label: 'Kritik',
-    getValue: () => String(mockGameData.riskSummary.critical),
-    bg: colors.summaryCriticalBg,
-    color: colors.critical,
-  },
-] as const;
+type RiskSummaryRowProps = {
+  summary: DerivedRiskSummary;
+};
 
-export function RiskSummaryRow() {
+export function RiskSummaryRow({ summary }: RiskSummaryRowProps) {
+  const items = [
+    {
+      key: 'total',
+      label: 'Toplam Risk',
+      value: String(summary.total),
+      bg: colors.summaryDangerBg,
+      color: colors.danger,
+    },
+    {
+      key: 'active',
+      label: 'Aktif Tehdit',
+      value: String(summary.activeThreats),
+      bg: colors.summaryWarningBg,
+      color: colors.warning,
+    },
+    {
+      key: 'critical',
+      label: 'Kritik',
+      value: String(summary.critical),
+      bg: colors.summaryCriticalBg,
+      color: colors.critical,
+    },
+  ] as const;
+
   return (
     <View style={styles.row}>
-      {summaryConfig.map((item) => (
+      {items.map((item) => (
         <View
           key={item.key}
           style={[styles.card, { backgroundColor: item.bg }, shadows.soft]}>
           <Text style={[styles.label, { color: item.color }]}>{item.label}</Text>
-          <Text style={[styles.value, { color: item.color }]}>
-            {item.getValue()}
-          </Text>
+          <Text style={[styles.value, { color: item.color }]}>{item.value}</Text>
         </View>
       ))}
     </View>
