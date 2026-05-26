@@ -108,7 +108,7 @@ export default function RootLayout() {
       <View style={styles.root}>
         {showBrandedSplash ? (
           <SplashGateScreen mode="loading" />
-        ) : bootstrap.phase === "ready" ? (
+        ) : bootstrap.phase === 'ready' ? (
           <TabNavigator />
         ) : (
           <AppGate

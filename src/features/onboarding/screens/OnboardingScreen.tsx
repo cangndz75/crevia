@@ -1,92 +1,87 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { useState } from 'react';
 
-import { OnboardingProgressDots } from '@/features/onboarding/components/OnboardingProgressDots';
-import { OnboardingPrimaryButton } from '@/features/onboarding/components/OnboardingPrimaryButton';
-import { OnboardingStepCard } from '@/features/onboarding/components/OnboardingStepCard';
-import { ONBOARDING_STEPS } from '@/features/onboarding/content/onboardingContent';
-import { colors } from '@/ui/theme/colors';
-import { spacing } from '@/ui/theme/spacing';
+import { OnboardingLayout } from '@/features/onboarding/components/OnboardingLayout';
+import { OnboardingEventsStep } from '@/features/onboarding/components/steps/OnboardingEventsStep';
+import { OnboardingRegionStep } from '@/features/onboarding/components/steps/OnboardingRegionStep';
+import { OnboardingRoadmapStep } from '@/features/onboarding/components/steps/OnboardingRoadmapStep';
+import { OnboardingWelcomeStep } from '@/features/onboarding/components/steps/OnboardingWelcomeStep';
+import {
+  ONBOARDING_STEPS,
+  REGION_OPTIONS,
+} from '@/features/onboarding/content/onboardingContent';
 
 type OnboardingScreenProps = {
-  stepIndex: number;
-  onNext: () => void;
-  onBack: () => void;
+  onComplete: () => void | Promise<void>;
 };
 
-export function OnboardingScreen({
-  stepIndex,
-  onNext,
-  onBack,
-}: OnboardingScreenProps) {
-  const step = ONBOARDING_STEPS[stepIndex];
+export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
+  const [stepIndex, setStepIndex] = useState(0);
+  const [selectedRegionId, setSelectedRegionId] = useState(
+    REGION_OPTIONS.find((r) => r.recommended)?.id ?? REGION_OPTIONS[0]!.id,
+  );
+  const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(
+    null,
+  );
+
+  const step = ONBOARDING_STEPS[stepIndex]!;
   const isLast = stepIndex === ONBOARDING_STEPS.length - 1;
   const total = ONBOARDING_STEPS.length;
 
+  const handlePrimary = () => {
+    if (isLast) {
+      void onComplete();
+      return;
+    }
+    setStepIndex((i) => i + 1);
+  };
+
+  const primaryLabel = isLast
+    ? 'Oyuna Başla'
+    : stepIndex === 0
+      ? 'Devam'
+      : 'Devam';
+
+  const primaryDisabled =
+    step.id === 'events' && selectedDecisionId == null;
+
+  const renderStepContent = () => {
+    switch (step.id) {
+      case 'welcome':
+        return <OnboardingWelcomeStep />;
+      case 'region':
+        return (
+          <OnboardingRegionStep
+            selectedId={selectedRegionId}
+            onSelect={setSelectedRegionId}
+          />
+        );
+      case 'events':
+        return (
+          <OnboardingEventsStep
+            selectedDecisionId={selectedDecisionId}
+            onSelectDecision={setSelectedDecisionId}
+          />
+        );
+      case 'roadmap':
+        return <OnboardingRoadmapStep />;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <View style={styles.root}>
-      <OnboardingProgressDots current={stepIndex + 1} total={total} />
-
-      <Animated.ScrollView
-        key={step.id}
-        entering={FadeIn.duration(280)}
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        <OnboardingStepCard step={step} />
-      </Animated.ScrollView>
-
-      <View style={styles.footer}>
-        <OnboardingPrimaryButton
-          title={isLast ? 'Brifinge Geç' : 'Devam'}
-          onPress={onNext}
-        />
-        {stepIndex > 0 ? (
-          <Pressable
-            onPress={onBack}
-            style={({ pressed }) => [styles.backLink, pressed && styles.backPressed]}
-            accessibilityRole="button">
-            <Text style={styles.backText}>Geri</Text>
-          </Pressable>
-        ) : (
-          <View style={styles.backSpacer} />
-        )}
-      </View>
-    </View>
+    <OnboardingLayout
+      stepIndex={stepIndex}
+      totalSteps={total}
+      title={step.title}
+      body={step.body}
+      primaryLabel={primaryLabel}
+      onPrimary={handlePrimary}
+      primaryDisabled={primaryDisabled}
+      onBack={stepIndex > 0 ? () => setStepIndex((i) => i - 1) : undefined}
+      onSkip={stepIndex === 0 ? () => void onComplete() : undefined}
+      skipLabel="Geç">
+      {renderStepContent()}
+    </OnboardingLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    gap: spacing.md,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingVertical: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
-  footer: {
-    gap: spacing.md,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
-  backLink: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  backPressed: {
-    opacity: 0.6,
-  },
-  backText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  backSpacer: {
-    height: 36,
-  },
-});

@@ -1,4 +1,22 @@
+import type { PilotDayTheme, PilotEventType } from './PilotDayPlan';
+
+export type { PilotDayTheme, PilotEventType } from './PilotDayPlan';
+
 export type EventRiskLevel = 'low' | 'medium' | 'high' | 'critical';
+
+type EventConditionMetricKey =
+  | 'publicSatisfaction'
+  | 'budget'
+  | 'staffMorale'
+  | 'riskScore';
+
+export type EventCondition =
+  | { type: 'metric_gte'; metric: EventConditionMetricKey; value: number }
+  | { type: 'metric_lte'; metric: EventConditionMetricKey; value: number }
+  | { type: 'flag_equals'; flag: string; value: string | number | boolean }
+  | { type: 'district_equals'; districtId: string }
+  | { type: 'previous_decision'; eventId: string; decisionId: string }
+  | { type: 'relationship_gte'; targetId: string; value: number };
 
 export type EventDecisionEffect = {
   publicSatisfaction: number;
@@ -76,4 +94,14 @@ export type EventCard = {
   /** Karar ekranında “yarın etkisi” uyarısı */
   delayHint?: boolean;
   filterTags?: EventFilterTag[];
+  /** Pilot senaryo günü (1–7); yoksa genel havuz. */
+  day?: number;
+  theme?: PilotDayTheme;
+  districtIds?: string[];
+  eventType?: PilotEventType;
+  conditions?: EventCondition[];
+  priority?: number;
+  fallback?: boolean;
+  setsFlags?: Record<string, string | number | boolean>;
+  resultFlags?: Record<string, string | number | boolean>;
 };

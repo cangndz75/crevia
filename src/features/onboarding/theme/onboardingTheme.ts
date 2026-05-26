@@ -1,0 +1,20 @@
+/** Onboarding ekranları için premium mavi/lavender tema */
+export const onboardingTheme = {
+  bg: '#F5F4FB',
+  bgSoft: '#EDEAF8',
+  primary: '#5B5FEF',
+  primaryDark: '#4347D4',
+  primaryMuted: '#E8E7FD',
+  navy: '#1E2348',
+  textMuted: '#6B6B8A',
+  glass: 'rgba(255,255,255,0.72)',
+  glassBorder: 'rgba(255,255,255,0.9)',
+  success: '#3BAF7A',
+  successMuted: '#E8F7F0',
+  warning: '#F59E0B',
+  warningMuted: '#FEF3C7',
+  danger: '#EF4444',
+  dangerMuted: '#FEE2E2',
+  purple: '#7B5BB8',
+  purpleMuted: '#F0EBFA',
+} as const;

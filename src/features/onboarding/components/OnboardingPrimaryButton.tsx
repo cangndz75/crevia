@@ -1,13 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
 
-import { colors } from '@/ui/theme/colors';
+import { onboardingTheme } from '@/features/onboarding/theme/onboardingTheme';
 import { spacing } from '@/ui/theme/spacing';
+import { colors } from '@/ui/theme/colors';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -15,7 +16,6 @@ type OnboardingPrimaryButtonProps = {
   title: string;
   onPress: () => void;
   disabled?: boolean;
-  icon?: keyof typeof Ionicons.glyphMap;
   style?: ViewStyle;
 };
 
@@ -23,7 +23,6 @@ export function OnboardingPrimaryButton({
   title,
   onPress,
   disabled = false,
-  icon,
   style,
 }: OnboardingPrimaryButtonProps) {
   const scale = useSharedValue(1);
@@ -37,22 +36,16 @@ export function OnboardingPrimaryButton({
       onPress={onPress}
       disabled={disabled}
       onPressIn={() => {
-        scale.value = withSpring(0.97, { damping: 15 });
+        scale.value = withSpring(0.98, { damping: 15 });
       }}
       onPressOut={() => {
         scale.value = withSpring(1, { damping: 15 });
       }}
-      style={[
-        styles.btn,
-        disabled && styles.btnDisabled,
-        animStyle,
-        style,
-      ]}>
-      {icon ? (
-        <Ionicons name={icon} size={20} color={colors.textInverse} />
-      ) : null}
+      style={[styles.btn, disabled && styles.btnDisabled, animStyle, style]}>
       <Text style={styles.label}>{title}</Text>
-      <Ionicons name="arrow-forward" size={20} color={colors.textInverse} />
+      <View style={styles.arrowCircle}>
+        <Ionicons name="arrow-forward" size={18} color={onboardingTheme.primary} />
+      </View>
     </AnimatedPressable>
   );
 }
@@ -61,17 +54,17 @@ const styles = StyleSheet.create({
   btn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
+    justifyContent: 'space-between',
+    backgroundColor: onboardingTheme.primary,
     borderRadius: 999,
     paddingVertical: 16,
-    paddingHorizontal: spacing.xl,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.28,
-    shadowRadius: 10,
-    elevation: 4,
+    paddingLeft: spacing.xl,
+    paddingRight: spacing.sm,
+    shadowColor: onboardingTheme.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
   },
   btnDisabled: {
     opacity: 0.45,
@@ -82,5 +75,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textInverse,
     letterSpacing: 0.2,
+  },
+  arrowCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
