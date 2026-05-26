@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -11,6 +11,14 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShallow } from 'zustand/react/shallow';
 
+import { getDistrictProfile } from '@/core/content/districtProfiles';
+import {
+  DEFAULT_PILOT_DISTRICT_ID,
+  type PilotDistrictId,
+} from '@/core/models/DistrictProfile';
+import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
+import { hubAssets } from '@/features/hub/utils/hubAssets';
+import { getTimeGreeting } from '@/features/hub/utils/hubPresentation';
 import { useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
@@ -25,7 +33,7 @@ function AnimatedXpBar({ progress }: { progress: number }) {
       if (width <= 0) return;
       fillWidth.value = 0;
       fillWidth.value = withTiming(width * progress, {
-        duration: 900,
+        duration: 800,
         easing: Easing.out(Easing.cubic),
       });
     },
@@ -60,72 +68,89 @@ function AnimatedXpBar({ progress }: { progress: number }) {
 
 export function HubTopBar() {
   const insets = useSafeAreaInsets();
+  const greeting = useMemo(() => getTimeGreeting(), []);
+
   const {
-    day,
     level,
     xp,
     xpToNextLevel,
     notificationCount,
     streakDays,
-    pilotRegion,
+    pilotDay,
+    districtName,
   } = useGameStore(
-    useShallow((s) => ({
-      day: s.gameState.city.day,
-      level: s.gameState.player.level,
-      xp: s.gameState.player.xp,
-      xpToNextLevel: s.gameState.player.xpToNextLevel,
-      notificationCount: s.gameState.player.notificationCount,
-      streakDays: s.gameState.player.streakDays,
-      pilotRegion:
-        s.neighborhoods[0]?.name.split(' ')[0] ?? s.gameState.city.name,
-    })),
+    useShallow((s) => {
+      const districtId: PilotDistrictId =
+        s.gameState.pilot.selectedDistrictId ?? DEFAULT_PILOT_DISTRICT_ID;
+      const district = getDistrictProfile(districtId);
+      return {
+        level: s.gameState.player.level,
+        xp: s.gameState.player.xp,
+        xpToNextLevel: s.gameState.player.xpToNextLevel,
+        notificationCount: s.gameState.player.notificationCount,
+        streakDays: s.gameState.player.streakDays,
+        pilotDay: s.gameState.pilot.currentPilotDay,
+        districtName: district?.name ?? 'Pilot Bölge',
+      };
+    }),
   );
 
   const xpProgress = xpToNextLevel > 0 ? xp / xpToNextLevel : 0;
 
   return (
-    <View style={[styles.wrapper, { paddingTop: insets.top + spacing.sm }]}>
+    <View style={[styles.wrapper, { paddingTop: insets.top + 8 }]}>
+      {/* Row 1: Avatar + greeting + bell */}
       <View style={styles.topRow}>
-        <View style={styles.profile}>
-          <View style={styles.avatar}>
-            <Ionicons name="person" size={22} color={colors.hubGoldDark} />
-          </View>
-          <View style={styles.greetingBlock}>
-            <Text style={styles.greeting}>Günaydın ☀️</Text>
-            <Text style={styles.meta}>
-              {day}. Gün · Pilot Bölge: {pilotRegion}
-            </Text>
+        <View style={styles.avatarWrap}>
+          <HubAssetImage
+            source={hubAssets.playerAvatar}
+            containerStyle={styles.avatar}
+            style={styles.avatarImage}
+            contentFit="cover"
+          />
+          <View style={styles.avatarLevel}>
+            <Text style={styles.avatarLevelText}>{level}</Text>
           </View>
         </View>
 
+        <View style={styles.greetCol}>
+          <Text style={styles.greetingText}>
+            {greeting.title} Can {greeting.emoji}
+          </Text>
+          <Text style={styles.metaText}>
+            {pilotDay}. Gün · Pilot Bölge: {districtName.split(' ')[0]}
+          </Text>
+        </View>
+
         <Pressable style={styles.bellBtn} accessibilityLabel="Bildirimler">
-          <Ionicons
-            name="notifications-outline"
-            size={22}
-            color={colors.textPrimary}
-          />
+          <Ionicons name="notifications-outline" size={20} color={colors.textPrimary} />
           {notificationCount > 0 && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{notificationCount}</Text>
+              <Text style={styles.badgeText}>
+                {notificationCount > 9 ? '9+' : notificationCount}
+              </Text>
             </View>
           )}
         </Pressable>
       </View>
 
+      {/* Row 2: Level pill + XP bar + streak */}
       <View style={styles.levelRow}>
         <View style={styles.levelPill}>
           <Text style={styles.levelPillText}>Seviye {level}</Text>
         </View>
-        <View style={styles.xpBlock}>
-          <Text style={styles.xpLabel}>
-            XP {xp.toLocaleString('tr-TR')} /{' '}
-            {xpToNextLevel.toLocaleString('tr-TR')}
-          </Text>
+        <View style={styles.xpCol}>
+          <View style={styles.xpLabelRow}>
+            <Text style={styles.xpLabelText}>XP</Text>
+            <Text style={styles.xpValueText}>
+              {xp.toLocaleString('tr-TR')}/{xpToNextLevel.toLocaleString('tr-TR')}
+            </Text>
+          </View>
           <AnimatedXpBar progress={xpProgress} />
         </View>
         <View style={styles.streakPill}>
-          <Ionicons name="flame" size={14} color={colors.warning} />
-          <Text style={styles.streakText}>{Math.max(streakDays, 1)}</Text>
+          <Text style={styles.streakEmoji}>🔥</Text>
+          <Text style={styles.streakNum}>{Math.max(streakDays, 1)}</Text>
         </View>
       </View>
     </View>
@@ -135,50 +160,68 @@ export function HubTopBar() {
 const styles = StyleSheet.create({
   wrapper: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-    gap: spacing.md,
+    paddingBottom: spacing.sm,
+    gap: 10,
     backgroundColor: colors.hubCream,
   },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 10,
   },
-  profile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    flex: 1,
+  avatarWrap: {
+    position: 'relative',
   },
   avatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.hubGoldMuted,
+    overflow: 'hidden',
+    borderWidth: 2.5,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryMuted,
+  },
+  avatarImage: {
+    borderRadius: 24,
+  },
+  avatarLevel: {
+    position: 'absolute',
+    bottom: -3,
+    right: -3,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.hubGold,
     borderWidth: 2,
-    borderColor: colors.surface,
+    borderColor: colors.hubCream,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 3,
   },
-  greetingBlock: {
+  avatarLevelText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  greetCol: {
     flex: 1,
-    gap: 2,
+    gap: 1,
   },
-  greeting: {
+  greetingText: {
     fontSize: 18,
     fontWeight: '800',
     color: colors.textPrimary,
     letterSpacing: -0.3,
   },
-  meta: {
-    fontSize: 12,
-    fontWeight: '500',
+  metaText: {
+    fontSize: 11,
+    fontWeight: '600',
     color: colors.textSecondary,
   },
   bellBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -187,8 +230,8 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: 6,
-    right: 6,
+    top: 2,
+    right: 2,
     minWidth: 16,
     height: 16,
     borderRadius: 8,
@@ -196,63 +239,79 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 3,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: colors.surface,
   },
   badgeText: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '800',
     color: colors.textInverse,
   },
   levelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 8,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
   },
   levelPill: {
     backgroundColor: colors.hubGold,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: radius.full,
   },
   levelPillText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  xpBlock: {
-    flex: 1,
-    gap: 4,
-  },
-  xpLabel: {
     fontSize: 10,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  xpCol: {
+    flex: 1,
+    gap: 3,
+  },
+  xpLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  xpLabelText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  xpValueText: {
+    fontSize: 9,
     fontWeight: '700',
     color: colors.textSecondary,
   },
   xpTrack: {
-    height: 8,
-    borderRadius: 4,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: colors.hubGoldTrack,
     overflow: 'hidden',
   },
   xpFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 3,
     backgroundColor: colors.hubGold,
   },
   streakPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
+    gap: 2,
+    backgroundColor: colors.warningMuted,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  streakText: {
-    fontSize: 13,
+  streakEmoji: {
+    fontSize: 12,
+  },
+  streakNum: {
+    fontSize: 11,
     fontWeight: '800',
     color: colors.warning,
   },

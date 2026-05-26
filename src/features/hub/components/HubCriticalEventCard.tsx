@@ -1,29 +1,136 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated, {
+  FadeInUp,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
-import { getRiskLevelLabel } from '@/core/content/mockGameData';
 import type { EventPreviewEffects } from '@/core/models/EventCard';
+import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
 import { deriveCrisisQueue } from '@/features/hub/utils/hubDerived';
-import { getCategoryIcon } from '@/features/events/utils/eventPresentation';
+import { getEventHeroImage, hubAssets } from '@/features/hub/utils/hubAssets';
+import { getCriticalEventQuote } from '@/features/hub/utils/hubPresentation';
 import { selectActiveEvents, useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
-function formatBudgetPreviewLabel(budget: number): string {
-  if (budget < 0) {
-    return `-₺${Math.abs(budget).toLocaleString('tr-TR')} Bütçe`;
-  }
-  return `₺${budget.toLocaleString('tr-TR')} Bütçe`;
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+function EventIllustration({
+  eventId,
+  category,
+}: {
+  eventId: string;
+  category: string;
+}) {
+  const image = getEventHeroImage(eventId, category);
+  return (
+    <View style={illStyles.wrap}>
+      <View style={illStyles.glow} />
+      <HubAssetImage
+        source={image}
+        containerStyle={illStyles.frame}
+        style={illStyles.image}
+        contentFit="contain"
+      />
+      <View style={illStyles.alertIcon}>
+        <Ionicons name="alert-circle" size={10} color="#fff" />
+      </View>
+    </View>
+  );
 }
 
-function hasBudgetPreview(effects: EventPreviewEffects): boolean {
-  return effects.budget != null && effects.budget !== 0;
+const illStyles = StyleSheet.create({
+  wrap: {
+    width: 76,
+    alignSelf: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    marginTop: 2,
+  },
+  glow: {
+    position: 'absolute',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.warningMuted,
+    opacity: 0.85,
+  },
+  frame: {
+    width: 70,
+    height: 70,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: '#EDD9A3',
+  },
+  image: {
+    borderRadius: 14,
+  },
+  alertIcon: {
+    position: 'absolute',
+    top: -2,
+    right: 0,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+});
+
+function ImpactChip({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: 'positive' | 'negative' | 'warning';
+}) {
+  const bg =
+    tone === 'positive'
+      ? colors.successMuted
+      : tone === 'negative'
+        ? colors.dangerMuted
+        : colors.warningMuted;
+  const fg =
+    tone === 'positive'
+      ? colors.success
+      : tone === 'negative'
+        ? colors.danger
+        : colors.warning;
+  return (
+    <View style={[chipStyles.chip, { backgroundColor: bg }]}>
+      <Text style={[chipStyles.text, { color: fg }]}>{label}</Text>
+    </View>
+  );
 }
+
+const chipStyles = StyleSheet.create({
+  chip: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
+  },
+  text: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+});
 
 export function HubCriticalEventCard() {
   const router = useRouter();
@@ -38,93 +145,135 @@ export function HubCriticalEventCard() {
     return queue[0]?.event ?? null;
   }, [activeEvents, featuredId]);
 
+  const ctaScale = useSharedValue(1);
+  const ctaAnim = useAnimatedStyle(() => ({
+    transform: [{ scale: ctaScale.value }],
+  }));
+
   if (!event) {
     return (
       <Animated.View
-        entering={FadeInUp.duration(300).springify().damping(22)}
-        style={[styles.card, styles.emptyCard, shadows.card]}>
-        <Ionicons name="shield-checkmark" size={32} color={colors.success} />
-        <Text style={styles.emptyTitle}>Kritik olay yok</Text>
-        <Text style={styles.emptySub}>Bölge şu an sakin görünüyor.</Text>
+        entering={FadeInUp.duration(280)}
+        style={[styles.card, styles.emptyCard, shadows.soft]}>
+        <HubAssetImage
+          source={hubAssets.regionCalm}
+          containerStyle={styles.emptyImage}
+          contentFit="contain"
+        />
+        <Text style={styles.emptyTitle}>Bugün kritik olay yok</Text>
+        <Text style={styles.emptySub}>Ekip hazır, yeni uyarı beklenmiyor.</Text>
       </Animated.View>
     );
   }
 
-  const previewEffects = event.previewEffects;
-  const satPositive = previewEffects.publicSatisfaction >= 0;
-  const budgetDelta = previewEffects.budget;
-  const showBudgetImpact = hasBudgetPreview(previewEffects);
+  const effects: EventPreviewEffects = event.previewEffects;
+  const quote = getCriticalEventQuote(advisorBody);
+  const goToEvent = () => router.push(`/events/${event.id}`);
+
+  const hasImpacts =
+    effects.publicSatisfaction !== 0 ||
+    (effects.budget != null && effects.budget !== 0) ||
+    effects.risk !== 0;
 
   return (
     <Animated.View
-      entering={FadeInUp.delay(40).duration(340).springify().damping(22)}
+      entering={FadeInUp.delay(30).duration(320).springify().damping(20)}
       style={[styles.card, shadows.card]}>
-      <View style={styles.priorityBar}>
-        <Ionicons name="warning" size={14} color={colors.textInverse} />
-        <Text style={styles.priorityText}>Günün Kritik Olayı</Text>
-        <View style={styles.priorityTag}>
-          <Text style={styles.priorityTagText}>Yüksek Öncelik</Text>
-        </View>
-      </View>
-
-      <View style={styles.body}>
-        <View style={styles.mainCol}>
-          <View style={styles.titleRow}>
-            <View style={styles.catIcon}>
-              <Ionicons
-                name={getCategoryIcon(event.category)}
-                size={18}
-                color={colors.warning}
-              />
+      <Pressable onPress={goToEvent} accessibilityRole="button">
+        <LinearGradient
+          colors={['#F2C97A', '#E5AD4A', '#D99B3A']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}>
+          <View style={styles.headerLeft}>
+            <View style={styles.flameBadge}>
+              <Ionicons name="flame" size={12} color={colors.hubGoldDark} />
             </View>
-            <View style={styles.titleBlock}>
-              <Text style={styles.title}>{event.title}</Text>
-              <Text style={styles.location}>{event.district}</Text>
-            </View>
+            <Text style={styles.headerText}>Günün Kritik Olayı</Text>
           </View>
+          <View style={styles.priorityBadge}>
+            <Text style={styles.priorityText}>Yüksek Öncelik</Text>
+          </View>
+        </LinearGradient>
+      </Pressable>
 
-          <View style={styles.speechBubble}>
-            <Text style={styles.speechText} numberOfLines={2}>
-              {advisorBody.split('.')[0] ?? 'Bu konu acil çözülmeli.'}
+      <Pressable onPress={goToEvent} style={styles.body} accessibilityRole="button">
+        <View style={styles.leftCol}>
+          <Text style={styles.title} numberOfLines={2}>
+            {event.title}
+          </Text>
+          <View style={styles.locRow}>
+            <Ionicons name="location-outline" size={12} color={colors.hubGoldDark} />
+            <Text style={styles.locText} numberOfLines={1}>
+              {event.district}
+              {event.neighborhoodId ? ` · ${event.neighborhoodId}` : ''}
             </Text>
           </View>
 
-          <View style={styles.impacts}>
-            <View style={[styles.impact, { backgroundColor: colors.successMuted }]}>
-              <Text style={[styles.impactText, { color: colors.success }]}>
-                {satPositive ? '+' : ''}
-                {previewEffects.publicSatisfaction} Memnuniyet
-              </Text>
-            </View>
-            {showBudgetImpact && budgetDelta != null ? (
-              <View style={[styles.impact, { backgroundColor: colors.dangerMuted }]}>
-                <Text style={[styles.impactText, { color: colors.danger }]}>
-                  {formatBudgetPreviewLabel(budgetDelta)}
-                </Text>
-              </View>
-            ) : null}
-            <View style={[styles.impact, { backgroundColor: colors.warningMuted }]}>
-              <Text style={[styles.impactText, { color: colors.warning }]}>
-                {previewEffects.risk > 0 ? '+' : ''}
-                {previewEffects.risk} Risk
+          <View style={styles.quoteWrap}>
+            <HubAssetImage
+              source={hubAssets.advisorPortrait}
+              containerStyle={styles.quoteAvatar}
+              contentFit="cover"
+            />
+            <View style={styles.bubble}>
+              <Text style={styles.quoteText} numberOfLines={2}>
+                &ldquo;{quote}&rdquo;
               </Text>
             </View>
           </View>
 
-          <Pressable
-            onPress={() => router.push(`/events/${event.id}`)}
-            style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}>
-            <Text style={styles.ctaText}>Karar Ver ›</Text>
-          </Pressable>
+          {hasImpacts && (
+            <View style={styles.impactsBlock}>
+              <Text style={styles.impactsLabel}>Çözülmezse</Text>
+              <View style={styles.impacts}>
+                {effects.publicSatisfaction !== 0 && (
+                  <ImpactChip
+                    label={`${effects.publicSatisfaction > 0 ? '+' : ''}${effects.publicSatisfaction} Memnuniyet`}
+                    tone={effects.publicSatisfaction > 0 ? 'positive' : 'negative'}
+                  />
+                )}
+                {effects.budget != null && effects.budget !== 0 && (
+                  <ImpactChip
+                    label={`${effects.budget > 0 ? '+' : '-'}₺${Math.abs(effects.budget)} Bütçe`}
+                    tone={effects.budget > 0 ? 'positive' : 'negative'}
+                  />
+                )}
+                {effects.risk !== 0 && (
+                  <ImpactChip
+                    label={`${effects.risk > 0 ? '+' : ''}${effects.risk} Risk`}
+                    tone="warning"
+                  />
+                )}
+              </View>
+            </View>
+          )}
         </View>
 
-        <View style={styles.illustration}>
-          <View style={styles.dumpster} />
-          <View style={styles.dumpsterLid} />
-          <Text style={styles.riskLabel}>
-            {getRiskLevelLabel(event.riskLevel)}
-          </Text>
-        </View>
+        <EventIllustration eventId={event.id} category={event.category} />
+      </Pressable>
+
+      <View style={styles.ctaWrap}>
+        <AnimatedPressable
+          onPressIn={() => {
+            ctaScale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
+          }}
+          onPressOut={() => {
+            ctaScale.value = withSpring(1, { damping: 15, stiffness: 300 });
+          }}
+          onPress={goToEvent}
+          accessibilityRole="button"
+          accessibilityLabel="Karar ver"
+          style={[styles.cta, ctaAnim]}>
+          <LinearGradient
+            colors={[colors.headerTealDark, colors.primary, '#24A89E']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.ctaGradient}>
+            <Text style={styles.ctaText}>Karar Ver</Text>
+            <Ionicons name="chevron-forward" size={17} color="#fff" />
+          </LinearGradient>
+        </AnimatedPressable>
       </View>
     </Animated.View>
   );
@@ -136,153 +285,170 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#E8D9B8',
     overflow: 'hidden',
   },
   emptyCard: {
     padding: spacing.xl,
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 6,
+    borderColor: colors.border,
   },
   emptyTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.textPrimary,
   },
   emptySub: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textSecondary,
   },
-  priorityBar: {
+  emptyImage: {
+    width: 72,
+    height: 72,
+  },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.warning,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 11,
   },
-  priorityText: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.textInverse,
-    letterSpacing: 0.2,
-  },
-  priorityTag: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: radius.sm,
-  },
-  priorityTagText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textInverse,
-  },
-  body: {
+  headerLeft: {
     flexDirection: 'row',
-    padding: spacing.lg,
-    gap: spacing.md,
+    alignItems: 'center',
+    gap: 7,
   },
-  mainCol: {
-    flex: 1,
-    gap: spacing.sm,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    alignItems: 'flex-start',
-  },
-  catIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.warningMuted,
+  flameBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255,255,255,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  titleBlock: {
+  headerText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#5C3D0A',
+    letterSpacing: 0.2,
+  },
+  priorityBadge: {
+    backgroundColor: 'rgba(92, 61, 10, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(92, 61, 10, 0.08)',
+  },
+  priorityText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#5C3D0A',
+    letterSpacing: 0.3,
+  },
+  body: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    gap: 12,
+    backgroundColor: '#FFFCF7',
+  },
+  leftCol: {
     flex: 1,
-    gap: 2,
+    gap: 10,
+    minWidth: 0,
   },
   title: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '800',
     color: colors.textPrimary,
+    letterSpacing: -0.35,
+    lineHeight: 22,
   },
-  location: {
-    fontSize: 12,
-    fontWeight: '500',
+  locRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: -2,
+  },
+  locText: {
+    fontSize: 11,
+    fontWeight: '600',
     color: colors.textSecondary,
+    flex: 1,
   },
-  speechBubble: {
-    backgroundColor: colors.backgroundAlt,
-    borderRadius: radius.md,
-    padding: spacing.sm,
+  quoteWrap: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 2,
+  },
+  quoteAvatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    marginTop: 1,
+  },
+  bubble: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    borderTopLeftRadius: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  speechText: {
-    fontSize: 12,
+  quoteText: {
+    fontSize: 10,
     fontWeight: '600',
-    color: colors.textPrimary,
     fontStyle: 'italic',
-    lineHeight: 17,
+    color: colors.textPrimary,
+    lineHeight: 13,
+  },
+  impactsBlock: {
+    marginTop: 2,
+    gap: 0,
+  },
+  impactsLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: colors.textSecondary,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginBottom: 6,
   },
   impacts: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
   },
-  impact: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-  },
-  impactText: {
-    fontSize: 10,
-    fontWeight: '700',
+  ctaWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 16,
+    backgroundColor: '#FFFCF7',
   },
   cta: {
-    backgroundColor: '#2C2C2E',
     borderRadius: radius.full,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: spacing.xs,
+    overflow: 'hidden',
   },
-  ctaPressed: {
-    opacity: 0.9,
-  },
-  ctaText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.textInverse,
-  },
-  illustration: {
-    width: 72,
+  ctaGradient: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
+    gap: 6,
+    paddingVertical: 14,
   },
-  dumpster: {
-    width: 48,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: colors.success,
-    opacity: 0.85,
-  },
-  dumpsterLid: {
-    width: 52,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.success,
-    marginTop: -4,
-    opacity: 0.6,
-  },
-  riskLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
+  ctaText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: -0.2,
   },
 });

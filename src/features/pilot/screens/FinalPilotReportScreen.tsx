@@ -240,8 +240,10 @@ export function FinalPilotReportScreen() {
         </View>
         <View style={styles.lockActions}>
           <GameButton
-            title="Ana Operasyonu İncele"
-            onPress={() => router.push('/events/main-operation-preview')}
+            title="Ana Operasyon Önizlemesine Devam"
+            onPress={() =>
+              router.replace('/events/main-operation-preview')
+            }
             style={styles.fullBtn}
           />
           <GameButton

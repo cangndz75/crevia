@@ -1,69 +1,39 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
+import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
 import { useHubDerivedInput } from '@/features/hub/hooks/useHubDerivedInput';
 import {
   deriveHubMetricCards,
   type HubMetricCard,
 } from '@/features/hub/utils/hubDerived';
+import { getMetricIcon } from '@/features/hub/utils/hubAssets';
 import { useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
-import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
-const iconMap: Record<
-  HubMetricCard['icon'],
-  keyof typeof Ionicons.glyphMap
-> = {
-  operasyon: 'bus-outline',
-  halk: 'people-outline',
-  butce: 'cash-outline',
-  ekip: 'person-outline',
-};
-
-function MetricTile({
-  metric,
-  index,
-}: {
-  metric: HubMetricCard;
-  index: number;
-}) {
+function MetricTile({ m }: { m: HubMetricCard }) {
   return (
-    <Animated.View
-      entering={FadeInDown.delay(index * 60).springify()}
-      style={[styles.tile, shadows.soft]}>
-      <View style={styles.tileTop}>
-        <View style={[styles.iconCircle, { backgroundColor: metric.muted }]}>
-          <Ionicons
-            name={iconMap[metric.icon]}
-            size={18}
-            color={metric.accent}
-          />
-        </View>
-        <View
-          style={[
-            styles.trendPill,
-            {
-              backgroundColor: metric.trendUp
-                ? colors.successMuted
-                : colors.dangerMuted,
-            },
-          ]}>
-          <Text
-            style={[
-              styles.trendText,
-              { color: metric.trendUp ? colors.success : colors.danger },
-            ]}>
-            {metric.trend}
-          </Text>
-        </View>
+    <View style={styles.tile}>
+      <View style={[styles.iconBadge, { backgroundColor: m.muted }]}>
+        <HubAssetImage
+          source={getMetricIcon(m.icon)}
+          containerStyle={styles.iconImage}
+          contentFit="contain"
+        />
       </View>
-      <Text style={styles.value}>{metric.value}</Text>
-      <Text style={styles.label}>{metric.label}</Text>
-    </Animated.View>
+      <Text style={styles.label}>{m.label}</Text>
+      <Text style={styles.value}>{m.value}</Text>
+      {m.showTrend ? (
+        <Text style={[styles.trend, { color: m.trendUp ? colors.success : colors.danger }]}>
+          {m.trend}
+        </Text>
+      ) : (
+        <Text style={[styles.trend, { color: colors.textSecondary }]}>{m.trend}</Text>
+      )}
+    </View>
   );
 }
 
@@ -76,63 +46,59 @@ export function HubMetricsGrid() {
   );
 
   return (
-    <View style={styles.grid}>
-      {metrics.map((m, i) => (
-        <MetricTile key={m.id} metric={m} index={i} />
+    <Animated.View entering={FadeIn.duration(250)} style={styles.wrap}>
+      {metrics.map((m) => (
+        <MetricTile key={m.id} m={m} />
       ))}
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  grid: {
+  wrap: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
     paddingHorizontal: spacing.lg,
+    gap: 8,
   },
   tile: {
-    width: '48%',
-    flexGrow: 1,
-    flexBasis: '46%',
+    flex: 1,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
-    gap: 4,
-    minHeight: 96,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    gap: 3,
   },
-  tileTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+  iconBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    marginBottom: 2,
   },
-  trendPill: {
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: radius.full,
-  },
-  trendText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  value: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    marginTop: spacing.xs,
+  iconImage: {
+    width: 26,
+    height: 26,
   },
   label: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 9,
+    fontWeight: '700',
     color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  value: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+  },
+  trend: {
+    fontSize: 9,
+    fontWeight: '700',
   },
 });

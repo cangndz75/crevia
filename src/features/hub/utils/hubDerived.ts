@@ -5,6 +5,10 @@ import type { Neighborhood } from '@/core/models/Neighborhood';
 import type { OpsPulseStatus } from '@/core/models/OperationsBrief';
 import type { GameResources } from '@/core/models/GameResources';
 import {
+  getRegionAvatarColor,
+  getRegionMoodLabel,
+} from '@/features/hub/utils/hubPresentation';
+import {
   eventRecurrenceRisk,
   eventSeverity,
   eventVisibility,
@@ -189,6 +193,7 @@ export type HubMetricCard = {
   value: string;
   trend: string;
   trendUp: boolean;
+  showTrend: boolean;
   icon: 'operasyon' | 'halk' | 'butce' | 'ekip';
   accent: string;
   muted: string;
@@ -198,24 +203,29 @@ export function deriveHubMetricCards(
   input: HubDerivedInput,
   resources: GameResources,
 ): HubMetricCard[] {
-  const { metrics, activeEvents } = input;
+  const { metrics, activeEvents, decisionCount } = input;
   const risk = deriveHubRiskScore(input);
   const operasyon = Math.max(0, Math.min(100, 100 - risk.score * 0.65));
   const halk = metrics.publicSatisfaction / 10;
   const budgetK = metrics.budget / 1000;
   const ekip = resources.availableStaff;
 
+  const showTrend = decisionCount > 0;
+
   const satDelta = metrics.publicSatisfaction - 55;
   const budgetDelta = ((metrics.budget - 75_000) / 75_000) * 100;
   const moraleDelta = metrics.staffMorale - 65;
+  const opsDelta =
+    activeEvents.length > 2 ? activeEvents.length * 4 : decisionCount > 0 ? 8 : 0;
 
   return [
     {
       id: 'operasyon',
       label: 'Operasyon',
       value: String(Math.round(operasyon)),
-      trend: activeEvents.length > 2 ? `+${activeEvents.length * 4}%` : '+12%',
+      trend: showTrend ? `↑ ${opsDelta}%` : 'Stabil',
       trendUp: operasyon >= 60,
+      showTrend,
       icon: 'operasyon',
       accent: '#3BAF7A',
       muted: '#E8F7F0',
@@ -224,8 +234,11 @@ export function deriveHubMetricCards(
       id: 'halk',
       label: 'Halk',
       value: halk.toFixed(1),
-      trend: `${satDelta >= 0 ? '+' : ''}${(satDelta / 10).toFixed(1)}`,
+      trend: showTrend
+        ? `${satDelta >= 0 ? '↑' : '↓'} ${Math.abs(satDelta / 10).toFixed(1)}`
+        : 'Nötr',
       trendUp: satDelta >= 0,
+      showTrend,
       icon: 'halk',
       accent: '#7B5BB8',
       muted: '#F0EBFA',
@@ -234,21 +247,27 @@ export function deriveHubMetricCards(
       id: 'butce',
       label: 'Bütçe',
       value: `₺${budgetK.toFixed(1)}K`,
-      trend: `${budgetDelta >= 0 ? '+' : ''}${Math.round(budgetDelta)}%`,
+      trend: showTrend
+        ? `${budgetDelta >= 0 ? '↑' : '↓'} ${Math.abs(Math.round(budgetDelta))}%`
+        : 'Nötr',
       trendUp: budgetDelta >= 0,
+      showTrend,
       icon: 'butce',
-      accent: '#3BAF7A',
-      muted: '#E8F7F0',
+      accent: '#2E9B8C',
+      muted: '#E6F5F4',
     },
     {
       id: 'ekip',
       label: 'Ekip Gücü',
       value: `${ekip}/30`,
-      trend: moraleDelta >= 0 ? `+${moraleDelta}` : `${moraleDelta}`,
+      trend: showTrend
+        ? `${moraleDelta >= 0 ? '↑' : '↓'} ${Math.abs(moraleDelta)}`
+        : 'Hazır',
       trendUp: moraleDelta >= 0,
+      showTrend,
       icon: 'ekip',
-      accent: '#3BAF7A',
-      muted: '#E8F7F0',
+      accent: '#E89B2E',
+      muted: '#FDF4E6',
     },
   ];
 }
@@ -260,7 +279,9 @@ export type RegionPulseItem = {
   activeCount: number;
   mood: '😟' | '😠' | '🙂' | '😊';
   pulseColor: string;
-  contactLabel: string;
+  statusLabel: string;
+  detailLine: string;
+  avatarColor: string;
 };
 
 export function deriveRegionPulse(
@@ -286,6 +307,19 @@ export function deriveRegionPulse(
           ? '#E05A52'
           : '#3BAF7A';
     const shortName = n.name.split(' ')[0] ?? n.name;
+    let detailLine: string;
+    if (activeCount === 0) {
+      if (n.trust < 48) detailLine = 'Güven zayıf';
+      else if (n.cleanliness < 52) detailLine = 'Temizlik riski';
+      else if (n.longTermNeglect >= 45) detailLine = 'İhmal izleniyor';
+      else if (n.trust >= 55) detailLine = 'Güven yüksek';
+      else detailLine = 'Olay beklenmiyor';
+    } else if (n.trust < 48) detailLine = 'Halk tedirgin';
+    else if (n.cleanliness < 52) detailLine = 'Bakım bekliyor';
+    else if (n.longTermNeglect >= 45) detailLine = 'Esnaf baskısı';
+    else if (activeCount >= 2) detailLine = `${activeCount} olay aktif`;
+    else detailLine = 'Takipte';
+
     return {
       id: n.id,
       name: n.name,
@@ -293,7 +327,9 @@ export function deriveRegionPulse(
       activeCount,
       mood,
       pulseColor,
-      contactLabel: `Muhtar ${shortName}`,
+      statusLabel: getRegionMoodLabel(mood, activeCount),
+      detailLine,
+      avatarColor: getRegionAvatarColor(shortName),
     };
   });
 }

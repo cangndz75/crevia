@@ -1,6 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
 import { useHubDerivedInput } from '@/features/hub/hooks/useHubDerivedInput';
 import { deriveDay1Missions } from '@/features/hub/utils/hubDerived';
@@ -9,79 +15,145 @@ import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
-export function HubDailyGoalCard() {
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+type HubDailyGoalCardProps = {
+  onEndDay: () => void;
+};
+
+export function HubDailyGoalCard({ onEndDay }: HubDailyGoalCardProps) {
   const input = useHubDerivedInput();
   const missions = useMemo(() => deriveDay1Missions(input), [input]);
-  const primary = missions[0];
   const completed = missions.filter((m) => m.status === 'completed').length;
-  const progress = primary ? Math.min(primary.current / primary.target, 1) : 0;
+  const total = missions.length;
+  const progress = total > 0 ? completed / total : 0;
   const totalXp = missions.reduce((s, m) => s + m.xpReward, 0);
+  const primary = missions[0];
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: scale.value < 1 ? 0.94 : 1,
+  }));
 
   if (!primary) return null;
 
   return (
-    <View style={[styles.card, shadows.soft]}>
-      <View style={styles.left}>
-        <Text style={styles.label}>Günlük Hedef</Text>
-        <Text style={styles.goal} numberOfLines={2}>
-          {completed >= 2
-            ? 'Günlük hedeflere yaklaşıyorsun'
-            : `${primary.target} kritik olayı çöz`}
-        </Text>
-        <View style={styles.progressRow}>
-          <View style={styles.track}>
-            <View style={[styles.fill, { width: `${progress * 100}%` }]} />
-          </View>
-          <Text style={styles.progressText}>
-            {completed}/{missions.length} tamamlandı
+    <View style={[styles.panel, shadows.card]}>
+      <View style={styles.goalSection}>
+        <View style={styles.trophyCircle}>
+          <Ionicons name="trophy" size={18} color={colors.hubGoldDark} />
+        </View>
+
+        <View style={styles.goalContent}>
+          <Text style={styles.sectionLabel}>GÜNLÜK HEDEF</Text>
+          <Text style={styles.goalText} numberOfLines={1}>
+            {primary.target} kritik olayı çöz
           </Text>
+          <View style={styles.progressRow}>
+            <View style={styles.track}>
+              <View
+                style={[styles.fill, { width: `${Math.round(progress * 100)}%` }]}
+              />
+            </View>
+            <Text style={styles.progressText}>
+              {completed}/{total} tamamlandı
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.reward}>
+          <Text style={styles.rewardLabel}>Ödül</Text>
+          <Text style={styles.xp}>+{totalXp} XP</Text>
         </View>
       </View>
-      <View style={styles.reward}>
-        <Ionicons name="medal" size={28} color={colors.hubGold} />
-        <Text style={styles.xpReward}>+{totalXp} XP</Text>
+
+      <View style={styles.endDayFooter}>
+        <AnimatedPressable
+          onPress={onEndDay}
+          onPressIn={() => {
+            scale.value = withSpring(0.98, { damping: 15, stiffness: 300 });
+          }}
+          onPressOut={() => {
+            scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Günü bitir"
+          style={[styles.endDayBtn, animatedStyle]}>
+          <LinearGradient
+            colors={['#0F4A47', colors.headerTealDark, colors.primary]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.endDayGradient}>
+            <View style={styles.endDayLeft}>
+              <View style={styles.flagBadge}>
+                <Ionicons name="flag" size={15} color="#FFFFFF" />
+              </View>
+              <View style={styles.endDayTextCol}>
+                <Text style={styles.endDayTitle}>Günü Bitir</Text>
+                <Text style={styles.endDayHint}>Günün raporunu gör</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={19} color="rgba(255,255,255,0.95)" />
+          </LinearGradient>
+        </AnimatedPressable>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  panel: {
+    marginHorizontal: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: '#E8D9B8',
+    overflow: 'hidden',
+  },
+  goalSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: spacing.lg,
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 12,
     backgroundColor: colors.hubGoldMuted,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: '#F0E0B8',
-    padding: spacing.lg,
-    gap: spacing.md,
   },
-  left: {
+  trophyCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.hubGold,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  goalContent: {
     flex: 1,
-    gap: spacing.xs,
+    gap: 4,
+    minWidth: 0,
   },
-  label: {
-    fontSize: 11,
+  sectionLabel: {
+    fontSize: 9,
     fontWeight: '800',
     color: colors.hubGoldDark,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
+    letterSpacing: 0.9,
   },
-  goal: {
+  goalText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.textPrimary,
-    lineHeight: 19,
+    letterSpacing: -0.2,
   },
   progressRow: {
     gap: 4,
-    marginTop: spacing.xs,
   },
   track: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: 'rgba(255,255,255,0.65)',
     overflow: 'hidden',
   },
   fill: {
@@ -90,17 +162,82 @@ const styles = StyleSheet.create({
     backgroundColor: colors.hubGold,
   },
   progressText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     color: colors.textSecondary,
   },
   reward: {
     alignItems: 'center',
-    gap: 4,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hubGold,
+    gap: 1,
   },
-  xpReward: {
-    fontSize: 12,
+  rewardLabel: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  xp: {
+    fontSize: 13,
     fontWeight: '800',
     color: colors.hubGoldDark,
+  },
+  endDayFooter: {
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+    paddingTop: 2,
+    backgroundColor: '#FFFCF7',
+  },
+  endDayBtn: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    shadowColor: '#0D3D3A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.14,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  endDayGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 15,
+    paddingHorizontal: 14,
+  },
+  endDayLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  flagBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  endDayTextCol: {
+    gap: 2,
+  },
+  endDayTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.25,
+  },
+  endDayHint: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.8)',
   },
 });

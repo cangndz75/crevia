@@ -13,7 +13,7 @@ type TabConfig = {
 };
 
 const TAB_CONFIG: Record<string, TabConfig> = {
-  index: { label: 'Ana Sayfa', icon: 'home-outline', iconFocused: 'home' },
+  index: { label: 'Merkez', icon: 'home-outline', iconFocused: 'home' },
   events: { label: 'Operasyon', icon: 'flash-outline', iconFocused: 'flash' },
   risks: { label: 'Harita', icon: 'map-outline', iconFocused: 'map' },
   progression: {
