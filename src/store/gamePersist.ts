@@ -1,14 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createJSONStorage, type StateStorage } from 'zustand/middleware';
 
+import { createDefaultPilotState } from '@/core/game/createDefaultPilotState';
+import type { GameState } from '@/core/models/GameState';
+import type { PilotGameState } from '@/core/models/PilotGameState';
+
 import type { GameStore } from './useGameStore';
 
 // ---------------------------------------------------------------------------
 // Save version & storage key
 // ---------------------------------------------------------------------------
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
+/** Anahtar değişmedi — v1 kayıtları aynı AsyncStorage girişinden okunur. */
 export const GAME_STORAGE_KEY = 'crevia-game-state-v1';
+
+const LEGACY_SAVE_VERSION = 1;
 
 // ---------------------------------------------------------------------------
 // Persisted shape — only serialisable data, no actions / derived
@@ -51,33 +58,103 @@ export function partialiseGameState(
 }
 
 // ---------------------------------------------------------------------------
-// Validation — reject corrupt saves gracefully
+// Validation & migration
 // ---------------------------------------------------------------------------
 
 function isRecord(val: unknown): val is Record<string, unknown> {
   return val !== null && typeof val === 'object' && !Array.isArray(val);
 }
 
-export function isValidSave(raw: unknown): raw is PersistedGameState {
-  if (!isRecord(raw)) return false;
-  if ((raw as { saveVersion?: unknown }).saveVersion !== SAVE_VERSION) return false;
+function isPilotStatus(val: unknown): val is PilotGameState['status'] {
+  return (
+    val === 'not_started' || val === 'active' || val === 'completed'
+  );
+}
 
+function isValidPilotState(val: unknown): val is PilotGameState {
+  if (!isRecord(val)) return false;
+  if (typeof val.currentPilotDay !== 'number') return false;
+  if (!isPilotStatus(val.status)) return false;
+  if (!Array.isArray(val.completedEventIds)) return false;
+  if (!Array.isArray(val.pendingConsequences)) return false;
+  if (!isRecord(val.flags)) return false;
+  return true;
+}
+
+function ensurePilotOnGameState(gameState: GameState): GameState {
+  if (isValidPilotState(gameState.pilot)) {
+    return gameState;
+  }
+  return {
+    ...gameState,
+    pilot: createDefaultPilotState(),
+  };
+}
+
+function validatePersistedCore(raw: Record<string, unknown>): boolean {
   const gs = raw.gameState;
   if (!isRecord(gs)) return false;
 
-  const city = (gs as Record<string, unknown>).city;
+  const city = gs.city;
   if (!isRecord(city)) return false;
   if (typeof city.day !== 'number') return false;
 
-  const player = (gs as Record<string, unknown>).player;
+  const player = gs.player;
   if (!isRecord(player)) return false;
   if (typeof player.xp !== 'number') return false;
   if (typeof player.level !== 'number') return false;
 
-  if (!Array.isArray((gs as Record<string, unknown>).events)) return false;
+  if (!Array.isArray(gs.events)) return false;
   if (!Array.isArray(raw.decisionHistory)) return false;
 
   return true;
+}
+
+/**
+ * v1 kayıtları pilot alanı olmadan gelebilir; v2'ye yükseltir.
+ * Geçersiz kayıtlar için null döner.
+ */
+export function normalizePersistedSave(
+  raw: unknown,
+): PersistedGameState | null {
+  if (!isRecord(raw)) return null;
+
+  const version = raw.saveVersion;
+  if (version !== LEGACY_SAVE_VERSION && version !== SAVE_VERSION) {
+    return null;
+  }
+
+  if (!validatePersistedCore(raw)) return null;
+
+  const gameState = ensurePilotOnGameState(
+    raw.gameState as GameState,
+  );
+
+  return {
+    gameState,
+    neighborhoods: raw.neighborhoods as PersistedGameState['neighborhoods'],
+    resources: raw.resources as PersistedGameState['resources'],
+    eventPool: raw.eventPool as PersistedGameState['eventPool'],
+    decisionHistory:
+      raw.decisionHistory as PersistedGameState['decisionHistory'],
+    snapshots: (raw.snapshots ?? []) as PersistedGameState['snapshots'],
+    lastDailyReport:
+      (raw.lastDailyReport as PersistedGameState['lastDailyReport']) ??
+      null,
+    lastClosedDay:
+      (raw.lastClosedDay as PersistedGameState['lastClosedDay']) ?? null,
+    saveVersion: SAVE_VERSION,
+    updatedAt:
+      typeof raw.updatedAt === 'string'
+        ? raw.updatedAt
+        : new Date().toISOString(),
+  };
+}
+
+export function isValidSave(raw: unknown): raw is PersistedGameState {
+  const normalized = normalizePersistedSave(raw);
+  if (!normalized) return false;
+  return normalized.saveVersion === SAVE_VERSION;
 }
 
 // ---------------------------------------------------------------------------

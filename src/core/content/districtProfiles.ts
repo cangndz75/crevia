@@ -1,12 +1,11 @@
-import type { DistrictProfile } from '@/core/models/DistrictProfile';
+import {
+  PILOT_DISTRICT_IDS,
+  type DistrictProfile,
+  type PilotDistrictId,
+} from '@/core/models/DistrictProfile';
 
-export const PILOT_DISTRICT_IDS = [
-  'central',
-  'cumhuriyet',
-  'industrial_market',
-] as const;
-
-export type PilotDistrictId = (typeof PILOT_DISTRICT_IDS)[number];
+export type { PilotDistrictId } from '@/core/models/DistrictProfile';
+export { PILOT_DISTRICT_IDS } from '@/core/models/DistrictProfile';
 
 export const districtProfiles: Record<PilotDistrictId, DistrictProfile> = {
   central: {

@@ -10,6 +10,7 @@ import {
   EventOpportunity,
   SolvedEvent,
 } from './EventCard';
+import { PilotGameState } from './PilotGameState';
 import { PlayerState } from './PlayerState';
 import { RiskItem } from './RiskItem';
 
@@ -32,4 +33,5 @@ export type GameState = {
     critical: number;
   };
   operationsBrief: OperationsBrief;
+  pilot: PilotGameState;
 };

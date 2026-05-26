@@ -2,8 +2,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
 import { getRiskLevelLabel } from '@/core/content/mockGameData';
+import type { EventPreviewEffects } from '@/core/models/EventCard';
 import { deriveCrisisQueue } from '@/features/hub/utils/hubDerived';
 import { getCategoryIcon } from '@/features/events/utils/eventPresentation';
 import { selectActiveEvents, useGameStore } from '@/store/useGameStore';
@@ -11,6 +13,17 @@ import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
+
+function formatBudgetPreviewLabel(budget: number): string {
+  if (budget < 0) {
+    return `-₺${Math.abs(budget).toLocaleString('tr-TR')} Bütçe`;
+  }
+  return `₺${budget.toLocaleString('tr-TR')} Bütçe`;
+}
+
+function hasBudgetPreview(effects: EventPreviewEffects): boolean {
+  return effects.budget != null && effects.budget !== 0;
+}
 
 export function HubCriticalEventCard() {
   const router = useRouter();
@@ -27,19 +40,25 @@ export function HubCriticalEventCard() {
 
   if (!event) {
     return (
-      <View style={[styles.card, styles.emptyCard, shadows.card]}>
+      <Animated.View
+        entering={FadeInUp.duration(300).springify().damping(22)}
+        style={[styles.card, styles.emptyCard, shadows.card]}>
         <Ionicons name="shield-checkmark" size={32} color={colors.success} />
         <Text style={styles.emptyTitle}>Kritik olay yok</Text>
         <Text style={styles.emptySub}>Bölge şu an sakin görünüyor.</Text>
-      </View>
+      </Animated.View>
     );
   }
 
-  const { previewEffects } = event;
+  const previewEffects = event.previewEffects;
   const satPositive = previewEffects.publicSatisfaction >= 0;
+  const budgetDelta = previewEffects.budget;
+  const showBudgetImpact = hasBudgetPreview(previewEffects);
 
   return (
-    <View style={[styles.card, shadows.card]}>
+    <Animated.View
+      entering={FadeInUp.delay(40).duration(340).springify().damping(22)}
+      style={[styles.card, shadows.card]}>
       <View style={styles.priorityBar}>
         <Ionicons name="warning" size={14} color={colors.textInverse} />
         <Text style={styles.priorityText}>Günün Kritik Olayı</Text>
@@ -77,14 +96,13 @@ export function HubCriticalEventCard() {
                 {previewEffects.publicSatisfaction} Memnuniyet
               </Text>
             </View>
-            <View style={[styles.impact, { backgroundColor: colors.dangerMuted }]}>
-              <Text style={[styles.impactText, { color: colors.danger }]}>
-                {previewEffects.budget < 0
-                  ? `-₺${Math.abs(previewEffects.budget).toLocaleString('tr-TR')}`
-                  : `₺${previewEffects.budget}`}{' '}
-                Bütçe
-              </Text>
-            </View>
+            {showBudgetImpact && budgetDelta != null ? (
+              <View style={[styles.impact, { backgroundColor: colors.dangerMuted }]}>
+                <Text style={[styles.impactText, { color: colors.danger }]}>
+                  {formatBudgetPreviewLabel(budgetDelta)}
+                </Text>
+              </View>
+            ) : null}
             <View style={[styles.impact, { backgroundColor: colors.warningMuted }]}>
               <Text style={[styles.impactText, { color: colors.warning }]}>
                 {previewEffects.risk > 0 ? '+' : ''}
@@ -108,7 +126,7 @@ export function HubCriticalEventCard() {
           </Text>
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

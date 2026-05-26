@@ -1,7 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 
+import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import {
   REGION_OPTIONS,
   type RegionOption,
@@ -18,8 +23,8 @@ const TONE_COLORS = {
 };
 
 type OnboardingRegionStepProps = {
-  selectedId: string;
-  onSelect: (id: string) => void;
+  selectedId: PilotDistrictId;
+  onSelect: (id: PilotDistrictId) => void;
 };
 
 function RegionCard({
@@ -33,8 +38,16 @@ function RegionCard({
   onPress: () => void;
   index: number;
 }) {
+  const selectionStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: withSpring(selected ? 1.02 : 1, { damping: 18, stiffness: 200 }) },
+    ],
+  }));
+
   return (
-    <Animated.View entering={FadeInDown.delay(index * 70).springify()}>
+    <Animated.View
+      entering={FadeInDown.delay(index * 70).springify()}
+      style={selectionStyle}>
       <Pressable
         onPress={onPress}
         style={[

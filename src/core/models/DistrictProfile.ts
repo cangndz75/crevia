@@ -1,6 +1,16 @@
 import type { GameMetrics } from './GameMetrics';
 import type { PilotEventType } from './PilotDayPlan';
 
+export const PILOT_DISTRICT_IDS = [
+  'central',
+  'cumhuriyet',
+  'industrial_market',
+] as const;
+
+export type PilotDistrictId = (typeof PILOT_DISTRICT_IDS)[number];
+
+export const DEFAULT_PILOT_DISTRICT_ID: PilotDistrictId = 'central';
+
 export type DistrictDifficulty = 'balanced' | 'challenging' | 'hard';
 
 /** Bölge başlangıç metrikleri; GameMetrics ile uyumlu, opsiyonel risk skoru. */
@@ -18,7 +28,7 @@ export type DistrictEventBias = {
 };
 
 export type DistrictProfile = {
-  id: string;
+  id: PilotDistrictId;
   name: string;
   shortName: string;
   description: string;

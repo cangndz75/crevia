@@ -8,6 +8,8 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { HubCriticalEventCard } from '@/features/hub/components/HubCriticalEventCard';
+import { HubPilotContextCard } from '@/features/hub/components/HubPilotContextCard';
+import { HubPilotReportBanner } from '@/features/hub/components/HubPilotReportBanner';
 import { HubDailyGoalCard } from '@/features/hub/components/HubDailyGoalCard';
 import { HubHeader } from '@/features/hub/components/HubHeader';
 import { HubMetricsGrid } from '@/features/hub/components/HubMetricsGrid';
@@ -49,6 +51,8 @@ export function HubScreen() {
         <HubStatusSummaryCard />
         <HubMetricsGrid />
         <HubRegionPulseSection />
+        <HubPilotContextCard />
+        <HubPilotReportBanner />
         <HubCriticalEventCard />
         <HubQuickActions />
         <HubDailyGoalCard />

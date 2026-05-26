@@ -1,3 +1,4 @@
+import { createDefaultPilotState } from '@/core/game/createDefaultPilotState';
 import { createSnapshot } from '@/core/game/createSnapshot';
 import type { GameState } from '@/core/models/GameState';
 import type { EventCard } from '@/core/models/EventCard';
@@ -17,7 +18,10 @@ import {
 
 export { DAY1_NEIGHBORHOODS } from './day1SeedPool';
 
-export const DAY1_ROLE = 'Temizlik ve Çevre Operasyon Sorumlusu';
+export const PILOT_COORDINATOR_ROLE = 'Pilot Bölge Hizmet Koordinatörü';
+
+/** Oyuncu rolü — bootstrap hydrate kontrolü ve seed ile uyumlu. */
+export const DAY1_ROLE = PILOT_COORDINATOR_ROLE;
 
 export const DAY1_METRICS = {
   publicSatisfaction: 55,
@@ -147,6 +151,7 @@ function buildDay1GameState(activeEvents: EventCard[]): GameState {
         attribution: '— Deniz Erdem',
       },
     },
+    pilot: createDefaultPilotState(),
   };
 }
 

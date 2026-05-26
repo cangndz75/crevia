@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { OnboardingLogo } from '@/features/onboarding/components/OnboardingLogo';
 import { OnboardingPrimaryButton } from '@/features/onboarding/components/OnboardingPrimaryButton';
@@ -44,9 +45,15 @@ export function OnboardingLayout({
         showsVerticalScrollIndicator={false}>
         <OnboardingLogo />
         {headerExtra}
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.body}>{body}</Text>
-        {children}
+        <Animated.View
+          key={`step-${stepIndex}`}
+          entering={FadeIn.duration(280)}
+          exiting={FadeOut.duration(180)}
+          style={styles.stepContent}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.body}>{body}</Text>
+          {children}
+        </Animated.View>
       </ScrollView>
 
       <View style={styles.footer}>
@@ -83,6 +90,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
+    gap: spacing.md,
+    alignItems: 'center',
+  },
+  stepContent: {
+    width: '100%',
     gap: spacing.md,
     alignItems: 'center',
   },

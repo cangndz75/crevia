@@ -2,12 +2,18 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 
 import { DecisionOptionCard } from '@/features/events/components/DecisionOptionCard';
 import { EventDecisionConsultant } from '@/features/events/components/EventDecisionConsultant';
 import { EventDecisionEventCard } from '@/features/events/components/EventDecisionEventCard';
+import { EventDecisionResultPhase } from '@/features/events/components/EventDecisionResultPhase';
 import { EventsStatusHeader } from '@/features/events/components/EventsStatusHeader';
-import { getDecisionResultMessage } from '@/features/events/utils/decisionPresentation';
+import {
+  canCompletePilot,
+  PILOT_FINAL_EVENT_ID,
+} from '@/core/game/calculatePilotFinalResult';
+import type { EventDecision } from '@/core/models/EventCard';
 import { useGameStore } from '@/store/useGameStore';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
 import { GameButton } from '@/ui/components/GameButton';
@@ -30,15 +36,30 @@ export function EventDecisionScreen({ eventId }: EventDecisionScreenProps) {
   const event = useGameStore((s) =>
     s.gameState.events.find((e) => e.id === eventId),
   );
-  const eventAdvisor = useGameStore((s) => s.gameState.eventAdvisor);
   const applyDecisionAction = useGameStore((s) => s.applyDecision);
+  const showPilotReportCta = useGameStore((s) => {
+    if (eventId !== PILOT_FINAL_EVENT_ID) {
+      return false;
+    }
+    return (
+      canCompletePilot(s.gameState) || s.gameState.pilot.status === 'completed'
+    );
+  });
+
+  const eventAdvisor = useGameStore((s) => s.gameState.eventAdvisor);
 
   const [phase, setPhase] = useState<ScreenPhase>('choose');
-  const [resultMessage, setResultMessage] = useState('');
+  const [appliedDecision, setAppliedDecision] = useState<EventDecision | null>(
+    null,
+  );
   const [applyingId, setApplyingId] = useState<string | null>(null);
 
   const goToHub = useCallback(() => {
     router.replace('/');
+  }, [router]);
+
+  const goToPilotReport = useCallback(() => {
+    router.push('/events/pilot-final-report');
   }, [router]);
 
   const handleDecision = useCallback(
@@ -51,7 +72,7 @@ export function EventDecisionScreen({ eventId }: EventDecisionScreenProps) {
       setApplyingId(decisionId);
       try {
         applyDecisionAction(eventId, decisionId);
-        setResultMessage(getDecisionResultMessage(decision));
+        setAppliedDecision(decision);
         setPhase('result');
       } catch {
         Alert.alert(
@@ -85,22 +106,17 @@ export function EventDecisionScreen({ eventId }: EventDecisionScreenProps) {
     );
   }
 
-  if (phase === 'result') {
+  if (phase === 'result' && appliedDecision) {
     return (
-      <View style={styles.root}>
-        <View style={styles.resultWrap}>
-          <View style={styles.resultIcon}>
-            <Ionicons name="checkmark-circle" size={56} color={colors.success} />
-          </View>
-          <Text style={styles.resultTitle}>Karar Kaydedildi</Text>
-          <Text style={styles.resultBody}>{resultMessage}</Text>
-          <GameButton
-            title="Operasyon Merkezine Dön"
-            onPress={goToHub}
-            style={styles.resultBtn}
-          />
-        </View>
-      </View>
+      <EventDecisionResultPhase
+        decision={appliedDecision}
+        event={event}
+        eventAdvisor={eventAdvisor}
+        showPilotReportCta={showPilotReportCta}
+        bottomPadding={bottomPadding}
+        onGoToHub={goToHub}
+        onGoToPilotReport={goToPilotReport}
+      />
     );
   }
 
@@ -125,22 +141,29 @@ export function EventDecisionScreen({ eventId }: EventDecisionScreenProps) {
           </View>
         </View>
 
-        <EventDecisionEventCard event={event} />
+        <Animated.View entering={FadeInUp.duration(320).springify().damping(22)}>
+          <EventDecisionEventCard event={event} />
+        </Animated.View>
 
         <View style={styles.decisionsBlock}>
-          <View style={styles.sectionHead}>
+          <Animated.View
+            entering={FadeIn.delay(120).duration(260)}
+            style={styles.sectionHead}>
             <Ionicons name="document-text-outline" size={18} color={colors.textPrimary} />
             <Text style={styles.sectionTitle}>Bir Karar Ver</Text>
-          </View>
+          </Animated.View>
 
           <View style={styles.decisionsList}>
-            {event.decisions.map((decision) => (
-              <DecisionOptionCard
+            {event.decisions.map((decision, index) => (
+              <Animated.View
                 key={decision.id}
-                decision={decision}
-                selected={applyingId === decision.id}
-                onSelect={() => handleDecision(decision.id)}
-              />
+                entering={FadeInUp.delay(180 + index * 70).duration(300).springify().damping(20)}>
+                <DecisionOptionCard
+                  decision={decision}
+                  selected={applyingId === decision.id}
+                  onSelect={() => handleDecision(decision.id)}
+                />
+              </Animated.View>
             ))}
           </View>
         </View>
@@ -201,33 +224,6 @@ const styles = StyleSheet.create({
     maxWidth: 300,
   },
   notFoundBtn: {
-    alignSelf: 'stretch',
-    marginTop: spacing.md,
-  },
-  resultWrap: {
-    flex: 1,
-    padding: spacing.xl,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.lg,
-  },
-  resultIcon: {
-    marginBottom: spacing.sm,
-  },
-  resultTitle: {
-    ...typography.title,
-    fontSize: 22,
-    textAlign: 'center',
-  },
-  resultBody: {
-    ...typography.caption,
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: 'center',
-    maxWidth: 320,
-    color: colors.textPrimary,
-  },
-  resultBtn: {
     alignSelf: 'stretch',
     marginTop: spacing.md,
   },

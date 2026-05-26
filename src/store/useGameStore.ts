@@ -2,8 +2,24 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 
+import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import { createDay1Seed } from '@/core/content/day1Seed';
 import { applyDecision as runApplyDecision } from '@/core/game/applyDecision';
+import { applyPilotDecisionMetadata } from '@/core/game/applyPilotDecisionMetadata';
+import {
+  calculatePilotFinalResult,
+  canCompletePilot,
+} from '@/core/game/calculatePilotFinalResult';
+import { advancePilotDayForGameState } from '@/core/game/advancePilotDayForGameState';
+import { applyDistrictStartingMetrics } from '@/core/game/applyDistrictStartingMetrics';
+import { createDefaultPilotState } from '@/core/game/createDefaultPilotState';
+import {
+  clearActiveEventsForGameState,
+  shouldClearPilotActiveEvents,
+} from '@/core/game/clearActiveEventsForGameState';
+import { refreshPilotEventsFromGameState } from '@/core/game/refreshPilotEventsFromGameState';
+import { syncCityDayWithPilotDay } from '@/core/game/syncCityDayWithPilotDay';
+import { syncInitialSnapshotWithGameState } from '@/core/game/syncInitialSnapshotWithGameState';
 import { endDay, type EndDayState } from '@/core/game/endDay';
 import type { DecisionRecord } from '@/core/models/DecisionRecord';
 import type { DailyReport } from '@/core/models/DailyReport';
@@ -11,6 +27,11 @@ import type { DaySnapshot } from '@/core/models/DaySnapshot';
 import type { GameMetrics } from '@/core/models/GameMetrics';
 import type { GameState } from '@/core/models/GameState';
 import type { EventCard } from '@/core/models/EventCard';
+import type {
+  PendingConsequence,
+  PilotFinalResult,
+  PilotGameState,
+} from '@/core/models/PilotGameState';
 import type { GameResources } from '@/core/models/GameResources';
 import type { Neighborhood } from '@/core/models/Neighborhood';
 import type { CityPulseMetric } from '@/core/models/CityPulseMetric';
@@ -21,10 +42,9 @@ import {
   clearPersistedGame,
   GAME_STORAGE_KEY,
   gameJsonStorage,
-  isValidSave,
   limitSnapshots,
+  normalizePersistedSave,
   partialiseGameState,
-  type PersistedGameState,
 } from './gamePersist';
 
 // ---------------------------------------------------------------------------
@@ -52,6 +72,17 @@ type GameStoreActions = {
   resetGame: () => void;
   clearSaveAndReset: () => Promise<void>;
   _setHasHydrated: (v: boolean) => void;
+  setSelectedPilotDistrict: (districtId: PilotDistrictId) => void;
+  startPilotDistrict: (districtId: PilotDistrictId) => void;
+  setPilotFlag: (key: string, value: string | number | boolean) => void;
+  addCompletedPilotEvent: (eventId: string) => void;
+  addPendingConsequence: (consequence: PendingConsequence) => void;
+  clearResolvedPendingConsequences: (ids: string[]) => void;
+  advancePilotDay: () => void;
+  completePilot: (finalResult: PilotFinalResult) => void;
+  completePilotFromCurrentState: () => void;
+  resetPilotState: () => void;
+  refreshPilotEventsForCurrentDay: () => void;
 };
 
 export type GameStore = GameStoreState & GameStoreActions;
@@ -125,6 +156,16 @@ function withSyncedPulse(gameState: GameState): GameState {
   };
 }
 
+function withPilot(
+  gameState: GameState,
+  updater: (pilot: PilotGameState) => PilotGameState,
+): GameState {
+  return withSyncedPulse({
+    ...gameState,
+    pilot: updater(gameState.pilot),
+  });
+}
+
 function toEngineState(state: GameStoreState): EndDayState {
   return {
     ...state.gameState,
@@ -194,17 +235,37 @@ export const useGameStore = create<GameStore>()(
 
       applyDecision: (eventId, decisionId) => {
         const current = get();
+        const event =
+          current.gameState.events.find((e) => e.id === eventId) ??
+          current.eventPool.find((e) => e.id === eventId);
+        const decision = event?.decisions.find((d) => d.id === decisionId);
+
         const result = runApplyDecision({
           state: toEngineState(current),
           eventId,
           decisionId,
         });
 
+        let nextGameState = withSyncedPulse(result.nextState);
+        if (event && decision) {
+          nextGameState = applyPilotDecisionMetadata({
+            gameState: nextGameState,
+            event,
+            decision,
+          });
+        }
+
+        const shouldClearEvents = shouldClearPilotActiveEvents(nextGameState);
+        if (shouldClearEvents) {
+          nextGameState = clearActiveEventsForGameState(nextGameState);
+        }
+
         set({
-          gameState: withSyncedPulse(result.nextState),
+          gameState: nextGameState,
           neighborhoods:
             result.nextState.neighborhoods ?? current.neighborhoods,
           resources: result.nextState.resources ?? current.resources,
+          eventPool: shouldClearEvents ? [] : current.eventPool,
           decisionHistory: [
             ...current.decisionHistory,
             result.decisionRecord,
@@ -239,20 +300,200 @@ export const useGameStore = create<GameStore>()(
           return;
         }
 
-        const result = endDay(toEngineState(current));
+        const skipGenericEventSelection =
+          current.gameState.pilot.status === 'active' ||
+          current.gameState.pilot.status === 'completed';
+
+        const result = endDay(toEngineState(current), {
+          skipEventSelection: skipGenericEventSelection,
+        });
+
+        let nextGameState = withSyncedPulse(result.nextState);
+        let nextEventPool = current.eventPool;
+
+        if (nextGameState.pilot.status === 'active') {
+          const advancedGameState = syncCityDayWithPilotDay(
+            advancePilotDayForGameState(nextGameState),
+          );
+          const pilotRefresh = refreshPilotEventsFromGameState(
+            advancedGameState,
+            current.eventPool,
+          );
+          nextGameState = withSyncedPulse(pilotRefresh.gameState);
+          nextEventPool = pilotRefresh.eventPool;
+        }
 
         set({
-          gameState: withSyncedPulse(result.nextState),
+          gameState: nextGameState,
           neighborhoods:
             result.nextState.neighborhoods ?? current.neighborhoods,
           resources: result.nextState.resources ?? current.resources,
-          eventPool: current.eventPool,
+          eventPool: nextEventPool,
           decisionHistory: current.decisionHistory,
           snapshots: limitSnapshots(
             result.nextState.snapshots ?? current.snapshots,
           ),
           lastDailyReport: result.dailyReport,
           lastClosedDay: closingDay,
+        });
+      },
+
+      setSelectedPilotDistrict: (districtId) => {
+        const { gameState } = get();
+        set({
+          gameState: withPilot(gameState, (pilot) => ({
+            ...pilot,
+            selectedDistrictId: districtId,
+            status: pilot.status === 'active' ? pilot.status : 'active',
+            currentPilotDay: 1,
+          })),
+        });
+      },
+
+      startPilotDistrict: (districtId) => {
+        const { gameState, snapshots, eventPool } = get();
+        const withPilotReset: GameState = {
+          ...gameState,
+          pilot: {
+            ...createDefaultPilotState(),
+            selectedDistrictId: districtId,
+            status: 'active',
+            currentPilotDay: 1,
+          },
+        };
+        const withMetrics = applyDistrictStartingMetrics(
+          withPilotReset,
+          districtId,
+        );
+        const alignedGameState = syncCityDayWithPilotDay(withMetrics);
+        const nextGameState = withSyncedPulse(alignedGameState);
+        const pilotRefresh = refreshPilotEventsFromGameState(
+          nextGameState,
+          eventPool,
+        );
+        const syncedGameState = withSyncedPulse(pilotRefresh.gameState);
+        set({
+          gameState: syncedGameState,
+          snapshots: syncInitialSnapshotWithGameState(
+            snapshots,
+            syncedGameState,
+          ),
+          eventPool: pilotRefresh.eventPool,
+        });
+      },
+
+      refreshPilotEventsForCurrentDay: () => {
+        const { gameState, eventPool } = get();
+        const pilotRefresh = refreshPilotEventsFromGameState(
+          gameState,
+          eventPool,
+        );
+        if (!pilotRefresh.refreshed) {
+          return;
+        }
+        set({
+          gameState: withSyncedPulse(pilotRefresh.gameState),
+          eventPool: pilotRefresh.eventPool,
+        });
+      },
+
+      setPilotFlag: (key, value) => {
+        const { gameState } = get();
+        set({
+          gameState: withPilot(gameState, (pilot) => ({
+            ...pilot,
+            flags: { ...pilot.flags, [key]: value },
+          })),
+        });
+      },
+
+      addCompletedPilotEvent: (eventId) => {
+        const { gameState } = get();
+        if (gameState.pilot.completedEventIds.includes(eventId)) {
+          return;
+        }
+        set({
+          gameState: withPilot(gameState, (pilot) => ({
+            ...pilot,
+            completedEventIds: [...pilot.completedEventIds, eventId],
+          })),
+        });
+      },
+
+      addPendingConsequence: (consequence) => {
+        const { gameState } = get();
+        set({
+          gameState: withPilot(gameState, (pilot) => ({
+            ...pilot,
+            pendingConsequences: [
+              ...pilot.pendingConsequences,
+              consequence,
+            ],
+          })),
+        });
+      },
+
+      clearResolvedPendingConsequences: (ids) => {
+        const { gameState } = get();
+        const idSet = new Set(ids);
+        set({
+          gameState: withPilot(gameState, (pilot) => ({
+            ...pilot,
+            pendingConsequences: pilot.pendingConsequences.filter(
+              (c) => !idSet.has(c.id),
+            ),
+          })),
+        });
+      },
+
+      advancePilotDay: () => {
+        const { gameState } = get();
+        const { currentPilotDay } = gameState.pilot;
+        if (currentPilotDay >= 7) {
+          return;
+        }
+        set({
+          gameState: withPilot(gameState, (pilot) => ({
+            ...pilot,
+            currentPilotDay: currentPilotDay + 1,
+          })),
+        });
+      },
+
+      completePilot: (finalResult) => {
+        const { gameState } = get();
+        const withCompleted = withPilot(gameState, (pilot) => ({
+          ...pilot,
+          status: 'completed' as const,
+          finalResult,
+        }));
+        set({
+          gameState: withSyncedPulse(
+            clearActiveEventsForGameState(withCompleted),
+          ),
+          eventPool: [],
+        });
+      },
+
+      completePilotFromCurrentState: () => {
+        const { gameState, snapshots } = get();
+        if (!canCompletePilot(gameState)) {
+          return;
+        }
+        const finalResult = calculatePilotFinalResult({
+          gameState,
+          snapshots,
+        });
+        get().completePilot(finalResult);
+      },
+
+      resetPilotState: () => {
+        const { gameState } = get();
+        set({
+          gameState: withSyncedPulse({
+            ...gameState,
+            pilot: createDefaultPilotState(),
+          }),
         });
       },
     }),
@@ -264,13 +505,15 @@ export const useGameStore = create<GameStore>()(
         partialiseGameState(state) as unknown as GameStore,
 
       merge: (persisted, currentState) => {
-        if (!isValidSave(persisted)) {
+        const saved = normalizePersistedSave(persisted);
+        if (!saved) {
           return { ...currentState, _hasHydrated: true };
         }
-        const saved = persisted as PersistedGameState;
         return {
           ...currentState,
-          gameState: withSyncedPulse(saved.gameState),
+          gameState: withSyncedPulse(
+            syncCityDayWithPilotDay(saved.gameState),
+          ),
           neighborhoods: saved.neighborhoods,
           resources: saved.resources,
           eventPool: saved.eventPool,
@@ -337,6 +580,12 @@ export const selectFeaturedEventId = (s: GameStore) =>
 export const selectEventOpportunity = (s: GameStore) =>
   s.gameState.eventOpportunity;
 export const selectHasHydrated = (s: GameStore) => s._hasHydrated;
+export const selectPilotState = (s: GameStore) => s.gameState.pilot;
+export const selectSelectedPilotDistrictId = (s: GameStore) =>
+  s.gameState.pilot.selectedDistrictId;
+export const selectCurrentPilotDay = (s: GameStore) =>
+  s.gameState.pilot.currentPilotDay;
+export const selectPilotStatus = (s: GameStore) => s.gameState.pilot.status;
 
 export function getActiveEvent(eventId: string): EventCard | undefined {
   return useGameStore

@@ -1,24 +1,24 @@
 import { useState } from 'react';
 
+import {
+  DEFAULT_PILOT_DISTRICT_ID,
+  type PilotDistrictId,
+} from '@/core/models/DistrictProfile';
 import { OnboardingLayout } from '@/features/onboarding/components/OnboardingLayout';
 import { OnboardingEventsStep } from '@/features/onboarding/components/steps/OnboardingEventsStep';
 import { OnboardingRegionStep } from '@/features/onboarding/components/steps/OnboardingRegionStep';
 import { OnboardingRoadmapStep } from '@/features/onboarding/components/steps/OnboardingRoadmapStep';
 import { OnboardingWelcomeStep } from '@/features/onboarding/components/steps/OnboardingWelcomeStep';
-import {
-  ONBOARDING_STEPS,
-  REGION_OPTIONS,
-} from '@/features/onboarding/content/onboardingContent';
+import { ONBOARDING_STEPS } from '@/features/onboarding/content/onboardingContent';
 
 type OnboardingScreenProps = {
-  onComplete: () => void | Promise<void>;
+  onComplete: (districtId: PilotDistrictId) => void | Promise<void>;
 };
 
 export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   const [stepIndex, setStepIndex] = useState(0);
-  const [selectedRegionId, setSelectedRegionId] = useState(
-    REGION_OPTIONS.find((r) => r.recommended)?.id ?? REGION_OPTIONS[0]!.id,
-  );
+  const [selectedRegionId, setSelectedRegionId] =
+    useState<PilotDistrictId>(DEFAULT_PILOT_DISTRICT_ID);
   const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(
     null,
   );
@@ -27,9 +27,13 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   const isLast = stepIndex === ONBOARDING_STEPS.length - 1;
   const total = ONBOARDING_STEPS.length;
 
+  const finishOnboarding = (districtId: PilotDistrictId) => {
+    void onComplete(districtId);
+  };
+
   const handlePrimary = () => {
     if (isLast) {
-      void onComplete();
+      finishOnboarding(selectedRegionId);
       return;
     }
     setStepIndex((i) => i + 1);
@@ -79,7 +83,11 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
       onPrimary={handlePrimary}
       primaryDisabled={primaryDisabled}
       onBack={stepIndex > 0 ? () => setStepIndex((i) => i - 1) : undefined}
-      onSkip={stepIndex === 0 ? () => void onComplete() : undefined}
+      onSkip={
+        stepIndex === 0
+          ? () => finishOnboarding(DEFAULT_PILOT_DISTRICT_ID)
+          : undefined
+      }
       skipLabel="Geç">
       {renderStepContent()}
     </OnboardingLayout>

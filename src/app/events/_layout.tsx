@@ -14,6 +14,11 @@ export default function EventsLayout() {
       }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="pilot-final-report" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="main-operation-preview"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }

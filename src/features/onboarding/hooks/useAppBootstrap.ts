@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { DAY1_ROLE } from '@/core/content/day1Seed';
+import {
+  DEFAULT_PILOT_DISTRICT_ID,
+  type PilotDistrictId,
+} from '@/core/models/DistrictProfile';
 import { checkConnectivity, subscribeConnectivity } from '@/core/onboarding/connectivity';
 import {
   isOnboardingComplete,
@@ -72,23 +76,28 @@ export function useAppBootstrap() {
     }
   }, [resolvePhase]);
 
-  /** Tutorial "Kapat" — bayrak yazılır, bir daha onboarding gösterilmez. */
-  const completeOnboarding = useCallback(async () => {
-    await setOnboardingComplete();
+  /** Onboarding biter — bayrak yazılır, pilot bölge store'a işlenir. */
+  const completeOnboarding = useCallback(
+    async (districtId: PilotDistrictId = DEFAULT_PILOT_DISTRICT_ID) => {
+      await setOnboardingComplete();
 
-    const store = useGameStore.getState();
-    const hydratedSaveExists =
-      store._hasHydrated &&
-      store.gameState?.city &&
-      store.gameState.player.role === DAY1_ROLE;
+      const store = useGameStore.getState();
+      const hydratedSaveExists =
+        store._hasHydrated &&
+        store.gameState?.city &&
+        store.gameState.player.role === DAY1_ROLE;
 
-    if (!hydratedSaveExists) {
-      store.initializeDay1();
-    }
+      if (!hydratedSaveExists) {
+        store.initializeDay1();
+      }
 
-    setPhase('ready');
-    setGateOpen(true);
-  }, []);
+      store.startPilotDistrict(districtId);
+
+      setPhase('ready');
+      setGateOpen(true);
+    },
+    [],
+  );
 
   const effectiveGateOpen = gateOpen && hasHydrated;
 

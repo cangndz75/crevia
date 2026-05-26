@@ -4,6 +4,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { DecisionRecord } from '@/core/models/DecisionRecord';
 import type { DailyReport } from '@/core/models/DailyReport';
 import type { GameMetrics } from '@/core/models/GameMetrics';
+import { PilotReportSummaryCard } from '@/features/reports/components/PilotReportSummaryCard';
+import { getPilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
 import {
   selectDecisionHistory,
   selectLastDailyReport,
@@ -109,6 +111,7 @@ type ReportContentProps = {
   level: number;
   dayDecisions: DecisionRecord[];
   snapshotCount: number;
+  pilotReportContext: ReturnType<typeof getPilotReportContext>;
   onGoHub: () => void;
 };
 
@@ -119,6 +122,7 @@ function ReportContent({
   level,
   dayDecisions,
   snapshotCount,
+  pilotReportContext,
   onGoHub,
 }: ReportContentProps) {
   const summaryLines = report.summaryLines ?? [];
@@ -129,6 +133,10 @@ function ReportContent({
     <AppScreen>
       <Text style={typography.title}>Gün Sonu Raporu</Text>
       <Text style={typography.caption}>Gün {report.day} tamamlandı</Text>
+
+      {pilotReportContext ? (
+        <PilotReportSummaryCard context={pilotReportContext} />
+      ) : null}
 
       <LineList title="Özet" lines={summaryLines} />
       <LineList title="Uyarılar" lines={warnings} tone="warning" />
@@ -227,6 +235,8 @@ function MetricItem({ label, value }: { label: string; value: string }) {
 export function ReportScreen() {
   const router = useRouter();
   const report = useGameStore(selectLastDailyReport);
+  const gameState = useGameStore((s) => s.gameState);
+  const lastClosedDay = useGameStore((s) => s.lastClosedDay);
   const metrics = useGameMetrics();
   const xp = useGameStore(selectXp);
   const level = useGameStore(selectLevel);
@@ -240,6 +250,12 @@ export function ReportScreen() {
   }
 
   const dayDecisions = decisionHistory.filter((r) => r.day === report.day);
+  const pilotReportContext = getPilotReportContext({
+    gameState,
+    lastDailyReport: report,
+    lastClosedDay,
+    decisionHistory,
+  });
 
   return (
     <ReportContent
@@ -249,6 +265,7 @@ export function ReportScreen() {
       level={level}
       dayDecisions={dayDecisions}
       snapshotCount={snapshots.length}
+      pilotReportContext={pilotReportContext}
       onGoHub={onGoHub}
     />
   );

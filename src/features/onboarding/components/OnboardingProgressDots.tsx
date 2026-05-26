@@ -1,4 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 
 import { onboardingTheme } from '@/features/onboarding/theme/onboardingTheme';
 import { spacing } from '@/ui/theme/spacing';
@@ -7,6 +11,24 @@ type OnboardingProgressDotsProps = {
   current: number;
   total: number;
 };
+
+function Dot({ active, done }: { active: boolean; done: boolean }) {
+  const animStyle = useAnimatedStyle(() => ({
+    width: withSpring(active ? 24 : 8, { damping: 18, stiffness: 200 }),
+    opacity: withSpring(done ? 0.5 : 1, { damping: 20 }),
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        styles.dot,
+        active && styles.dotActive,
+        done && styles.dotDone,
+        animStyle,
+      ]}
+    />
+  );
+}
 
 export function OnboardingProgressDots({
   current,
@@ -17,17 +39,8 @@ export function OnboardingProgressDots({
       <View style={styles.dotsRow}>
         {Array.from({ length: total }, (_, i) => {
           const step = i + 1;
-          const active = step === current;
-          const done = step < current;
           return (
-            <View
-              key={step}
-              style={[
-                styles.dot,
-                active && styles.dotActive,
-                done && styles.dotDone,
-              ]}
-            />
+            <Dot key={step} active={step === current} done={step < current} />
           );
         })}
       </View>

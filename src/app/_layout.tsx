@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import type { PilotDistrictId } from "@/core/models/DistrictProfile";
 import { OnboardingFlow } from "@/features/onboarding/OnboardingFlow";
 import {
   useAppBootstrap,
@@ -58,7 +59,7 @@ type AppGateProps = {
   phase: AppBootstrapPhase;
   retrying: boolean;
   onRetry: () => void;
-  onOnboardingComplete: () => void | Promise<void>;
+  onOnboardingComplete: (districtId: PilotDistrictId) => void | Promise<void>;
 };
 
 function AppGate({

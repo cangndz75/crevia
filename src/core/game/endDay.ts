@@ -31,6 +31,11 @@ export type EndDayResult = {
   endDaySnapshot: DaySnapshot;
 };
 
+export type EndDayOptions = {
+  /** true ise yeni gün için generic havuzdan event seçilmez (pilot refresh beklenir). */
+  skipEventSelection?: boolean;
+};
+
 function getMetrics(state: EndDayState) {
   return {
     publicSatisfaction: state.city.publicSatisfaction,
@@ -91,7 +96,11 @@ function selectNextDayEvents(
   return candidates.slice(0, count);
 }
 
-export function endDay(state: EndDayState): EndDayResult {
+export function endDay(
+  state: EndDayState,
+  options?: EndDayOptions,
+): EndDayResult {
+  const skipEventSelection = options?.skipEventSelection === true;
   const decisionHistory = state.decisionHistory ?? [];
   const snapshots = [...(state.snapshots ?? [])];
   const currentDay = state.city.day;
@@ -118,26 +127,39 @@ export function endDay(state: EndDayState): EndDayResult {
   });
 
   const nextDay = currentDay + 1;
-  const resolvedIds = new Set(nextState.solvedEvents.map((e) => e.id));
-  const todayActiveIds = new Set(state.events.map((e) => e.id));
-  const blockedIds = new Set([...resolvedIds, ...todayActiveIds]);
 
-  const pool = buildEventPool(nextState);
-  const nextEvents = selectNextDayEvents(
-    pool,
-    blockedIds,
-    NEXT_DAY_EVENT_COUNT,
-  );
+  if (skipEventSelection) {
+    nextState = {
+      ...nextState,
+      city: {
+        ...nextState.city,
+        day: nextDay,
+      },
+      events: [],
+      featuredEventId: '',
+    };
+  } else {
+    const resolvedIds = new Set(nextState.solvedEvents.map((e) => e.id));
+    const todayActiveIds = new Set(state.events.map((e) => e.id));
+    const blockedIds = new Set([...resolvedIds, ...todayActiveIds]);
 
-  nextState = {
-    ...nextState,
-    city: {
-      ...nextState.city,
-      day: nextDay,
-    },
-    events: nextEvents,
-    featuredEventId: nextEvents[0]?.id ?? nextState.featuredEventId,
-  };
+    const pool = buildEventPool(nextState);
+    const nextEvents = selectNextDayEvents(
+      pool,
+      blockedIds,
+      NEXT_DAY_EVENT_COUNT,
+    );
+
+    nextState = {
+      ...nextState,
+      city: {
+        ...nextState.city,
+        day: nextDay,
+      },
+      events: nextEvents,
+      featuredEventId: nextEvents[0]?.id ?? nextState.featuredEventId,
+    };
+  }
 
   return {
     nextState,

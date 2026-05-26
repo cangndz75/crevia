@@ -1,3 +1,4 @@
+import { createDefaultPilotState } from '@/core/game/createDefaultPilotState';
 import { GameState } from '@/core/models/GameState';
 import { colors } from '@/ui/theme/colors';
 
@@ -534,6 +535,7 @@ export const mockGameData: GameState = {
     rewardTitle: 'Enerjik Lider',
     rewardDescription: 'Bugün zorlu kararları yönettin.',
   },
+  pilot: createDefaultPilotState(),
 };
 
 export function getEventById(id: string) {

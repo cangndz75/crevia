@@ -38,6 +38,16 @@ export type EventDecisionCost = {
 
 export type DecisionStyle = 'bold' | 'balanced' | 'cautious' | 'risky';
 
+/** Pilot senaryo karar tonu — engine’e bağlı değil, selector/metadata için. */
+export type PilotDecisionStyle =
+  | 'fast'
+  | 'planned'
+  | 'partial'
+  | 'communication'
+  | 'permanent'
+  | 'resource_saving'
+  | 'risk';
+
 export type EventDecision = {
   id: string;
   title: string;
@@ -49,6 +59,10 @@ export type EventDecision = {
   costs?: EventDecisionCost;
   /** Karar sonrası kısa sonuç metni; yoksa karar tipinden türetilir. */
   resultText?: string;
+  /** Pilot metadata — applyDecision tarafından işlenmez. */
+  decisionStyle?: PilotDecisionStyle;
+  setFlags?: Record<string, string | number | boolean>;
+  xpReward?: number;
 };
 
 export type EventPreviewEffects = {

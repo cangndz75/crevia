@@ -1,6 +1,8 @@
 import type { ComponentProps } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
+import type { PilotDistrictId } from '@/core/models/DistrictProfile';
+
 export const ADVISOR = {
   name: 'Deniz Erdem',
   role: 'Saha Şefi',
@@ -111,7 +113,7 @@ export const WELCOME_CHARACTERS = [
 ] as const;
 
 export type RegionOption = {
-  id: string;
+  id: PilotDistrictId;
   title: string;
   tags: { label: string; icon: keyof typeof Ionicons.glyphMap }[];
   description: string;
@@ -125,7 +127,7 @@ export type RegionOption = {
 
 export const REGION_OPTIONS: RegionOption[] = [
   {
-    id: 'merkez',
+    id: 'central',
     title: 'Merkez Pilot Bölge',
     recommended: true,
     tags: [
@@ -156,7 +158,7 @@ export const REGION_OPTIONS: RegionOption[] = [
     },
   },
   {
-    id: 'sanayi',
+    id: 'industrial_market',
     title: 'Sanayi & Pazar Bölgesi',
     tags: [
       { label: 'Lojistik', icon: 'bus-outline' },
