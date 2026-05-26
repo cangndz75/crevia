@@ -1,7 +1,9 @@
 import type { EventCard } from '@/core/models/EventCard';
 import type { GameMetrics } from '@/core/models/GameMetrics';
 import type { DailyMission } from '@/core/models/DailyMission';
+import type { Neighborhood } from '@/core/models/Neighborhood';
 import type { OpsPulseStatus } from '@/core/models/OperationsBrief';
+import type { GameResources } from '@/core/models/GameResources';
 import {
   eventRecurrenceRisk,
   eventSeverity,
@@ -180,6 +182,121 @@ export type LiveOpsLine = {
   detail: string;
   status: OpsPulseStatus;
 };
+
+export type HubMetricCard = {
+  id: string;
+  label: string;
+  value: string;
+  trend: string;
+  trendUp: boolean;
+  icon: 'operasyon' | 'halk' | 'butce' | 'ekip';
+  accent: string;
+  muted: string;
+};
+
+export function deriveHubMetricCards(
+  input: HubDerivedInput,
+  resources: GameResources,
+): HubMetricCard[] {
+  const { metrics, activeEvents } = input;
+  const risk = deriveHubRiskScore(input);
+  const operasyon = Math.max(0, Math.min(100, 100 - risk.score * 0.65));
+  const halk = metrics.publicSatisfaction / 10;
+  const budgetK = metrics.budget / 1000;
+  const ekip = resources.availableStaff;
+
+  const satDelta = metrics.publicSatisfaction - 55;
+  const budgetDelta = ((metrics.budget - 75_000) / 75_000) * 100;
+  const moraleDelta = metrics.staffMorale - 65;
+
+  return [
+    {
+      id: 'operasyon',
+      label: 'Operasyon',
+      value: String(Math.round(operasyon)),
+      trend: activeEvents.length > 2 ? `+${activeEvents.length * 4}%` : '+12%',
+      trendUp: operasyon >= 60,
+      icon: 'operasyon',
+      accent: '#3BAF7A',
+      muted: '#E8F7F0',
+    },
+    {
+      id: 'halk',
+      label: 'Halk',
+      value: halk.toFixed(1),
+      trend: `${satDelta >= 0 ? '+' : ''}${(satDelta / 10).toFixed(1)}`,
+      trendUp: satDelta >= 0,
+      icon: 'halk',
+      accent: '#7B5BB8',
+      muted: '#F0EBFA',
+    },
+    {
+      id: 'butce',
+      label: 'Bütçe',
+      value: `₺${budgetK.toFixed(1)}K`,
+      trend: `${budgetDelta >= 0 ? '+' : ''}${Math.round(budgetDelta)}%`,
+      trendUp: budgetDelta >= 0,
+      icon: 'butce',
+      accent: '#3BAF7A',
+      muted: '#E8F7F0',
+    },
+    {
+      id: 'ekip',
+      label: 'Ekip Gücü',
+      value: `${ekip}/30`,
+      trend: moraleDelta >= 0 ? `+${moraleDelta}` : `${moraleDelta}`,
+      trendUp: moraleDelta >= 0,
+      icon: 'ekip',
+      accent: '#3BAF7A',
+      muted: '#E8F7F0',
+    },
+  ];
+}
+
+export type RegionPulseItem = {
+  id: string;
+  name: string;
+  shortName: string;
+  activeCount: number;
+  mood: '😟' | '😠' | '🙂' | '😊';
+  pulseColor: string;
+  contactLabel: string;
+};
+
+export function deriveRegionPulse(
+  neighborhoods: Neighborhood[],
+  activeEvents: EventCard[],
+): RegionPulseItem[] {
+  return neighborhoods.slice(0, 3).map((n) => {
+    const activeCount = activeEvents.filter(
+      (e) => e.neighborhoodId === n.id,
+    ).length;
+    const mood =
+      n.trust < 48
+        ? '😠'
+        : n.cleanliness < 52
+          ? '😟'
+          : n.trust >= 55
+            ? '😊'
+            : '🙂';
+    const pulseColor =
+      n.longTermNeglect >= 45
+        ? '#E89B2E'
+        : n.trust < 48
+          ? '#E05A52'
+          : '#3BAF7A';
+    const shortName = n.name.split(' ')[0] ?? n.name;
+    return {
+      id: n.id,
+      name: n.name,
+      shortName,
+      activeCount,
+      mood,
+      pulseColor,
+      contactLabel: `Muhtar ${shortName}`,
+    };
+  });
+}
 
 export function deriveLiveOpsPulse(input: HubDerivedInput): LiveOpsLine[] {
   const { day, metrics, activeEvents, decisionCount } = input;

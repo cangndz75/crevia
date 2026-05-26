@@ -7,16 +7,17 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
-import { ActiveEventsSection } from '@/features/hub/components/ActiveEventsSection';
-import { CrisisQueuePreview } from '@/features/hub/components/CrisisQueuePreview';
-import { DailyMissionsSection } from '@/features/hub/components/DailyMissionsSection';
+import { HubCriticalEventCard } from '@/features/hub/components/HubCriticalEventCard';
+import { HubDailyGoalCard } from '@/features/hub/components/HubDailyGoalCard';
 import { HubHeader } from '@/features/hub/components/HubHeader';
-import { RiskPressureCard } from '@/features/hub/components/RiskPressureCard';
-import { useGameStore } from '@/store/useGameStore';
+import { HubMetricsGrid } from '@/features/hub/components/HubMetricsGrid';
+import { HubQuickActions } from '@/features/hub/components/HubQuickActions';
+import { HubRegionPulseSection } from '@/features/hub/components/HubRegionPulseSection';
+import { HubStatusSummaryCard } from '@/features/hub/components/HubStatusSummaryCard';
+import { selectActiveEvents, useGameStore } from '@/store/useGameStore';
 import { AppScreen } from '@/ui/components/AppScreen';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
-import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -24,6 +25,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 export function HubScreen() {
   const router = useRouter();
   const endCurrentDay = useGameStore((s) => s.endCurrentDay);
+  const eventCount = useGameStore(selectActiveEvents).length;
   const scale = useSharedValue(1);
 
   const handleEndDay = () => {
@@ -37,13 +39,34 @@ export function HubScreen() {
   }));
 
   return (
-    <AppScreen safeEdges={['left', 'right']} contentStyle={styles.content}>
+    <AppScreen
+      safeEdges={['left', 'right']}
+      contentStyle={styles.content}
+      style={styles.screen}>
       <HubHeader />
+
       <View style={styles.body}>
-        <RiskPressureCard />
-        <CrisisQueuePreview />
-        <DailyMissionsSection />
-        <ActiveEventsSection />
+        <HubStatusSummaryCard />
+        <HubMetricsGrid />
+        <HubRegionPulseSection />
+        <HubCriticalEventCard />
+        <HubQuickActions />
+        <HubDailyGoalCard />
+
+        {eventCount > 1 && (
+          <Pressable
+            onPress={() => router.push('/events')}
+            style={styles.moreEventsLink}>
+            <Text style={styles.moreEventsText}>
+              +{eventCount - 1} bekleyen olay daha
+            </Text>
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={colors.hubGoldDark}
+            />
+          </Pressable>
+        )}
 
         <AnimatedPressable
           onPressIn={() => {
@@ -54,7 +77,7 @@ export function HubScreen() {
           }}
           onPress={handleEndDay}
           style={[styles.endDayButton, animatedStyle]}>
-          <Ionicons name="flag-outline" size={20} color={colors.textInverse} />
+          <Ionicons name="moon-outline" size={18} color={colors.textPrimary} />
           <Text style={styles.endDayText}>Günü Bitir</Text>
         </AnimatedPressable>
       </View>
@@ -63,29 +86,46 @@ export function HubScreen() {
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    backgroundColor: colors.hubCream,
+  },
   content: {
     paddingHorizontal: 0,
     paddingTop: 0,
     gap: 0,
   },
   body: {
-    paddingHorizontal: spacing.lg,
-    gap: 28,
+    gap: spacing.xl,
     paddingBottom: spacing.xxl,
+  },
+  moreEventsLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  moreEventsText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.hubGoldDark,
   },
   endDayButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radius.xl,
-    paddingVertical: 16,
-    ...shadows.soft,
+    marginHorizontal: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radius.full,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   endDayText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: colors.textInverse,
+    color: colors.textPrimary,
   },
 });

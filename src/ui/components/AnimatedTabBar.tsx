@@ -1,14 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { useEffect, useRef } from 'react';
-import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
-import Animated, {
-  FadeIn,
-  FadeOut,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '@/ui/theme/colors';
@@ -21,26 +13,22 @@ type TabConfig = {
 };
 
 const TAB_CONFIG: Record<string, TabConfig> = {
-  index: { label: 'Merkez', icon: 'home-outline', iconFocused: 'home' },
-  events: { label: 'Olaylar', icon: 'flash-outline', iconFocused: 'flash' },
-  risks: { label: 'Riskler', icon: 'warning-outline', iconFocused: 'warning' },
+  index: { label: 'Ana Sayfa', icon: 'home-outline', iconFocused: 'home' },
+  events: { label: 'Operasyon', icon: 'flash-outline', iconFocused: 'flash' },
+  risks: { label: 'Harita', icon: 'map-outline', iconFocused: 'map' },
   progression: {
-    label: 'Yetkiler',
-    icon: 'ribbon-outline',
-    iconFocused: 'ribbon',
+    label: 'Başarılar',
+    icon: 'trophy-outline',
+    iconFocused: 'trophy',
   },
   reports: {
-    label: 'Rapor',
-    icon: 'document-text-outline',
-    iconFocused: 'document-text',
+    label: 'Raporlar',
+    icon: 'bar-chart-outline',
+    iconFocused: 'bar-chart',
   },
 };
 
-const SPRING = { damping: 22, stiffness: 220, mass: 0.8 };
-
-export const ANIMATED_TAB_BAR_HEIGHT = 68;
-
-type TabLayout = { x: number; width: number };
+export const ANIMATED_TAB_BAR_HEIGHT = 60;
 
 function shouldHideTabBar(state: BottomTabBarProps['state']) {
   const activeRoute = state.routes[state.index];
@@ -54,30 +42,7 @@ function shouldHideTabBar(state: BottomTabBarProps['state']) {
 
 export function useAppTabBarHeight() {
   const insets = useSafeAreaInsets();
-  return ANIMATED_TAB_BAR_HEIGHT + Math.max(insets.bottom, 10) + 16;
-}
-
-function TabIcon({ focused, config }: { focused: boolean; config: TabConfig }) {
-  const scale = useSharedValue(focused ? 1.05 : 1);
-
-  useEffect(() => {
-    scale.value = withSpring(focused ? 1.05 : 1, SPRING);
-  }, [focused]);
-
-  const iconAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <Animated.View style={[styles.iconWrapper, iconAnimStyle]}>
-      <Ionicons
-        name={focused ? config.iconFocused : config.icon}
-        size={24}
-        color={focused ? colors.navIconActive : colors.navIconInactive}
-      />
-      {focused && <View style={styles.activeDot} />}
-    </Animated.View>
-  );
+  return ANIMATED_TAB_BAR_HEIGHT + Math.max(insets.bottom, 8);
 }
 
 export function AnimatedTabBar({
@@ -85,143 +50,91 @@ export function AnimatedTabBar({
   navigation,
 }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const layouts = useRef<TabLayout[]>([]);
-  const indicatorX = useSharedValue(0);
-  const indicatorW = useSharedValue(72);
 
-  const hideBar = shouldHideTabBar(state);
-
-  const moveIndicator = (index: number) => {
-    const layout = layouts.current[index];
-    if (!layout) return;
-    indicatorX.value = withSpring(layout.x, SPRING);
-    indicatorW.value = withSpring(layout.width, SPRING);
-  };
-
-  useEffect(() => {
-    moveIndicator(state.index);
-  }, [state.index]);
-
-  const indicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: indicatorX.value }],
-    width: indicatorW.value,
-  }));
-
-  if (hideBar) {
+  if (shouldHideTabBar(state)) {
     return null;
   }
 
   return (
     <View
-      style={[styles.outer, { paddingBottom: Math.max(insets.bottom, 10) }]}
-      pointerEvents="box-none">
-      <View style={[styles.pill, shadows.card]}>
-        <Animated.View style={[styles.indicator, indicatorStyle]} />
+      style={[
+        styles.bar,
+        shadows.soft,
+        { paddingBottom: Math.max(insets.bottom, 8) },
+      ]}>
+      {state.routes.map((route, index) => {
+        const focused = state.index === index;
+        const config = TAB_CONFIG[route.name];
+        if (!config) return null;
 
-        {state.routes.map((route, index) => {
-          const focused = state.index === index;
-          const config = TAB_CONFIG[route.name];
-          if (!config) return null;
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!focused && !event.defaultPrevented) {
+            navigation.navigate(route.name, route.params);
+          }
+        };
 
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-            if (!focused && !event.defaultPrevented) {
-              navigation.navigate(route.name, route.params);
-            }
-          };
-
-          const onLayout = (event: LayoutChangeEvent) => {
-            const { x, width } = event.nativeEvent.layout;
-            layouts.current[index] = { x, width };
-            if (focused) {
-              moveIndicator(index);
-            }
-          };
-
-          return (
-            <Pressable
-              key={route.key}
-              onPress={onPress}
-              onLayout={onLayout}
-              style={styles.tab}
-              accessibilityRole="button"
-              accessibilityState={{ selected: focused }}
-              accessibilityLabel={config.label}>
-              <TabIcon focused={focused} config={config} />
-              {focused ? (
-                <Animated.Text
-                  entering={FadeIn.duration(180)}
-                  exiting={FadeOut.duration(120)}
-                  style={styles.label}
-                  numberOfLines={1}>
-                  {config.label}
-                </Animated.Text>
-              ) : null}
-            </Pressable>
-          );
-        })}
-      </View>
+        return (
+          <Pressable
+            key={route.key}
+            onPress={onPress}
+            style={styles.tab}
+            accessibilityRole="button"
+            accessibilityState={{ selected: focused }}
+            accessibilityLabel={config.label}>
+            <Ionicons
+              name={focused ? config.iconFocused : config.icon}
+              size={22}
+              color={focused ? colors.tabActive : colors.tabInactive}
+            />
+            {focused ? (
+              <Text style={[styles.label, styles.labelFocused]} numberOfLines={1}>
+                {config.label}
+              </Text>
+            ) : (
+              <Text style={styles.labelPlaceholder} />
+            )}
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  outer: {
+  bar: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
-  pill: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#140E30',
-    borderRadius: 28,
-    height: ANIMATED_TAB_BAR_HEIGHT,
-    paddingHorizontal: 6,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  indicator: {
-    position: 'absolute',
-    left: 0,
-    top: 6,
-    bottom: 6,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'flex-end',
+    justifyContent: 'space-around',
+    backgroundColor: colors.tabBar,
+    borderTopWidth: 1,
+    borderTopColor: colors.tabBarBorder,
+    paddingTop: 8,
+    minHeight: ANIMATED_TAB_BAR_HEIGHT,
   },
   tab: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    height: '100%',
-    zIndex: 1,
-  },
-  iconWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: colors.navIconActive,
-    marginTop: 2,
+    gap: 4,
+    paddingVertical: 4,
   },
   label: {
-    color: colors.navIconActive,
-    fontSize: 13,
-    fontWeight: '700',
-    maxWidth: 72,
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.hubGoldDark,
+  },
+  labelFocused: {},
+  labelPlaceholder: {
+    fontSize: 10,
+    height: 12,
   },
 });
