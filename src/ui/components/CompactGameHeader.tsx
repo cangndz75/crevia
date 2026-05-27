@@ -1,11 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { getDistrictProfile } from '@/core/content/districtProfiles';
+import { DEFAULT_PILOT_DISTRICT_ID } from '@/core/models/DistrictProfile';
 import { useGameStatus } from '@/store/gameSelectors';
 import { HeaderAvatar } from '@/ui/components/game-header/HeaderAvatar';
-import { HeaderNotifyButton } from '@/ui/components/game-header/HeaderNotifyButton';
 import { HeaderXpBar } from '@/ui/components/game-header/HeaderXpBar';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
@@ -17,28 +18,34 @@ export type CompactGameHeaderProps = {
   screenTitle?: string;
 };
 
-function buildPilotMetaLine(day: number, districtName: string): string {
-  return `${day}. Gün · ${districtName}`;
+function buildMetaLine(day: number, districtShortName: string): string {
+  return `${day}. Gün · ${districtShortName}`;
 }
 
 /**
- * Merkez dışı tüm oyun ekranları — kartlı kompakt header (sayfa başlığı + XP + bütçe).
+ * Merkez dışı tüm oyun sekmeleri — kartlı header (başlık, seviye, bölge, bütçe, XP).
  */
 export function CompactGameHeader({
   screenTitle = 'Crevia',
 }: CompactGameHeaderProps) {
   const insets = useSafeAreaInsets();
   const status = useGameStatus();
+
+  const districtShortName = useMemo(() => {
+    const id = status.selectedDistrictId ?? DEFAULT_PILOT_DISTRICT_ID;
+    return getDistrictProfile(id)?.shortName ?? 'Pilot Bölge';
+  }, [status.selectedDistrictId]);
+
   const metaLine = useMemo(
-    () => buildPilotMetaLine(status.currentDay, status.selectedDistrictName),
-    [status.currentDay, status.selectedDistrictName],
+    () => buildMetaLine(status.currentDay, districtShortName),
+    [status.currentDay, districtShortName],
   );
 
   return (
     <View style={[styles.outer, { paddingTop: insets.top + spacing.sm }]}>
       <View style={[styles.card, shadows.card]}>
         <View style={styles.mainRow}>
-          <HeaderAvatar size={44} borderColor={colors.surface} />
+          <HeaderAvatar size={48} borderColor={colors.surface} />
 
           <View style={styles.centerCol}>
             <View style={styles.titleRow}>
@@ -56,48 +63,41 @@ export function CompactGameHeader({
             </Text>
           </View>
 
-          <View style={styles.rightCol}>
-            <View style={styles.budgetPill}>
-              <View style={styles.walletIcon}>
-                <Ionicons
-                  name="wallet-outline"
-                  size={13}
-                  color={colors.authority}
-                />
-              </View>
-              <View style={styles.budgetTextCol}>
-                <Text style={styles.budgetLabel}>BÜTÇE</Text>
-                <Text
-                  style={styles.budgetAmount}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.75}>
-                  {status.budgetFormatted}
-                </Text>
-              </View>
+          <Pressable
+            style={styles.budgetCard}
+            accessibilityRole="button"
+            accessibilityLabel={`Bütçe ${status.budgetFormatted}`}>
+            <View style={styles.budgetTextCol}>
+              <Text
+                style={styles.budgetAmount}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}>
+                {status.budgetFormatted}
+              </Text>
+              <Text style={styles.budgetLabel}>Bütçe</Text>
             </View>
-            <HeaderNotifyButton
-              count={status.notificationCount}
-              dotColor={colors.authority}
-              dotOnly
-              compact
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={colors.textInverse}
+              style={styles.budgetChevron}
             />
-          </View>
+          </Pressable>
         </View>
 
-        <View style={styles.xpRow}>
+        <View style={styles.xpSection}>
           <Text style={styles.xpLabel}>XP</Text>
           <View style={styles.xpTrackWrap}>
             <HeaderXpBar
               progress={status.xpProgress}
               trackColor={colors.hubGoldTrack}
               fillColor={colors.primary}
-              height={5}
+              height={6}
             />
           </View>
           <Text style={styles.xpValue}>
-            {status.xp.toLocaleString('tr-TR')}/
-            {status.xpTarget.toLocaleString('tr-TR')}
+            {status.xp}/{status.xpTarget}
           </Text>
         </View>
       </View>
@@ -113,24 +113,23 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 22,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-    gap: spacing.sm,
+    overflow: 'hidden',
   },
   mainRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 10,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
   },
   centerCol: {
     flex: 1,
     minWidth: 0,
-    gap: 3,
-    paddingTop: 2,
+    gap: 4,
   },
   titleRow: {
     flexDirection: 'row',
@@ -139,10 +138,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   screenTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '800',
     color: colors.textPrimary,
-    letterSpacing: -0.3,
+    letterSpacing: -0.35,
     flexShrink: 1,
   },
   levelBadge: {
@@ -164,60 +163,48 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
   },
-  rightCol: {
+  budgetCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    flexShrink: 1,
-    maxWidth: '46%',
-    justifyContent: 'flex-end',
-  },
-  budgetPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderWidth: 1,
-    borderColor: `${colors.hubGold}88`,
-    backgroundColor: colors.surface,
-    borderRadius: radius.full,
-    paddingLeft: 3,
-    paddingRight: 7,
-    paddingVertical: 3,
-    flex: 1,
-    minWidth: 0,
+    backgroundColor: colors.headerTealDark,
+    borderRadius: radius.lg,
+    paddingVertical: 8,
+    paddingLeft: spacing.sm,
+    paddingRight: 6,
+    gap: 2,
     maxWidth: 118,
+    flexShrink: 0,
   },
   budgetTextCol: {
     flex: 1,
     minWidth: 0,
-  },
-  walletIcon: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.authorityMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  budgetLabel: {
-    fontSize: 7,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    color: colors.textSecondary,
-    lineHeight: 9,
+    alignItems: 'flex-end',
   },
   budgetAmount: {
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '800',
-    color: colors.textPrimary,
+    color: colors.textInverse,
     letterSpacing: -0.3,
   },
-  xpRow: {
+  budgetLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 1,
+  },
+  budgetChevron: {
+    opacity: 0.9,
+    marginLeft: 2,
+  },
+  xpSection: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingTop: 2,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.backgroundAlt,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
   xpLabel: {
     fontSize: 11,
@@ -230,10 +217,10 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   xpValue: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     color: colors.textSecondary,
-    minWidth: 48,
+    minWidth: 52,
     textAlign: 'right',
   },
 });

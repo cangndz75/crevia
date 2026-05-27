@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
@@ -49,13 +50,16 @@ function ActionTile({ action }: { action: (typeof ACTIONS)[number] }) {
           />
         </View>
       </View>
-      <View style={styles.textCol}>
-        <Text style={styles.label} numberOfLines={1}>
-          {action.label}
-        </Text>
-        <Text style={styles.description} numberOfLines={1}>
-          {action.description}
-        </Text>
+      <View style={styles.bottomRow}>
+        <View style={styles.textCol}>
+          <Text style={styles.label} numberOfLines={1}>
+            {action.label}
+          </Text>
+          <Text style={styles.description} numberOfLines={1}>
+            {action.description}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
       </View>
     </Pressable>
   );
@@ -66,14 +70,9 @@ export function HubQuickActions() {
     <View style={styles.wrap}>
       <Text style={styles.title}>Hızlı Aksiyonlar</Text>
       <View style={styles.grid}>
-        <View style={styles.gridRow}>
-          <ActionTile action={ACTIONS[0]} />
-          <ActionTile action={ACTIONS[1]} />
-        </View>
-        <View style={styles.gridRow}>
-          <ActionTile action={ACTIONS[2]} />
-          <ActionTile action={ACTIONS[3]} />
-        </View>
+        {ACTIONS.map((a) => (
+          <ActionTile key={a.id} action={a} />
+        ))}
       </View>
     </View>
   );
@@ -91,9 +90,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   grid: {
-    gap: 8,
-  },
-  gridRow: {
     flexDirection: 'row',
     gap: 8,
   },
@@ -103,10 +99,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingVertical: 11,
-    paddingHorizontal: 11,
-    gap: 9,
-    minHeight: 90,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    gap: 6,
+    minHeight: 0,
     ...shadows.soft,
   },
   pressed: {
@@ -136,10 +132,15 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
   },
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   textCol: {
+    flex: 1,
     gap: 3,
     minWidth: 0,
-    alignSelf: 'stretch',
   },
   label: {
     fontSize: 12,

@@ -1,44 +1,60 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { LinearGradient } from "expo-linear-gradient";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, { FadeInUp } from "react-native-reanimated";
 
-import { GameButton } from '@/ui/components/GameButton';
-import { colors } from '@/ui/theme/colors';
-import { radius } from '@/ui/theme/radius';
-import { shadows } from '@/ui/theme/shadows';
-import { spacing } from '@/ui/theme/spacing';
+import { GameButton } from "@/ui/components/GameButton";
+import { colors } from "@/ui/theme/colors";
+import { radius } from "@/ui/theme/radius";
+import { shadows } from "@/ui/theme/shadows";
+import { spacing } from "@/ui/theme/spacing";
 
 type OperationPreviewFooterCTAProps = {
   onPilotReport: () => void;
+  onNormalOperation?: () => void;
 };
 
 export function OperationPreviewFooterCTA({
   onPilotReport,
+  onNormalOperation,
 }: OperationPreviewFooterCTAProps) {
   return (
     <Animated.View
       entering={FadeInUp.delay(520).duration(340).springify().damping(22)}
-      style={styles.wrap}>
+      style={styles.wrap}
+    >
       <View style={[styles.ctaCard, shadows.card]}>
         <Pressable
           disabled
           style={styles.primaryBtn}
-          accessibilityState={{ disabled: true }}>
+          accessibilityState={{ disabled: true }}
+        >
           <LinearGradient
-            colors={[colors.hubGoldMuted, '#FFF8E8']}
+            colors={[colors.hubGoldMuted, "#FFF8E8"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.primaryGradient}>
+            style={styles.primaryGradient}
+          >
             <Ionicons name="lock-closed" size={17} color={colors.hubGoldDark} />
-            <Text style={styles.primaryText}>Ana Operasyon Yakında Açılacak</Text>
+            <Text style={styles.primaryText}>
+              Ana Operasyon Yakında Açılacak
+            </Text>
           </LinearGradient>
         </Pressable>
+
+        {onNormalOperation ? (
+          <GameButton
+            title="Günlük Operasyona Git"
+            onPress={onNormalOperation}
+            variant="secondary"
+            style={styles.secondaryBtn}
+          />
+        ) : null}
 
         <GameButton
           title="Pilot Raporuna Dön"
           onPress={onPilotReport}
-          variant="secondary"
+          variant="ghost"
           style={styles.secondaryBtn}
         />
       </View>
@@ -65,31 +81,31 @@ const styles = StyleSheet.create({
   },
   primaryBtn: {
     borderRadius: radius.lg,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderWidth: 1,
     borderColor: `${colors.hubGold}99`,
   },
   primaryGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: spacing.sm,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
   },
   primaryText: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: "800",
     color: colors.hubGoldDark,
     letterSpacing: -0.2,
   },
   secondaryBtn: {
-    alignSelf: 'stretch',
+    alignSelf: "stretch",
   },
   footerNote: {
     fontSize: 11,
     lineHeight: 16,
-    textAlign: 'center',
+    textAlign: "center",
     color: colors.textSecondary,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.sm,

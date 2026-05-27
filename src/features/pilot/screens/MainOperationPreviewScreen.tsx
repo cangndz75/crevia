@@ -1,17 +1,29 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { OperationalEventsListScreen } from '@/features/events/screens/OperationalEventsListScreen';
-import { GameScreenShell } from '@/ui/components/GameScreenShell';
+import { getPilotDistrictHeroImage } from '@/features/hub/utils/hubAssets';
+import { OperationPreviewFooterCTA } from '@/features/pilot/components/operation-preview/OperationPreviewFooterCTA';
+import { OperationPreviewHeader } from '@/features/pilot/components/operation-preview/OperationPreviewHeader';
+import { OperationPreviewHero } from '@/features/pilot/components/operation-preview/OperationPreviewHero';
+import { OperationPreviewLegacyCard } from '@/features/pilot/components/operation-preview/OperationPreviewLegacyCard';
+import { OperationPreviewRoadmap } from '@/features/pilot/components/operation-preview/OperationPreviewRoadmap';
+import { OperationPreviewStatusChips } from '@/features/pilot/components/operation-preview/OperationPreviewStatusChips';
+import { OperationPreviewSystemsGrid } from '@/features/pilot/components/operation-preview/OperationPreviewSystemsGrid';
+import { useOperationPreviewState } from '@/features/pilot/hooks/useOperationPreviewState';
+import { useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
 
 /**
- * Ana operasyon önizlemesi — pilot sonrası genişletilmiş olay listesi deneyimi.
+ * Anasayfa / pilot raporu → "Ana Operasyon Önizlemesi" (yakında açılacak).
+ * Alt menü Operasyon sekmesi ayrı: EventsDecisionCenterScreen.
  */
 export function MainOperationPreviewScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const districtId = useGameStore((s) => s.gameState.pilot.selectedDistrictId);
+  const preview = useOperationPreviewState({ forcePilotComplete: true });
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -21,67 +33,64 @@ export function MainOperationPreviewScreen() {
     router.replace('/');
   };
 
+  const handleInfo = () => {
+    Alert.alert(
+      'Ana Operasyon Önizlemesi',
+      'Şehir ölçeğindeki ana operasyon modu henüz açılmadı. Günlük kararlar için alttaki Operasyon sekmesini kullan.',
+    );
+  };
+
   return (
-    <GameScreenShell
-      screenTitle="Operasyon"
-      scrollable={false}
-      contentStyle={styles.shellContent}>
-      <View style={styles.topBar}>
-        <Pressable
-          onPress={handleBack}
-          style={styles.backBtn}
-          accessibilityLabel="Geri">
-          <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
-        </Pressable>
-        <View style={styles.titleBlock}>
-          <Text style={styles.title}>Ana Operasyon</Text>
-          <Text style={styles.subtitle}>Olay yönetimi önizlemesi</Text>
-        </View>
+    <View style={[styles.root, { paddingBottom: insets.bottom }]}>
+      <View style={styles.headerWrap}>
+        <OperationPreviewHeader onBack={handleBack} onInfo={handleInfo} />
       </View>
-      <OperationalEventsListScreen embedded />
-    </GameScreenShell>
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: spacing.xxl + insets.bottom },
+        ]}
+        showsVerticalScrollIndicator={false}>
+        <OperationPreviewStatusChips chips={preview.chips} />
+        <OperationPreviewRoadmap
+          steps={preview.roadmapSteps}
+          hint={preview.roadmapHint}
+        />
+        <OperationPreviewHero
+          districtImage={getPilotDistrictHeroImage(districtId)}
+          statusRows={preview.heroRows}
+          mainOperationLocked={preview.mainLocked}
+        />
+        <OperationPreviewLegacyCard values={preview.legacyValues} />
+        <OperationPreviewSystemsGrid cards={preview.systemCards} />
+        <OperationPreviewFooterCTA
+          onPilotReport={() => router.push('/events/pilot-final-report')}
+          onNormalOperation={() => router.replace('/events')}
+        />
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  shellContent: {
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    gap: 0,
+  root: {
     flex: 1,
+    backgroundColor: colors.background,
   },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+  headerWrap: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    backgroundColor: colors.background,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  titleBlock: {
+  scroll: {
     flex: 1,
-    minWidth: 0,
-    gap: 2,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  subtitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
+  scrollContent: {
+    gap: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
   },
 });

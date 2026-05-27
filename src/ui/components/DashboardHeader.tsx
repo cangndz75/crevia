@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useMemo } from 'react';
@@ -8,7 +9,6 @@ import { getTimeGreeting } from '@/core/utils/timeGreeting';
 import { getPilotDistrictHeroImage } from '@/features/hub/utils/hubAssets';
 import { useGameStatus } from '@/store/gameSelectors';
 import { HeaderAvatar } from '@/ui/components/game-header/HeaderAvatar';
-import { HeaderBudgetCard } from '@/ui/components/game-header/HeaderBudgetCard';
 import { HeaderNotifyButton } from '@/ui/components/game-header/HeaderNotifyButton';
 import { HeaderXpBar } from '@/ui/components/game-header/HeaderXpBar';
 import { colors } from '@/ui/theme/colors';
@@ -78,10 +78,16 @@ export function DashboardHeader() {
           <View style={styles.statsRow}>
             <View style={styles.xpBlock}>
               <View style={styles.xpLabels}>
-                <Text style={styles.xpLabel}>XP</Text>
+                <View style={styles.xpLabelRow}>
+                  <Ionicons name="star" size={12} color={colors.hubGold} />
+                  <Text style={styles.xpLabel}>XP</Text>
+                </View>
                 <Text style={styles.xpValue}>
                   {status.xp.toLocaleString('tr-TR')}/
                   {status.xpTarget.toLocaleString('tr-TR')}
+                </Text>
+                <Text style={styles.xpRemaining}>
+                  {Math.max(0, status.xpTarget - status.xp)} XP kaldı
                 </Text>
               </View>
               <HeaderXpBar
@@ -92,13 +98,16 @@ export function DashboardHeader() {
               />
             </View>
 
-            <HeaderBudgetCard
-              amount={status.budgetFormatted}
-              deltaLabel={status.budgetDeltaLabel}
-              deltaNegative={(status.budgetDelta ?? 0) < 0}
-              prominent
-              light
-            />
+            <View style={styles.budgetChip}>
+              <View style={styles.budgetWalletIcon}>
+                <Ionicons name="wallet-outline" size={14} color={colors.hubGold} />
+              </View>
+              <View style={styles.budgetContent}>
+                <Text style={styles.budgetChipLabel}>BÜTÇE</Text>
+                <Text style={styles.budgetChipAmount}>{status.budgetFormatted}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.7)" />
+            </View>
           </View>
         </View>
       </LinearGradient>
@@ -185,6 +194,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  xpLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
   xpLabel: {
     fontSize: 10,
     fontWeight: '700',
@@ -194,5 +208,50 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: 'rgba(255,255,255,0.65)',
+  },
+  xpRemaining: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.hubGold,
+  },
+  budgetChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    borderRadius: radius.lg,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    minWidth: 110,
+    flexShrink: 0,
+  },
+  budgetWalletIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(245,183,49,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(245,183,49,0.3)',
+  },
+  budgetContent: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
+  },
+  budgetChipLabel: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: 'rgba(255,255,255,0.6)',
+    letterSpacing: 0.6,
+  },
+  budgetChipAmount: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.textInverse,
+    letterSpacing: -0.3,
   },
 });

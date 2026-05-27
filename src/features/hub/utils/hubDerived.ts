@@ -244,17 +244,17 @@ export function deriveHubMetricCards(
       muted: '#F0EBFA',
     },
     {
-      id: 'butce',
-      label: 'Bütçe',
-      value: `₺${budgetK.toFixed(1)}K`,
+      id: 'risk',
+      label: 'Risk',
+      value: risk.score.toFixed(1),
       trend: showTrend
-        ? `${budgetDelta >= 0 ? '↑' : '↓'} ${Math.abs(Math.round(budgetDelta))}%`
+        ? `${risk.score <= 50 ? '↓' : '↑'} ${Math.abs(risk.score - 50).toFixed(1)}`
         : 'Nötr',
-      trendUp: budgetDelta >= 0,
+      trendUp: risk.score <= 50,
       showTrend,
       icon: 'butce',
-      accent: '#2E9B8C',
-      muted: '#E6F5F4',
+      accent: '#E89B2E',
+      muted: '#FDF4E6',
     },
     {
       id: 'ekip',

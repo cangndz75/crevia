@@ -33,14 +33,14 @@ export function HubScreen() {
       <View style={styles.body}>
         <HubStatusSummaryCard />
         <HubMetricsGrid />
-        <HubRegionPulseSection />
 
         <View style={styles.lowerSection}>
           <HubCriticalEventCard />
           <HubQuickActions />
-          <HubDailyGoalCard onEndDay={handleEndDay} />
         </View>
 
+        <HubRegionPulseSection />
+        <HubDailyGoalCard onEndDay={handleEndDay} />
         <HubPilotReportBanner />
 
         {eventCount > 1 && (

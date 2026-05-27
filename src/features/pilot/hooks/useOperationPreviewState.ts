@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { canCompletePilot } from '@/core/game/calculatePilotFinalResult';
 import { getDistrictProfile } from '@/core/content/districtProfiles';
 import {
   formatPilotRunMetricsDisplay,
@@ -41,13 +42,21 @@ function fallbackLegacyValues() {
   return formatPilotRunMetricsDisplay(FALLBACK_METRICS);
 }
 
-export function useOperationPreviewState() {
-  const { pilot, city, hasHydrated, districtId } = useGameStore(
+export type UseOperationPreviewStateOptions = {
+  /** Ana operasyon önizlemesi — pilot bölgesi bu ekranda her zaman bitmiş kabul edilir. */
+  forcePilotComplete?: boolean;
+};
+
+export function useOperationPreviewState(
+  options?: UseOperationPreviewStateOptions,
+) {
+  const { pilot, city, hasHydrated, districtId, gameState } = useGameStore(
     useShallow((s) => ({
       pilot: s.gameState.pilot,
       city: s.gameState.city,
       hasHydrated: s._hasHydrated,
       districtId: s.gameState.pilot.selectedDistrictId,
+      gameState: s.gameState,
     })),
   );
 
@@ -75,8 +84,17 @@ export function useOperationPreviewState() {
       ? formatPilotRunMetricsDisplay(displayMetrics)
       : formatPilotRunMetricsDisplay(fallbackFromDistrict);
 
-    const isCompleted = run?.isCompleted ?? pilot.status === 'completed';
-    const reportReady = (run?.dailySnapshots.length ?? 0) >= 7;
+    const unlock = run?.unlockState;
+    const isCompleted =
+      options?.forcePilotComplete === true ||
+      run?.isCompleted === true ||
+      pilot.status === 'completed' ||
+      unlock?.mainOperationPreviewUnlocked === true ||
+      canCompletePilot(gameState);
+    const reportReady =
+      (run?.dailySnapshots.length ?? 0) >= 7 ||
+      pilot.currentPilotDay >= 7 ||
+      isCompleted;
     const mainLocked = run
       ? !run.unlockState.fullMainOperationUnlocked
       : true;
@@ -94,7 +112,6 @@ export function useOperationPreviewState() {
       }
     });
 
-    const unlock = run?.unlockState;
     const roadmapSteps: RoadmapStep[] = ROADMAP_STEPS.map((step) => {
       switch (step.id) {
         case 'pilot':
@@ -175,7 +192,7 @@ export function useOperationPreviewState() {
       ? reportReady
         ? 'Pilot tamam — 7 günlük rapor hazır.'
         : 'Pilot tamam — sırada şehir haritası var.'
-      : 'Pilot süreci devam ediyor — kararların burada yansıyacak.';
+      : 'Pilot bölgesini tamamla; ardından şehir haritası açılacak.';
 
     const hasRealData = Boolean(run && (run.eventHistory.length > 0 || isCompleted));
 
@@ -196,5 +213,5 @@ export function useOperationPreviewState() {
         unlock?.mainOperationPreviewUnlocked ?? isCompleted,
       districtName: run?.selectedDistrictName ?? profile?.shortName,
     };
-  }, [pilot, city, hasHydrated, districtId]);
+  }, [pilot, city, hasHydrated, districtId, gameState, options?.forcePilotComplete]);
 }
