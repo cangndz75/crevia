@@ -3,10 +3,7 @@ import { useMemo } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
-import {
-  SYSTEM_CARDS,
-  type SystemCardItem,
-} from '@/features/pilot/components/operation-preview/operationPreviewData';
+import type { SystemCardItem } from '@/features/pilot/components/operation-preview/operationPreviewData';
 import { GameCard } from '@/ui/components/GameCard';
 import { SectionHeader } from '@/ui/components/SectionHeader';
 import { colors } from '@/ui/theme/colors';
@@ -77,7 +74,13 @@ function OperationPreviewSystemCard({
   );
 }
 
-export function OperationPreviewSystemsGrid() {
+type OperationPreviewSystemsGridProps = {
+  cards: SystemCardItem[];
+};
+
+export function OperationPreviewSystemsGrid({
+  cards,
+}: OperationPreviewSystemsGridProps) {
   const cardWidth = useGridCardWidth();
 
   return (
@@ -89,7 +92,7 @@ export function OperationPreviewSystemsGrid() {
         iconColor={colors.secondary}
       />
       <View style={styles.grid}>
-        {SYSTEM_CARDS.map((card, index) => (
+        {cards.map((card, index) => (
           <OperationPreviewSystemCard
             key={card.id}
             card={card}

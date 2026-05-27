@@ -15,7 +15,8 @@ import {
   selectXp,
   useGameStore,
 } from '@/store/useGameStore';
-import { AppScreen } from '@/ui/components/AppScreen';
+import { formatCurrency } from '@/core/utils/gameFormatters';
+import { GameScreenShell } from '@/ui/components/GameScreenShell';
 import { GameButton } from '@/ui/components/GameButton';
 import { GameCard } from '@/ui/components/GameCard';
 import { GameChip } from '@/ui/components/GameChip';
@@ -29,10 +30,6 @@ const toneColor = {
   neutral: colors.textPrimary,
 };
 
-function formatCurrency(amount: number): string {
-  return `₺${Math.round(amount).toLocaleString('tr-TR')}`;
-}
-
 function goToHub(router: ReturnType<typeof useRouter>) {
   router.push('/');
 }
@@ -43,7 +40,7 @@ type ReportEmptyProps = {
 
 function ReportEmpty({ onGoHub }: ReportEmptyProps) {
   return (
-    <AppScreen>
+    <GameScreenShell screenTitle="Raporlar">
       <Text style={typography.title}>Henüz Gün Sonu Raporu Yok</Text>
       <Text style={[typography.body, styles.emptyBody]}>
         Operasyon merkezinden günü bitirdiğinde burada günlük raporunu
@@ -54,7 +51,7 @@ function ReportEmpty({ onGoHub }: ReportEmptyProps) {
         onPress={onGoHub}
         style={styles.primaryAction}
       />
-    </AppScreen>
+    </GameScreenShell>
   );
 }
 
@@ -130,7 +127,7 @@ function ReportContent({
   const highlights = report.highlights ?? [];
 
   return (
-    <AppScreen>
+    <GameScreenShell screenTitle="Raporlar">
       <Text style={typography.title}>Gün Sonu Raporu</Text>
       <Text style={typography.caption}>Gün {report.day} tamamlandı</Text>
 
@@ -219,7 +216,7 @@ function ReportContent({
         onPress={onGoHub}
         style={styles.primaryAction}
       />
-    </AppScreen>
+    </GameScreenShell>
   );
 }
 

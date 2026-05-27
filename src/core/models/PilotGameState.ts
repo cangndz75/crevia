@@ -1,4 +1,6 @@
+import type { DailyEventSet } from './DailyEventSet';
 import type { PilotDistrictId } from './DistrictProfile';
+import type { PilotRun } from './PilotRun';
 
 export type PilotStatus = 'not_started' | 'active' | 'completed';
 
@@ -40,4 +42,8 @@ export type PilotGameState = {
   lastDecisionId?: string;
   lastEventId?: string;
   finalResult?: PilotFinalResult;
+  /** 7 günlük pilot koşusu — kararlar, günlük özetler ve kilit durumu. */
+  run: PilotRun | null;
+  /** Günlük çoklu olay seti — aynı gün/bölge için deterministik. */
+  dailyEventSet?: DailyEventSet;
 };

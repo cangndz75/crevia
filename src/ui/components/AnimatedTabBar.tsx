@@ -1,10 +1,51 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '@/ui/theme/colors';
 import { shadows } from '@/ui/theme/shadows';
+
+const AnimatedIcon = Animated.createAnimatedComponent(Ionicons);
+
+function TabBarIcon({
+  focused,
+  icon,
+  iconFocused,
+}: {
+  focused: boolean;
+  icon: keyof typeof Ionicons.glyphMap;
+  iconFocused: keyof typeof Ionicons.glyphMap;
+}) {
+  const scale = useSharedValue(focused ? 1.08 : 1);
+
+  useEffect(() => {
+    scale.value = withSpring(focused ? 1.08 : 1, {
+      damping: 14,
+      stiffness: 220,
+    });
+  }, [focused, scale]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={animStyle}>
+      <AnimatedIcon
+        name={focused ? iconFocused : icon}
+        size={22}
+        color={focused ? colors.tabActive : colors.tabInactive}
+      />
+    </Animated.View>
+  );
+}
 
 type TabConfig = {
   label: string;
@@ -86,10 +127,10 @@ export function AnimatedTabBar({
             accessibilityRole="button"
             accessibilityState={{ selected: focused }}
             accessibilityLabel={config.label}>
-            <Ionicons
-              name={focused ? config.iconFocused : config.icon}
-              size={22}
-              color={focused ? colors.tabActive : colors.tabInactive}
+            <TabBarIcon
+              focused={focused}
+              icon={config.icon}
+              iconFocused={config.iconFocused}
             />
             {focused ? (
               <Text style={[styles.label, styles.labelFocused]} numberOfLines={1}>

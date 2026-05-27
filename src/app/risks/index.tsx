@@ -1,5 +1,5 @@
-import { RisksScreen } from '@/features/risks/screens/RisksScreen';
+import { MapScreen } from '@/features/map/screens/MapScreen';
 
 export default function RisksRoute() {
-  return <RisksScreen />;
+  return <MapScreen />;
 }

@@ -1,4 +1,5 @@
 export type PlayerState = {
+  name?: string;
   xp: number;
   xpToNextLevel: number;
   authorityPoints: number;

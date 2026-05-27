@@ -1,5 +1,5 @@
 import { shouldClearPilotActiveEvents } from '@/core/game/clearActiveEventsForGameState';
-import { selectPilotEventsForDay } from '@/core/game/selectPilotEventsForDay';
+import { ensureDailyEventsForDay } from '@/core/game/ensureDailyEventsForDay';
 import type { EventCard } from '@/core/models/EventCard';
 import type { GameState } from '@/core/models/GameState';
 
@@ -9,21 +9,14 @@ export type ResolvePilotEventPoolResult = {
   refreshed: boolean;
 };
 
-function cloneEventCards(events: EventCard[]): EventCard[] {
-  return events.map((event) => ({
-    ...event,
-    decisions: event.decisions.map((decision) => ({ ...decision })),
-  }));
-}
-
 /**
  * Pilot aktifken güncel gün/bölge için eventPool çözümler.
- * Pilot inactive veya selector boş dönerse mevcut havuz korunur.
+ * Günlük çoklu set mantığı ensureDailyEventsForDay üzerinden çalışır.
  */
 export function resolvePilotEventPoolForGameState(
   gameState: GameState,
   currentEventPool: EventCard[],
-  maxEvents = 1,
+  _maxEvents = 1,
 ): ResolvePilotEventPoolResult {
   if (shouldClearPilotActiveEvents(gameState)) {
     return { eventPool: [], refreshed: true };
@@ -33,14 +26,14 @@ export function resolvePilotEventPoolForGameState(
     return { eventPool: currentEventPool, refreshed: false };
   }
 
-  const selected = selectPilotEventsForDay({ gameState, maxEvents });
+  const ensured = ensureDailyEventsForDay(gameState, currentEventPool);
 
-  if (selected.length === 0) {
+  if (!ensured.ensured || ensured.eventPool.length === 0) {
     return { eventPool: currentEventPool, refreshed: false };
   }
 
   return {
-    eventPool: cloneEventCards(selected),
+    eventPool: ensured.eventPool,
     refreshed: true,
   };
 }

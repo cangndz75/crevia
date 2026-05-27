@@ -564,9 +564,7 @@ export function formatUrgencyLabel(hours: number) {
   return `${hours} saat kaldı`;
 }
 
-export function formatCurrency(amount: number) {
-  return `₺${amount.toLocaleString('tr-TR')}`;
-}
+export { formatCurrency } from '@/core/utils/gameFormatters';
 
 export function getRiskLevelLabel(level: string): string {
   const labels: Record<string, string> = {

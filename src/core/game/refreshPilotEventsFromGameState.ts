@@ -2,8 +2,7 @@ import {
   clearActiveEventsForGameState,
   shouldClearPilotActiveEvents,
 } from '@/core/game/clearActiveEventsForGameState';
-import { resolvePilotEventPoolForGameState } from '@/core/game/resolvePilotEventPool';
-import { syncActiveEventsWithPool } from '@/core/game/syncActiveEventsWithPool';
+import { ensureDailyEventsForDay } from '@/core/game/ensureDailyEventsForDay';
 import type { EventCard } from '@/core/models/EventCard';
 import type { GameState } from '@/core/models/GameState';
 
@@ -30,10 +29,9 @@ export function refreshPilotEventsFromGameState(
     };
   }
 
-  const { eventPool: nextEventPool, refreshed } =
-    resolvePilotEventPoolForGameState(gameState, currentEventPool);
+  const ensured = ensureDailyEventsForDay(gameState, currentEventPool);
 
-  if (!refreshed) {
+  if (!ensured.ensured) {
     return {
       gameState,
       eventPool: currentEventPool,
@@ -42,8 +40,8 @@ export function refreshPilotEventsFromGameState(
   }
 
   return {
-    gameState: syncActiveEventsWithPool(gameState, nextEventPool),
-    eventPool: nextEventPool,
+    gameState: ensured.gameState,
+    eventPool: ensured.eventPool,
     refreshed: true,
   };
 }

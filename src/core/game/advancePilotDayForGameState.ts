@@ -20,6 +20,7 @@ export function advancePilotDayForGameState(gameState: GameState): GameState {
     pilot: {
       ...gameState.pilot,
       currentPilotDay: currentPilotDay + 1,
+      dailyEventSet: undefined,
     },
   };
 }

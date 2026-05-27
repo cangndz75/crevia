@@ -107,6 +107,7 @@ function buildDay1GameState(activeEvents: EventCard[]): GameState {
   return {
     city,
     player: {
+      name: 'Can',
       xp: 0,
       xpToNextLevel: 100,
       authorityPoints: 0,

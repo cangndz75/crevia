@@ -1,42 +1,17 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { Alert, StyleSheet } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
-import { useShallow } from 'zustand/react/shallow';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { OperationPreviewFooterCTA } from '@/features/pilot/components/operation-preview/OperationPreviewFooterCTA';
-import { OperationPreviewHeader } from '@/features/pilot/components/operation-preview/OperationPreviewHeader';
-import { OperationPreviewHero } from '@/features/pilot/components/operation-preview/OperationPreviewHero';
-import { OperationPreviewLegacyCard } from '@/features/pilot/components/operation-preview/OperationPreviewLegacyCard';
-import { OperationPreviewRoadmap } from '@/features/pilot/components/operation-preview/OperationPreviewRoadmap';
-import { OperationPreviewStatusChips } from '@/features/pilot/components/operation-preview/OperationPreviewStatusChips';
-import { OperationPreviewSystemsGrid } from '@/features/pilot/components/operation-preview/OperationPreviewSystemsGrid';
-import { getPilotDistrictHeroImage } from '@/features/hub/utils/hubAssets';
-import { useGameStore } from '@/store/useGameStore';
-import { AppScreen } from '@/ui/components/AppScreen';
+import { OperationalEventsListScreen } from '@/features/events/screens/OperationalEventsListScreen';
+import { GameScreenShell } from '@/ui/components/GameScreenShell';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
 
-function formatCurrency(amount: number): string {
-  return `₺${Math.round(amount).toLocaleString('tr-TR')}`;
-}
-
+/**
+ * Ana operasyon önizlemesi — pilot sonrası genişletilmiş olay listesi deneyimi.
+ */
 export function MainOperationPreviewScreen() {
   const router = useRouter();
-  const { districtId, city } = useGameStore(
-    useShallow((s) => ({
-      districtId: s.gameState.pilot.selectedDistrictId,
-      city: s.gameState.city,
-    })),
-  );
-
-  const districtImage = getPilotDistrictHeroImage(districtId);
-
-  const legacyValues = {
-    trust: `%${city.publicSatisfaction}`,
-    budget: formatCurrency(city.budget),
-    morale: `%${city.morale}`,
-    risk: `${city.riskScore}/100`,
-  };
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -46,43 +21,67 @@ export function MainOperationPreviewScreen() {
     router.replace('/');
   };
 
-  const handleInfo = () => {
-    Alert.alert(
-      'Ana Operasyon Önizlemesi',
-      'Pilot bölge tamamlandı. Ana operasyon modu ilerleyen güncellemelerde açılacak; kararların başlangıç dengene yansıyacak.',
-    );
-  };
-
-  const goPilotReport = () => {
-    router.push('/events/pilot-final-report');
-  };
-
   return (
-    <AppScreen
-      safeEdges={['left', 'right']}
-      style={styles.screen}
-      contentStyle={styles.content}>
-      <Animated.View entering={FadeIn.duration(280)}>
-        <OperationPreviewHeader onBack={handleBack} onInfo={handleInfo} />
-      </Animated.View>
-
-      <OperationPreviewStatusChips />
-      <OperationPreviewRoadmap />
-      <OperationPreviewHero districtImage={districtImage} />
-      <OperationPreviewLegacyCard values={legacyValues} />
-      <OperationPreviewSystemsGrid />
-      <OperationPreviewFooterCTA onPilotReport={goPilotReport} />
-    </AppScreen>
+    <GameScreenShell
+      screenTitle="Operasyon"
+      scrollable={false}
+      contentStyle={styles.shellContent}>
+      <View style={styles.topBar}>
+        <Pressable
+          onPress={handleBack}
+          style={styles.backBtn}
+          accessibilityLabel="Geri">
+          <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+        </Pressable>
+        <View style={styles.titleBlock}>
+          <Text style={styles.title}>Ana Operasyon</Text>
+          <Text style={styles.subtitle}>Olay yönetimi önizlemesi</Text>
+        </View>
+      </View>
+      <OperationalEventsListScreen embedded />
+    </GameScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    backgroundColor: colors.hubCream,
-  },
-  content: {
-    paddingHorizontal: spacing.lg,
+  shellContent: {
+    paddingHorizontal: 0,
     paddingTop: 0,
-    gap: spacing.lg,
+    gap: 0,
+    flex: 1,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  subtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
 });

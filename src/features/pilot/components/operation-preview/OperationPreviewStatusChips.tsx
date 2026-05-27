@@ -2,10 +2,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
-import {
-  STATUS_CHIPS,
-  type StatusChipItem,
-} from '@/features/pilot/components/operation-preview/operationPreviewData';
+import type { OperationPreviewChipView } from '@/features/pilot/hooks/useOperationPreviewState';
+import type { StatusChipItem } from '@/features/pilot/components/operation-preview/operationPreviewData';
+
+export type { OperationPreviewChipView };
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { spacing } from '@/ui/theme/spacing';
@@ -34,25 +34,54 @@ const CHIP_PALETTE: Record<
   },
 };
 
-function StatusChip({ item, index }: { item: StatusChipItem; index: number }) {
+function StatusChip({
+  item,
+  index,
+}: {
+  item: OperationPreviewChipView;
+  index: number;
+}) {
   const palette = CHIP_PALETTE[item.tone];
+  const inactive = !item.active;
 
   return (
     <Animated.View
       entering={FadeInUp.delay(40 + index * 40).duration(280).springify().damping(22)}
-      style={[styles.chip, { backgroundColor: palette.bg, borderColor: palette.border }]}>
-      <Ionicons name={item.icon} size={12} color={palette.icon} />
-      <Text style={[styles.chipText, { color: palette.text }]} numberOfLines={1}>
+      style={[
+        styles.chip,
+        {
+          backgroundColor: palette.bg,
+          borderColor: palette.border,
+          opacity: inactive ? 0.45 : 1,
+        },
+      ]}>
+      <Ionicons
+        name={item.icon}
+        size={12}
+        color={inactive ? colors.textSecondary : palette.icon}
+      />
+      <Text
+        style={[
+          styles.chipText,
+          { color: inactive ? colors.textSecondary : palette.text },
+        ]}
+        numberOfLines={1}>
         {item.label}
       </Text>
     </Animated.View>
   );
 }
 
-export function OperationPreviewStatusChips() {
+type OperationPreviewStatusChipsProps = {
+  chips: OperationPreviewChipView[];
+};
+
+export function OperationPreviewStatusChips({
+  chips,
+}: OperationPreviewStatusChipsProps) {
   return (
     <View style={styles.wrap}>
-      {STATUS_CHIPS.map((item, index) => (
+      {chips.map((item, index) => (
         <StatusChip key={item.id} item={item} index={index} />
       ))}
     </View>

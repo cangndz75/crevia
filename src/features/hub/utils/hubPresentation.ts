@@ -1,21 +1,8 @@
 import type { HubDerivedInput } from '@/features/hub/utils/hubDerived';
 import { deriveHubRiskScore } from '@/features/hub/utils/hubDerived';
 
-export type TimeGreeting = {
-  title: string;
-  emoji: string;
-};
-
-export function getTimeGreeting(date = new Date()): TimeGreeting {
-  const hour = date.getHours();
-  if (hour >= 5 && hour < 12) {
-    return { title: 'Günaydın', emoji: '☀️' };
-  }
-  if (hour >= 12 && hour < 18) {
-    return { title: 'İyi Günler', emoji: '🌤️' };
-  }
-  return { title: 'İyi Akşamlar', emoji: '🌙' };
-}
+export type { TimeGreeting } from '@/core/utils/timeGreeting';
+export { getTimeGreeting } from '@/core/utils/timeGreeting';
 
 export function getHubStatusSubtitle(input: HubDerivedInput): string {
   const { metrics, activeEvents, decisionCount } = input;

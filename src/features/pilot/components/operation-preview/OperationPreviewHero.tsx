@@ -4,7 +4,7 @@ import type { ImageSource } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
-import { HERO_STATUS_ROWS } from '@/features/pilot/components/operation-preview/operationPreviewData';
+import type { OperationPreviewHeroRow } from '@/features/pilot/hooks/useOperationPreviewState';
 import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
 import { GameCard } from '@/ui/components/GameCard';
 import { colors } from '@/ui/theme/colors';
@@ -15,6 +15,8 @@ import { typography } from '@/ui/theme/typography';
 
 type OperationPreviewHeroProps = {
   districtImage: ImageSource;
+  statusRows: OperationPreviewHeroRow[];
+  mainOperationLocked: boolean;
 };
 
 function HeroStatusPill({
@@ -45,7 +47,11 @@ function HeroStatusPill({
   );
 }
 
-export function OperationPreviewHero({ districtImage }: OperationPreviewHeroProps) {
+export function OperationPreviewHero({
+  districtImage,
+  statusRows,
+  mainOperationLocked,
+}: OperationPreviewHeroProps) {
   return (
     <Animated.View entering={FadeInUp.delay(140).duration(380).springify().damping(22)}>
       <GameCard padding="lg" style={[styles.card, shadows.card]}>
@@ -66,16 +72,20 @@ export function OperationPreviewHero({ districtImage }: OperationPreviewHeroProp
             style={styles.visualGradient}
           />
           <View style={styles.overlay}>
-            <View style={styles.overlayBadge}>
-              <Ionicons name="lock-closed" size={16} color={colors.hubGoldDark} />
-            </View>
+            {mainOperationLocked ? (
+              <View style={styles.overlayBadge}>
+                <Ionicons name="lock-closed" size={16} color={colors.hubGoldDark} />
+              </View>
+            ) : null}
             <Text style={styles.overlayTitle}>ANA OPERASYON</Text>
-            <Text style={styles.overlaySub}>Yakında Açılacak</Text>
+            <Text style={styles.overlaySub}>
+              {mainOperationLocked ? 'Yakında Açılacak' : 'Önizleme Modu'}
+            </Text>
           </View>
         </View>
 
         <View style={styles.statusRow}>
-          {HERO_STATUS_ROWS.map((row) => (
+          {statusRows.map((row) => (
             <HeroStatusPill
               key={row.id}
               label={row.label}

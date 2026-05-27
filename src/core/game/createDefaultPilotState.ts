@@ -8,5 +8,6 @@ export function createDefaultPilotState(): PilotGameState {
     flags: {},
     completedEventIds: [],
     pendingConsequences: [],
+    run: null,
   };
 }

@@ -5,14 +5,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { HubCriticalEventCard } from '@/features/hub/components/HubCriticalEventCard';
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
 import { HubDailyGoalCard } from '@/features/hub/components/HubDailyGoalCard';
-import { HubHeader } from '@/features/hub/components/HubHeader';
 import { HubMetricsGrid } from '@/features/hub/components/HubMetricsGrid';
 import { HubPilotReportBanner } from '@/features/hub/components/HubPilotReportBanner';
 import { HubQuickActions } from '@/features/hub/components/HubQuickActions';
 import { HubRegionPulseSection } from '@/features/hub/components/HubRegionPulseSection';
 import { HubStatusSummaryCard } from '@/features/hub/components/HubStatusSummaryCard';
 import { selectActiveEvents, useGameStore } from '@/store/useGameStore';
-import { AppScreen } from '@/ui/components/AppScreen';
+import { GameScreenShell } from '@/ui/components/GameScreenShell';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
 
@@ -27,12 +26,10 @@ export function HubScreen() {
   };
 
   return (
-    <AppScreen
-      safeEdges={['left', 'right']}
-      contentStyle={styles.content}
-      style={styles.screen}>
-      <HubHeader />
-
+    <GameScreenShell
+      headerVariant="dashboard"
+      backgroundColor={colors.hubCream}
+      contentStyle={styles.content}>
       <View style={styles.body}>
         <HubStatusSummaryCard />
         <HubMetricsGrid />
@@ -63,17 +60,13 @@ export function HubScreen() {
 
         <HubDevTools />
       </View>
-    </AppScreen>
+    </GameScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    backgroundColor: colors.hubCream,
-  },
   content: {
     paddingHorizontal: 0,
-    paddingTop: 0,
     gap: 0,
   },
   body: {

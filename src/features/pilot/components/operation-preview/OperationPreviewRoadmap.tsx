@@ -3,11 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
-import {
-  ROADMAP_STEPS,
-  type RoadmapStep,
-  type RoadmapStepState,
-} from '@/features/pilot/components/operation-preview/operationPreviewData';
+import type { RoadmapStep, RoadmapStepState } from '@/features/pilot/components/operation-preview/operationPreviewData';
 import { GameCard } from '@/ui/components/GameCard';
 import { SectionHeader } from '@/ui/components/SectionHeader';
 import { colors } from '@/ui/theme/colors';
@@ -117,7 +113,15 @@ function RoadmapNode({
   );
 }
 
-export function OperationPreviewRoadmap() {
+type OperationPreviewRoadmapProps = {
+  steps: RoadmapStep[];
+  hint: string;
+};
+
+export function OperationPreviewRoadmap({
+  steps,
+  hint,
+}: OperationPreviewRoadmapProps) {
   return (
     <Animated.View entering={FadeInUp.delay(60).duration(300)}>
       <SectionHeader
@@ -131,20 +135,18 @@ export function OperationPreviewRoadmap() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.scroll}>
-          {ROADMAP_STEPS.map((step, index) => (
+          {steps.map((step, index) => (
             <RoadmapNode
               key={step.id}
               step={step}
               index={index}
-              isLast={index === ROADMAP_STEPS.length - 1}
+              isLast={index === steps.length - 1}
             />
           ))}
         </ScrollView>
         <View style={styles.hintRow}>
           <Ionicons name="sparkles" size={14} color={colors.hubGoldDark} />
-          <Text style={styles.hintText}>
-            Pilot tamam — sırada şehir haritası var.
-          </Text>
+          <Text style={styles.hintText}>{hint}</Text>
         </View>
       </GameCard>
     </Animated.View>

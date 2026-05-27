@@ -37,12 +37,6 @@ const neighborhoodThumb: Record<string, ImageSource> = {
   'yeni-konut': require('@/assets/districts/central/district_central_overview_03.png'),
 };
 
-const eventHeroById: Record<string, ImageSource> = {
-  'container-overflow': require('@/assets/events/waste/ev_waste_overflow_container_01.png'),
-  'trash-collection-delay': require('@/assets/events/waste/ev_waste_collection_delay_01.png'),
-  'park-trash-buildup': require('@/assets/events/waste/ev_waste_overflow_container_02.png'),
-};
-
 export function getPilotDistrictHeroImage(
   districtId: PilotDistrictId | null | undefined,
 ): ImageSource {
@@ -56,29 +50,7 @@ export function getNeighborhoodThumb(neighborhoodId: string): ImageSource {
   return neighborhoodThumb[neighborhoodId] ?? hubAssets.regionBalanced;
 }
 
-export function getEventHeroImage(
-  eventId: string,
-  category: string,
-): ImageSource {
-  if (eventHeroById[eventId]) {
-    return eventHeroById[eventId];
-  }
-
-  const key = category.toLowerCase();
-  if (key.includes('temizlik')) {
-    return require('@/assets/events/waste/ev_waste_overflow_container_03.png');
-  }
-  if (key.includes('altyapı') || key.includes('altyapi')) {
-    return require('@/assets/events/maintenance/ev_maintenance_road_pothole_01.png');
-  }
-  if (key.includes('iletişim') || key.includes('iletisim')) {
-    return require('@/assets/events/social/ev_social_noise_complaint_01.png');
-  }
-  if (key.includes('pazar') || key.includes('market')) {
-    return require('@/assets/events/market/ev_market_area_pollution_01.png');
-  }
-  return require('@/assets/events/social/ev_city_risk_critical_01.png');
-}
+export { getEventHeroImage } from '@/features/events/utils/eventAssets';
 
 export function getMetricIcon(metricId: HubMetricCard['icon']): ImageSource {
   return hubAssets.metrics[metricId];

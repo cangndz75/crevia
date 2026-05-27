@@ -256,6 +256,13 @@ export function selectPilotEventsForDay(
   return selectPilotEventsInternal(params).selected;
 }
 
+/** Gün/tema/bölge/koşul filtresinden geçen tamamlanmamış adaylar. */
+export function listEligiblePilotEventsForDay(
+  params: Omit<SelectPilotEventsForDayParams, 'maxEvents'>,
+): EventCard[] {
+  return selectPilotEventsInternal({ ...params, maxEvents: 999 }).eligible;
+}
+
 /**
  * selectPilotEventsForDay sonucunu ve seçim gerekçesini döndürür (debug).
  */

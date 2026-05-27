@@ -82,13 +82,19 @@ function isValidPilotState(val: unknown): val is PilotGameState {
 }
 
 function ensurePilotOnGameState(gameState: GameState): GameState {
-  if (isValidPilotState(gameState.pilot)) {
-    return gameState;
+  if (!isValidPilotState(gameState.pilot)) {
+    return {
+      ...gameState,
+      pilot: createDefaultPilotState(),
+    };
   }
-  return {
-    ...gameState,
-    pilot: createDefaultPilotState(),
-  };
+  if (gameState.pilot.run === undefined) {
+    return {
+      ...gameState,
+      pilot: { ...gameState.pilot, run: null },
+    };
+  }
+  return gameState;
 }
 
 function validatePersistedCore(raw: Record<string, unknown>): boolean {
