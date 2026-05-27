@@ -5,6 +5,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 
 import { DecisionOptionCard } from '@/features/events/components/DecisionOptionCard';
+import { EventRecommendedTeamRow } from '@/features/events/components/EventRecommendedTeamRow';
 import { EventDecisionEventCard } from '@/features/events/components/EventDecisionEventCard';
 import { EventDecisionResultPhase } from '@/features/events/components/EventDecisionResultPhase';
 import { getDistrictProfileForEvent } from '@/features/events/utils/eventDecisionDistrict';
@@ -223,6 +224,10 @@ export function EventDecisionScreen({ eventId }: EventDecisionScreenProps) {
           </Animated.View>
         ) : null}
 
+        <Animated.View entering={FadeInUp.delay(100).duration(300).springify().damping(22)}>
+          <EventRecommendedTeamRow event={event} />
+        </Animated.View>
+
         <Animated.View entering={FadeIn.delay(140).duration(260)}>
           <AdvisorHintCard />
         </Animated.View>
@@ -241,6 +246,7 @@ export function EventDecisionScreen({ eventId }: EventDecisionScreenProps) {
                 key={decision.id}
                 entering={FadeInUp.delay(180 + index * 70).duration(300).springify().damping(20)}>
                 <DecisionOptionCard
+                  event={event}
                   decision={decision}
                   selected={applyingId === decision.id}
                   affordability={decisionAffordability[decision.id]}

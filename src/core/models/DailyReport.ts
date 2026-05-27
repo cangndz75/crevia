@@ -13,5 +13,7 @@ export type DailyReport = {
   summaryLines?: string[];
   warnings?: string[];
   highlights?: string[];
+  /** Gün sonu personel bloğu — genel özetten ayrı tutulur. */
+  personnelSummaryLines?: string[];
   createdAt?: string;
 };

@@ -6,6 +6,7 @@ import type { DecisionRecord } from '@/core/models/DecisionRecord';
 import type { DailyReport } from '@/core/models/DailyReport';
 import type { GameMetrics } from '@/core/models/GameMetrics';
 import { PilotReportSummaryCard } from '@/features/reports/components/PilotReportSummaryCard';
+import { ReportPersonnelSummary } from '@/features/reports/components/ReportPersonnelSummary';
 import { getPilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
 import { buildDailyEconomyReport } from '@/core/economy/economyReport';
 import {
@@ -150,6 +151,7 @@ function ReportContent({
       ) : null}
 
       <LineList title="Özet" lines={summaryLines} />
+      <ReportPersonnelSummary lines={report.personnelSummaryLines ?? []} />
       <LineList title="Uyarılar" lines={warnings} tone="warning" />
       <LineList title="Öne Çıkanlar" lines={highlights} tone="highlight" />
 

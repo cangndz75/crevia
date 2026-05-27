@@ -10,6 +10,8 @@ import {
   createInitialEconomyState,
 } from '@/core/economy/economyEngine';
 import type { EconomyState } from '@/core/economy/types';
+import { createInitialPersonnelState } from '@/core/personnel/personnelSeed';
+import type { PersonnelState } from '@/core/personnel/personnelTypes';
 import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
 import type { PlayerProgress } from '@/core/xp/types';
 import type { GameState } from '@/core/models/GameState';
@@ -46,6 +48,7 @@ export type PersistedGameState = Pick<
   | 'dailyGoalsByDay'
   | 'dailyGoalRuntime'
   | 'economyState'
+  | 'personnelState'
 > & {
   saveVersion: number;
   updatedAt: string;
@@ -72,6 +75,7 @@ export function partialiseGameState(
     dailyGoalsByDay: state.dailyGoalsByDay,
     dailyGoalRuntime: state.dailyGoalRuntime,
     economyState: state.economyState,
+    personnelState: state.personnelState,
     saveVersion: SAVE_VERSION,
     updatedAt: new Date().toISOString(),
   };
@@ -129,6 +133,20 @@ function isValidDailyGoal(val: unknown): val is DailyGoal {
   if (typeof val.xpReward !== 'number') return false;
   if (typeof val.xpClaimed !== 'boolean') return false;
   return true;
+}
+
+function isValidPersonnelState(val: unknown): val is PersonnelState {
+  if (!isRecord(val)) return false;
+  if (!Array.isArray(val.teams)) return false;
+  if (!Array.isArray(val.dayAssignments)) return false;
+  if (typeof val.lastProcessedDay !== 'number') return false;
+  return val.teams.every(
+    (t) =>
+      isRecord(t) &&
+      typeof t.id === 'string' &&
+      typeof t.fatigue === 'number' &&
+      typeof t.morale === 'number',
+  );
 }
 
 function isValidEconomyState(val: unknown): val is EconomyState {
@@ -199,6 +217,29 @@ export function normalizePersistedSave(
     raw.gameState as GameState,
   );
   const economyState = resolveEconomyState(raw, gameState);
+  const rawPersonnel = isValidPersonnelState(raw.personnelState)
+    ? raw.personnelState
+    : createInitialPersonnelState();
+  const personnelState: PersonnelState = {
+    ...rawPersonnel,
+    motivationUsedByTeamId: isRecord(rawPersonnel.motivationUsedByTeamId)
+      ? (rawPersonnel.motivationUsedByTeamId as Record<string, number>)
+      : {},
+    equipmentSupportUsedDay:
+      typeof rawPersonnel.equipmentSupportUsedDay === 'number'
+        ? rawPersonnel.equipmentSupportUsedDay
+        : null,
+    teams: rawPersonnel.teams.map((team) => ({
+      ...team,
+      restMode:
+        team.restMode === 'light_duty' || team.restMode === 'full_rest'
+          ? team.restMode
+          : null,
+    })),
+    dayIncidents: Array.isArray(rawPersonnel.dayIncidents)
+      ? rawPersonnel.dayIncidents
+      : [],
+  };
 
   return {
     gameState: {
@@ -206,6 +247,7 @@ export function normalizePersistedSave(
       city: { ...gameState.city, budget: economyState.currentSource },
     },
     economyState,
+    personnelState,
     neighborhoods: raw.neighborhoods as PersistedGameState['neighborhoods'],
     resources: raw.resources as PersistedGameState['resources'],
     eventPool: raw.eventPool as PersistedGameState['eventPool'],

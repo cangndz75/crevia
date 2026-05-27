@@ -1,5 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useShallow } from 'zustand/react/shallow';
 
 import { DecisionEffectPills } from '@/features/events/components/DecisionEffectPills';
 import { ImpactStatGrid } from '@/features/events/components/ImpactStatGrid';
@@ -9,7 +11,9 @@ import {
 } from '@/features/events/utils/eventDecisionPresentation';
 import type { DecisionAffordabilityCheck } from '@/core/economy/economyAffordability';
 import { formatSourceWithLabel } from '@/core/economy/economyFormatter';
-import { EventDecision } from '@/core/models/EventCard';
+import { selectPersonnelImpactPreviewForDecision } from '@/core/personnel/personnelPresentation';
+import type { EventCard, EventDecision } from '@/core/models/EventCard';
+import { useGameStore, selectPersonnelState } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
@@ -17,6 +21,7 @@ import { spacing } from '@/ui/theme/spacing';
 import { typography } from '@/ui/theme/typography';
 
 type DecisionOptionCardProps = {
+  event: EventCard;
   decision: EventDecision;
   selected: boolean;
   onSelect: () => void;
@@ -24,11 +29,29 @@ type DecisionOptionCardProps = {
 };
 
 export function DecisionOptionCard({
+  event,
   decision,
   selected,
   onSelect,
   affordability,
 }: DecisionOptionCardProps) {
+  const personnelState = useGameStore(selectPersonnelState);
+  const currentDay = useGameStore((s) => s.gameState.city.day);
+  const neighborhoods = useGameStore(useShallow((s) => s.neighborhoods));
+  const resources = useGameStore((s) => s.resources);
+
+  const personnelPreview = useMemo(
+    () =>
+      selectPersonnelImpactPreviewForDecision(
+        event,
+        decision,
+        personnelState,
+        currentDay,
+        { neighborhoods, resources },
+      ),
+    [currentDay, decision.id, event.id, neighborhoods, personnelState, resources],
+  );
+
   const effectPills = buildDecisionEffectPills(decision.effects, decision.costs);
   const bonusPills = buildBonusPotentialPills(decision.districtBonusFlags);
   const insufficient =
@@ -76,6 +99,37 @@ export function DecisionOptionCard({
         <View style={styles.pillSection}>
           <Text style={styles.pillSectionLabel}>Bonus potansiyeli</Text>
           <DecisionEffectPills pills={bonusPills} />
+        </View>
+      ) : null}
+
+      {personnelPreview.decisionLine ? (
+        <View
+          style={[
+            styles.personnelPreview,
+            personnelPreview.riskLevel === 'high' && styles.personnelPreviewRisk,
+          ]}>
+          <Text
+            style={[
+              styles.personnelPreviewText,
+              personnelPreview.isLowImpact && styles.personnelPreviewMuted,
+            ]}>
+            {personnelPreview.decisionLine}
+          </Text>
+          {personnelPreview.decisionRiskLine ? (
+            <Text style={styles.personnelPreviewRiskText}>
+              {personnelPreview.decisionRiskLine}
+            </Text>
+          ) : null}
+          {personnelPreview.decisionMistakeLine ? (
+            <Text style={styles.personnelPreviewMistakeLine}>
+              {personnelPreview.decisionMistakeLine}
+            </Text>
+          ) : null}
+          {personnelPreview.mistakeRiskText ? (
+            <Text style={styles.personnelPreviewMistakeDetail}>
+              {personnelPreview.mistakeRiskText}
+            </Text>
+          ) : null}
         </View>
       ) : null}
 
@@ -205,6 +259,43 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
     textTransform: 'uppercase',
+    color: colors.textSecondary,
+  },
+  personnelPreview: {
+    gap: 3,
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  personnelPreviewRisk: {
+    borderTopColor: colors.warningMuted,
+  },
+  personnelPreviewText: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  personnelPreviewMuted: {
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  personnelPreviewRiskText: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600',
+    color: colors.warning,
+  },
+  personnelPreviewMistakeLine: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '700',
+    color: colors.warning,
+  },
+  personnelPreviewMistakeDetail: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '500',
     color: colors.textSecondary,
   },
   hint: {

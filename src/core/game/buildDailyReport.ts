@@ -4,6 +4,7 @@ import type { DailyReport, DailyReportStat } from '@/core/models/DailyReport';
 import type { DaySnapshot } from '@/core/models/DaySnapshot';
 import type { EventCard } from '@/core/models/EventCard';
 import type { GameMetrics } from '@/core/models/GameMetrics';
+import type { PersonnelDayReport } from '@/core/personnel/personnelTypes';
 
 const LOW_SATISFACTION = 50;
 const LOW_MORALE = 50;
@@ -16,6 +17,7 @@ export type BuildDailyReportParams = {
   activeEvents: EventCard[];
   resolvedEventIds: string[];
   snapshots: DaySnapshot[];
+  personnelReport?: PersonnelDayReport | null;
 };
 
 function formatCurrency(amount: number): string {
@@ -157,6 +159,41 @@ export function buildDailyReport(params: BuildDailyReportParams): DailyReport {
     );
   }
 
+  const personnelSummaryMax = 4;
+  const personnelSummaryLines: string[] = [];
+  if (params.personnelReport) {
+    const incidentCap = 2;
+    const incidentLines = (params.personnelReport.incidentLines ?? []).slice(
+      0,
+      incidentCap,
+    );
+    const incidentLineSet = new Set(incidentLines);
+
+    for (const line of incidentLines) {
+      personnelSummaryLines.push(line);
+    }
+
+    const summarySlotCount = Math.min(
+      2,
+      personnelSummaryMax - incidentLines.length,
+    );
+    const nonDuplicateSummaryLines = (
+      params.personnelReport.summaryLines ?? []
+    ).filter((line) => !incidentLineSet.has(line));
+
+    for (const line of nonDuplicateSummaryLines.slice(0, summarySlotCount)) {
+      personnelSummaryLines.push(line);
+    }
+    const warningLine = params.personnelReport.warnings[0];
+    if (warningLine) {
+      personnelSummaryLines.push(warningLine);
+    }
+    const highlightLine = params.personnelReport.highlights[0];
+    if (highlightLine) {
+      personnelSummaryLines.push(highlightLine);
+    }
+  }
+
   while (summaryLines.length < 3) {
     summaryLines.push(
       `Gün ${day} özeti: ${resolvedEventIds.length} olay kayıt altında çözülmüş durumda.`,
@@ -177,6 +214,7 @@ export function buildDailyReport(params: BuildDailyReportParams): DailyReport {
     summaryLines,
     warnings,
     highlights,
+    personnelSummaryLines: personnelSummaryLines.slice(0, personnelSummaryMax),
     createdAt: new Date().toISOString(),
   };
 }

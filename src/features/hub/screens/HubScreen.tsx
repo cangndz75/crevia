@@ -6,6 +6,7 @@ import { HubCriticalEventCard } from '@/features/hub/components/HubCriticalEvent
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
 import { HubDailyGoalCard } from '@/features/hub/components/HubDailyGoalCard';
 import { HubMetricsGrid } from '@/features/hub/components/HubMetricsGrid';
+import { HubPersonnelStrip } from '@/features/hub/components/HubPersonnelStrip';
 import { HubPilotReportBanner } from '@/features/hub/components/HubPilotReportBanner';
 import { HubQuickActions } from '@/features/hub/components/HubQuickActions';
 import { HubRegionPulseSection } from '@/features/hub/components/HubRegionPulseSection';
@@ -33,6 +34,7 @@ export function HubScreen() {
       <View style={styles.body}>
         <HubStatusSummaryCard />
         <HubMetricsGrid />
+        <HubPersonnelStrip />
 
         <View style={styles.lowerSection}>
           <HubCriticalEventCard />

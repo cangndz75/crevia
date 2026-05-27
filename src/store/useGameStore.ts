@@ -76,6 +76,18 @@ import type {
   ApplyDecisionEconomyResult,
   EconomyState,
 } from '@/core/economy/types';
+import { buildPersonnelDayReport } from '@/core/personnel/personnelEngine';
+import {
+  applyPersonnelRestAction,
+  processPersonnelAfterDecision,
+  processPersonnelEndOfDay,
+} from '@/core/personnel/personnelIntegration';
+import {
+  canAffordRestAction,
+  getRestActionCost,
+} from '@/core/personnel/personnelRestActions';
+import { createInitialPersonnelState } from '@/core/personnel/personnelSeed';
+import type { PersonnelState, RestActionType } from '@/core/personnel/personnelTypes';
 
 export type ApplyDecisionInsufficientReason = 'insufficient_source';
 
@@ -145,6 +157,7 @@ type GameStoreState = {
   dailyGoalsByDay: Record<number, DailyGoal>;
   dailyGoalRuntime: DailyGoalRuntime;
   economyState: EconomyState;
+  personnelState: PersonnelState;
   /** AsyncStorage'dan hydration tamamlandı mı? */
   _hasHydrated: boolean;
 };
@@ -175,6 +188,10 @@ type GameStoreActions = {
   completePilotFromCurrentState: () => void;
   resetPilotState: () => void;
   refreshPilotEventsForCurrentDay: () => void;
+  restPersonnelTeam: (
+    teamId: string,
+    restType: RestActionType,
+  ) => { success: boolean; message: string };
 };
 
 export type GameStore = GameStoreState & GameStoreActions;
@@ -337,6 +354,7 @@ function applySeedBundle(
   | 'dailyGoalsByDay'
   | 'dailyGoalRuntime'
   | 'economyState'
+  | 'personnelState'
 > {
   return {
     gameState: withSyncedPulse(bundle.gameState),
@@ -353,6 +371,7 @@ function applySeedBundle(
     dailyGoalsByDay: {},
     dailyGoalRuntime: { ...INITIAL_DAILY_GOAL_RUNTIME },
     economyState: createInitialEconomyState(),
+    personnelState: createInitialPersonnelState(),
   };
 }
 
@@ -581,6 +600,51 @@ export const useGameStore = create<GameStore>()(
 
         nextGameState = syncCityBudgetWithEconomy(nextGameState, economyState);
 
+        let personnelState = current.personnelState;
+        let personnelRuntime = current.dailyGoalRuntime;
+
+        if (event && decision) {
+          const personnelResult = processPersonnelAfterDecision(
+            {
+              personnelState,
+              event,
+              decision,
+              day: result.decisionRecord.day,
+              neighborhoods: current.neighborhoods,
+              resources: result.nextState.resources ?? current.resources,
+            },
+            nextGameState.city.morale,
+          );
+          personnelState = personnelResult.personnelState;
+          personnelRuntime = {
+            ...personnelRuntime,
+            staffFatiguePeak: Math.max(
+              personnelRuntime.staffFatiguePeak,
+              personnelResult.staffFatiguePeak,
+            ),
+          };
+
+          if (
+            personnelResult.metricEffects &&
+            Object.keys(personnelResult.metricEffects).length > 0
+          ) {
+            nextGameState = applyMetricPatch(
+              nextGameState,
+              personnelResult.metricEffects,
+            );
+          }
+
+          if (personnelResult.cityMorale != null) {
+            nextGameState = withSyncedPulse({
+              ...nextGameState,
+              city: {
+                ...nextGameState.city,
+                morale: clampMetric(personnelResult.cityMorale),
+              },
+            });
+          }
+        }
+
         let playerProgress = result.xp.playerProgress;
         let currentDailyGoal = current.currentDailyGoal;
         let dailyGoalRuntime = current.dailyGoalRuntime;
@@ -630,7 +694,8 @@ export const useGameStore = create<GameStore>()(
           playerProgress,
           currentDailyGoal,
           dailyGoalsByDay,
-          dailyGoalRuntime,
+          dailyGoalRuntime: personnelRuntime,
+          personnelState,
         });
 
         return {
@@ -639,6 +704,70 @@ export const useGameStore = create<GameStore>()(
           economy: decisionEconomy,
           success: true,
         };
+      },
+
+      restPersonnelTeam: (teamId, restType) => {
+        const current = get();
+        const day = current.gameState.city.day;
+        const cost = getRestActionCost(restType);
+
+        if (cost > 0 && !canAffordRestAction(current.economyState, restType)) {
+          return {
+            success: false,
+            message: `Bu destek için ${Math.round(cost / 1000)}K Kaynak gerekiyor.`,
+          };
+        }
+
+        const restResult = applyPersonnelRestAction(
+          current.personnelState,
+          teamId,
+          restType,
+          day,
+        );
+        if (!restResult.success) {
+          return { success: false, message: restResult.message };
+        }
+
+        let economyState = current.economyState;
+        if (cost > 0) {
+          const economyTx = createEconomyTransaction({
+            day,
+            amount: -cost,
+            type: 'decision_cost',
+            title:
+              restType === 'motivation'
+                ? 'Motivasyon desteği'
+                : 'Ekipman desteği',
+            sourceType: 'system',
+          });
+          const economyResult = applyEconomyTransactions(economyState, [
+            economyTx,
+          ]);
+          economyState = economyResult.economyState;
+        }
+
+        const restedTeam = restResult.personnelState.teams.find(
+          (t) => t.id === teamId,
+        );
+        let gameState = syncCityBudgetWithEconomy(current.gameState, economyState);
+        if (restedTeam && (restType === 'motivation' || restType === 'full_rest')) {
+          gameState = withSyncedPulse({
+            ...gameState,
+            city: {
+              ...gameState.city,
+              morale: clampMetric(
+                Math.round(gameState.city.morale * 0.7 + restedTeam.morale * 0.3),
+              ),
+            },
+          });
+        }
+
+        set({
+          personnelState: restResult.personnelState,
+          gameState,
+          economyState,
+        });
+        return { success: true, message: restResult.message };
       },
 
       useQuickAction: (actionId) => {
@@ -691,9 +820,24 @@ export const useGameStore = create<GameStore>()(
           current.gameState.pilot.status === 'active' ||
           current.gameState.pilot.status === 'completed';
 
+        const districtNames = Object.fromEntries(
+          current.neighborhoods.map((n) => [n.id, n.name]),
+        );
+        const personnelReport = buildPersonnelDayReport(
+          current.personnelState,
+          closingDay,
+          districtNames,
+        );
+
         const result = endDay(toEngineState(current), {
           skipEventSelection: skipGenericEventSelection,
+          personnelReport,
         });
+
+        const personnelStateAfterNight = processPersonnelEndOfDay(
+          current.personnelState,
+          closingDay,
+        );
 
         let nextGameState = withSyncedPulse(result.nextState);
         let nextEventPool = current.eventPool;
@@ -754,8 +898,23 @@ export const useGameStore = create<GameStore>()(
 
         const nextDay = nextGameState.city.day;
 
+        const syncedMoraleCity = {
+          ...nextGameState.city,
+          morale: clampMetric(
+            Math.round(
+              nextGameState.city.morale * 0.5 +
+                (personnelStateAfterNight.teams.reduce((s, t) => s + t.morale, 0) /
+                  Math.max(1, personnelStateAfterNight.teams.length)) *
+                  0.5,
+            ),
+          ),
+        };
+
         set({
-          gameState: nextGameState,
+          gameState: withSyncedPulse({
+            ...nextGameState,
+            city: syncedMoraleCity,
+          }),
           neighborhoods:
             result.nextState.neighborhoods ?? current.neighborhoods,
           resources: result.nextState.resources ?? current.resources,
@@ -770,6 +929,7 @@ export const useGameStore = create<GameStore>()(
           dailyGoalsByDay,
           currentDailyGoal: createDailyGoalForDay(nextDay),
           dailyGoalRuntime: { ...INITIAL_DAILY_GOAL_RUNTIME },
+          personnelState: personnelStateAfterNight,
         });
       },
 
@@ -1007,6 +1167,7 @@ export const useGameStore = create<GameStore>()(
           dailyGoalsByDay: saved.dailyGoalsByDay,
           dailyGoalRuntime: saved.dailyGoalRuntime,
           economyState: saved.economyState,
+          personnelState: saved.personnelState,
           lastBudgetDelta: null,
           _hasHydrated: true,
         };
@@ -1080,6 +1241,7 @@ export const selectPilotStatus = (s: GameStore) => s.gameState.pilot.status;
 export const selectPilotRun = (s: GameStore) => s.gameState.pilot.run;
 export const selectDailyEventSet = (s: GameStore) =>
   s.gameState.pilot.dailyEventSet ?? null;
+export const selectPersonnelState = (s: GameStore) => s.personnelState;
 
 export function getActiveEvent(eventId: string): EventCard | undefined {
   return useGameStore
