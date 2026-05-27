@@ -6,6 +6,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
+import type { DecisionAffordabilityCheck } from '@/core/economy/economyAffordability';
 import { getDecisionStyleConfig } from '@/features/events/utils/eventPresentation';
 import type { EventDecision } from '@/core/models/EventCard';
 import { colors } from '@/ui/theme/colors';
@@ -18,13 +19,17 @@ function HorizontalDecisionButton({
   decision,
   selected,
   onSelect,
+  affordability,
 }: {
   decision: EventDecision;
   selected: boolean;
   onSelect: () => void;
+  affordability?: DecisionAffordabilityCheck;
 }) {
   const scale = useSharedValue(1);
   const styleConfig = getDecisionStyleConfig(decision.style);
+  const insufficient =
+    affordability != null && affordability.cost > 0 && !affordability.canAfford;
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -32,9 +37,12 @@ function HorizontalDecisionButton({
 
   return (
     <AnimatedPressable
-      onPress={onSelect}
+      onPress={insufficient ? undefined : onSelect}
+      disabled={insufficient}
       onPressIn={() => {
-        scale.value = withSpring(0.96, { damping: 18, stiffness: 320 });
+        if (!insufficient) {
+          scale.value = withSpring(0.96, { damping: 18, stiffness: 320 });
+        }
       }}
       onPressOut={() => {
         scale.value = withSpring(1, { damping: 18, stiffness: 320 });
@@ -42,14 +50,15 @@ function HorizontalDecisionButton({
       style={[
         animStyle,
         styles.option,
-        selected && styles.optionSelected,
+        selected && !insufficient && styles.optionSelected,
+        insufficient && styles.optionInsufficient,
         {
-          borderColor: selected ? styleConfig.accent : colors.border,
-          backgroundColor: selected ? '#FAFFFE' : colors.surface,
+          borderColor: selected && !insufficient ? styleConfig.accent : colors.border,
+          backgroundColor: selected && !insufficient ? '#FAFFFE' : colors.surface,
         },
       ]}
       accessibilityRole="button"
-      accessibilityState={{ selected }}>
+      accessibilityState={{ selected, disabled: insufficient }}>
       <View style={[styles.iconWrap, { backgroundColor: styleConfig.muted }]}>
         <Ionicons
           name={styleConfig.icon}
@@ -60,8 +69,13 @@ function HorizontalDecisionButton({
       <Text style={styles.optionTitle} numberOfLines={2}>
         {decision.title}
       </Text>
-      {decision.recommended ? (
+      {decision.recommended && !insufficient ? (
         <View style={styles.recommendedDot} />
+      ) : null}
+      {insufficient && affordability ? (
+        <Text style={styles.insufficientHint} numberOfLines={2}>
+          Kaynak yetersiz{'\n'}Eksik: {affordability.formattedMissingSource} Kaynak
+        </Text>
       ) : null}
     </AnimatedPressable>
   );
@@ -71,12 +85,14 @@ type DecisionOptionsProps = {
   decisions: EventDecision[];
   selectedId: string | null;
   onSelect: (decisionId: string) => void;
+  affordabilityByDecisionId?: Record<string, DecisionAffordabilityCheck>;
 };
 
 export function DecisionOptions({
   decisions,
   selectedId,
   onSelect,
+  affordabilityByDecisionId,
 }: DecisionOptionsProps) {
   return (
     <View style={styles.wrap}>
@@ -88,6 +104,7 @@ export function DecisionOptions({
             decision={decision}
             selected={selectedId === decision.id}
             onSelect={() => onSelect(decision.id)}
+            affordability={affordabilityByDecisionId?.[decision.id]}
           />
         ))}
       </View>
@@ -139,6 +156,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 6,
     elevation: 2,
+  },
+  optionInsufficient: {
+    opacity: 0.65,
+    backgroundColor: colors.backgroundAlt,
+  },
+  insufficientHint: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.warning,
+    textAlign: 'center',
+    lineHeight: 12,
+    paddingHorizontal: 2,
   },
   iconWrap: {
     width: 44,

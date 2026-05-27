@@ -62,10 +62,54 @@ import type { DailyGoal, DailyGoalClaimResult } from '@/core/dailyGoals/types';
 import type { ApplyDecisionXpResult } from '@/core/xp/applyDecisionXp';
 import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
 import type { PlayerProgress } from '@/core/xp/types';
+import {
+  checkDecisionAffordability,
+  type DecisionAffordabilityCheck,
+} from '@/core/economy/economyAffordability';
+import {
+  applyEconomyTransactions,
+  createEconomyTransaction,
+  createInitialEconomyState,
+  extractDecisionCostFromApplied,
+} from '@/core/economy/economyEngine';
+import type {
+  ApplyDecisionEconomyResult,
+  EconomyState,
+} from '@/core/economy/types';
+
+export type ApplyDecisionInsufficientReason = 'insufficient_source';
 
 export type ApplyDecisionStoreResult = ApplyDecisionXpResult & {
   dailyGoalClaim: DailyGoalClaimResult | null;
+  economy?: ApplyDecisionEconomyResult;
+  /** Verilmezse başarılı kabul edilir — geriye uyumluluk. */
+  success?: boolean;
+  reason?: ApplyDecisionInsufficientReason;
 };
+
+function buildInsufficientApplyDecisionResult(
+  playerProgress: PlayerProgress,
+  affordability: DecisionAffordabilityCheck,
+): ApplyDecisionStoreResult {
+  return {
+    playerProgress,
+    xpBreakdown: { total: 0, items: [] },
+    xpTransactions: [],
+    leveledUp: false,
+    previousLevel: playerProgress.currentLevel,
+    newLevel: playerProgress.currentLevel,
+    unlockedAuthorities: [...playerProgress.unlockedAuthorities],
+    dailyGoalClaim: null,
+    success: false,
+    reason: 'insufficient_source',
+    economy: {
+      cost: affordability.cost,
+      currentSource: affordability.currentSource,
+      insufficientSource: true,
+      missingSource: affordability.missingSource,
+    },
+  };
+}
 
 import {
   clearPersistedGame,
@@ -100,6 +144,7 @@ type GameStoreState = {
   currentDailyGoal: DailyGoal | null;
   dailyGoalsByDay: Record<number, DailyGoal>;
   dailyGoalRuntime: DailyGoalRuntime;
+  economyState: EconomyState;
   /** AsyncStorage'dan hydration tamamlandı mı? */
   _hasHydrated: boolean;
 };
@@ -156,13 +201,13 @@ function buildCityPulse(city: CityState): CityPulseMetric[] {
     },
     {
       id: 'budget',
-      label: 'Bütçe Durumu',
-      value: `₺${city.budget.toLocaleString('tr-TR')}`,
+      label: 'Kaynak Durumu',
+      value: `${Math.round(city.budget / 1000)}K Kaynak`,
       progress: Math.min(1, city.budget / 100_000),
       color: colors.secondary,
       mutedColor: colors.secondaryMuted,
       icon: 'cash',
-      trendLabel: 'Bütçe',
+      trendLabel: 'Kaynak',
       trendValue: `Gün ${city.day}`,
       trendTone: 'info',
       variant: 'icon',
@@ -291,6 +336,7 @@ function applySeedBundle(
   | 'currentDailyGoal'
   | 'dailyGoalsByDay'
   | 'dailyGoalRuntime'
+  | 'economyState'
 > {
   return {
     gameState: withSyncedPulse(bundle.gameState),
@@ -306,6 +352,20 @@ function applySeedBundle(
     currentDailyGoal: createDailyGoalForDay(bundle.gameState.city.day),
     dailyGoalsByDay: {},
     dailyGoalRuntime: { ...INITIAL_DAILY_GOAL_RUNTIME },
+    economyState: createInitialEconomyState(),
+  };
+}
+
+function syncCityBudgetWithEconomy(
+  gameState: GameState,
+  economyState: EconomyState,
+): GameState {
+  if (gameState.city.budget === economyState.currentSource) {
+    return gameState;
+  }
+  return {
+    ...gameState,
+    city: { ...gameState.city, budget: economyState.currentSource },
   };
 }
 
@@ -354,14 +414,26 @@ export const useGameStore = create<GameStore>()(
       },
 
       updateBudget: (amount) => {
-        const { gameState } = get();
-        const nextBudget = Math.max(0, gameState.city.budget + amount);
+        const { gameState, economyState } = get();
+        if (amount === 0) return;
+
+        const tx = createEconomyTransaction({
+          day: gameState.city.day,
+          amount,
+          type: amount > 0 ? 'reward' : 'daily_adjustment',
+          title: amount > 0 ? 'Kaynak artışı' : 'Kaynak düşüşü',
+          sourceType: 'system',
+        });
+        const economyResult = applyEconomyTransactions(economyState, [tx]);
+        const syncedGameState = syncCityBudgetWithEconomy(
+          gameState,
+          economyResult.economyState,
+        );
+
         set({
-          lastBudgetDelta: amount !== 0 ? amount : null,
-          gameState: withSyncedPulse({
-            ...gameState,
-            city: { ...gameState.city, budget: nextBudget },
-          }),
+          lastBudgetDelta: amount,
+          economyState: economyResult.economyState,
+          gameState: withSyncedPulse(syncedGameState),
         });
       },
 
@@ -412,6 +484,19 @@ export const useGameStore = create<GameStore>()(
           current.eventPool.find((e) => e.id === eventId);
         const decision = event?.decisions.find((d) => d.id === decisionId);
 
+        if (decision) {
+          const affordability = checkDecisionAffordability({
+            economyState: current.economyState,
+            decision,
+          });
+          if (!affordability.canAfford) {
+            return buildInsufficientApplyDecisionResult(
+              current.playerProgress,
+              affordability,
+            );
+          }
+        }
+
         const result = runApplyDecision({
           state: toEngineState(current),
           eventId,
@@ -456,6 +541,46 @@ export const useGameStore = create<GameStore>()(
 
         const budgetEffect = result.decisionRecord.appliedEffects.budget ?? 0;
 
+        const decisionCost = extractDecisionCostFromApplied(
+          result.decisionRecord.appliedCosts,
+          result.decisionRecord.appliedEffects,
+          { decision },
+        );
+
+        let economyState = current.economyState;
+        let decisionEconomy: ApplyDecisionEconomyResult | undefined;
+
+        if (decisionCost > 0) {
+          const economyTx = createEconomyTransaction({
+            day: result.decisionRecord.day,
+            amount: -decisionCost,
+            type: 'decision_cost',
+            title: 'Karar maliyeti',
+            description: event?.title ?? decision?.title,
+            sourceId: decision?.id,
+            sourceType: 'decision',
+          });
+          const economyResult = applyEconomyTransactions(
+            economyState,
+            [economyTx],
+          );
+          economyState = economyResult.economyState;
+          decisionEconomy = {
+            cost: decisionCost,
+            transaction: economyResult.appliedTransactions[0],
+            currentSource: economyState.currentSource,
+            insufficientSource: economyResult.insufficientSource,
+          };
+        } else {
+          decisionEconomy = {
+            cost: 0,
+            currentSource: economyState.currentSource,
+            insufficientSource: false,
+          };
+        }
+
+        nextGameState = syncCityBudgetWithEconomy(nextGameState, economyState);
+
         let playerProgress = result.xp.playerProgress;
         let currentDailyGoal = current.currentDailyGoal;
         let dailyGoalRuntime = current.dailyGoalRuntime;
@@ -486,7 +611,7 @@ export const useGameStore = create<GameStore>()(
         };
 
         set({
-          gameState: nextGameState,
+          gameState: withSyncedPulse(nextGameState),
           neighborhoods:
             result.nextState.neighborhoods ?? current.neighborhoods,
           resources: result.nextState.resources ?? current.resources,
@@ -501,13 +626,19 @@ export const useGameStore = create<GameStore>()(
             result.afterSnapshot,
           ]),
           lastBudgetDelta: budgetEffect !== 0 ? budgetEffect : null,
+          economyState,
           playerProgress,
           currentDailyGoal,
           dailyGoalsByDay,
           dailyGoalRuntime,
         });
 
-        return { ...result.xp, dailyGoalClaim };
+        return {
+          ...result.xp,
+          dailyGoalClaim,
+          economy: decisionEconomy,
+          success: true,
+        };
       },
 
       useQuickAction: (actionId) => {
@@ -871,6 +1002,11 @@ export const useGameStore = create<GameStore>()(
           snapshots: limitSnapshots(saved.snapshots),
           lastDailyReport: saved.lastDailyReport,
           lastClosedDay: saved.lastClosedDay,
+          playerProgress: saved.playerProgress,
+          currentDailyGoal: saved.currentDailyGoal,
+          dailyGoalsByDay: saved.dailyGoalsByDay,
+          dailyGoalRuntime: saved.dailyGoalRuntime,
+          economyState: saved.economyState,
           lastBudgetDelta: null,
           _hasHydrated: true,
         };
@@ -899,9 +1035,13 @@ export function getEventById(eventId: string): EventCard | undefined {
 export const selectDay = (s: GameStore) => s.gameState.city.day;
 export const selectRole = (s: GameStore) => s.gameState.player.role;
 /** getState için; useGameStore ile doğrudan kullanmayın — useGameMetrics tercih edin. */
+function resolveMetricsBudget(s: GameStore): number {
+  return s.economyState?.currentSource ?? s.gameState.city.budget;
+}
+
 export const selectMetrics = (s: GameStore): GameMetrics => ({
   publicSatisfaction: s.gameState.city.publicSatisfaction,
-  budget: s.gameState.city.budget,
+  budget: resolveMetricsBudget(s),
   staffMorale: s.gameState.city.morale,
 });
 
@@ -910,7 +1050,7 @@ export function useGameMetrics(): GameMetrics {
   return useGameStore(
     useShallow((s) => ({
       publicSatisfaction: s.gameState.city.publicSatisfaction,
-      budget: s.gameState.city.budget,
+      budget: resolveMetricsBudget(s),
       staffMorale: s.gameState.city.morale,
     })),
   );

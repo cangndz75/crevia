@@ -5,6 +5,11 @@ import { createDefaultPilotState } from '@/core/game/createDefaultPilotState';
 import { INITIAL_DAILY_GOAL_RUNTIME } from '@/core/dailyGoals/dailyGoalIntegration';
 import { createDailyGoalForDay } from '@/core/dailyGoals/dailyGoalEngine';
 import type { DailyGoal } from '@/core/dailyGoals/types';
+import {
+  createEconomyStateFromLegacyBudget,
+  createInitialEconomyState,
+} from '@/core/economy/economyEngine';
+import type { EconomyState } from '@/core/economy/types';
 import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
 import type { PlayerProgress } from '@/core/xp/types';
 import type { GameState } from '@/core/models/GameState';
@@ -40,6 +45,7 @@ export type PersistedGameState = Pick<
   | 'currentDailyGoal'
   | 'dailyGoalsByDay'
   | 'dailyGoalRuntime'
+  | 'economyState'
 > & {
   saveVersion: number;
   updatedAt: string;
@@ -65,6 +71,7 @@ export function partialiseGameState(
     currentDailyGoal: state.currentDailyGoal,
     dailyGoalsByDay: state.dailyGoalsByDay,
     dailyGoalRuntime: state.dailyGoalRuntime,
+    economyState: state.economyState,
     saveVersion: SAVE_VERSION,
     updatedAt: new Date().toISOString(),
   };
@@ -124,6 +131,26 @@ function isValidDailyGoal(val: unknown): val is DailyGoal {
   return true;
 }
 
+function isValidEconomyState(val: unknown): val is EconomyState {
+  if (!isRecord(val)) return false;
+  if (typeof val.currentSource !== 'number') return false;
+  if (typeof val.startingSource !== 'number') return false;
+  if (typeof val.totalEarned !== 'number') return false;
+  if (typeof val.totalSpent !== 'number') return false;
+  if (!Array.isArray(val.transactions)) return false;
+  return true;
+}
+
+function resolveEconomyState(
+  raw: Record<string, unknown>,
+  gameState: GameState,
+): EconomyState {
+  if (isValidEconomyState(raw.economyState)) {
+    return raw.economyState;
+  }
+  return createEconomyStateFromLegacyBudget(gameState.city.budget);
+}
+
 function isValidPlayerProgress(val: unknown): val is PlayerProgress {
   if (!isRecord(val)) return false;
   if (typeof val.totalXp !== 'number') return false;
@@ -171,9 +198,14 @@ export function normalizePersistedSave(
   const gameState = ensurePilotOnGameState(
     raw.gameState as GameState,
   );
+  const economyState = resolveEconomyState(raw, gameState);
 
   return {
-    gameState,
+    gameState: {
+      ...gameState,
+      city: { ...gameState.city, budget: economyState.currentSource },
+    },
+    economyState,
     neighborhoods: raw.neighborhoods as PersistedGameState['neighborhoods'],
     resources: raw.resources as PersistedGameState['resources'],
     eventPool: raw.eventPool as PersistedGameState['eventPool'],

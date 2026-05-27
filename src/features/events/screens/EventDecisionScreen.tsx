@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 
@@ -15,6 +15,10 @@ import {
   canCompletePilot,
   PILOT_FINAL_EVENT_ID,
 } from '@/core/game/calculatePilotFinalResult';
+import {
+  checkDecisionAffordability,
+  type DecisionAffordabilityCheck,
+} from '@/core/economy/economyAffordability';
 import type { ApplyDecisionXpResult } from '@/core/xp/applyDecisionXp';
 import type { EventDecision } from '@/core/models/EventCard';
 import { useGameStore } from '@/store/useGameStore';
@@ -40,6 +44,7 @@ export function EventDecisionScreen({ eventId }: EventDecisionScreenProps) {
     s.gameState.events.find((e) => e.id === eventId),
   );
   const applyDecisionAction = useGameStore((s) => s.applyDecision);
+  const economyState = useGameStore((s) => s.economyState);
   const showPilotReportCta = useGameStore((s) => {
     if (eventId !== PILOT_FINAL_EVENT_ID) {
       return false;
@@ -64,9 +69,32 @@ export function EventDecisionScreen({ eventId }: EventDecisionScreenProps) {
     null,
   );
 
+  const decisionAffordability = useMemo(() => {
+    if (!event) {
+      return {};
+    }
+    return Object.fromEntries(
+      event.decisions.map((d) => [
+        d.id,
+        checkDecisionAffordability({ economyState, decision: d }),
+      ]),
+    );
+  }, [economyState, event]);
+
   const goToHub = useCallback(() => {
     router.replace('/');
   }, [router]);
+
+  const showInsufficientSourceAlert = useCallback(
+    (affordability: DecisionAffordabilityCheck) => {
+      Alert.alert(
+        'Kaynak yetersiz',
+        `Bu karar için ${affordability.formattedMissingSource} Kaynak daha gerekiyor.`,
+        [{ text: 'Tamam' }],
+      );
+    },
+    [],
+  );
 
   const goToPilotReport = useCallback(() => {
     router.push('/events/pilot-final-report');
@@ -79,9 +107,26 @@ export function EventDecisionScreen({ eventId }: EventDecisionScreenProps) {
       const decision = event.decisions.find((d) => d.id === decisionId);
       if (!decision) return;
 
+      const affordability = decisionAffordability[decisionId];
+      if (affordability && !affordability.canAfford) {
+        showInsufficientSourceAlert(affordability);
+        return;
+      }
+
       setApplyingId(decisionId);
       try {
         const xpResult = applyDecisionAction(eventId, decisionId);
+        if (
+          xpResult.success === false &&
+          xpResult.reason === 'insufficient_source'
+        ) {
+          const guardAffordability = checkDecisionAffordability({
+            economyState,
+            decision,
+          });
+          showInsufficientSourceAlert(guardAffordability);
+          return;
+        }
         setXpFeedback(xpResult);
         setAppliedDecision(decision);
         setPhase('result');
@@ -95,7 +140,17 @@ export function EventDecisionScreen({ eventId }: EventDecisionScreenProps) {
         setApplyingId(null);
       }
     },
-    [applyDecisionAction, applyingId, event, eventId, goToHub, phase],
+    [
+      applyDecisionAction,
+      applyingId,
+      decisionAffordability,
+      event,
+      eventId,
+      goToHub,
+      phase,
+      economyState,
+      showInsufficientSourceAlert,
+    ],
   );
 
   if (!event) {
@@ -188,6 +243,7 @@ export function EventDecisionScreen({ eventId }: EventDecisionScreenProps) {
                 <DecisionOptionCard
                   decision={decision}
                   selected={applyingId === decision.id}
+                  affordability={decisionAffordability[decision.id]}
                   onSelect={() => handleDecision(decision.id)}
                 />
               </Animated.View>

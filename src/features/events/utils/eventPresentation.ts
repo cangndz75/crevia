@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 
+import { formatSourceDelta } from '@/core/economy/economyFormatter';
 import {
   DecisionStyle,
   EventDecisionEffect,
@@ -113,7 +114,7 @@ export function buildEffectChips(
     {
       key: 'budget',
       icon: 'wallet-outline',
-      label: 'Bütçe',
+      label: 'Kaynak',
       value: formatCurrencyShort(effects.budget),
       tone:
         effects.budget > 0 ? 'positive' : effects.budget < 0 ? 'negative' : 'neutral',
@@ -153,6 +154,5 @@ export function buildEffectChips(
 }
 
 function formatCurrencyShort(amount: number) {
-  const sign = amount > 0 ? '+' : '';
-  return `${sign}₺${Math.abs(amount).toLocaleString('tr-TR')}`;
+  return formatSourceDelta(amount);
 }

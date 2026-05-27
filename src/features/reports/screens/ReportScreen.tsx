@@ -7,6 +7,11 @@ import type { DailyReport } from '@/core/models/DailyReport';
 import type { GameMetrics } from '@/core/models/GameMetrics';
 import { PilotReportSummaryCard } from '@/features/reports/components/PilotReportSummaryCard';
 import { getPilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
+import { buildDailyEconomyReport } from '@/core/economy/economyReport';
+import {
+  formatSourceAmount,
+  formatSourceWithLabel,
+} from '@/core/economy/economyFormatter';
 import { buildDailyXpReport } from '@/core/xp/xpReport';
 import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
 import {
@@ -17,7 +22,6 @@ import {
   useGameStore,
 } from '@/store/useGameStore';
 import { DailyXpSummaryCard } from '@/ui/components/xp/DailyXpSummaryCard';
-import { formatCurrency } from '@/core/utils/gameFormatters';
 import { GameScreenShell } from '@/ui/components/GameScreenShell';
 import { GameButton } from '@/ui/components/GameButton';
 import { GameCard } from '@/ui/components/GameCard';
@@ -110,6 +114,7 @@ type ReportContentProps = {
   snapshotCount: number;
   pilotReportContext: ReturnType<typeof getPilotReportContext>;
   dailyXpReport: ReturnType<typeof buildDailyXpReport>;
+  dailySourceSpentLabel: string | null;
   currentLevel: number;
   currentLevelXp: number;
   nextLevelXp: number;
@@ -124,6 +129,7 @@ function ReportContent({
   snapshotCount,
   pilotReportContext,
   dailyXpReport,
+  dailySourceSpentLabel,
   currentLevel,
   currentLevelXp,
   nextLevelXp,
@@ -154,13 +160,19 @@ function ReportContent({
             label="Halk Memnuniyeti"
             value={`%${metrics.publicSatisfaction}`}
           />
-          <MetricItem label="Bütçe" value={formatCurrency(metrics.budget)} />
+          <MetricItem label="Kaynak" value={formatSourceWithLabel(metrics.budget)} />
           <MetricItem
             label="Personel Morali"
             value={`%${metrics.staffMorale}`}
           />
         </View>
       </GameCard>
+
+      {dailySourceSpentLabel ? (
+        <Text style={[typography.body, styles.sourceSpentLine]}>
+          Bugün Harcanan Kaynak: {dailySourceSpentLabel}
+        </Text>
+      ) : null}
 
       <DailyXpSummaryCard
         report={dailyXpReport}
@@ -255,10 +267,15 @@ export function ReportScreen() {
   }
 
   const dayDecisions = decisionHistory.filter((r) => r.day === report.day);
+  const economyState = useGameStore((s) => s.economyState);
   const dailyXpReport = useMemo(
     () => buildDailyXpReport(playerProgress.xpHistory, report.day),
     [playerProgress.xpHistory, report.day],
   );
+  const dailySourceSpentLabel = useMemo(() => {
+    const spent = buildDailyEconomyReport(economyState, report.day).spent;
+    return spent > 0 ? formatSourceAmount(spent) : null;
+  }, [economyState, report.day]);
   const pilotReportContext = getPilotReportContext({
     gameState,
     lastDailyReport: report,
@@ -274,6 +291,7 @@ export function ReportScreen() {
       snapshotCount={snapshots.length}
       pilotReportContext={pilotReportContext}
       dailyXpReport={dailyXpReport}
+      dailySourceSpentLabel={dailySourceSpentLabel}
       currentLevel={playerProgress.currentLevel}
       currentLevelXp={playerProgress.currentLevelXp}
       nextLevelXp={playerProgress.nextLevelXp}
@@ -351,5 +369,9 @@ const styles = StyleSheet.create({
   },
   snapshotHint: {
     marginTop: spacing.xs,
+  },
+  sourceSpentLine: {
+    marginTop: spacing.sm,
+    color: colors.textSecondary,
   },
 });

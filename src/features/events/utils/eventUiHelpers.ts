@@ -1,3 +1,4 @@
+import { formatSourceDelta } from '@/core/economy/economyFormatter';
 import type {
   EventCard,
   EventDecision,
@@ -73,12 +74,7 @@ export function deriveContextTags(event: EventCard): string[] {
 }
 
 function formatBudgetShort(amount: number): string {
-  const sign = amount > 0 ? '+' : amount < 0 ? '-' : '';
-  const abs = Math.abs(amount);
-  if (abs >= 1000) {
-    return `${sign}₺${Math.round(abs / 1000)}K`;
-  }
-  return `${sign}₺${abs.toLocaleString('tr-TR')}`;
+  return formatSourceDelta(amount);
 }
 
 export function buildCompactEffectChips(

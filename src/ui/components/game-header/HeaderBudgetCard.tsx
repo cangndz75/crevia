@@ -29,7 +29,7 @@ export function HeaderBudgetCard({
         light ? styles.cardLight : styles.cardDefault,
         !light && shadows.soft,
       ]}>
-      <Text style={[styles.label, light && styles.labelLight]}>Bütçe</Text>
+      <Text style={[styles.label, light && styles.labelLight]}>Kaynak</Text>
       <Text
         style={[
           styles.amount,

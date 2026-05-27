@@ -66,7 +66,7 @@ export function CompactGameHeader({
           <Pressable
             style={styles.budgetCard}
             accessibilityRole="button"
-            accessibilityLabel={`Bütçe ${status.budgetFormatted}`}>
+            accessibilityLabel={`Kaynak ${status.budgetFormatted}`}>
             <View style={styles.budgetTextCol}>
               <Text
                 style={styles.budgetAmount}
@@ -75,7 +75,7 @@ export function CompactGameHeader({
                 minimumFontScale={0.8}>
                 {status.budgetFormatted}
               </Text>
-              <Text style={styles.budgetLabel}>Bütçe</Text>
+              <Text style={styles.budgetLabel}>Kaynak</Text>
             </View>
             <Ionicons
               name="chevron-forward"

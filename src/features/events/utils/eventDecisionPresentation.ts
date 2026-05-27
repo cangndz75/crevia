@@ -11,6 +11,7 @@ import type { GameChipTone } from '@/ui/components/GameChip';
 import { getActiveDistrictBonusLabels } from '@/core/xp/districtBonusLabels';
 import type { DistrictBonusFlags } from '@/core/xp/types';
 
+import { formatSourceDelta } from '@/core/economy/economyFormatter';
 import { getDecisionResultMessage } from '@/features/events/utils/decisionPresentation';
 
 export type MetricEffectRow = {
@@ -55,7 +56,7 @@ function formatEffectDelta(value: number, suffix: string): string {
 }
 
 function formatBudgetAmount(amount: number): string {
-  return `₺${Math.abs(amount).toLocaleString('tr-TR')}`;
+  return formatSourceDelta(-Math.abs(amount));
 }
 
 export function getDistrictEventTypeLabel(
@@ -208,8 +209,7 @@ function formatSigned(value: number): string {
 }
 
 function formatBudget(value: number): string {
-  const sign = value > 0 ? '+' : '';
-  return `${sign}₺${Math.abs(value).toLocaleString('tr-TR')}`;
+  return formatSourceDelta(value);
 }
 
 export function getDecisionStyleLabel(
@@ -273,7 +273,7 @@ export function getDecisionResultDescription(decision: EventDecision): string {
 export function getMetricLabel(metricKey: string): string {
   const labels: Record<string, string> = {
     publicSatisfaction: 'Halk Memnuniyeti',
-    budget: 'Bütçe',
+    budget: 'Kaynak',
     morale: 'Personel Morali',
     staffMorale: 'Personel Morali',
     risk: 'Operasyon Riski',

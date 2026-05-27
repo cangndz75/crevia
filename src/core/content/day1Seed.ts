@@ -1,3 +1,4 @@
+import { INITIAL_SOURCE_AMOUNT } from '@/core/economy/constants';
 import { createDefaultPilotState } from '@/core/game/createDefaultPilotState';
 import { createSnapshot } from '@/core/game/createSnapshot';
 import type { GameState } from '@/core/models/GameState';
@@ -25,7 +26,7 @@ export const DAY1_ROLE = PILOT_COORDINATOR_ROLE;
 
 export const DAY1_METRICS = {
   publicSatisfaction: 55,
-  budget: 75_000,
+  budget: INITIAL_SOURCE_AMOUNT,
   staffMorale: 65,
 } as const;
 
@@ -52,13 +53,13 @@ function buildCityPulse(city: CityState): CityPulseMetric[] {
     },
     {
       id: 'budget',
-      label: 'Bütçe Durumu',
-      value: `₺${city.budget.toLocaleString('tr-TR')}`,
+      label: 'Kaynak Durumu',
+      value: `${Math.round(city.budget / 1000)}K Kaynak`,
       progress: Math.min(1, city.budget / 100_000),
       color: colors.secondary,
       mutedColor: colors.secondaryMuted,
       icon: 'cash',
-      trendLabel: 'Bütçe',
+      trendLabel: 'Kaynak',
       trendValue: 'Gün 1',
       trendTone: 'info',
       variant: 'icon',

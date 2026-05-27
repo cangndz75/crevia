@@ -8,6 +8,7 @@ import { EventSummaryChips } from '@/features/events/components/decision-center/
 import { PendingEventsList } from '@/features/events/components/decision-center/PendingEventsList';
 import { PriorityEventCard } from '@/features/events/components/decision-center/PriorityEventCard';
 import { ResolvedEventsPreview } from '@/features/events/components/decision-center/ResolvedEventsPreview';
+import { checkDecisionAffordability } from '@/core/economy/economyAffordability';
 import {
   buildDistrictContext,
   computeDaySummary,
@@ -35,6 +36,7 @@ export function EventsDecisionCenterScreen() {
   const featuredEventId = useGameStore(selectFeaturedEventId);
   const decisionHistory = useGameStore(selectDecisionHistory);
   const applyDecisionAction = useGameStore((s) => s.applyDecision);
+  const economyState = useGameStore((s) => s.economyState);
   const endCurrentDay = useGameStore((s) => s.endCurrentDay);
 
   const [filter, setFilter] = useState<EventScreenFilterKey>('all');
@@ -80,12 +82,34 @@ export function EventsDecisionCenterScreen() {
   const showPriority =
     shouldShowPriorityEvent(priorityEvent, filter) && priorityEvent != null;
 
+  const priorityAffordability = useMemo(() => {
+    if (!priorityEvent) {
+      return {};
+    }
+    return Object.fromEntries(
+      priorityEvent.decisions.map((d) => [
+        d.id,
+        checkDecisionAffordability({ economyState, decision: d }),
+      ]),
+    );
+  }, [economyState, priorityEvent]);
+
   const handleSelectDecision = useCallback(
     (decisionId: string) => {
       if (!priorityEvent) return;
 
       const decision = priorityEvent.decisions.find((d) => d.id === decisionId);
       if (!decision) return;
+
+      const affordability = priorityAffordability[decisionId];
+      if (affordability && !affordability.canAfford) {
+        Alert.alert(
+          'Kaynak yetersiz',
+          `Bu karar için ${affordability.formattedMissingSource} Kaynak daha gerekiyor.`,
+          [{ text: 'Tamam' }],
+        );
+        return;
+      }
 
       setSelectedDecisionId(decisionId);
 
@@ -102,7 +126,23 @@ export function EventsDecisionCenterScreen() {
             text: 'Onayla',
             onPress: () => {
               try {
-                applyDecisionAction(priorityEvent.id, decisionId);
+                const result = applyDecisionAction(priorityEvent.id, decisionId);
+                if (
+                  result.success === false &&
+                  result.reason === 'insufficient_source'
+                ) {
+                  const blocked = checkDecisionAffordability({
+                    economyState,
+                    decision,
+                  });
+                  Alert.alert(
+                    'Kaynak yetersiz',
+                    `Bu karar için ${blocked.formattedMissingSource} Kaynak daha gerekiyor.`,
+                    [{ text: 'Tamam' }],
+                  );
+                  setSelectedDecisionId(null);
+                  return;
+                }
                 setSelectedDecisionId(null);
                 setFocusOverrideId(null);
               } catch {
@@ -117,7 +157,7 @@ export function EventsDecisionCenterScreen() {
         ],
       );
     },
-    [applyDecisionAction, priorityEvent],
+    [applyDecisionAction, economyState, priorityAffordability, priorityEvent],
   );
 
   const handlePendingPress = useCallback((eventId: string) => {
@@ -151,6 +191,7 @@ export function EventsDecisionCenterScreen() {
               event={priorityEvent}
               selectedDecisionId={selectedDecisionId}
               onSelectDecision={handleSelectDecision}
+              affordabilityByDecisionId={priorityAffordability}
             />
           ) : null}
 

@@ -5,10 +5,15 @@ import { getDistrictProfile } from '@/core/content/districtProfiles';
 import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
 import type { PlayerProgress } from '@/core/xp/types';
 import {
+  formatSourceAmount,
+  formatSourceDelta,
+  formatSourceWithLabel,
+} from '@/core/economy/economyFormatter';
+import { createInitialEconomyState } from '@/core/economy/economyEngine';
+import type { EconomyState } from '@/core/economy/types';
+import {
   calculateLevelProgress,
   calculateXpProgress,
-  formatBudgetDelta,
-  formatCurrency,
 } from '@/core/utils/gameFormatters';
 import {
   DEFAULT_PILOT_DISTRICT_ID,
@@ -51,6 +56,9 @@ export type GameStatusSnapshot = {
   budgetFormatted: string;
   budgetDelta: number | null;
   budgetDeltaLabel: string | null;
+  source: number;
+  sourceLabel: string;
+  sourceShort: string;
   notificationCount: number;
   publicSatisfaction: number;
   districtPulse: number;
@@ -80,6 +88,10 @@ function resolvePlayerProgress(state: GameStore): PlayerProgress {
   return state.playerProgress ?? createInitialPlayerProgress();
 }
 
+function resolveEconomyState(state: GameStore): EconomyState {
+  return state.economyState ?? createInitialEconomyState();
+}
+
 function clampProgressRatio(ratio: number): number {
   if (!Number.isFinite(ratio)) {
     return 0;
@@ -106,6 +118,8 @@ export function selectGameStatus(state: GameStore): GameStatusSnapshot {
     pilot.selectedDistrictId ?? DEFAULT_PILOT_DISTRICT_ID;
   const district = getDistrictProfile(districtId);
   const playerProgress = resolvePlayerProgress(state);
+  const economy = resolveEconomyState(state);
+  const currentSource = economy.currentSource;
   const budgetDelta = state.lastBudgetDelta;
   const headerXp = playerProgress.currentLevelXp;
   const headerXpTarget = playerProgress.nextLevelXp;
@@ -125,10 +139,16 @@ export function selectGameStatus(state: GameStore): GameStatusSnapshot {
     level: playerProgress.currentLevel,
     levelProgress: headerXpProgress,
     totalXp: playerProgress.totalXp,
-    budget: city.budget,
-    budgetFormatted: formatCurrency(city.budget),
+    budget: currentSource,
+    budgetFormatted: formatSourceWithLabel(currentSource),
     budgetDelta,
-    budgetDeltaLabel: formatBudgetDelta(budgetDelta),
+    budgetDeltaLabel:
+      budgetDelta != null && budgetDelta !== 0
+        ? formatSourceDelta(budgetDelta)
+        : null,
+    source: currentSource,
+    sourceLabel: formatSourceWithLabel(currentSource),
+    sourceShort: formatSourceAmount(currentSource),
     notificationCount: player.notificationCount,
     publicSatisfaction: city.publicSatisfaction,
     districtPulse: averageDistrictPulse(

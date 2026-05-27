@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { formatSourceDelta } from '@/core/economy/economyFormatter';
 import { EventPreviewEffects } from '@/core/models/EventCard';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
@@ -38,9 +39,7 @@ export function EventPreviewImpactRow({ effects }: EventPreviewImpactRowProps) {
   const publicPrefix = effects.publicSatisfaction >= 0 ? '+' : '';
   const riskPrefix = effects.risk >= 0 ? '+' : '';
   const budget =
-    effects.budget != null
-      ? `${effects.budget >= 0 ? '+' : '-'}₺${Math.abs(effects.budget).toLocaleString('tr-TR')}`
-      : null;
+    effects.budget != null ? formatSourceDelta(effects.budget) : null;
 
   return (
     <View style={styles.row}>
@@ -56,7 +55,7 @@ export function EventPreviewImpactRow({ effects }: EventPreviewImpactRowProps) {
       />
       <ImpactPill label="XP" value={`+${effects.xp}`} tone="xp" />
       {budget ? (
-        <ImpactPill label="Bütçe" value={budget} tone="budget" />
+        <ImpactPill label="Kaynak" value={budget} tone="budget" />
       ) : null}
     </View>
   );

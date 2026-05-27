@@ -103,7 +103,7 @@ export function DashboardHeader() {
                 <Ionicons name="wallet-outline" size={14} color={colors.hubGold} />
               </View>
               <View style={styles.budgetContent}>
-                <Text style={styles.budgetChipLabel}>BÜTÇE</Text>
+                <Text style={styles.budgetChipLabel}>KAYNAK</Text>
                 <Text style={styles.budgetChipAmount}>{status.budgetFormatted}</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.7)" />

@@ -7,6 +7,8 @@ import {
   buildBonusPotentialPills,
   buildDecisionEffectPills,
 } from '@/features/events/utils/eventDecisionPresentation';
+import type { DecisionAffordabilityCheck } from '@/core/economy/economyAffordability';
+import { formatSourceWithLabel } from '@/core/economy/economyFormatter';
 import { EventDecision } from '@/core/models/EventCard';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
@@ -18,27 +20,33 @@ type DecisionOptionCardProps = {
   decision: EventDecision;
   selected: boolean;
   onSelect: () => void;
+  affordability?: DecisionAffordabilityCheck;
 };
 
 export function DecisionOptionCard({
   decision,
   selected,
   onSelect,
+  affordability,
 }: DecisionOptionCardProps) {
   const effectPills = buildDecisionEffectPills(decision.effects, decision.costs);
   const bonusPills = buildBonusPotentialPills(decision.districtBonusFlags);
+  const insufficient =
+    affordability != null && affordability.cost > 0 && !affordability.canAfford;
 
   return (
     <Pressable
-      onPress={onSelect}
+      onPress={insufficient ? undefined : onSelect}
+      disabled={insufficient}
       style={({ pressed }) => [
         styles.card,
         shadows.card,
-        selected && styles.cardSelected,
-        pressed && styles.pressed,
+        selected && !insufficient && styles.cardSelected,
+        insufficient && styles.cardInsufficient,
+        pressed && !insufficient && styles.pressed,
       ]}
       accessibilityRole="button"
-      accessibilityState={{ selected }}>
+      accessibilityState={{ selected, disabled: insufficient }}>
       <View style={styles.header}>
         <Text style={styles.title}>{decision.title}</Text>
         {decision.recommended ? (
@@ -71,7 +79,29 @@ export function DecisionOptionCard({
         </View>
       ) : null}
 
-      {decision.delayHint ? (
+      {insufficient && affordability ? (
+        <View style={styles.insufficientWrap}>
+          <View style={styles.insufficientPill}>
+            <Ionicons
+              name="alert-circle-outline"
+              size={12}
+              color={colors.warning}
+            />
+            <Text style={styles.insufficientTitle}>Kaynak yetersiz</Text>
+          </View>
+          <Text style={styles.insufficientDetail}>
+            Maliyet: {affordability.formattedCost}
+          </Text>
+          <Text style={styles.insufficientDetail}>
+            Mevcut: {formatSourceWithLabel(affordability.currentSource)}
+          </Text>
+          <Text style={styles.insufficientMissing}>
+            Eksik: {affordability.formattedMissingSource} Kaynak
+          </Text>
+        </View>
+      ) : null}
+
+      {decision.delayHint && !insufficient ? (
         <View style={styles.hint}>
           <Ionicons
             name="information-circle-outline"
@@ -98,8 +128,44 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: '#FAFFFE',
   },
+  cardInsufficient: {
+    opacity: 0.72,
+    borderColor: colors.warningMuted,
+    backgroundColor: colors.backgroundAlt,
+  },
   pressed: {
     opacity: 0.96,
+  },
+  insufficientWrap: {
+    gap: 4,
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  insufficientPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.warningMuted,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+  },
+  insufficientTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.warning,
+  },
+  insufficientDetail: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  insufficientMissing: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.warning,
   },
   header: {
     flexDirection: 'row',

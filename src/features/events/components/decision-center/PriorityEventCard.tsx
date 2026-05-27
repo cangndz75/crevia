@@ -10,6 +10,7 @@ import {
   formatUrgencyLabel,
   getRiskLevelLabel,
 } from '@/core/content/mockGameData';
+import type { DecisionAffordabilityCheck } from '@/core/economy/economyAffordability';
 import type { EventCard } from '@/core/models/EventCard';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
@@ -21,12 +22,14 @@ type PriorityEventCardProps = {
   event: EventCard;
   selectedDecisionId: string | null;
   onSelectDecision: (decisionId: string) => void;
+  affordabilityByDecisionId?: Record<string, DecisionAffordabilityCheck>;
 };
 
 export function PriorityEventCard({
   event,
   selectedDecisionId,
   onSelectDecision,
+  affordabilityByDecisionId,
 }: PriorityEventCardProps) {
   const riskColor = getRiskLevelColor(event.riskLevel);
 
@@ -76,6 +79,7 @@ export function PriorityEventCard({
           decisions={event.decisions}
           selectedId={selectedDecisionId}
           onSelect={onSelectDecision}
+          affordabilityByDecisionId={affordabilityByDecisionId}
         />
       </View>
     </Animated.View>

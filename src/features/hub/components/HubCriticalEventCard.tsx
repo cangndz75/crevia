@@ -10,6 +10,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
+import { formatSourceDelta } from '@/core/economy/economyFormatter';
 import type { EventPreviewEffects } from '@/core/models/EventCard';
 import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
 import { deriveCrisisQueue } from '@/features/hub/utils/hubDerived';
@@ -235,7 +236,7 @@ export function HubCriticalEventCard() {
                 )}
                 {effects.budget != null && effects.budget !== 0 && (
                   <ImpactChip
-                    label={`${effects.budget > 0 ? '+' : '-'}₺${Math.abs(effects.budget)} Bütçe`}
+                    label={formatSourceDelta(effects.budget)}
                     tone={effects.budget > 0 ? 'positive' : 'negative'}
                   />
                 )}

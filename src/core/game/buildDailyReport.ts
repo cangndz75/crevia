@@ -1,3 +1,4 @@
+import { formatSourceWithLabel } from '@/core/economy/economyFormatter';
 import type { DecisionRecord } from '@/core/models/DecisionRecord';
 import type { DailyReport, DailyReportStat } from '@/core/models/DailyReport';
 import type { DaySnapshot } from '@/core/models/DaySnapshot';
@@ -18,7 +19,7 @@ export type BuildDailyReportParams = {
 };
 
 function formatCurrency(amount: number): string {
-  return `₺${Math.round(amount).toLocaleString('tr-TR')}`;
+  return formatSourceWithLabel(amount);
 }
 
 function buildStats(
@@ -44,7 +45,7 @@ function buildStats(
         metrics.publicSatisfaction >= LOW_SATISFACTION ? 'positive' : 'negative',
     },
     {
-      label: 'Bütçe',
+      label: 'Kaynak',
       value: formatCurrency(metrics.budget),
       tone: metrics.budget >= LOW_BUDGET ? 'neutral' : 'negative',
     },
@@ -129,7 +130,7 @@ export function buildDailyReport(params: BuildDailyReportParams): DailyReport {
 
   if (metrics.budget < LOW_BUDGET) {
     warnings.push(
-      `Bütçe ${formatCurrency(metrics.budget)} seviyesinde. Harcama kalemlerini sıkı takip et.`,
+      `Kaynak ${formatCurrency(metrics.budget)} seviyesinde. Harcama kalemlerini sıkı takip et.`,
     );
   }
 

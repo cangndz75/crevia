@@ -2,10 +2,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
-  formatCurrency,
   getRiskSeverityColor,
   getRiskSeverityLabel,
 } from '@/core/content/mockGameData';
+import { formatSourceWithLabel } from '@/core/economy/economyFormatter';
 import { RiskIcon, RiskItem } from '@/core/models/RiskItem';
 import { ProgressBar } from '@/ui/components/ProgressBar';
 import { colors } from '@/ui/theme/colors';
@@ -29,7 +29,7 @@ type RiskListCardProps = {
 function handleAction(risk: RiskItem) {
   Alert.alert(
     risk.actionLabel,
-    `"${risk.title}" için önlem uygulandı.\nMaliyet: ${formatCurrency(risk.cost)}`,
+    `"${risk.title}" için önlem uygulandı.\nMaliyet: ${formatSourceWithLabel(risk.cost)}`,
     [{ text: 'Tamam' }],
   );
 }
@@ -93,7 +93,7 @@ export function RiskListCard({ risk }: RiskListCardProps) {
         <View style={styles.costRow}>
           <Ionicons name="wallet-outline" size={16} color={colors.textSecondary} />
           <Text style={styles.costText}>
-            Maliyet: {formatCurrency(risk.cost)}
+            Maliyet: {formatSourceWithLabel(risk.cost)}
           </Text>
         </View>
 
