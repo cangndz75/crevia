@@ -50,6 +50,23 @@ import {
   syncPilotRunDay,
 } from '@/core/game/pilotRun';
 
+import { createDailyGoalForDay } from '@/core/dailyGoals/dailyGoalEngine';
+import {
+  INITIAL_DAILY_GOAL_RUNTIME,
+  processDecisionDailyGoal,
+  processDayEndDailyGoal,
+  processQuickActionDailyGoal,
+  type DailyGoalRuntime,
+} from '@/core/dailyGoals/dailyGoalIntegration';
+import type { DailyGoal, DailyGoalClaimResult } from '@/core/dailyGoals/types';
+import type { ApplyDecisionXpResult } from '@/core/xp/applyDecisionXp';
+import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
+import type { PlayerProgress } from '@/core/xp/types';
+
+export type ApplyDecisionStoreResult = ApplyDecisionXpResult & {
+  dailyGoalClaim: DailyGoalClaimResult | null;
+};
+
 import {
   clearPersistedGame,
   GAME_STORAGE_KEY,
@@ -75,13 +92,22 @@ type GameStoreState = {
   lastClosedDay: number | null;
   /** Son kararın net bütçe etkisi — persist edilmez, header'da gösterilir */
   lastBudgetDelta: number | null;
+  /**
+   * Yeni XP / seviye modülü ilerlemesi.
+   * gameState.player (mock header XP) ile ayrı tutulur — UI bu alanı henüz göstermiyor.
+   */
+  playerProgress: PlayerProgress;
+  currentDailyGoal: DailyGoal | null;
+  dailyGoalsByDay: Record<number, DailyGoal>;
+  dailyGoalRuntime: DailyGoalRuntime;
   /** AsyncStorage'dan hydration tamamlandı mı? */
   _hasHydrated: boolean;
 };
 
 type GameStoreActions = {
   initializeDay1: () => void;
-  applyDecision: (eventId: string, decisionId: string) => void;
+  applyDecision: (eventId: string, decisionId: string) => ApplyDecisionStoreResult;
+  useQuickAction: (actionId: string) => void;
   endCurrentDay: () => void;
   resetGame: () => void;
   clearSaveAndReset: () => Promise<void>;
@@ -261,6 +287,10 @@ function applySeedBundle(
   | 'lastDailyReport'
   | 'lastClosedDay'
   | 'lastBudgetDelta'
+  | 'playerProgress'
+  | 'currentDailyGoal'
+  | 'dailyGoalsByDay'
+  | 'dailyGoalRuntime'
 > {
   return {
     gameState: withSyncedPulse(bundle.gameState),
@@ -272,6 +302,10 @@ function applySeedBundle(
     lastDailyReport: null,
     lastClosedDay: null,
     lastBudgetDelta: null,
+    playerProgress: createInitialPlayerProgress(),
+    currentDailyGoal: createDailyGoalForDay(bundle.gameState.city.day),
+    dailyGoalsByDay: {},
+    dailyGoalRuntime: { ...INITIAL_DAILY_GOAL_RUNTIME },
   };
 }
 
@@ -382,6 +416,7 @@ export const useGameStore = create<GameStore>()(
           state: toEngineState(current),
           eventId,
           decisionId,
+          playerProgress: current.playerProgress,
         });
 
         let nextGameState = withSyncedPulse(result.nextState);
@@ -421,6 +456,35 @@ export const useGameStore = create<GameStore>()(
 
         const budgetEffect = result.decisionRecord.appliedEffects.budget ?? 0;
 
+        let playerProgress = result.xp.playerProgress;
+        let currentDailyGoal = current.currentDailyGoal;
+        let dailyGoalRuntime = current.dailyGoalRuntime;
+        let dailyGoalClaim: DailyGoalClaimResult | null = null;
+
+        if (event && decision) {
+          const dailyResult = processDecisionDailyGoal({
+            day: result.decisionRecord.day,
+            goal: currentDailyGoal,
+            playerProgress,
+            event,
+            decision,
+            appliedEffects: result.decisionRecord.appliedEffects,
+            appliedCosts: result.decisionRecord.appliedCosts,
+            runtime: dailyGoalRuntime,
+          });
+          playerProgress = dailyResult.playerProgress;
+          currentDailyGoal = dailyResult.goal;
+          dailyGoalRuntime = dailyResult.runtime;
+          dailyGoalClaim = dailyResult.processResult.claim;
+        }
+
+        const dailyGoalsByDay = {
+          ...current.dailyGoalsByDay,
+          ...(currentDailyGoal
+            ? { [currentDailyGoal.day]: currentDailyGoal }
+            : {}),
+        };
+
         set({
           gameState: nextGameState,
           neighborhoods:
@@ -437,6 +501,34 @@ export const useGameStore = create<GameStore>()(
             result.afterSnapshot,
           ]),
           lastBudgetDelta: budgetEffect !== 0 ? budgetEffect : null,
+          playerProgress,
+          currentDailyGoal,
+          dailyGoalsByDay,
+          dailyGoalRuntime,
+        });
+
+        return { ...result.xp, dailyGoalClaim };
+      },
+
+      useQuickAction: (actionId) => {
+        const current = get();
+        const day = current.gameState.city.day;
+        const quickResult = processQuickActionDailyGoal({
+          day,
+          goal: current.currentDailyGoal,
+          playerProgress: current.playerProgress,
+          quickActionId: actionId,
+        });
+
+        const dailyGoalsByDay = {
+          ...current.dailyGoalsByDay,
+          [quickResult.goal.day]: quickResult.goal,
+        };
+
+        set({
+          playerProgress: quickResult.playerProgress,
+          currentDailyGoal: quickResult.goal,
+          dailyGoalsByDay,
         });
       },
 
@@ -493,6 +585,20 @@ export const useGameStore = create<GameStore>()(
           }));
         }
 
+        let playerProgress = current.playerProgress;
+        const dayEndResult = processDayEndDailyGoal({
+          day: closingDay,
+          goal: current.currentDailyGoal,
+          playerProgress,
+          runtime: current.dailyGoalRuntime,
+        });
+        playerProgress = dayEndResult.playerProgress;
+        const closedDayGoal = dayEndResult.goal;
+        const dailyGoalsByDay = {
+          ...current.dailyGoalsByDay,
+          [closingDay]: closedDayGoal,
+        };
+
         if (nextGameState.pilot.status === 'active') {
           const advancedGameState = syncCityDayWithPilotDay(
             advancePilotDayForGameState(nextGameState),
@@ -515,6 +621,8 @@ export const useGameStore = create<GameStore>()(
           }
         }
 
+        const nextDay = nextGameState.city.day;
+
         set({
           gameState: nextGameState,
           neighborhoods:
@@ -527,6 +635,10 @@ export const useGameStore = create<GameStore>()(
           ),
           lastDailyReport: result.dailyReport,
           lastClosedDay: closingDay,
+          playerProgress,
+          dailyGoalsByDay,
+          currentDailyGoal: createDailyGoalForDay(nextDay),
+          dailyGoalRuntime: { ...INITIAL_DAILY_GOAL_RUNTIME },
         });
       },
 

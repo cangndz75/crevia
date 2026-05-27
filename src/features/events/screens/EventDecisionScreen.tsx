@@ -5,14 +5,17 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 
 import { DecisionOptionCard } from '@/features/events/components/DecisionOptionCard';
-import { EventDecisionConsultant } from '@/features/events/components/EventDecisionConsultant';
 import { EventDecisionEventCard } from '@/features/events/components/EventDecisionEventCard';
 import { EventDecisionResultPhase } from '@/features/events/components/EventDecisionResultPhase';
+import { getDistrictProfileForEvent } from '@/features/events/utils/eventDecisionDistrict';
+import { AdvisorHintCard } from '@/ui/components/advisor/AdvisorHintCard';
+import { DistrictProfileMiniCard } from '@/ui/components/districts/DistrictProfileMiniCard';
 import { EventsStatusHeader } from '@/features/events/components/EventsStatusHeader';
 import {
   canCompletePilot,
   PILOT_FINAL_EVENT_ID,
 } from '@/core/game/calculatePilotFinalResult';
+import type { ApplyDecisionXpResult } from '@/core/xp/applyDecisionXp';
 import type { EventDecision } from '@/core/models/EventCard';
 import { useGameStore } from '@/store/useGameStore';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
@@ -47,12 +50,19 @@ export function EventDecisionScreen({ eventId }: EventDecisionScreenProps) {
   });
 
   const eventAdvisor = useGameStore((s) => s.gameState.eventAdvisor);
+  const currentDay = useGameStore((s) => s.gameState.city.day);
+  const selectedPilotDistrictId = useGameStore(
+    (s) => s.gameState.pilot.selectedDistrictId,
+  );
 
   const [phase, setPhase] = useState<ScreenPhase>('choose');
   const [appliedDecision, setAppliedDecision] = useState<EventDecision | null>(
     null,
   );
   const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [xpFeedback, setXpFeedback] = useState<ApplyDecisionXpResult | null>(
+    null,
+  );
 
   const goToHub = useCallback(() => {
     router.replace('/');
@@ -71,7 +81,8 @@ export function EventDecisionScreen({ eventId }: EventDecisionScreenProps) {
 
       setApplyingId(decisionId);
       try {
-        applyDecisionAction(eventId, decisionId);
+        const xpResult = applyDecisionAction(eventId, decisionId);
+        setXpFeedback(xpResult);
         setAppliedDecision(decision);
         setPhase('result');
       } catch {
@@ -106,12 +117,18 @@ export function EventDecisionScreen({ eventId }: EventDecisionScreenProps) {
     );
   }
 
+  const districtProfile = getDistrictProfileForEvent(
+    event,
+    selectedPilotDistrictId,
+  );
+
   if (phase === 'result' && appliedDecision) {
     return (
       <EventDecisionResultPhase
         decision={appliedDecision}
         event={event}
         eventAdvisor={eventAdvisor}
+        xpFeedback={xpFeedback}
         showPilotReportCta={showPilotReportCta}
         bottomPadding={bottomPadding}
         onGoToHub={goToHub}
@@ -142,7 +159,17 @@ export function EventDecisionScreen({ eventId }: EventDecisionScreenProps) {
         </View>
 
         <Animated.View entering={FadeInUp.duration(320).springify().damping(22)}>
-          <EventDecisionEventCard event={event} />
+          <EventDecisionEventCard event={event} day={currentDay} />
+        </Animated.View>
+
+        {districtProfile ? (
+          <Animated.View entering={FadeInUp.delay(80).duration(300).springify().damping(22)}>
+            <DistrictProfileMiniCard profile={districtProfile} />
+          </Animated.View>
+        ) : null}
+
+        <Animated.View entering={FadeIn.delay(140).duration(260)}>
+          <AdvisorHintCard />
         </Animated.View>
 
         <View style={styles.decisionsBlock}>
@@ -167,8 +194,6 @@ export function EventDecisionScreen({ eventId }: EventDecisionScreenProps) {
             ))}
           </View>
         </View>
-
-        <EventDecisionConsultant />
 
         <View style={styles.actions}>
           <Pressable

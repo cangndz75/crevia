@@ -2,10 +2,14 @@ import type {
   EventAdvisorNote,
   EventCard,
   EventDecision,
+  EventDecisionCost,
   EventDecisionEffect,
+  EventFilterTag,
   PilotDecisionStyle,
 } from '@/core/models/EventCard';
 import type { GameChipTone } from '@/ui/components/GameChip';
+import { getActiveDistrictBonusLabels } from '@/core/xp/districtBonusLabels';
+import type { DistrictBonusFlags } from '@/core/xp/types';
 
 import { getDecisionResultMessage } from '@/features/events/utils/decisionPresentation';
 
@@ -15,6 +19,166 @@ export type MetricEffectRow = {
   value: string;
   tone: 'positive' | 'negative' | 'neutral' | 'xp';
 };
+
+export type DecisionEffectPill = {
+  key: string;
+  label: string;
+  tone: 'positive' | 'negative' | 'neutral' | 'gold' | 'teal';
+};
+
+const DISTRICT_EVENT_TYPE_LABELS: Record<string, string> = {
+  waste_overflow: 'Atık taşması',
+  delayed_collection: 'Gecikmiş toplama',
+  sidewalk_blocked: 'Kaldırım',
+  market_crowding: 'Pazar yoğunluğu',
+  vehicle_breakdown_risk: 'Araç riski',
+  noise_complaint: 'Gürültü şikayeti',
+  social_media_complaint: 'Sosyal medya',
+  park_cleanliness: 'Park temizliği',
+  route_delay: 'Rota gecikmesi',
+  staff_fatigue_pressure: 'Ekip yorgunluğu',
+  public_trust_drop: 'Güven kaybı',
+};
+
+const FILTER_TAG_LABELS: Record<EventFilterTag, string> = {
+  urgent: 'Acil',
+  crisis: 'Kriz',
+  opportunity: 'Fırsat',
+};
+
+function formatEffectDelta(value: number, suffix: string): string {
+  const sign = value > 0 ? '+' : '';
+  const abs = Math.abs(value);
+  const formatted =
+    abs > 0 && abs <= 1.5 ? abs.toFixed(1) : String(Math.round(abs));
+  return `${sign}${formatted} ${suffix}`;
+}
+
+function formatBudgetAmount(amount: number): string {
+  return `₺${Math.abs(amount).toLocaleString('tr-TR')}`;
+}
+
+export function getDistrictEventTypeLabel(
+  districtEventType?: string,
+): string | null {
+  if (!districtEventType?.trim()) {
+    return null;
+  }
+  return (
+    DISTRICT_EVENT_TYPE_LABELS[districtEventType] ??
+    districtEventType.replace(/_/g, ' ')
+  );
+}
+
+export function getEventContextTags(event: EventCard): string[] {
+  const tags: string[] = [];
+  if (event.contextTag?.trim()) {
+    tags.push(event.contextTag.trim());
+  }
+  const districtTypeLabel = getDistrictEventTypeLabel(event.districtEventType);
+  if (districtTypeLabel) {
+    tags.push(districtTypeLabel);
+  }
+  for (const tag of event.filterTags ?? []) {
+    const label = FILTER_TAG_LABELS[tag];
+    if (label && !tags.includes(label)) {
+      tags.push(label);
+    }
+  }
+  return tags;
+}
+
+export function buildDecisionEffectPills(
+  effects: EventDecisionEffect,
+  costs?: EventDecisionCost,
+): DecisionEffectPill[] {
+  const pills: DecisionEffectPill[] = [];
+
+  if (effects.publicSatisfaction !== 0) {
+    pills.push({
+      key: 'sat',
+      label: formatEffectDelta(effects.publicSatisfaction, 'Halk'),
+      tone: effects.publicSatisfaction > 0 ? 'positive' : 'negative',
+    });
+  }
+
+  if (effects.risk !== 0) {
+    pills.push({
+      key: 'risk',
+      label: formatEffectDelta(effects.risk, 'Risk'),
+      tone: effects.risk < 0 ? 'positive' : 'negative',
+    });
+  }
+
+  const budgetSpend =
+    (costs?.budget ?? 0) > 0
+      ? costs!.budget!
+      : effects.budget < 0
+        ? Math.abs(effects.budget)
+        : 0;
+  if (budgetSpend > 0) {
+    pills.push({
+      key: 'budget',
+      label: formatBudgetAmount(budgetSpend),
+      tone: 'neutral',
+    });
+  }
+
+  const staffHours = costs?.staffHours;
+  if (staffHours != null && staffHours > 0) {
+    const fatigue = Math.ceil(staffHours / 4);
+    pills.push({
+      key: 'fatigue',
+      label: `+${fatigue} Yorgunluk`,
+      tone: 'negative',
+    });
+  } else {
+    const moraleDelta = effects.morale ?? effects.staffMorale ?? 0;
+    if (moraleDelta !== 0) {
+      pills.push({
+        key: 'morale',
+        label: formatEffectDelta(moraleDelta, 'Moral'),
+        tone: moraleDelta > 0 ? 'positive' : 'negative',
+      });
+    }
+  }
+
+  if (costs?.vehicleUsage != null && costs.vehicleUsage > 0) {
+    pills.push({
+      key: 'vehicle',
+      label: `${costs.vehicleUsage} Araç`,
+      tone: 'teal',
+    });
+  }
+
+  if (effects.trust != null && effects.trust !== 0) {
+    pills.push({
+      key: 'trust',
+      label: formatEffectDelta(effects.trust, 'Güven'),
+      tone: effects.trust > 0 ? 'positive' : 'negative',
+    });
+  }
+
+  if (effects.cleanliness != null && effects.cleanliness !== 0) {
+    pills.push({
+      key: 'clean',
+      label: formatEffectDelta(effects.cleanliness, 'Temizlik'),
+      tone: effects.cleanliness > 0 ? 'positive' : 'negative',
+    });
+  }
+
+  return pills;
+}
+
+export function buildBonusPotentialPills(
+  flags?: DistrictBonusFlags,
+): DecisionEffectPill[] {
+  return getActiveDistrictBonusLabels(flags).map((label, index) => ({
+    key: `bonus-${index}`,
+    label,
+    tone: 'gold' as const,
+  }));
+}
 
 const DECISION_STYLE_LABELS: Record<PilotDecisionStyle, string> = {
   fast: 'Hızlı Müdahale',

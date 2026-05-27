@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { getDistrictProfile } from '@/core/content/districtProfiles';
+import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
+import type { PlayerProgress } from '@/core/xp/types';
 import {
   calculateLevelProgress,
   calculateXpProgress,
@@ -34,11 +36,17 @@ export type GameStatusSnapshot = {
   dayLabel: string;
   selectedDistrictId: PilotDistrictId | null;
   selectedDistrictName: string;
+  /** Header XP bar — mevcut seviye içi ilerleme (currentLevelXp). */
   xp: number;
+  /** Header XP bar — bu seviye aralığında gereken XP (nextLevelXp). */
   xpTarget: number;
+  /** Header "X XP kaldı" metni. */
+  xpToNextLevel: number;
   xpProgress: number;
   level: number;
   levelProgress: number;
+  /** Toplam kazanılan XP — header dışı ekranlar için. */
+  totalXp: number;
   budget: number;
   budgetFormatted: string;
   budgetDelta: number | null;
@@ -68,6 +76,24 @@ function countCriticalEvents(events: GameStore['gameState']['events']): number {
   ).length;
 }
 
+function resolvePlayerProgress(state: GameStore): PlayerProgress {
+  return state.playerProgress ?? createInitialPlayerProgress();
+}
+
+function clampProgressRatio(ratio: number): number {
+  if (!Number.isFinite(ratio)) {
+    return 0;
+  }
+  return Math.min(1, Math.max(0, ratio));
+}
+
+function resolveHeaderXpProgress(progress: PlayerProgress): number {
+  if (progress.nextLevelXp > 0) {
+    return clampProgressRatio(progress.currentLevelXp / progress.nextLevelXp);
+  }
+  return progress.xpToNextLevel <= 0 ? 1 : 0;
+}
+
 export function buildDayLabel(day: number): string {
   const weekday = WEEKDAYS_TR[new Date().getDay()];
   return `Gün ${day} · ${weekday}`;
@@ -79,8 +105,11 @@ export function selectGameStatus(state: GameStore): GameStatusSnapshot {
   const districtId: PilotDistrictId =
     pilot.selectedDistrictId ?? DEFAULT_PILOT_DISTRICT_ID;
   const district = getDistrictProfile(districtId);
-  const xpTarget = player.xpToNextLevel;
+  const playerProgress = resolvePlayerProgress(state);
   const budgetDelta = state.lastBudgetDelta;
+  const headerXp = playerProgress.currentLevelXp;
+  const headerXpTarget = playerProgress.nextLevelXp;
+  const headerXpProgress = resolveHeaderXpProgress(playerProgress);
 
   return {
     playerName: player.name ?? 'Can',
@@ -89,11 +118,13 @@ export function selectGameStatus(state: GameStore): GameStatusSnapshot {
     dayLabel: buildDayLabel(city.day),
     selectedDistrictId: pilot.selectedDistrictId,
     selectedDistrictName: district?.name ?? 'Pilot Bölge',
-    xp: player.xp,
-    xpTarget,
-    xpProgress: calculateXpProgress(player.xp, xpTarget),
-    level: player.level,
-    levelProgress: calculateLevelProgress(player.xp, xpTarget),
+    xp: headerXp,
+    xpTarget: headerXpTarget,
+    xpToNextLevel: Math.max(0, playerProgress.xpToNextLevel),
+    xpProgress: headerXpProgress,
+    level: playerProgress.currentLevel,
+    levelProgress: headerXpProgress,
+    totalXp: playerProgress.totalXp,
     budget: city.budget,
     budgetFormatted: formatCurrency(city.budget),
     budgetDelta,

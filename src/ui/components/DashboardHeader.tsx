@@ -87,7 +87,7 @@ export function DashboardHeader() {
                   {status.xpTarget.toLocaleString('tr-TR')}
                 </Text>
                 <Text style={styles.xpRemaining}>
-                  {Math.max(0, status.xpTarget - status.xp)} XP kaldı
+                  {status.xpToNextLevel.toLocaleString('tr-TR')} XP kaldı
                 </Text>
               </View>
               <HeaderXpBar

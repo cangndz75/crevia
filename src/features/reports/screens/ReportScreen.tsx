@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { DecisionRecord } from '@/core/models/DecisionRecord';
@@ -6,15 +7,16 @@ import type { DailyReport } from '@/core/models/DailyReport';
 import type { GameMetrics } from '@/core/models/GameMetrics';
 import { PilotReportSummaryCard } from '@/features/reports/components/PilotReportSummaryCard';
 import { getPilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
+import { buildDailyXpReport } from '@/core/xp/xpReport';
+import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
 import {
   selectDecisionHistory,
   selectLastDailyReport,
-  selectLevel,
   useGameMetrics,
   selectSnapshots,
-  selectXp,
   useGameStore,
 } from '@/store/useGameStore';
+import { DailyXpSummaryCard } from '@/ui/components/xp/DailyXpSummaryCard';
 import { formatCurrency } from '@/core/utils/gameFormatters';
 import { GameScreenShell } from '@/ui/components/GameScreenShell';
 import { GameButton } from '@/ui/components/GameButton';
@@ -104,22 +106,28 @@ function DecisionRow({ record }: DecisionRowProps) {
 type ReportContentProps = {
   report: DailyReport;
   metrics: GameMetrics;
-  xp: number;
-  level: number;
   dayDecisions: DecisionRecord[];
   snapshotCount: number;
   pilotReportContext: ReturnType<typeof getPilotReportContext>;
+  dailyXpReport: ReturnType<typeof buildDailyXpReport>;
+  currentLevel: number;
+  currentLevelXp: number;
+  nextLevelXp: number;
+  xpToNextLevel: number;
   onGoHub: () => void;
 };
 
 function ReportContent({
   report,
   metrics,
-  xp,
-  level,
   dayDecisions,
   snapshotCount,
   pilotReportContext,
+  dailyXpReport,
+  currentLevel,
+  currentLevelXp,
+  nextLevelXp,
+  xpToNextLevel,
   onGoHub,
 }: ReportContentProps) {
   const summaryLines = report.summaryLines ?? [];
@@ -154,14 +162,13 @@ function ReportContent({
         </View>
       </GameCard>
 
-      <GameCard padding="md" style={styles.statCard}>
-        <Text style={styles.statLabel}>XP</Text>
-        <Text style={typography.stat}>{xp.toLocaleString('tr-TR')}</Text>
-      </GameCard>
-      <GameCard padding="md" style={styles.statCard}>
-        <Text style={styles.statLabel}>Seviye</Text>
-        <Text style={typography.stat}>{level}</Text>
-      </GameCard>
+      <DailyXpSummaryCard
+        report={dailyXpReport}
+        currentLevel={currentLevel}
+        currentLevelXp={currentLevelXp}
+        nextLevelXp={nextLevelXp}
+        xpToNextLevel={xpToNextLevel}
+      />
 
       {report.stats.length > 0 ? (
         <View style={styles.stats}>
@@ -235,8 +242,9 @@ export function ReportScreen() {
   const gameState = useGameStore((s) => s.gameState);
   const lastClosedDay = useGameStore((s) => s.lastClosedDay);
   const metrics = useGameMetrics();
-  const xp = useGameStore(selectXp);
-  const level = useGameStore(selectLevel);
+  const playerProgress = useGameStore(
+    (s) => s.playerProgress ?? createInitialPlayerProgress(),
+  );
   const decisionHistory = useGameStore(selectDecisionHistory);
   const snapshots = useGameStore(selectSnapshots);
 
@@ -247,6 +255,10 @@ export function ReportScreen() {
   }
 
   const dayDecisions = decisionHistory.filter((r) => r.day === report.day);
+  const dailyXpReport = useMemo(
+    () => buildDailyXpReport(playerProgress.xpHistory, report.day),
+    [playerProgress.xpHistory, report.day],
+  );
   const pilotReportContext = getPilotReportContext({
     gameState,
     lastDailyReport: report,
@@ -258,11 +270,14 @@ export function ReportScreen() {
     <ReportContent
       report={report}
       metrics={metrics}
-      xp={xp}
-      level={level}
       dayDecisions={dayDecisions}
       snapshotCount={snapshots.length}
       pilotReportContext={pilotReportContext}
+      dailyXpReport={dailyXpReport}
+      currentLevel={playerProgress.currentLevel}
+      currentLevelXp={playerProgress.currentLevelXp}
+      nextLevelXp={playerProgress.nextLevelXp}
+      xpToNextLevel={playerProgress.xpToNextLevel}
       onGoHub={onGoHub}
     />
   );

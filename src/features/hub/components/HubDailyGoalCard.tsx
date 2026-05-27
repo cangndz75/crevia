@@ -1,6 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -8,8 +7,8 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
-import { useHubDerivedInput } from '@/features/hub/hooks/useHubDerivedInput';
-import { deriveDay1Missions } from '@/features/hub/utils/hubDerived';
+import { createDailyGoalForDay } from '@/core/dailyGoals/dailyGoalEngine';
+import { useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
@@ -22,13 +21,10 @@ type HubDailyGoalCardProps = {
 };
 
 export function HubDailyGoalCard({ onEndDay }: HubDailyGoalCardProps) {
-  const input = useHubDerivedInput();
-  const missions = useMemo(() => deriveDay1Missions(input), [input]);
-  const completed = missions.filter((m) => m.status === 'completed').length;
-  const total = missions.length;
-  const progress = total > 0 ? completed / total : 0;
-  const totalXp = missions.reduce((s, m) => s + m.xpReward, 0);
-  const primary = missions[0];
+  const currentDay = useGameStore((s) => s.gameState.city.day);
+  const goal = useGameStore(
+    (s) => s.currentDailyGoal ?? createDailyGoalForDay(currentDay),
+  );
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -36,35 +32,40 @@ export function HubDailyGoalCard({ onEndDay }: HubDailyGoalCardProps) {
     opacity: scale.value < 1 ? 0.94 : 1,
   }));
 
-  if (!primary) return null;
+  const progressRatio =
+    goal.target > 0 ? Math.min(1, goal.progress / goal.target) : 0;
 
   return (
     <View style={[styles.panel, shadows.card]}>
       <View style={styles.goalSection}>
         <View style={styles.trophyCircle}>
-          <Ionicons name="trophy" size={18} color={colors.hubGoldDark} />
+          <Ionicons
+            name={goal.completed ? 'checkmark-circle' : 'trophy'}
+            size={18}
+            color={colors.hubGoldDark}
+          />
         </View>
 
         <View style={styles.goalContent}>
           <Text style={styles.sectionLabel}>GÜNLÜK HEDEF</Text>
-          <Text style={styles.goalText} numberOfLines={1}>
-            {primary.target} kritik olayı çöz
+          <Text style={styles.goalText} numberOfLines={2}>
+            {goal.title}
           </Text>
           <View style={styles.progressRow}>
             <View style={styles.track}>
               <View
-                style={[styles.fill, { width: `${Math.round(progress * 100)}%` }]}
+                style={[styles.fill, { width: `${Math.round(progressRatio * 100)}%` }]}
               />
             </View>
             <Text style={styles.progressText}>
-              {completed}/{total} tamamlandı
+              {goal.progress}/{goal.target} tamamlandı
             </Text>
           </View>
         </View>
 
         <View style={styles.reward}>
           <Text style={styles.rewardLabel}>Ödül</Text>
-          <Text style={styles.xp}>+{totalXp} XP</Text>
+          <Text style={styles.xp}>+{goal.xpReward} XP</Text>
         </View>
       </View>
 

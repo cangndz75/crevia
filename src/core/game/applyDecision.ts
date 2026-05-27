@@ -18,6 +18,10 @@ import type {
 } from '@/core/models/EventCard';
 import type { GameResources } from '@/core/models/GameResources';
 import type { Neighborhood } from '@/core/models/Neighborhood';
+import { applyDecisionXp, type ApplyDecisionXpResult } from '@/core/xp/applyDecisionXp';
+import { buildDecisionXpResultFromApplied } from '@/core/xp/buildDecisionXpResult';
+import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
+import type { PlayerProgress } from '@/core/xp/types';
 
 const BASE_DECISION_XP = 20;
 const HIGH_BUDGET_SPEND_THRESHOLD = 5000;
@@ -35,10 +39,19 @@ const DEFAULT_RESOURCES: GameResources = {
   overtimeHours: 0,
 };
 
+export type ApplyDecisionXpContext = {
+  dailyGoalCompleted?: boolean;
+  butterflyPositive?: boolean;
+  tutorialBonus?: boolean;
+};
+
 export type ApplyDecisionParams = {
   state: DecisionEngineState;
   eventId: string;
   decisionId: string;
+  /** Yeni XP modülü ilerlemesi; verilmezse sıfırdan başlar. */
+  playerProgress?: PlayerProgress;
+  xpContext?: ApplyDecisionXpContext;
 };
 
 export type ApplyDecisionResult = {
@@ -46,6 +59,8 @@ export type ApplyDecisionResult = {
   decisionRecord: DecisionRecord;
   beforeSnapshot: DaySnapshot;
   afterSnapshot: DaySnapshot;
+  /** UI bağlı değil — breakdown, transaction ve level up bilgisi. */
+  xp: ApplyDecisionXpResult;
 };
 
 type MetricSlice = {
@@ -408,10 +423,32 @@ export function applyDecision(params: ApplyDecisionParams): ApplyDecisionResult 
         : undefined,
   });
 
+  const xp = applyDecisionXp({
+    playerProgress: params.playerProgress ?? createInitialPlayerProgress(),
+    day: workingState.city.day,
+    event,
+    decision,
+    decisionResult: buildDecisionXpResultFromApplied(
+      appliedEffects,
+      Object.keys(mergedAppliedCosts).length > 0 ? mergedAppliedCosts : undefined,
+      decision,
+      event.districtBonusHints,
+    ),
+    district: neighborhood
+      ? { id: neighborhood.id }
+      : workingState.pilot.selectedDistrictId
+        ? { id: workingState.pilot.selectedDistrictId }
+        : undefined,
+    dailyGoalCompleted: params.xpContext?.dailyGoalCompleted,
+    butterflyPositive: params.xpContext?.butterflyPositive,
+    tutorialBonus: params.xpContext?.tutorialBonus,
+  });
+
   return {
     nextState,
     decisionRecord,
     beforeSnapshot,
     afterSnapshot,
+    xp,
   };
 }

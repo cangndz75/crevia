@@ -11,20 +11,19 @@ import {
 } from '@/features/progression/components/authorities/ProgressionSegmentTabs';
 import { WeeklyUnlockablesSection } from '@/features/progression/components/authorities/WeeklyUnlockablesCard';
 import { deriveAuthoritiesScreenModel } from '@/features/progression/utils/authoritiesScreenModel';
-import { useGameStatus } from '@/store/gameSelectors';
 import { useGameStore } from '@/store/useGameStore';
 import { GameScreenShell } from '@/ui/components/GameScreenShell';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
 
 export function ProgressionScreen() {
-  const { xp } = useGameStatus();
+  const totalXp = useGameStore((s) => s.playerProgress?.totalXp ?? 0);
   const pilotDay = useGameStore((s) => s.gameState.pilot.currentPilotDay);
   const [tab, setTab] = useState<ProgressionTabKey>('authorities');
 
   const model = useMemo(
-    () => deriveAuthoritiesScreenModel(xp, pilotDay),
-    [xp, pilotDay],
+    () => deriveAuthoritiesScreenModel(totalXp, pilotDay),
+    [totalXp, pilotDay],
   );
 
   return (

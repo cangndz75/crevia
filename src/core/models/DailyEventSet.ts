@@ -1,3 +1,4 @@
+import type { EventCard } from '@/core/models/EventCard';
 import type { PilotDistrictId } from './DistrictProfile';
 
 export type GameEventRole =
@@ -31,4 +32,6 @@ export type DailyEventSet = {
   allEventIds: string[];
   eventRoles: Record<string, GameEventRole>;
   eventStatuses: Record<string, GameEventStatus>;
+  /** pilotEvents dışında district engine ile üretilen kartlar. */
+  supplementalEvents?: EventCard[];
 };

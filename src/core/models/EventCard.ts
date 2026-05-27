@@ -1,3 +1,4 @@
+import type { DistrictBonusFlags } from '@/core/xp/types';
 import type { PilotDayTheme, PilotEventType } from './PilotDayPlan';
 
 export type { PilotDayTheme, PilotEventType } from './PilotDayPlan';
@@ -63,6 +64,8 @@ export type EventDecision = {
   decisionStyle?: PilotDecisionStyle;
   setFlags?: Record<string, string | number | boolean>;
   xpReward?: number;
+  /** District engine — XP adapter districtBonusFlags için. */
+  districtBonusFlags?: DistrictBonusFlags;
 };
 
 export type EventPreviewEffects = {
@@ -118,4 +121,8 @@ export type EventCard = {
   fallback?: boolean;
   setsFlags?: Record<string, string | number | boolean>;
   resultFlags?: Record<string, string | number | boolean>;
+  /** District engine metadata — UI yok sayar. */
+  districtBonusHints?: DistrictBonusFlags;
+  xpDistrictType?: string;
+  districtEventType?: string;
 };

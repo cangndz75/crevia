@@ -1,4 +1,5 @@
 import { pilotEvents } from '@/core/content/pilotEvents';
+import { mergeEventCatalogs } from '@/core/districts/districtEventIntegration';
 import {
   generateDailyEventSet,
   resolveEventCardsFromDailySet,
@@ -38,8 +39,12 @@ function applyDailySetToGameState(
     catalog,
     solvedIds,
   );
+  const mergedCatalog = mergeEventCatalogs(
+    catalog,
+    dailyEventSet.supplementalEvents ?? [],
+  );
   const allCards = dailyEventSet.allEventIds
-    .map((id) => catalog.find((e) => e.id === id))
+    .map((id) => mergedCatalog.find((e) => e.id === id))
     .filter((e): e is EventCard => e != null);
 
   const anchorStillActive = activeEvents.some(

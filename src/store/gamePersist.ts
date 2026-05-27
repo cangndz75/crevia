@@ -2,6 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createJSONStorage, type StateStorage } from 'zustand/middleware';
 
 import { createDefaultPilotState } from '@/core/game/createDefaultPilotState';
+import { INITIAL_DAILY_GOAL_RUNTIME } from '@/core/dailyGoals/dailyGoalIntegration';
+import { createDailyGoalForDay } from '@/core/dailyGoals/dailyGoalEngine';
+import type { DailyGoal } from '@/core/dailyGoals/types';
+import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
+import type { PlayerProgress } from '@/core/xp/types';
 import type { GameState } from '@/core/models/GameState';
 import type { PilotGameState } from '@/core/models/PilotGameState';
 
@@ -31,6 +36,10 @@ export type PersistedGameState = Pick<
   | 'snapshots'
   | 'lastDailyReport'
   | 'lastClosedDay'
+  | 'playerProgress'
+  | 'currentDailyGoal'
+  | 'dailyGoalsByDay'
+  | 'dailyGoalRuntime'
 > & {
   saveVersion: number;
   updatedAt: string;
@@ -52,6 +61,10 @@ export function partialiseGameState(
     snapshots: state.snapshots.slice(-100),
     lastDailyReport: state.lastDailyReport,
     lastClosedDay: state.lastClosedDay,
+    playerProgress: state.playerProgress,
+    currentDailyGoal: state.currentDailyGoal,
+    dailyGoalsByDay: state.dailyGoalsByDay,
+    dailyGoalRuntime: state.dailyGoalRuntime,
     saveVersion: SAVE_VERSION,
     updatedAt: new Date().toISOString(),
   };
@@ -95,6 +108,29 @@ function ensurePilotOnGameState(gameState: GameState): GameState {
     };
   }
   return gameState;
+}
+
+function isValidDailyGoal(val: unknown): val is DailyGoal {
+  if (!isRecord(val)) return false;
+  if (typeof val.id !== 'string') return false;
+  if (typeof val.day !== 'number') return false;
+  if (typeof val.type !== 'string') return false;
+  if (typeof val.title !== 'string') return false;
+  if (typeof val.target !== 'number') return false;
+  if (typeof val.progress !== 'number') return false;
+  if (typeof val.completed !== 'boolean') return false;
+  if (typeof val.xpReward !== 'number') return false;
+  if (typeof val.xpClaimed !== 'boolean') return false;
+  return true;
+}
+
+function isValidPlayerProgress(val: unknown): val is PlayerProgress {
+  if (!isRecord(val)) return false;
+  if (typeof val.totalXp !== 'number') return false;
+  if (typeof val.currentLevel !== 'number') return false;
+  if (!Array.isArray(val.xpHistory)) return false;
+  if (!Array.isArray(val.unlockedAuthorities)) return false;
+  return true;
 }
 
 function validatePersistedCore(raw: Record<string, unknown>): boolean {
@@ -149,6 +185,27 @@ export function normalizePersistedSave(
       null,
     lastClosedDay:
       (raw.lastClosedDay as PersistedGameState['lastClosedDay']) ?? null,
+    playerProgress: isValidPlayerProgress(raw.playerProgress)
+      ? raw.playerProgress
+      : createInitialPlayerProgress(),
+    currentDailyGoal: isValidDailyGoal(raw.currentDailyGoal)
+      ? raw.currentDailyGoal
+      : createDailyGoalForDay(gameState.city.day),
+    dailyGoalsByDay: isRecord(raw.dailyGoalsByDay)
+      ? (raw.dailyGoalsByDay as Record<number, DailyGoal>)
+      : {},
+    dailyGoalRuntime: isRecord(raw.dailyGoalRuntime)
+      ? {
+          staffFatiguePeak:
+            typeof raw.dailyGoalRuntime.staffFatiguePeak === 'number'
+              ? raw.dailyGoalRuntime.staffFatiguePeak
+              : 0,
+          budgetExceededToday:
+            typeof raw.dailyGoalRuntime.budgetExceededToday === 'boolean'
+              ? raw.dailyGoalRuntime.budgetExceededToday
+              : false,
+        }
+      : { ...INITIAL_DAILY_GOAL_RUNTIME },
     saveVersion: SAVE_VERSION,
     updatedAt:
       typeof raw.updatedAt === 'string'

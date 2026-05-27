@@ -2,7 +2,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp, ZoomIn } from 'react-native-reanimated';
 
+import type { ApplyDecisionXpResult } from '@/core/xp/applyDecisionXp';
 import type { EventAdvisorNote, EventCard, EventDecision } from '@/core/models/EventCard';
+import { XpFeedbackCard } from '@/ui/components/xp/XpFeedbackCard';
 import {
   getButterflyHintBody,
   getDecisionResultDescription,
@@ -27,6 +29,7 @@ type EventDecisionResultPhaseProps = {
   decision: EventDecision;
   event: EventCard;
   eventAdvisor: EventAdvisorNote;
+  xpFeedback?: ApplyDecisionXpResult | null;
   showPilotReportCta: boolean;
   bottomPadding: number;
   onGoToHub: () => void;
@@ -44,6 +47,7 @@ export function EventDecisionResultPhase({
   decision,
   event,
   eventAdvisor,
+  xpFeedback,
   showPilotReportCta,
   bottomPadding,
   onGoToHub,
@@ -91,6 +95,19 @@ export function EventDecisionResultPhase({
             </Animated.View>
           ) : null}
         </Animated.View>
+
+        {xpFeedback?.xpBreakdown ? (
+          <Animated.View
+            entering={FadeInUp.delay(280).duration(320).springify().damping(22)}>
+            <XpFeedbackCard
+              xpBreakdown={xpFeedback.xpBreakdown}
+              leveledUp={xpFeedback.leveledUp}
+              previousLevel={xpFeedback.previousLevel}
+              newLevel={xpFeedback.newLevel}
+              unlockedAuthorities={xpFeedback.unlockedAuthorities}
+            />
+          </Animated.View>
+        ) : null}
 
         {metricRows.length > 0 ? (
           <Animated.View

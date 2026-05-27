@@ -16,6 +16,7 @@ import {
 } from '@/core/models/DistrictProfile';
 import type { EventCard } from '@/core/models/EventCard';
 import type { GameState } from '@/core/models/GameState';
+import { enrichDailyEventSetWithDistrictEvents } from '@/core/districts/districtEventIntegration';
 
 export type GenerateDailyEventSetParams = {
   gameState: GameState;
@@ -364,7 +365,7 @@ export function generateDailyEventSet(
 
   const uniqueAll = [...new Set(allEventIds)];
 
-  return {
+  const baseDailyEventSet: DailyEventSet = {
     id: `daily-${districtId}-d${day}-${seed}`,
     day,
     districtId,
@@ -380,6 +381,14 @@ export function generateDailyEventSet(
     eventRoles,
     eventStatuses,
   };
+
+  return enrichDailyEventSetWithDistrictEvents({
+    gameState,
+    day,
+    districtId,
+    dailyEventSet: baseDailyEventSet,
+    randomFn: rng,
+  });
 }
 
 export function resolveEventCardsFromDailySet(
@@ -387,7 +396,11 @@ export function resolveEventCardsFromDailySet(
   catalog: EventCard[] = pilotEvents,
   solvedEventIds: Set<string> = new Set(),
 ): EventCard[] {
-  const byId = new Map(catalog.map((e) => [e.id, e]));
+  const mergedCatalog = [
+    ...catalog,
+    ...(dailyEventSet.supplementalEvents ?? []),
+  ];
+  const byId = new Map(mergedCatalog.map((e) => [e.id, e]));
   const activeIds = dailyEventSet.allEventIds.filter((id) => !solvedEventIds.has(id));
   const cards = activeIds
     .map((id) => byId.get(id))

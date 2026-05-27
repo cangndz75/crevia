@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
 import { getQuickActionIcon } from '@/features/hub/utils/hubAssets';
+import { useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
@@ -35,9 +36,16 @@ const ACTIONS = [
   },
 ];
 
-function ActionTile({ action }: { action: (typeof ACTIONS)[number] }) {
+function ActionTile({
+  action,
+  onPress,
+}: {
+  action: (typeof ACTIONS)[number];
+  onPress: () => void;
+}) {
   return (
     <Pressable
+      onPress={onPress}
       style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
       accessibilityRole="button"
       accessibilityLabel={`${action.label}, ${action.description}`}>
@@ -66,12 +74,18 @@ function ActionTile({ action }: { action: (typeof ACTIONS)[number] }) {
 }
 
 export function HubQuickActions() {
+  const useQuickAction = useGameStore((s) => s.useQuickAction);
+
   return (
     <View style={styles.wrap}>
       <Text style={styles.title}>Hızlı Aksiyonlar</Text>
       <View style={styles.grid}>
         {ACTIONS.map((a) => (
-          <ActionTile key={a.id} action={a} />
+          <ActionTile
+            key={a.id}
+            action={a}
+            onPress={() => useQuickAction(a.id)}
+          />
         ))}
       </View>
     </View>

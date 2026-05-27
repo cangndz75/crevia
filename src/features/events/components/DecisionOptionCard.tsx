@@ -1,7 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { DecisionEffectPills } from '@/features/events/components/DecisionEffectPills';
 import { ImpactStatGrid } from '@/features/events/components/ImpactStatGrid';
+import {
+  buildBonusPotentialPills,
+  buildDecisionEffectPills,
+} from '@/features/events/utils/eventDecisionPresentation';
 import { EventDecision } from '@/core/models/EventCard';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
@@ -20,6 +25,9 @@ export function DecisionOptionCard({
   selected,
   onSelect,
 }: DecisionOptionCardProps) {
+  const effectPills = buildDecisionEffectPills(decision.effects, decision.costs);
+  const bonusPills = buildBonusPotentialPills(decision.districtBonusFlags);
+
   return (
     <Pressable
       onPress={onSelect}
@@ -43,11 +51,25 @@ export function DecisionOptionCard({
 
       <Text style={styles.description}>{decision.description}</Text>
 
-      <ImpactStatGrid
-        effects={decision.effects}
-        costs={decision.costs}
-        qualitative
-      />
+      {effectPills.length > 0 ? (
+        <View style={styles.pillSection}>
+          <Text style={styles.pillSectionLabel}>Tahmini etkiler</Text>
+          <DecisionEffectPills pills={effectPills} />
+        </View>
+      ) : (
+        <ImpactStatGrid
+          effects={decision.effects}
+          costs={decision.costs}
+          qualitative
+        />
+      )}
+
+      {bonusPills.length > 0 ? (
+        <View style={styles.pillSection}>
+          <Text style={styles.pillSectionLabel}>Bonus potansiyeli</Text>
+          <DecisionEffectPills pills={bonusPills} />
+        </View>
+      ) : null}
 
       {decision.delayHint ? (
         <View style={styles.hint}>
@@ -108,6 +130,16 @@ const styles = StyleSheet.create({
   description: {
     ...typography.caption,
     lineHeight: 20,
+  },
+  pillSection: {
+    gap: spacing.xs,
+  },
+  pillSectionLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
   },
   hint: {
     flexDirection: 'row',
