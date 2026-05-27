@@ -14,6 +14,7 @@ import {
   inferTaskDifficulty,
   isHeavyTaskDifficulty,
 } from './personnelEngine';
+import { buildCompetencyPreviewText } from './personnelCompetency';
 import {
   buildMistakeRiskDecisionLine,
   buildMistakeRiskPreviewText,
@@ -46,6 +47,8 @@ export type PersonnelImpactPreview = {
   mistakeRiskText?: string | null;
   /** Karar kartı aksaklık riski satırı */
   decisionMistakeLine?: string | null;
+  /** Güçlü/zayıf yetkinlik uyumu — yalnızca uç değerlerde */
+  competencyText?: string | null;
 };
 
 export type PersonnelImpactPreviewExtras = {
@@ -108,9 +111,10 @@ export function selectRecommendedTeamForEvent(
   event: EventCard,
   districtNames?: Record<string, string>,
 ): PersonnelTeamRecommendation | null {
-  const preferredRole = inferPreferredRole(event);
   const districtId = event.neighborhoodId ?? event.district;
   const difficulty = inferTaskDifficulty(event.riskLevel);
+  const previewDecision = event.decisions[0];
+  const preferredRole = inferPreferredRole(event, previewDecision);
 
   const team = getRecommendedPersonnelForTask(personnelState, {
     preferredRole,
@@ -387,9 +391,9 @@ function computePersonnelImpactPreview(params: {
     resources = DEFAULT_RESOURCES,
   } = params;
 
-  const preferredRole = inferPreferredRole(event);
   const districtId = event.neighborhoodId ?? event.district;
   const difficulty = inferTaskDifficulty(event.riskLevel);
+  const preferredRole = inferPreferredRole(event, decision);
 
   const team = getRecommendedPersonnelForTask(personnelState, {
     preferredRole,
@@ -459,6 +463,7 @@ function computePersonnelImpactPreview(params: {
         ? null
         : buildMistakeRiskPreviewText(mistakeRiskLevel, taskInput),
     decisionMistakeLine: buildMistakeRiskDecisionLine(mistakeRiskLevel),
+    competencyText: buildCompetencyPreviewText(taskInput.competencyScore ?? 50),
   };
 
   return preview;

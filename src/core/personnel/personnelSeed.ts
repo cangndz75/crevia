@@ -1,5 +1,11 @@
-import type { PersonnelState, PersonnelTeam } from './personnelTypes';
+import type { PersonnelCompetencyKey, PersonnelState, PersonnelTeam } from './personnelTypes';
 import { getPersonnelStatus, getPersonnelWarnings } from './personnelEngine';
+
+function competencies(
+  values: Record<PersonnelCompetencyKey, number>,
+): Record<PersonnelCompetencyKey, number> {
+  return values;
+}
 
 function createTeam(partial: Omit<PersonnelTeam, 'warningTags' | 'status'>): PersonnelTeam {
   const team: PersonnelTeam = {
@@ -36,6 +42,14 @@ export function createInitialPersonnelTeams(): PersonnelTeam[] {
       moraleDeltaToday: 0,
       sentExhaustedLastTask: false,
       restMode: null,
+      competencies: competencies({
+        waste_collection: 78,
+        market_cleanup: 72,
+        container_maintenance: 34,
+        complaint_response: 46,
+        crisis_coordination: 38,
+        route_operation: 48,
+      }),
     }),
     createTeam({
       id: 'team-driver-b',
@@ -60,6 +74,14 @@ export function createInitialPersonnelTeams(): PersonnelTeam[] {
       moraleDeltaToday: 0,
       sentExhaustedLastTask: false,
       restMode: null,
+      competencies: competencies({
+        waste_collection: 58,
+        market_cleanup: 40,
+        container_maintenance: 30,
+        complaint_response: 36,
+        crisis_coordination: 34,
+        route_operation: 84,
+      }),
     }),
     createTeam({
       id: 'team-maintenance-c',
@@ -84,6 +106,14 @@ export function createInitialPersonnelTeams(): PersonnelTeam[] {
       moraleDeltaToday: 0,
       sentExhaustedLastTask: false,
       restMode: null,
+      competencies: competencies({
+        waste_collection: 38,
+        market_cleanup: 34,
+        container_maintenance: 86,
+        complaint_response: 38,
+        crisis_coordination: 44,
+        route_operation: 46,
+      }),
     }),
     createTeam({
       id: 'team-field-supervisor',
@@ -108,6 +138,14 @@ export function createInitialPersonnelTeams(): PersonnelTeam[] {
       moraleDeltaToday: 0,
       sentExhaustedLastTask: false,
       restMode: null,
+      competencies: competencies({
+        waste_collection: 36,
+        market_cleanup: 34,
+        container_maintenance: 42,
+        complaint_response: 82,
+        crisis_coordination: 84,
+        route_operation: 50,
+      }),
     }),
   ];
 }

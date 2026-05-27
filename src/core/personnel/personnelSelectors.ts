@@ -3,6 +3,7 @@ import {
   ROLE_LABELS_TR,
   STATUS_LABELS_TR,
 } from './personnelConstants';
+import { getStrongestWeakestCompetencyLabels } from './personnelCompetency';
 import { getPersonnelWarnings } from './personnelEngine';
 import type {
   PersonnelState,
@@ -66,6 +67,7 @@ export function toPersonnelTeamCardView(
 ): PersonnelTeamCardView {
   const warnings = getPersonnelWarnings(team, districtName);
   const restModeLabel = buildRestModeLabel(team);
+  const competencyLabels = getStrongestWeakestCompetencyLabels(team);
   return {
     id: team.id,
     name: team.name,
@@ -81,6 +83,8 @@ export function toPersonnelTeamCardView(
     fatigueBandLabel: fatigueBandLabel(team.fatigue),
     restModeLabel,
     supportTag: equipmentSupportActive ? 'Ekipman desteği aktif' : null,
+    strongestCompetencyLabel: competencyLabels?.strongest ?? null,
+    weakestCompetencyLabel: competencyLabels?.weakest ?? null,
   };
 }
 

@@ -130,6 +130,11 @@ export function DecisionOptionCard({
               {personnelPreview.mistakeRiskText}
             </Text>
           ) : null}
+          {personnelPreview.competencyText ? (
+            <Text style={styles.personnelPreviewCompetency}>
+              {personnelPreview.competencyText}
+            </Text>
+          ) : null}
         </View>
       ) : null}
 
@@ -297,6 +302,12 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     fontWeight: '500',
     color: colors.textSecondary,
+  },
+  personnelPreviewCompetency: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600',
+    color: colors.secondary,
   },
   hint: {
     flexDirection: 'row',

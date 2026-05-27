@@ -1,4 +1,9 @@
 import {
+  applyCompetencyRiskToScore,
+  getCompetencyRiskModifier,
+  getTeamCompetencyScore,
+} from './personnelCompetency';
+import {
   MISTAKE_RISK,
   MISTAKE_RISK_LEVEL_LABELS_TR,
   SUCCESS_THRESHOLDS,
@@ -52,7 +57,7 @@ export function calculatePersonnelMistakeRisk(
   taskSuccessScore: number,
 ): number {
   const { team } = input;
-  let risk = MISTAKE_RISK.base;
+  let risk: number = MISTAKE_RISK.base;
 
   const { fatigue: fCfg } = MISTAKE_RISK;
   if (team.fatigue >= fCfg.highThreshold) {
@@ -110,6 +115,20 @@ export function calculatePersonnelMistakeRisk(
   } else {
     risk += sCfg.penaltyFailed;
   }
+
+  const competencyValue =
+    input.competencyScore ??
+    (input.requiredCompetency
+      ? getTeamCompetencyScore(team, input.requiredCompetency)
+      : 50);
+  const competencyRiskMod = getCompetencyRiskModifier(competencyValue);
+  risk = applyCompetencyRiskToScore(
+    risk,
+    competencyRiskMod,
+    input,
+    taskSuccessScore,
+    sCfg.partialThreshold,
+  );
 
   return clampScore(
     Math.round(risk),

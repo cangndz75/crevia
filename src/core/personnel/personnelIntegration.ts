@@ -56,7 +56,7 @@ export function processPersonnelAfterDecision(
   const { personnelState, event, decision, day, neighborhoods, resources } =
     params;
 
-  const preferredRole = inferPreferredRole(event);
+  const preferredRole = inferPreferredRole(event, decision);
   const districtId = event.neighborhoodId ?? event.district;
   const difficulty = inferTaskDifficulty(event.riskLevel);
 

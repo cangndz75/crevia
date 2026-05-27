@@ -14,3 +14,4 @@ export {
 } from '@/core/personnel/personnelEngine';
 export * from '@/core/personnel/personnelPresentation';
 export * from '@/core/personnel/personnelMistakeRisk';
+export * from '@/core/personnel/personnelCompetency';

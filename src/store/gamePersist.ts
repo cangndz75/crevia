@@ -10,8 +10,9 @@ import {
   createInitialEconomyState,
 } from '@/core/economy/economyEngine';
 import type { EconomyState } from '@/core/economy/types';
+import { ensureTeamCompetencies } from '@/core/personnel/personnelCompetency';
 import { createInitialPersonnelState } from '@/core/personnel/personnelSeed';
-import type { PersonnelState } from '@/core/personnel/personnelTypes';
+import type { PersonnelState, PersonnelTeam } from '@/core/personnel/personnelTypes';
 import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
 import type { PlayerProgress } from '@/core/xp/types';
 import type { GameState } from '@/core/models/GameState';
@@ -229,13 +230,15 @@ export function normalizePersistedSave(
       typeof rawPersonnel.equipmentSupportUsedDay === 'number'
         ? rawPersonnel.equipmentSupportUsedDay
         : null,
-    teams: rawPersonnel.teams.map((team) => ({
-      ...team,
-      restMode:
-        team.restMode === 'light_duty' || team.restMode === 'full_rest'
-          ? team.restMode
-          : null,
-    })),
+    teams: rawPersonnel.teams.map((team) =>
+      ensureTeamCompetencies({
+        ...team,
+        restMode:
+          team.restMode === 'light_duty' || team.restMode === 'full_rest'
+            ? team.restMode
+            : null,
+      } as PersonnelTeam),
+    ),
     dayIncidents: Array.isArray(rawPersonnel.dayIncidents)
       ? rawPersonnel.dayIncidents
       : [],

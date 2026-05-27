@@ -4,6 +4,14 @@ export type PersonnelRole =
   | 'maintenance'
   | 'field_supervisor';
 
+export type PersonnelCompetencyKey =
+  | 'waste_collection'
+  | 'market_cleanup'
+  | 'container_maintenance'
+  | 'complaint_response'
+  | 'crisis_coordination'
+  | 'route_operation';
+
 export type PersonnelTeamStatus =
   | 'idle'
   | 'assigned'
@@ -96,6 +104,7 @@ export type PersonnelTeam = {
   sentExhaustedLastTask: boolean;
   /** Tam dinlenme veya hafif görev planı */
   restMode: PersonnelRestMode | null;
+  competencies: Record<PersonnelCompetencyKey, number>;
 };
 
 export type PersonnelDayAssignment = {
@@ -123,6 +132,8 @@ export type PersonnelTaskInput = {
   roleMatchScore: number;
   equipmentSupportActive: boolean;
   day: number;
+  requiredCompetency?: PersonnelCompetencyKey;
+  competencyScore?: number;
 };
 
 export type PersonnelTaskResult = {
@@ -180,4 +191,6 @@ export type PersonnelTeamCardView = {
   fatigueBandLabel: string;
   restModeLabel: string | null;
   supportTag: string | null;
+  strongestCompetencyLabel: string | null;
+  weakestCompetencyLabel: string | null;
 };

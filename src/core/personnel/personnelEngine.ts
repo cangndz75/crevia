@@ -1,4 +1,8 @@
-import type { EventCard, EventDecision, EventRiskLevel } from '@/core/models/EventCard';
+import type {
+  EventCard,
+  EventDecision,
+  EventRiskLevel,
+} from '@/core/models/EventCard';
 import type { GameResources } from '@/core/models/GameResources';
 import type { Neighborhood } from '@/core/models/Neighborhood';
 
@@ -27,6 +31,11 @@ import {
   SUCCESS_THRESHOLDS,
   TASK_FATIGUE_BASE,
 } from './personnelConstants';
+import {
+  getCompetencyScoreModifier,
+  getTeamCompetencyScore,
+  inferPersonnelCompetencyForTask,
+} from './personnelCompetency';
 import {
   applyIncidentToTaskOutcome,
   calculatePersonnelMistakeRisk,
@@ -217,21 +226,146 @@ export function inferTaskDifficulty(riskLevel: EventRiskLevel): TaskDifficulty {
   return RISK_TO_TASK_DIFFICULTY[riskLevel] ?? 'normal';
 }
 
-export function inferPreferredRole(event: EventCard): PersonnelRole {
-  if (event.eventType && EVENT_TYPE_ROLE_HINTS[event.eventType]) {
-    return EVENT_TYPE_ROLE_HINTS[event.eventType];
+export function buildPersonnelRoleHaystack(
+  event: EventCard,
+  decision?: EventDecision,
+): string {
+  const parts = [
+    event.category,
+    event.title,
+    event.description,
+    event.contextTag ?? '',
+    event.eventType ?? '',
+  ];
+  if (decision) {
+    parts.push(decision.title, decision.description);
+  }
+  return parts.join(' ').toLowerCase();
+}
+
+export function inferRoleFromHaystack(haystack: string): PersonnelRole {
+  const isOverflowCollection =
+    /konteyner taşması|taşan konteyner|konteyner taştı/.test(haystack) &&
+    !/arıza|tamir|konteyner bakım|kapak arız/.test(haystack);
+
+  if (isOverflowCollection) {
+    return 'cleaning';
   }
 
-  const haystack = `${event.category} ${event.title} ${event.contextTag}`.toLowerCase();
-  for (const [role, tags] of Object.entries(ROLE_TASK_TAGS) as [
-    PersonnelRole,
-    string[],
-  ][]) {
-    if (tags.some((tag) => haystack.includes(tag))) {
-      return role;
+  if (
+    /konteyner bakım|konteyner arıza|kapak arız|filo bakım|araç bakım|teker kırık|teker arız/.test(
+      haystack,
+    ) ||
+    (/arıza|tamir|kırık/.test(haystack) &&
+      !/şikayet|muhtar|sosyal medya|kriz/.test(haystack))
+  ) {
+    return 'maintenance';
+  }
+
+  if (
+    /araçlı toplama|güzergah|dar sokak/.test(haystack) ||
+    (/rota|sürücü|trafik/.test(haystack) &&
+      !/şikayet|muhtar|personel görüşmesi/.test(haystack))
+  ) {
+    return 'driver';
+  }
+
+  if (
+    /şikayet|muhtar|vatandaş|mahalle sakini|sosyal medya|toplu tepki|kriz/.test(
+      haystack,
+    ) ||
+    /rapor|sunum|üst yönetim|değerlendirme raporu/.test(haystack) ||
+    (/iletişim|bilgilendirme|koordinasyon/.test(haystack) &&
+      /muhtar|vatandaş|şikayet|kriz|sosyal/.test(haystack))
+  ) {
+    return 'field_supervisor';
+  }
+
+  if (
+    /çöp|atık|toplam|temizlik|temizle|pazar|park|kirlilik|doluluk|mıntıka|saha müdahale/.test(
+      haystack,
+    )
+  ) {
+    return 'cleaning';
+  }
+
+  return 'cleaning';
+}
+
+function inferRoleFromContextualEventType(
+  eventType: string,
+  haystack: string,
+): PersonnelRole | null {
+  switch (eventType) {
+    case 'citizen_complaint':
+      if (
+        /temizlik|çöp|toplam|pazar|saha müdahale|müdahale ekibi/.test(haystack) &&
+        !/muhtar.*koordinasyon|şikayet koordinasyonu/.test(haystack)
+      ) {
+        return 'cleaning';
+      }
+      return 'field_supervisor';
+    case 'social_media':
+      if (/temizlik|çöp|toplam|saha müdahale|müdahale ekibi|pazar temiz/.test(haystack)) {
+        return 'cleaning';
+      }
+      return 'field_supervisor';
+    case 'staff':
+      if (
+        /fazla mesai|yorgunluk|vardiya|rota baskı|ekip temposu|saha yükü|personelde|dinlendirme/.test(
+          haystack,
+        ) &&
+        !/personel görüşmesi|iletişim planı/.test(haystack)
+      ) {
+        return 'cleaning';
+      }
+      if (/iletişim|koordinasyon|görüşme|personel görüşmesi|muhtar/.test(haystack)) {
+        return 'field_supervisor';
+      }
+      return inferRoleFromHaystack(haystack);
+    case 'butterfly':
+      if (/şikayet|kriz|sosyal|muhtar|gergin|toplu tepki/.test(haystack)) {
+        return 'field_supervisor';
+      }
+      return inferRoleFromHaystack(haystack);
+    case 'opportunity':
+      if (
+        /iletişim|eğitim|motivasyon|briefing|personel görüşmesi/.test(haystack) &&
+        !/temizlik|toplam|çöp|rota|araç/.test(haystack)
+      ) {
+        return 'field_supervisor';
+      }
+      return 'cleaning';
+    case 'permanent_solution':
+      return inferRoleFromHaystack(haystack);
+    case 'final':
+      if (/rapor|sunum|iletişim|üst yönetim|değerlendirme/.test(haystack)) {
+        return 'field_supervisor';
+      }
+      return inferRoleFromHaystack(haystack);
+    default:
+      return null;
+  }
+}
+
+export function inferPreferredRole(
+  event: EventCard,
+  decision?: EventDecision,
+): PersonnelRole {
+  const haystack = buildPersonnelRoleHaystack(event, decision);
+
+  if (event.eventType) {
+    const contextual = inferRoleFromContextualEventType(event.eventType, haystack);
+    if (contextual != null) {
+      return contextual;
+    }
+    const direct = EVENT_TYPE_ROLE_HINTS[event.eventType];
+    if (direct) {
+      return direct;
     }
   }
-  return 'field_supervisor';
+
+  return inferRoleFromHaystack(haystack);
 }
 
 export function scoreRoleMatch(
@@ -272,7 +406,7 @@ export function buildPersonnelTaskInput(params: {
 }): PersonnelTaskInput {
   const { team, event, decision, neighborhood, resources, equipmentSupportActive, day } =
     params;
-  const preferredRole = inferPreferredRole(event);
+  const preferredRole = inferPreferredRole(event, decision);
   const staffHours = decision.costs?.staffHours ?? 0;
   const workedHours = clamp(
     Math.max(6, Math.min(12, event.urgencyHours || 8)) + staffHours * 0.25,
@@ -280,6 +414,13 @@ export function buildPersonnelTaskInput(params: {
     14,
   );
   const overtimeHours = Math.max(0, workedHours - 8);
+
+  const requiredCompetency = inferPersonnelCompetencyForTask({
+    team,
+    event,
+    decision,
+  });
+  const competencyScore = getTeamCompetencyScore(team, requiredCompetency);
 
   return {
     team,
@@ -293,6 +434,8 @@ export function buildPersonnelTaskInput(params: {
     roleMatchScore: scoreRoleMatch(team.role, preferredRole, event),
     equipmentSupportActive,
     day,
+    requiredCompetency,
+    competencyScore,
   };
 }
 
@@ -406,11 +549,19 @@ export function calculateTaskSuccessScore(input: PersonnelTaskInput): number {
       ? pickRange(5, 12, [team.id, input.day, 'glitch-penalty'])
       : 0;
 
+  const competencyValue =
+    input.competencyScore ??
+    (input.requiredCompetency
+      ? getTeamCompetencyScore(team, input.requiredCompetency)
+      : 50);
+  const competencyBonus = getCompetencyScoreModifier(competencyValue);
+
   const score =
     baseTaskScore +
     roleMatchBonus +
     moraleBonus +
-    familiarityBonus -
+    familiarityBonus +
+    competencyBonus -
     fatiguePenalty -
     vehiclePenalty -
     districtDifficultyPenalty -

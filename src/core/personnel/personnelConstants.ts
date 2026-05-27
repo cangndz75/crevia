@@ -108,13 +108,11 @@ export const RISK_TO_TASK_DIFFICULTY: Record<
   critical: 'crisis',
 };
 
+/** Doğrudan eşleşen event tipleri — bağlamsal tipler personnelEngine'de işlenir. */
 export const EVENT_TYPE_ROLE_HINTS: Record<string, PersonnelRole> = {
   waste: 'cleaning',
   market: 'cleaning',
   vehicle: 'driver',
-  staff: 'field_supervisor',
-  citizen_complaint: 'field_supervisor',
-  social_media: 'field_supervisor',
   sidewalk: 'maintenance',
   noise: 'maintenance',
 };

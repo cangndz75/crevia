@@ -151,6 +151,17 @@ export function PersonnelTeamCard({
       </Text>
       <Text style={[typography.body, styles.readiness]}>{team.readinessText}</Text>
 
+      {team.strongestCompetencyLabel && team.weakestCompetencyLabel ? (
+        <View style={styles.competencyRow}>
+          <Text style={styles.competencyStrong}>
+            Güçlü: {team.strongestCompetencyLabel}
+          </Text>
+          <Text style={styles.competencyWeak}>
+            Zayıf: {team.weakestCompetencyLabel}
+          </Text>
+        </View>
+      ) : null}
+
       {team.warningLabels.length > 0 ? (
         <View style={styles.warnings}>
           {team.warningLabels.slice(0, 2).map((warning) => (
@@ -227,6 +238,19 @@ const styles = StyleSheet.create({
   },
   readiness: {
     color: colors.textPrimary,
+  },
+  competencyRow: {
+    gap: 2,
+  },
+  competencyStrong: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.success,
+  },
+  competencyWeak: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textSecondary,
   },
   warnings: {
     gap: 2,
