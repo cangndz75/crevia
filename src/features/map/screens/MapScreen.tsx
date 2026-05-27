@@ -4,8 +4,10 @@ import { View } from 'react-native';
 
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import { DEFAULT_PILOT_DISTRICT_ID } from '@/core/models/DistrictProfile';
+import { selectIsDay1TutorialActive } from '@/features/tutorial/tutorialSelectors';
 import {
   selectActiveEvents,
+  selectContainerState,
   selectCurrentPilotDay,
   selectSelectedPilotDistrictId,
   useGameStore,
@@ -28,6 +30,11 @@ import { RiskPanel } from '../components/RiskPanel';
 import { VehiclePanel } from '../components/VehiclePanel';
 import { pilotAreaFromDistrict } from '../data/pilotAreaMapping';
 import {
+  buildContainerMapPins,
+  buildContainerPanelItems,
+  buildContainerSummaryFromPins,
+} from '../utils/containerMapAdapter';
+import {
   getActiveOperation,
   getContainerSummary,
   getContainers,
@@ -39,13 +46,22 @@ import {
   getTasks,
   getVehicles,
 } from '../data/mapSelectors';
-import type { ActiveLayers, LayerId, MapFilterId, PilotAreaId } from '../types/map';
+import { DEFAULT_MAP_DISTRICT_ID, type MapDistrictId } from '../data/mapAssets';
+import type {
+  ActiveLayers,
+  LayerId,
+  MapFilterId,
+  MapViewMode,
+  PilotAreaId,
+} from '../types/map';
 
 export function MapScreen() {
   const selectedDistrictId: PilotDistrictId =
     useGameStore(selectSelectedPilotDistrictId) ?? DEFAULT_PILOT_DISTRICT_ID;
   const gameDay = useGameStore(selectCurrentPilotDay) ?? 1;
   const activeEvents = useGameStore(selectActiveEvents);
+  const containerState = useGameStore(selectContainerState);
+  const hideContainerSignals = useGameStore(selectIsDay1TutorialActive);
 
   const pilotAreaId: PilotAreaId = pilotAreaFromDistrict(selectedDistrictId);
   const preset = useMemo(() => getPilotPreset(pilotAreaId), [pilotAreaId]);
@@ -56,6 +72,18 @@ export function MapScreen() {
   );
   const [isLayerPanelOpen, setLayerPanelOpen] = useState(false);
   const [isGuideOpen, setGuideOpen] = useState(false);
+  const [mapViewMode, setMapViewMode] = useState<MapViewMode>('overview');
+  const [detailDistrictId, setDetailDistrictId] =
+    useState<MapDistrictId>(DEFAULT_MAP_DISTRICT_ID);
+
+  const handleDistrictSelect = useCallback((districtId: MapDistrictId) => {
+    setDetailDistrictId(districtId);
+    setMapViewMode('detail');
+  }, []);
+
+  const handleBackToOverview = useCallback(() => {
+    setMapViewMode('overview');
+  }, []);
 
   useEffect(() => {
     setActiveLayers(getDefaultLayers(pilotAreaId));
@@ -68,6 +96,27 @@ export function MapScreen() {
   const containerSummary = useMemo(
     () => getContainerSummary(pilotAreaId),
     [pilotAreaId],
+  );
+
+  const liveContainerPins = useMemo(
+    () =>
+      containerState
+        ? buildContainerMapPins({ containerState })
+        : [],
+    [containerState],
+  );
+
+  const liveContainerPanelItems = useMemo(
+    () => buildContainerPanelItems(liveContainerPins),
+    [liveContainerPins],
+  );
+
+  const liveContainerSummary = useMemo(
+    () =>
+      liveContainerPins.length > 0
+        ? buildContainerSummaryFromPins(liveContainerPins)
+        : null,
+    [liveContainerPins],
   );
   const riskSummary = useMemo(() => getRiskSummary(pilotAreaId), [pilotAreaId]);
   const activeOperation = useMemo(
@@ -132,8 +181,13 @@ export function MapScreen() {
       case 'containers':
         return (
           <ContainerPanel
-            summary={containerSummary}
+            summary={liveContainerSummary ?? containerSummary}
             containers={containers}
+            liveItems={
+              liveContainerPanelItems.length > 0
+                ? liveContainerPanelItems
+                : undefined
+            }
             emphasizeRouteCta={pilotAreaId === 'sanayiPazar'}
           />
         );
@@ -155,13 +209,19 @@ export function MapScreen() {
       <MapFilterTabs selected={selectedFilter} onSelect={setSelectedFilter} />
 
       <CityMapCard
+        viewMode={mapViewMode}
+        detailDistrictId={detailDistrictId}
         pilotAreaId={pilotAreaId}
         selectedDistrictId={selectedDistrictId}
         selectedFilter={selectedFilter}
         gameDay={gameDay}
         activeLayers={activeLayers}
         activeEvents={activeEvents}
+        containerState={containerState}
+        hideContainerSignals={hideContainerSignals}
         onLayersPress={() => setLayerPanelOpen(true)}
+        onDistrictSelect={handleDistrictSelect}
+        onBackToOverview={handleBackToOverview}
         onPinPress={(pinId) => {
           const linked = activeEvents.find((e) => e.id === pinId);
           if (linked) {

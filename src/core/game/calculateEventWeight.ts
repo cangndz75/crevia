@@ -1,4 +1,6 @@
 import { districtProfiles } from '@/core/content/districtProfiles';
+import { getContainerEventWeightForCandidate } from '@/core/containers/containerEventSignals';
+import type { ContainerState } from '@/core/containers/containerTypes';
 import { conditionsMatch } from '@/core/game/pilotConditions';
 import type { PilotEventSelectionContext } from '@/core/game/pilotConditions';
 import type { EventCard } from '@/core/models/EventCard';
@@ -12,6 +14,8 @@ export type CalculateEventWeightParams = {
   recentEventIds?: string[];
   /** Aynı bölgeye özel mi (ALL_DISTRICTS değil). */
   districtMatch?: boolean;
+  /** Opsiyonel konteyner sinyali — gün 1'de boost uygulanmaz. */
+  containerState?: ContainerState | null;
 };
 
 function metricBonus(
@@ -99,7 +103,14 @@ function repeatPenalty(
 export function calculateEventWeight(
   params: CalculateEventWeightParams,
 ): number {
-  const { event, context, theme, recentEventIds, districtMatch } = params;
+  const {
+    event,
+    context,
+    theme,
+    recentEventIds,
+    districtMatch,
+    containerState,
+  } = params;
 
   let weight = (event.priority ?? 1) * 10;
 
@@ -118,6 +129,20 @@ export function calculateEventWeight(
   weight += metricBonus(event, context);
   weight += districtBiasBonus(event, context);
   weight -= repeatPenalty(event.id, recentEventIds);
+
+  if (containerState) {
+    const containerBoost = getContainerEventWeightForCandidate({
+      containerState,
+      neighborhoodId: event.neighborhoodId,
+      eventType: event.eventType,
+      title: event.title,
+      category: event.category,
+      day: context.currentDay,
+    });
+    if (containerBoost > 0) {
+      weight = weight * (1 + containerBoost);
+    }
+  }
 
   return Math.max(1, weight);
 }

@@ -1,38 +1,55 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { EventEffectChips } from '@/features/events/components/decision-center/EventEffectChips';
 import { EventThumbnail } from '@/features/events/components/decision-center/EventThumbnail';
-import { buildCompactEffectChips } from '@/features/events/utils/eventUiHelpers';
+import { eventsScreen } from '@/features/events/theme/eventsScreenTokens';
 import {
-  getRiskLevelColor,
-  getRiskLevelMuted,
-} from '@/features/events/utils/eventPresentation';
+  buildPremiumPreviewChips,
+  getEventAccentKind,
+  type EventAccentKind,
+} from '@/features/events/utils/eventUiHelpers';
 import {
   formatUrgencyLabel,
   getRiskLevelLabel,
 } from '@/core/content/mockGameData';
 import type { EventCard } from '@/core/models/EventCard';
-import { colors } from '@/ui/theme/colors';
-import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
-import { spacing } from '@/ui/theme/spacing';
 
-const EFFECT_TONE_BG: Record<string, string> = {
-  positive: colors.successMuted,
-  negative: colors.dangerMuted,
-  neutral: colors.background,
-  xp: colors.purpleMuted,
-  risk: colors.primaryMuted,
-  budget: '#FCE8EC',
+const ACCENT_COLORS: Record<EventAccentKind, string> = {
+  critical: eventsScreen.critical,
+  urgent: eventsScreen.urgent,
+  opportunity: eventsScreen.opportunity,
+  resolved: eventsScreen.resolved,
+  default: eventsScreen.urgent,
 };
 
-const EFFECT_TONE_TEXT: Record<string, string> = {
-  positive: colors.success,
-  negative: colors.danger,
-  neutral: colors.textSecondary,
-  xp: colors.purple,
-  risk: colors.primary,
-  budget: colors.danger,
+const ACCENT_BADGE: Record<EventAccentKind, { bg: string; text: string; label: string }> = {
+  critical: {
+    bg: eventsScreen.criticalMuted,
+    text: eventsScreen.critical,
+    label: 'YÜKSEK RİSK',
+  },
+  urgent: {
+    bg: eventsScreen.urgentMuted,
+    text: eventsScreen.urgent,
+    label: 'YÜKSEK RİSK',
+  },
+  opportunity: {
+    bg: eventsScreen.opportunityMuted,
+    text: eventsScreen.opportunity,
+    label: 'FIRSAT',
+  },
+  resolved: {
+    bg: eventsScreen.resolvedMuted,
+    text: eventsScreen.resolved,
+    label: 'ÇÖZÜLDÜ',
+  },
+  default: {
+    bg: eventsScreen.urgentMuted,
+    text: eventsScreen.urgent,
+    label: 'ORTA RİSK',
+  },
 };
 
 type PendingEventItemProps = {
@@ -41,12 +58,16 @@ type PendingEventItemProps = {
 };
 
 export function PendingEventItem({ event, onPress }: PendingEventItemProps) {
-  const accent = getRiskLevelColor(event.riskLevel);
-  const muted = getRiskLevelMuted(event.riskLevel);
-  const isOpportunity = event.filterTags?.includes('opportunity');
-  const isCritical =
-    event.riskLevel === 'critical' || event.riskLevel === 'high';
-  const effectChips = buildCompactEffectChips(event.previewEffects, 2);
+  const accentKind = getEventAccentKind(event);
+  const stripeColor = ACCENT_COLORS[accentKind];
+  const badge = ACCENT_COLORS[accentKind]
+    ? ACCENT_BADGE[accentKind]
+    : ACCENT_BADGE.default;
+  const isOpportunity = accentKind === 'opportunity';
+  const effectChips = buildPremiumPreviewChips(event.previewEffects, 2, event);
+  const riskLabel = isOpportunity
+    ? 'FIRSAT'
+    : `${getRiskLevelLabel(event.riskLevel).toUpperCase()} RİSK`;
 
   return (
     <Pressable
@@ -55,68 +76,41 @@ export function PendingEventItem({ event, onPress }: PendingEventItemProps) {
         styles.card,
         shadows.soft,
         pressed && styles.pressed,
-      ]}>
-      <EventThumbnail event={event} size={76} />
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={`${event.title}, ${event.district}`}>
+      <View style={[styles.stripe, { backgroundColor: stripeColor }]} />
+
+      <EventThumbnail event={event} size={72} />
 
       <View style={styles.body}>
-        {isCritical ? (
-          <View style={styles.criticalRow}>
-            <Ionicons name="water" size={11} color={colors.danger} />
-            <Text style={styles.criticalLabel}>KRİTİK OLAY</Text>
-          </View>
-        ) : null}
-
         <Text style={styles.title} numberOfLines={1}>
           {event.title}
         </Text>
-
         <View style={styles.locationRow}>
-          <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
+          <Ionicons name="location-outline" size={12} color={eventsScreen.textMuted} />
           <Text style={styles.location} numberOfLines={1}>
             {event.district}
           </Text>
         </View>
-
         <Text style={styles.description} numberOfLines={2}>
           {event.description}
         </Text>
-
-        {effectChips.length > 0 ? (
-          <View style={styles.effectRow}>
-            {effectChips.map((chip) => (
-              <View
-                key={chip.key}
-                style={[
-                  styles.effectChip,
-                  { backgroundColor: EFFECT_TONE_BG[chip.tone] },
-                ]}>
-                <Text
-                  style={[
-                    styles.effectText,
-                    { color: EFFECT_TONE_TEXT[chip.tone] },
-                  ]}>
-                  {chip.label}
-                </Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
+        <EventEffectChips chips={effectChips} compact />
       </View>
 
       <View style={styles.trailing}>
         <View style={styles.timeRow}>
-          <Ionicons name="time-outline" size={12} color={colors.danger} />
+          <Ionicons name="time-outline" size={12} color={eventsScreen.urgent} />
           <Text style={styles.time}>{formatUrgencyLabel(event.urgencyHours)}</Text>
         </View>
-        <View style={[styles.riskBadge, { backgroundColor: muted }]}>
-          <Text style={[styles.riskText, { color: accent }]}>
-            {isOpportunity
-              ? 'Fırsat'
-              : `${getRiskLevelLabel(event.riskLevel)} Risk`}
+        <View style={[styles.riskBadge, { backgroundColor: badge.bg }]}>
+          <Text style={[styles.riskText, { color: badge.text }]} numberOfLines={1}>
+            {isOpportunity ? badge.label : riskLabel}
           </Text>
         </View>
-        <View style={styles.goBtn}>
-          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+        <View style={styles.chevronBtn}>
+          <Ionicons name="chevron-forward" size={18} color={eventsScreen.textMuted} />
         </View>
       </View>
     </Pressable>
@@ -127,39 +121,37 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    gap: spacing.md,
+    backgroundColor: eventsScreen.card,
+    borderRadius: eventsScreen.radiusMd,
+    paddingVertical: 12,
+    paddingRight: 10,
+    paddingLeft: 8,
+    gap: 10,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: eventsScreen.border,
+    overflow: 'hidden',
   },
   pressed: {
     opacity: 0.96,
     transform: [{ scale: 0.995 }],
   },
+  stripe: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+  },
   body: {
     flex: 1,
     minWidth: 0,
-    gap: 4,
-    paddingTop: 2,
-  },
-  criticalRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 2,
-  },
-  criticalLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    color: colors.danger,
+    gap: 3,
+    paddingTop: 1,
   },
   title: {
     fontSize: 15,
     fontWeight: '800',
-    color: colors.textPrimary,
+    color: eventsScreen.text,
     letterSpacing: -0.2,
   },
   locationRow: {
@@ -168,36 +160,21 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   location: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
     flex: 1,
+    fontSize: 11,
+    fontWeight: '600',
+    color: eventsScreen.textMuted,
   },
   description: {
-    fontSize: 12,
-    lineHeight: 17,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  effectRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    marginTop: 4,
-  },
-  effectChip: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: radius.sm,
-  },
-  effectText: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 11,
+    lineHeight: 16,
+    color: eventsScreen.textMuted,
+    marginTop: 1,
   },
   trailing: {
     alignItems: 'flex-end',
-    gap: spacing.sm,
-    minWidth: 68,
+    gap: 8,
+    minWidth: 72,
     paddingTop: 2,
   },
   timeRow: {
@@ -208,24 +185,27 @@ const styles = StyleSheet.create({
   time: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.danger,
+    color: eventsScreen.urgent,
   },
   riskBadge: {
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: radius.full,
+    borderRadius: 6,
+    maxWidth: 88,
   },
   riskText: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: '800',
+    letterSpacing: 0.3,
+    textAlign: 'right',
   },
-  goBtn: {
+  chevronBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: colors.background,
+    backgroundColor: eventsScreen.bg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: eventsScreen.border,
     alignItems: 'center',
     justifyContent: 'center',
   },

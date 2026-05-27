@@ -18,11 +18,15 @@ function TabBarIcon({
   focused,
   icon,
   iconFocused,
+  accent = false,
 }: {
   focused: boolean;
   icon: keyof typeof Ionicons.glyphMap;
   iconFocused: keyof typeof Ionicons.glyphMap;
+  accent?: boolean;
 }) {
+  const activeColor = accent ? colors.hubGoldDark : colors.tabActive;
+  const inactiveColor = colors.tabInactive;
   const scale = useSharedValue(focused ? 1.08 : 1);
 
   useEffect(() => {
@@ -41,7 +45,7 @@ function TabBarIcon({
       <AnimatedIcon
         name={focused ? iconFocused : icon}
         size={22}
-        color={focused ? colors.tabActive : colors.tabInactive}
+        color={focused ? activeColor : inactiveColor}
       />
     </Animated.View>
   );
@@ -73,6 +77,13 @@ export const ANIMATED_TAB_BAR_HEIGHT = 60;
 
 function shouldHideTabBar(state: BottomTabBarProps['state']) {
   const activeRoute = state.routes[state.index];
+  if (
+    activeRoute.name === 'profile' ||
+    activeRoute.name === 'leaderboard' ||
+    activeRoute.name === 'social'
+  ) {
+    return true;
+  }
   if (activeRoute.name !== 'events' || !activeRoute.state) {
     return false;
   }
@@ -119,11 +130,13 @@ export function AnimatedTabBar({
           }
         };
 
+        const isEventsTab = route.name === 'events';
+
         return (
           <Pressable
             key={route.key}
             onPress={onPress}
-            style={styles.tab}
+            style={[styles.tab, focused && isEventsTab && styles.tabEventsActive]}
             accessibilityRole="button"
             accessibilityState={{ selected: focused }}
             accessibilityLabel={config.label}>
@@ -131,9 +144,16 @@ export function AnimatedTabBar({
               focused={focused}
               icon={config.icon}
               iconFocused={config.iconFocused}
+              accent={isEventsTab}
             />
+            {focused && isEventsTab ? <View style={styles.activeDot} /> : null}
             {focused ? (
-              <Text style={[styles.label, styles.labelFocused]} numberOfLines={1}>
+              <Text
+                style={[
+                  styles.label,
+                  isEventsTab ? styles.labelEventsFocused : styles.labelFocused,
+                ]}
+                numberOfLines={1}>
                 {config.label}
               </Text>
             ) : (
@@ -167,13 +187,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
     paddingVertical: 4,
+    borderRadius: 14,
+    marginHorizontal: 2,
+  },
+  tabEventsActive: {
+    backgroundColor: colors.navIndicator,
+  },
+  activeDot: {
+    position: 'absolute',
+    top: 2,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: colors.hubGold,
   },
   label: {
     fontSize: 10,
     fontWeight: '800',
     color: colors.hubGoldDark,
   },
-  labelFocused: {},
+  labelFocused: {
+    color: colors.tabActive,
+  },
+  labelEventsFocused: {
+    color: colors.hubGoldDark,
+  },
   labelPlaceholder: {
     fontSize: 10,
     height: 12,

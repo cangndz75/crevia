@@ -24,12 +24,18 @@ export type DistrictContext = {
   riskFocusLine: string;
 };
 
-const FILTER_OPTIONS: { key: EventScreenFilterKey; label: string }[] = [
-  { key: 'all', label: 'Tümü' },
-  { key: 'critical', label: 'Kritik' },
-  { key: 'urgent', label: 'Acil' },
-  { key: 'opportunity', label: 'Fırsat' },
-  { key: 'resolved', label: 'Çözüldü' },
+export type EventScreenFilterOption = {
+  key: EventScreenFilterKey;
+  label: string;
+  icon: string;
+};
+
+const FILTER_OPTIONS: EventScreenFilterOption[] = [
+  { key: 'all', label: 'Tümü', icon: 'grid-outline' },
+  { key: 'critical', label: 'Kritik', icon: 'shield' },
+  { key: 'urgent', label: 'Acil', icon: 'notifications' },
+  { key: 'opportunity', label: 'Fırsat', icon: 'star' },
+  { key: 'resolved', label: 'Çözüldü', icon: 'checkmark-circle' },
 ];
 
 export function getEventScreenFilters() {

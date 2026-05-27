@@ -3,8 +3,6 @@ import { StyleSheet, View } from 'react-native';
 import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
 import { getEventHeroImage } from '@/features/events/utils/eventAssets';
 import type { EventCard } from '@/core/models/EventCard';
-import { radius } from '@/ui/theme/radius';
-
 type EventThumbnailProps = {
   event: EventCard;
   size?: number;
@@ -27,11 +25,11 @@ export function EventThumbnail({ event, size = 76 }: EventThumbnailProps) {
 
 const styles = StyleSheet.create({
   wrap: {
-    borderRadius: radius.md,
+    borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-    backgroundColor: '#F5F8F7',
+    borderColor: 'rgba(6, 63, 59, 0.08)',
+    backgroundColor: '#EEF4F2',
   },
   frame: {
     flex: 1,

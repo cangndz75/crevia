@@ -3,8 +3,13 @@ import {
   shouldClearPilotActiveEvents,
 } from '@/core/game/clearActiveEventsForGameState';
 import { ensureDailyEventsForDay } from '@/core/game/ensureDailyEventsForDay';
+import type { ContainerState } from '@/core/containers/containerTypes';
 import type { EventCard } from '@/core/models/EventCard';
 import type { GameState } from '@/core/models/GameState';
+
+export type RefreshPilotEventsFromGameStateOptions = {
+  containerState?: ContainerState | null;
+};
 
 export type RefreshPilotEventsFromGameStateResult = {
   gameState: GameState;
@@ -20,6 +25,7 @@ export type RefreshPilotEventsFromGameStateResult = {
 export function refreshPilotEventsFromGameState(
   gameState: GameState,
   currentEventPool: EventCard[],
+  options?: RefreshPilotEventsFromGameStateOptions,
 ): RefreshPilotEventsFromGameStateResult {
   if (shouldClearPilotActiveEvents(gameState)) {
     return {
@@ -29,7 +35,9 @@ export function refreshPilotEventsFromGameState(
     };
   }
 
-  const ensured = ensureDailyEventsForDay(gameState, currentEventPool);
+  const ensured = ensureDailyEventsForDay(gameState, currentEventPool, undefined, {
+    containerState: options?.containerState ?? null,
+  });
 
   if (!ensured.ensured) {
     return {

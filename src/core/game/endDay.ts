@@ -7,6 +7,7 @@ import type { DaySnapshot } from '@/core/models/DaySnapshot';
 import type { DecisionEngineState } from '@/core/models/DecisionEngineState';
 import type { EventCard } from '@/core/models/EventCard';
 import type { GameResources } from '@/core/models/GameResources';
+import type { ContainerState } from '@/core/containers/containerTypes';
 import type { PersonnelDayReport } from '@/core/personnel/personnelTypes';
 
 const UNRESOLVED_SATISFACTION_PENALTY = 2;
@@ -36,6 +37,8 @@ export type EndDayOptions = {
   /** true ise yeni gün için generic havuzdan event seçilmez (pilot refresh beklenir). */
   skipEventSelection?: boolean;
   personnelReport?: PersonnelDayReport | null;
+  /** Gün kapanışı konteyner tick sonrası durum — rapor özetine yansır. */
+  containerState?: ContainerState;
 };
 
 function getMetrics(state: EndDayState) {
@@ -121,6 +124,7 @@ export function endDay(
     resolvedEventIds: state.solvedEvents.map((e) => e.id),
     snapshots,
     personnelReport: options?.personnelReport ?? null,
+    containerState: options?.containerState,
   });
 
   let nextState: EndDayState = applyUnresolvedEventPenalty({

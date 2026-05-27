@@ -9,6 +9,10 @@ import type {
 } from '@/core/models/EventCard';
 import type { PilotDayTheme } from '@/core/models/PilotDayPlan';
 import type { PilotEventType } from '@/core/models/PilotDayPlan';
+import {
+  buildDay1TutorialDecisions,
+  DAY1_TUTORIAL_EVENT_COPY,
+} from '@/features/tutorial/day1TutorialDecisions';
 
 const ALL_DISTRICTS: PilotDistrictId[] = [...PILOT_DISTRICT_IDS];
 
@@ -66,66 +70,6 @@ function pilotEvent(base: PilotEventBase): EventCard {
     filterTags: base.filterTags,
     delayHint: base.delayHint,
   };
-}
-
-function learningDay1Decisions(prefix: string): EventDecision[] {
-  return [
-    {
-      id: `${prefix}-fast`,
-      title: 'Hızlı Müdahale',
-      description: 'Ekibi hemen yönlendir; görünür sonuç, yüksek maliyet.',
-      style: 'bold',
-      recommended: true,
-      decisionStyle: 'fast',
-      setFlags: { day1ResponseStyle: 'fast' },
-      resultText: 'Saha hızlı müdahale etti; mahalle güveni kısa vadede arttı.',
-      effects: {
-        publicSatisfaction: 10,
-        budget: -6500,
-        morale: -5,
-        risk: -10,
-        xp: 14,
-      },
-      costs: { staffHours: 7, vehicleUsage: 1 },
-      xpReward: 14,
-    },
-    {
-      id: `${prefix}-planned`,
-      title: 'Planlı Rotayı Bekle',
-      description: 'Mevcut plana sadık kal; bütçe korunur, gecikme riski var.',
-      style: 'balanced',
-      decisionStyle: 'planned',
-      setFlags: { day1ResponseStyle: 'planned' },
-      delayHint: true,
-      resultText: 'Sorun planlı rotaya alındı; şikayet riski sürüyor.',
-      effects: {
-        publicSatisfaction: 3,
-        budget: -1200,
-        morale: 1,
-        risk: 6,
-        xp: 8,
-      },
-      xpReward: 8,
-    },
-    {
-      id: `${prefix}-partial`,
-      title: 'Kısmi Müdahale',
-      description: 'Geçici toparlama; dengeli maliyet, kalıcı risk bırakabilir.',
-      style: 'cautious',
-      decisionStyle: 'partial',
-      setFlags: { day1ResponseStyle: 'partial' },
-      resultText: 'Kısmi müdahale yapıldı; tablo stabil ama tam çözülmedi.',
-      effects: {
-        publicSatisfaction: 6,
-        budget: -3200,
-        morale: -2,
-        risk: 0,
-        xp: 10,
-      },
-      costs: { staffHours: 3 },
-      xpReward: 10,
-    },
-  ];
 }
 
 function complaintDay2Decisions(
@@ -221,75 +165,54 @@ const pilotEventsList: EventCard[] = [
   // —— Gün 1: Learning ——
   pilotEvent({
     id: 'central_day1_learning_main_street',
-    title: 'Ana Caddede İlk Müdahale',
-    description:
-      'Ece: Ana caddede taşan konteyner yoğun yaya trafiğinde görünür. İlk izlenim kritik.',
+    title: DAY1_TUTORIAL_EVENT_COPY.title,
+    description: DAY1_TUTORIAL_EVENT_COPY.description,
     day: 1,
     theme: 'learning',
-    eventType: 'waste',
+    eventType: 'citizen_complaint',
     districtIds: ['central'],
-    districtLabel: DISTRICT_LABELS.central,
-    contextTag: 'Görünür hizmet',
-    riskLevel: 'high',
-    urgencyHours: 3,
+    districtLabel: DAY1_TUTORIAL_EVENT_COPY.neighborhood,
+    contextTag: DAY1_TUTORIAL_EVENT_COPY.contextTag,
+    riskLevel: DAY1_TUTORIAL_EVENT_COPY.riskLevel,
+    urgencyHours: DAY1_TUTORIAL_EVENT_COPY.urgencyHours,
     filterTags: ['urgent'],
     fallback: true,
-    previewEffects: { publicSatisfaction: -6, risk: 10, xp: 18, budget: -5000 },
-    decisions: learningDay1Decisions('central-d1'),
+    previewEffects: DAY1_TUTORIAL_EVENT_COPY.previewEffects,
+    decisions: buildDay1TutorialDecisions('central-d1'),
   }),
   pilotEvent({
     id: 'cumhuriyet_day1_learning_complaint',
-    title: 'Koku Şikayeti İlk Sinyal',
-    description:
-      'Hüseyin Muhtar: Konut sokaklarından koku şikayeti geldi. Sosyal baskı hızlı yükselir.',
+    title: DAY1_TUTORIAL_EVENT_COPY.title,
+    description: DAY1_TUTORIAL_EVENT_COPY.description,
     day: 1,
     theme: 'learning',
     eventType: 'citizen_complaint',
     districtIds: ['cumhuriyet'],
-    districtLabel: DISTRICT_LABELS.cumhuriyet,
-    contextTag: 'Şikayet sinyali',
-    riskLevel: 'high',
-    urgencyHours: 2,
+    districtLabel: DAY1_TUTORIAL_EVENT_COPY.neighborhood,
+    contextTag: DAY1_TUTORIAL_EVENT_COPY.contextTag,
+    riskLevel: DAY1_TUTORIAL_EVENT_COPY.riskLevel,
+    urgencyHours: DAY1_TUTORIAL_EVENT_COPY.urgencyHours,
     filterTags: ['urgent', 'crisis'],
     fallback: true,
-    previewEffects: { publicSatisfaction: -8, risk: 12, xp: 18 },
-    decisions: learningDay1Decisions('cumhuriyet-d1').map((d) => ({
-      ...d,
-      effects: {
-        ...d.effects,
-        publicSatisfaction: d.effects.publicSatisfaction + 1,
-        risk: d.id.includes('planned') ? d.effects.risk + 2 : d.effects.risk,
-      },
-    })),
+    previewEffects: DAY1_TUTORIAL_EVENT_COPY.previewEffects,
+    decisions: buildDay1TutorialDecisions('cumhuriyet-d1'),
   }),
   pilotEvent({
     id: 'industrial_market_day1_learning_market_waste',
-    title: 'Pazar Alanında Yoğun Atık',
-    description:
-      'Nermin Usta: Pazar sonrası atık yığıldı. Rota ve personel baskısı yüksek.',
+    title: DAY1_TUTORIAL_EVENT_COPY.title,
+    description: DAY1_TUTORIAL_EVENT_COPY.description,
     day: 1,
     theme: 'learning',
-    eventType: 'market',
+    eventType: 'citizen_complaint',
     districtIds: ['industrial_market'],
-    districtLabel: DISTRICT_LABELS.industrial_market,
-    contextTag: 'Operasyon baskısı',
-    riskLevel: 'high',
-    urgencyHours: 3,
+    districtLabel: DAY1_TUTORIAL_EVENT_COPY.neighborhood,
+    contextTag: DAY1_TUTORIAL_EVENT_COPY.contextTag,
+    riskLevel: DAY1_TUTORIAL_EVENT_COPY.riskLevel,
+    urgencyHours: DAY1_TUTORIAL_EVENT_COPY.urgencyHours,
     filterTags: ['urgent'],
     fallback: true,
-    previewEffects: { publicSatisfaction: -7, risk: 11, xp: 17, budget: -6000 },
-    decisions: learningDay1Decisions('industrial-d1').map((d) => ({
-      ...d,
-      effects: {
-        ...d.effects,
-        morale: d.effects.morale - 1,
-        budget: d.effects.budget - 500,
-      },
-      costs:
-        d.id.includes('fast') || d.id.includes('partial')
-          ? { staffHours: 8, vehicleUsage: 1 }
-          : d.costs,
-    })),
+    previewEffects: DAY1_TUTORIAL_EVENT_COPY.previewEffects,
+    decisions: buildDay1TutorialDecisions('industrial-d1'),
   }),
 
   // —— Gün 2: Complaint ——

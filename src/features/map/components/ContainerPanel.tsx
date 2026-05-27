@@ -6,11 +6,14 @@ import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
-import type { Container, ContainerSummary } from '../types/map';
+import type { Container, ContainerSummary, PinSeverity } from '../types/map';
+import type { MapContainerPanelItem } from '../utils/containerMapAdapter';
 
 type Props = {
   summary: ContainerSummary;
   containers: Container[];
+  /** Core container verisi varsa mock yerine bu liste kullanılır. */
+  liveItems?: MapContainerPanelItem[];
   emphasizeRouteCta?: boolean;
 };
 
@@ -18,6 +21,13 @@ const statusColors: Record<string, string> = {
   empty: colors.success,
   normal: colors.hubGold,
   full: colors.warning,
+  critical: colors.danger,
+};
+
+const severityColors: Record<PinSeverity, string> = {
+  low: colors.success,
+  medium: colors.warning,
+  high: '#D9933D',
   critical: colors.danger,
 };
 
@@ -41,12 +51,38 @@ function ContainerRow({ container }: { container: Container }) {
   );
 }
 
+function LiveContainerRow({ item }: { item: MapContainerPanelItem }) {
+  const col = severityColors[item.severity] ?? colors.textSecondary;
+  return (
+    <View style={[styles.containerRow, shadows.soft]}>
+      <View style={[styles.fillCircle, { borderColor: col }]}>
+        <Text style={[styles.fillText, { color: col }]}>%{item.fillPercentage}</Text>
+      </View>
+      <View style={styles.containerInfo}>
+        <Text style={styles.containerAddress}>{item.label}</Text>
+        <Text style={styles.containerDistrict}>{item.district}</Text>
+        <Text style={styles.metricsLine}>{item.metricsLine}</Text>
+        <Text style={styles.recommendedLine}>{item.recommendedAction}</Text>
+      </View>
+      <View style={[styles.statusPill, { backgroundColor: `${col}18` }]}>
+        <Text style={[styles.statusText, { color: col }]}>{item.statusLabel}</Text>
+      </View>
+    </View>
+  );
+}
+
 export function ContainerPanel({
   summary,
   containers,
+  liveItems,
   emphasizeRouteCta = false,
 }: Props) {
-  const criticals = containers.filter((c) => c.status === 'critical');
+  const useLive = (liveItems?.length ?? 0) > 0;
+  const criticals = useLive
+    ? liveItems!.filter(
+        (item) => item.severity === 'critical' || item.severity === 'high',
+      )
+    : containers.filter((c) => c.status === 'critical');
 
   return (
     <View style={styles.container}>
@@ -79,7 +115,11 @@ export function ContainerPanel({
         <View style={styles.criticalHeader}>
           <View>
             <Text style={styles.criticalTitle}>Kritik Noktalar</Text>
-            <Text style={styles.criticalSubtitle}>Müdahale edilmesi gereken dolu konteynerler</Text>
+            <Text style={styles.criticalSubtitle}>
+              {useLive
+                ? 'Canlı konteyner durumu — öncelikli noktalar'
+                : 'Müdahale edilmesi gereken dolu konteynerler'}
+            </Text>
           </View>
           <Pressable
             style={[
@@ -97,9 +137,13 @@ export function ContainerPanel({
             </Text>
           </Pressable>
         </View>
-        {criticals.map((c) => (
-          <ContainerRow key={c.id} container={c} />
-        ))}
+        {useLive
+          ? (criticals as MapContainerPanelItem[]).map((item) => (
+              <LiveContainerRow key={item.id} item={item} />
+            ))
+          : (criticals as Container[]).map((c) => (
+              <ContainerRow key={c.id} container={c} />
+            ))}
       </View>
     </View>
   );
@@ -279,6 +323,17 @@ const styles = StyleSheet.create({
   containerDistrict: {
     fontSize: 11,
     color: colors.textSecondary,
+  },
+  metricsLine: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  recommendedLine: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.primary,
+    marginTop: 2,
   },
   statusPill: {
     paddingHorizontal: 8,

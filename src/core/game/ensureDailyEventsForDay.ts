@@ -7,7 +7,12 @@ import {
 import { shouldClearPilotActiveEvents } from '@/core/game/clearActiveEventsForGameState';
 import type { DailyEventSet } from '@/core/models/DailyEventSet';
 import type { EventCard } from '@/core/models/EventCard';
+import type { ContainerState } from '@/core/containers/containerTypes';
 import type { GameState } from '@/core/models/GameState';
+
+export type EnsureDailyEventsForDayOptions = {
+  containerState?: ContainerState | null;
+};
 
 export type EnsureDailyEventsForDayResult = {
   gameState: GameState;
@@ -80,6 +85,7 @@ export function ensureDailyEventsForDay(
   gameState: GameState,
   currentEventPool: EventCard[] = [],
   catalog: EventCard[] = pilotEvents,
+  options?: EnsureDailyEventsForDayOptions,
 ): EnsureDailyEventsForDayResult {
   if (shouldClearPilotActiveEvents(gameState)) {
     return {
@@ -122,6 +128,7 @@ export function ensureDailyEventsForDay(
     day,
     districtId,
     events: catalog,
+    containerState: options?.containerState ?? null,
   });
 
   dailyEventSet.generatedAt = new Date().toISOString();

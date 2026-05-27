@@ -1,8 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter, type Href } from 'expo-router';
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getTimeGreeting } from '@/core/utils/timeGreeting';
@@ -25,6 +26,7 @@ function buildPilotMetaLine(day: number, districtName: string): string {
  * Yalnızca hub ekranında kullanılır.
  */
 export function DashboardHeader() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const status = useGameStatus();
   const greeting = useMemo(() => getTimeGreeting(), []);
@@ -55,12 +57,17 @@ export function DashboardHeader() {
           <Text style={styles.kicker}>KOMUTA MERKEZİ</Text>
 
           <View style={styles.topRow}>
-            <HeaderAvatar
-              size={56}
-              level={status.level}
-              showLevelBadge
-              borderColor="rgba(255,255,255,0.85)"
-            />
+            <Pressable
+              onPress={() => router.push('/profile' as Href)}
+              accessibilityRole="button"
+              accessibilityLabel="Profili aç">
+              <HeaderAvatar
+                size={56}
+                level={status.level}
+                showLevelBadge
+                borderColor="rgba(255,255,255,0.85)"
+              />
+            </Pressable>
 
             <View style={styles.greetCol}>
               <Text style={styles.greeting}>

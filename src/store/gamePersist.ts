@@ -11,6 +11,8 @@ import {
 } from '@/core/economy/economyEngine';
 import type { EconomyState } from '@/core/economy/types';
 import { ensureTeamCompetencies } from '@/core/personnel/personnelCompetency';
+import { normalizePersistedContainerState } from '@/core/containers/containerSeed';
+import type { ContainerState } from '@/core/containers/containerTypes';
 import { createInitialPersonnelState } from '@/core/personnel/personnelSeed';
 import type { PersonnelState, PersonnelTeam } from '@/core/personnel/personnelTypes';
 import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
@@ -18,17 +20,26 @@ import type { PlayerProgress } from '@/core/xp/types';
 import type { GameState } from '@/core/models/GameState';
 import type { PilotGameState } from '@/core/models/PilotGameState';
 
+import {
+  INITIAL_TUTORIAL_STATE,
+  type TutorialState,
+} from '@/features/tutorial/tutorialTypes';
+
+import type { LeaderboardEntry } from '@/core/leaderboard/leaderboardTypes';
+
 import type { GameStore } from './useGameStore';
 
 // ---------------------------------------------------------------------------
 // Save version & storage key
 // ---------------------------------------------------------------------------
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 4;
 /** Anahtar değişmedi — v1 kayıtları aynı AsyncStorage girişinden okunur. */
 export const GAME_STORAGE_KEY = 'crevia-game-state-v1';
 
 const LEGACY_SAVE_VERSION = 1;
+const SAVE_VERSION_2 = 2;
+const SAVE_VERSION_3 = 3;
 
 // ---------------------------------------------------------------------------
 // Persisted shape — only serialisable data, no actions / derived
@@ -50,6 +61,10 @@ export type PersistedGameState = Pick<
   | 'dailyGoalRuntime'
   | 'economyState'
   | 'personnelState'
+  | 'containerState'
+  | 'tutorialState'
+  | 'bestPilotScores'
+  | 'lastPilotScore'
 > & {
   saveVersion: number;
   updatedAt: string;
@@ -77,9 +92,49 @@ export function partialiseGameState(
     dailyGoalRuntime: state.dailyGoalRuntime,
     economyState: state.economyState,
     personnelState: state.personnelState,
+    containerState: state.containerState,
+    tutorialState: state.tutorialState,
+    bestPilotScores: state.bestPilotScores,
+    lastPilotScore: state.lastPilotScore,
     saveVersion: SAVE_VERSION,
     updatedAt: new Date().toISOString(),
   };
+}
+
+function isValidLeaderboardEntry(val: unknown): val is LeaderboardEntry {
+  if (!isRecord(val)) return false;
+  if (typeof val.id !== 'string') return false;
+  if (typeof val.playerName !== 'string') return false;
+  if (typeof val.neighborhoodId !== 'string') return false;
+  if (typeof val.score !== 'number') return false;
+  if (typeof val.baseScore !== 'number') return false;
+  if (!isRecord(val.breakdown)) return false;
+  return true;
+}
+
+function normalizeLeaderboardEntries(raw: unknown): LeaderboardEntry[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw.filter(isValidLeaderboardEntry);
+}
+
+function normalizeLastPilotScore(raw: unknown): LeaderboardEntry | undefined {
+  if (raw == null) {
+    return undefined;
+  }
+  return isValidLeaderboardEntry(raw) ? raw : undefined;
+}
+
+function isValidTutorialState(val: unknown): val is TutorialState {
+  if (!isRecord(val)) return false;
+  if (typeof val.day1Completed !== 'boolean') return false;
+  if (val.activeStepId != null && typeof val.activeStepId !== 'string') {
+    return false;
+  }
+  if (!Array.isArray(val.completedStepIds)) return false;
+  if (typeof val.skipped !== 'boolean') return false;
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -199,7 +254,7 @@ function validatePersistedCore(raw: Record<string, unknown>): boolean {
 }
 
 /**
- * v1 kayıtları pilot alanı olmadan gelebilir; v2'ye yükseltir.
+ * v1 kayıtları pilot alanı olmadan gelebilir; v2/v3 migration ile yükseltir.
  * Geçersiz kayıtlar için null döner.
  */
 export function normalizePersistedSave(
@@ -208,7 +263,12 @@ export function normalizePersistedSave(
   if (!isRecord(raw)) return null;
 
   const version = raw.saveVersion;
-  if (version !== LEGACY_SAVE_VERSION && version !== SAVE_VERSION) {
+  if (
+    version !== LEGACY_SAVE_VERSION &&
+    version !== SAVE_VERSION_2 &&
+    version !== SAVE_VERSION_3 &&
+    version !== SAVE_VERSION
+  ) {
     return null;
   }
 
@@ -221,6 +281,12 @@ export function normalizePersistedSave(
   const rawPersonnel = isValidPersonnelState(raw.personnelState)
     ? raw.personnelState
     : createInitialPersonnelState();
+  const currentDay = gameState.city.day;
+  const containerState: ContainerState = normalizePersistedContainerState(
+    raw.containerState,
+    currentDay,
+  );
+
   const personnelState: PersonnelState = {
     ...rawPersonnel,
     motivationUsedByTeamId: isRecord(rawPersonnel.motivationUsedByTeamId)
@@ -251,6 +317,7 @@ export function normalizePersistedSave(
     },
     economyState,
     personnelState,
+    containerState,
     neighborhoods: raw.neighborhoods as PersistedGameState['neighborhoods'],
     resources: raw.resources as PersistedGameState['resources'],
     eventPool: raw.eventPool as PersistedGameState['eventPool'],
@@ -283,6 +350,11 @@ export function normalizePersistedSave(
               : false,
         }
       : { ...INITIAL_DAILY_GOAL_RUNTIME },
+    tutorialState: isValidTutorialState(raw.tutorialState)
+      ? raw.tutorialState
+      : { ...INITIAL_TUTORIAL_STATE },
+    bestPilotScores: normalizeLeaderboardEntries(raw.bestPilotScores),
+    lastPilotScore: normalizeLastPilotScore(raw.lastPilotScore),
     saveVersion: SAVE_VERSION,
     updatedAt:
       typeof raw.updatedAt === 'string'

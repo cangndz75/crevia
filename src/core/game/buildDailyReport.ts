@@ -4,6 +4,8 @@ import type { DailyReport, DailyReportStat } from '@/core/models/DailyReport';
 import type { DaySnapshot } from '@/core/models/DaySnapshot';
 import type { EventCard } from '@/core/models/EventCard';
 import type { GameMetrics } from '@/core/models/GameMetrics';
+import { buildDailyContainerSummaryLines } from '@/core/containers/containerUiHelpers';
+import type { ContainerState } from '@/core/containers/containerTypes';
 import type { PersonnelDayReport } from '@/core/personnel/personnelTypes';
 
 const LOW_SATISFACTION = 50;
@@ -18,6 +20,8 @@ export type BuildDailyReportParams = {
   resolvedEventIds: string[];
   snapshots: DaySnapshot[];
   personnelReport?: PersonnelDayReport | null;
+  /** Gün kapanışı sonrası konteyner durumu (varsa özet satırları üretilir). */
+  containerState?: ContainerState;
 };
 
 function formatCurrency(amount: number): string {
@@ -205,6 +209,11 @@ export function buildDailyReport(params: BuildDailyReportParams): DailyReport {
     metrics,
   );
 
+  const containerSummaryLines = buildDailyContainerSummaryLines(
+    params.containerState,
+    day,
+  );
+
   return {
     day,
     title: `Gün ${day} Tamamlandı`,
@@ -215,6 +224,10 @@ export function buildDailyReport(params: BuildDailyReportParams): DailyReport {
     warnings,
     highlights,
     personnelSummaryLines: personnelSummaryLines.slice(0, personnelSummaryMax),
+    containerSummaryLines:
+      containerSummaryLines && containerSummaryLines.length > 0
+        ? containerSummaryLines
+        : undefined,
     createdAt: new Date().toISOString(),
   };
 }

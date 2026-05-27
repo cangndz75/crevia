@@ -13,6 +13,13 @@ import type {
 import type { GameState } from '@/core/models/GameState';
 import type { PilotEventType } from '@/core/models/PilotDayPlan';
 
+import {
+  isContainerOrWasteEventCandidate,
+  mapContainerSignalToDistrictEventType,
+  selectContainerSignalForNeighborhood,
+} from '@/core/containers/containerEventSignals';
+import { normalizeContainerNeighborhoodId } from '@/core/containers/containerNeighborhoodBridge';
+import type { ContainerState } from '@/core/containers/containerTypes';
 import { getDistrictProfile } from '@/core/districts/districtProfiles';
 import { createDistrictEvent } from '@/core/districts/districtEventEngine';
 import { mapPilotDistrictToDistrictType } from '@/core/districts/pilotDistrictBridge';
@@ -202,7 +209,81 @@ export type EnrichDailyEventSetParams = {
   districtId: PilotDistrictId;
   dailyEventSet: DailyEventSet;
   randomFn?: () => number;
+  containerState?: ContainerState | null;
+  catalog?: EventCard[];
 };
+
+function resolveEventCardById(
+  id: string,
+  catalog: EventCard[],
+  supplemental: EventCard[] = [],
+): EventCard | undefined {
+  return (
+    supplemental.find((event) => event.id === id) ??
+    catalog.find((event) => event.id === id)
+  );
+}
+
+function dailySetAlreadyHasContainerOrWasteEvent(
+  dailyEventSet: DailyEventSet,
+  catalog: EventCard[],
+): boolean {
+  const supplemental = dailyEventSet.supplementalEvents ?? [];
+  const eventIds = new Set<string>([
+    ...dailyEventSet.allEventIds,
+    dailyEventSet.anchorEventId,
+    ...dailyEventSet.sideEventIds,
+    ...dailyEventSet.quickActionIds,
+    ...dailyEventSet.opportunityEventIds,
+    ...dailyEventSet.butterflyEventIds,
+    ...dailyEventSet.signalEventIds,
+  ]);
+
+  for (const eventId of eventIds) {
+    if (!eventId) {
+      continue;
+    }
+    const card = resolveEventCardById(eventId, catalog, supplemental);
+    if (
+      card &&
+      isContainerOrWasteEventCandidate({
+        eventType: card.eventType,
+        title: card.title,
+        category: card.category,
+        tags: card.filterTags,
+        districtEventType: card.districtEventType,
+      })
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function resolveContainerDistrictEventType(
+  containerState: ContainerState,
+  pilotDistrictId: PilotDistrictId,
+  day: number,
+): DistrictEventType | undefined {
+  if (day <= 1) {
+    return undefined;
+  }
+
+  const neighborhoodId = normalizeContainerNeighborhoodId(pilotDistrictId);
+  if (!neighborhoodId) {
+    return undefined;
+  }
+
+  const signal = selectContainerSignalForNeighborhood(
+    containerState,
+    neighborhoodId,
+  );
+  if (!signal || signal.severity === 'none' || signal.severity === 'low') {
+    return undefined;
+  }
+
+  return mapContainerSignalToDistrictEventType(signal) ?? undefined;
+}
 
 /**
  * Günlük sete district engine event ekler; mock seçimi korunur.
@@ -219,11 +300,27 @@ export function enrichDailyEventSetWithDistrictEvents(
     return params.dailyEventSet;
   }
 
+  const catalog = params.catalog ?? [];
+  if (
+    dailySetAlreadyHasContainerOrWasteEvent(params.dailyEventSet, catalog)
+  ) {
+    return params.dailyEventSet;
+  }
+
   const districtType = mapPilotDistrictToDistrictType(params.districtId);
   const profile = getDistrictProfile(districtType);
   const currentRisk =
     params.gameState.city.riskScore ?? profile.baseRisk;
   const baseCount = params.dailyEventSet.allEventIds.length;
+
+  const containerEventTypeOverride =
+    params.containerState != null
+      ? resolveContainerDistrictEventType(
+          params.containerState,
+          params.districtId,
+          params.day,
+        )
+      : undefined;
 
   const supplemental: EventCard[] = [];
   const existingIds = new Set(params.dailyEventSet.allEventIds);
@@ -235,6 +332,7 @@ export function enrichDailyEventSetWithDistrictEvents(
       currentRisk,
       activeEventCount: baseCount + supplemental.length,
       randomFn: params.randomFn,
+      eventType: containerEventTypeOverride,
     });
 
     if (existingIds.has(districtEvent.id)) {

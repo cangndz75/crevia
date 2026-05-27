@@ -1,17 +1,37 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { HubContainerSignalCard } from '@/features/hub/components/HubContainerSignalCard';
 import { HubCriticalEventCard } from '@/features/hub/components/HubCriticalEventCard';
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
 import { HubDailyGoalCard } from '@/features/hub/components/HubDailyGoalCard';
 import { HubMetricsGrid } from '@/features/hub/components/HubMetricsGrid';
 import { HubPersonnelStrip } from '@/features/hub/components/HubPersonnelStrip';
 import { HubPilotReportBanner } from '@/features/hub/components/HubPilotReportBanner';
+import { HubLeaderboardShortcut } from '@/features/hub/components/HubLeaderboardShortcut';
+import { HubSocialPulseShortcut } from '@/features/hub/components/HubSocialPulseShortcut';
 import { HubQuickActions } from '@/features/hub/components/HubQuickActions';
 import { HubRegionPulseSection } from '@/features/hub/components/HubRegionPulseSection';
 import { HubStatusSummaryCard } from '@/features/hub/components/HubStatusSummaryCard';
-import { selectActiveEvents, useGameStore } from '@/store/useGameStore';
+import { HubSocialSignalCard } from '@/features/tutorial/HubSocialSignalCard';
+import {
+  TutorialCoachOverlay,
+  useTutorialHighlight,
+} from '@/features/tutorial/TutorialCoachOverlay';
+import { TutorialTarget } from '@/features/tutorial/TutorialTarget';
+import {
+  selectActiveTutorialStepForScreen,
+  selectIsDay1TutorialActive,
+  selectShouldShowTutorialSocialCard,
+} from '@/features/tutorial/tutorialSelectors';
+import { selectHubContainerSignal } from '@/core/containers/containerSelectors';
+import {
+  selectActiveEvents,
+  selectContainerState,
+  useGameStore,
+} from '@/store/useGameStore';
 import { GameScreenShell } from '@/ui/components/GameScreenShell';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
@@ -20,6 +40,24 @@ export function HubScreen() {
   const router = useRouter();
   const endCurrentDay = useGameStore((s) => s.endCurrentDay);
   const eventCount = useGameStore(selectActiveEvents).length;
+  const showSocialCard = useGameStore(selectShouldShowTutorialSocialCard);
+  const hubTutorialStep = useGameStore((s) =>
+    selectActiveTutorialStepForScreen(s, 'hub'),
+  );
+  const tutorialActive = useGameStore(selectIsDay1TutorialActive);
+  const containerState = useGameStore(selectContainerState);
+  const pilotDay = useGameStore(
+    (s) => s.gameState.pilot.currentPilotDay ?? s.gameState.city.day,
+  );
+
+  const containerSignalCompact = useMemo(() => {
+    const signal = selectHubContainerSignal(containerState);
+    return pilotDay <= 1 || signal?.severity === 'low';
+  }, [containerState, pilotDay]);
+
+  const metricsHighlight = useTutorialHighlight('hub', 'hub_metrics');
+  const criticalHighlight = useTutorialHighlight('hub', 'critical_event_card');
+  const socialHighlight = useTutorialHighlight('hub', 'social_signal_card');
 
   const handleEndDay = () => {
     endCurrentDay();
@@ -31,15 +69,39 @@ export function HubScreen() {
       headerVariant="dashboard"
       backgroundColor={colors.hubCream}
       contentStyle={styles.content}>
-      <View style={styles.body}>
+      <View
+        style={[
+          styles.body,
+          hubTutorialStep ? styles.bodyWithCoach : null,
+        ]}>
         <HubStatusSummaryCard />
-        <HubMetricsGrid />
+        <TutorialTarget targetKey="hub_metrics" highlighted={metricsHighlight}>
+          <HubMetricsGrid />
+        </TutorialTarget>
+        <HubContainerSignalCard
+          hidden={tutorialActive}
+          compact={containerSignalCompact}
+        />
         <HubPersonnelStrip />
 
         <View style={styles.lowerSection}>
-          <HubCriticalEventCard />
+          <TutorialTarget
+            targetKey="critical_event_card"
+            highlighted={criticalHighlight}>
+            <HubCriticalEventCard />
+          </TutorialTarget>
           <HubQuickActions />
+          <HubSocialPulseShortcut />
+          <HubLeaderboardShortcut />
         </View>
+
+        {showSocialCard ? (
+          <TutorialTarget
+            targetKey="social_signal_card"
+            highlighted={socialHighlight}>
+            <HubSocialSignalCard />
+          </TutorialTarget>
+        ) : null}
 
         <HubRegionPulseSection />
         <HubDailyGoalCard onEndDay={handleEndDay} />
@@ -62,6 +124,7 @@ export function HubScreen() {
 
         <HubDevTools />
       </View>
+      <TutorialCoachOverlay screen="hub" />
     </GameScreenShell>
   );
 }
@@ -74,6 +137,9 @@ const styles = StyleSheet.create({
   body: {
     gap: 14,
     paddingBottom: spacing.xxxl,
+  },
+  bodyWithCoach: {
+    paddingBottom: spacing.xxxl + 150,
   },
   lowerSection: {
     gap: 14,

@@ -20,6 +20,7 @@ import {
   ANIMATED_TAB_BAR_HEIGHT,
   AnimatedTabBar,
 } from "@/ui/components/AnimatedTabBar";
+import { GestureRootProvider } from "@/ui/providers/GestureRootProvider";
 import { colors } from "@/ui/theme/colors";
 
 SplashScreen.preventAutoHideAsync();
@@ -50,7 +51,10 @@ function TabNavigator() {
       />
       <Tabs.Screen name="risks" options={{ title: "Riskler" }} />
       <Tabs.Screen name="progression" options={{ title: "Yetkiler" }} />
+      <Tabs.Screen name="social" options={{ href: null, title: "Sosyal Nabız" }} />
       <Tabs.Screen name="reports" options={{ title: "Rapor" }} />
+      <Tabs.Screen name="profile" options={{ href: null, title: "Profil" }} />
+      <Tabs.Screen name="leaderboard" options={{ href: null, title: "Liderlik" }} />
     </Tabs>
   );
 }
@@ -97,30 +101,29 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError, bootstrap.gateOpen]);
 
-  if (!fontsLoaded && !fontError) {
-    return null;
-  }
-
   const showBrandedSplash = !bootstrap.gateOpen;
+  const fontsReady = fontsLoaded || fontError;
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style="dark" />
-      <View style={styles.root}>
-        {showBrandedSplash ? (
-          <SplashGateScreen mode="loading" />
-        ) : bootstrap.phase === 'ready' ? (
-          <TabNavigator />
-        ) : (
-          <AppGate
-            phase={bootstrap.phase}
-            retrying={bootstrap.retrying}
-            onRetry={bootstrap.retryConnection}
-            onOnboardingComplete={bootstrap.completeOnboarding}
-          />
-        )}
-      </View>
-    </SafeAreaProvider>
+    <GestureRootProvider>
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <View style={styles.root}>
+          {!fontsReady ? null : showBrandedSplash ? (
+            <SplashGateScreen mode="loading" />
+          ) : bootstrap.phase === "ready" ? (
+            <TabNavigator />
+          ) : (
+            <AppGate
+              phase={bootstrap.phase}
+              retrying={bootstrap.retrying}
+              onRetry={bootstrap.retryConnection}
+              onOnboardingComplete={bootstrap.completeOnboarding}
+            />
+          )}
+        </View>
+      </SafeAreaProvider>
+    </GestureRootProvider>
   );
 }
 

@@ -218,6 +218,9 @@ export function StyledPilotMap({
           <MapPinNode
             key={pin.id}
             pin={pin}
+            normalized={false}
+            mapWidth={MAP_VIEWBOX.width}
+            mapHeight={MAP_VIEWBOX.height}
             onPress={onPinPress}
           />
         ))}

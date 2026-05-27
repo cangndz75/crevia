@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp, ZoomIn } from 'react-native-reanimated';
@@ -7,6 +7,8 @@ import Animated, { FadeIn, FadeInUp, ZoomIn } from 'react-native-reanimated';
 import {
   canCompletePilot,
 } from '@/core/game/calculatePilotFinalResult';
+import { PilotLeaderboardResultCard } from '@/features/reports/components/PilotLeaderboardResultCard';
+import { usePilotLeaderboardResult } from '@/features/reports/hooks/usePilotLeaderboardResult';
 import {
   selectGameState,
   selectSnapshots,
@@ -85,6 +87,7 @@ export function FinalPilotReportScreen() {
   const completePilotFromCurrentState = useGameStore(
     (s) => s.completePilotFromCurrentState,
   );
+  const pilotLeaderboard = usePilotLeaderboardResult();
 
   useEffect(() => {
     if (finalResult) {
@@ -170,6 +173,17 @@ export function FinalPilotReportScreen() {
           </Text>
         </GameCard>
       </Animated.View>
+
+      {pilotLeaderboard ? (
+        <Animated.View entering={FadeInUp.delay(220).duration(360).springify().damping(22)}>
+          <PilotLeaderboardResultCard
+            entry={pilotLeaderboard.entry}
+            rank={pilotLeaderboard.rank}
+            totalEntries={pilotLeaderboard.totalEntries}
+            onOpenLeaderboard={() => router.push('/leaderboard' as Href)}
+          />
+        </Animated.View>
+      ) : null}
 
       <SectionHeader
         title="Değerlendirme Özeti"

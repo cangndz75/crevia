@@ -15,5 +15,7 @@ export type DailyReport = {
   highlights?: string[];
   /** Gün sonu personel bloğu — genel özetten ayrı tutulur. */
   personnelSummaryLines?: string[];
+  /** Gün sonu atık/konteyner operasyon özeti (en fazla 3 satır). */
+  containerSummaryLines?: string[];
   createdAt?: string;
 };

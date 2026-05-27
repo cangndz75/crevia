@@ -1,0 +1,21 @@
+/** Olay Detayı / Karar ekranı — görsel tokenlar (app theme ile uyumlu). */
+export const eventDetail = {
+  bg: '#F5F3EA',
+  tealDark: '#063F3B',
+  teal: '#0B6B61',
+  tealMid: '#1A8F8A',
+  mint: '#DDF4E8',
+  mintSoft: '#EEF9F3',
+  card: '#FFFFFF',
+  textDark: '#102F2D',
+  textMuted: '#6B7D78',
+  orange: '#D9933D',
+  red: '#D95F50',
+  success: '#6CCB8E',
+  glass: 'rgba(255,255,255,0.72)',
+  screenPadding: 20,
+  cardRadius: 24,
+  smallRadius: 14,
+  sectionGap: 16,
+  ctaHeight: 60,
+} as const;

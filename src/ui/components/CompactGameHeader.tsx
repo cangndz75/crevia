@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter, type Href } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +29,7 @@ function buildMetaLine(day: number, districtShortName: string): string {
 export function CompactGameHeader({
   screenTitle = 'Crevia',
 }: CompactGameHeaderProps) {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const status = useGameStatus();
 
@@ -45,7 +47,12 @@ export function CompactGameHeader({
     <View style={[styles.outer, { paddingTop: insets.top + spacing.sm }]}>
       <View style={[styles.card, shadows.card]}>
         <View style={styles.mainRow}>
-          <HeaderAvatar size={48} borderColor={colors.surface} />
+          <Pressable
+            onPress={() => router.push('/profile' as Href)}
+            accessibilityRole="button"
+            accessibilityLabel="Profili aç">
+            <HeaderAvatar size={48} borderColor={colors.surface} />
+          </Pressable>
 
           <View style={styles.centerCol}>
             <View style={styles.titleRow}>

@@ -1,10 +1,13 @@
 import { Circle, G, Text as SvgText } from 'react-native-svg';
 
 import type { MapPin as MapPinModel } from '../types/map';
-import { MAP_VIEWBOX } from '../data/mapGeometry';
 
 type Props = {
   pin: MapPinModel;
+  /** viewBox 0 0 1 1 için normalize koordinat */
+  normalized?: boolean;
+  mapWidth?: number;
+  mapHeight?: number;
   selected?: boolean;
   onPress?: (pinId: string) => void;
 };
@@ -19,24 +22,36 @@ const PIN_ICON: Record<string, string> = {
   opportunity: '★',
 };
 
-export function MapPin({ pin, selected, onPress }: Props) {
-  const cx = pin.x * MAP_VIEWBOX.width;
-  const cy = pin.y * MAP_VIEWBOX.height;
+export function MapPin({
+  pin,
+  normalized = true,
+  mapWidth = 1,
+  mapHeight = 1,
+  selected,
+  onPress,
+}: Props) {
+  const cx = normalized ? pin.x : pin.x * mapWidth;
+  const cy = normalized ? pin.y : pin.y * mapHeight;
   const isLarge =
     pin.severity === 'critical' || pin.severity === 'high' || pin.type === 'crew';
-  const r = pin.type === 'crew' ? 11 : isLarge ? 9 : 7;
+  const r = normalized
+    ? pin.type === 'crew'
+      ? 0.022
+      : isLarge
+        ? 0.018
+        : 0.014
+    : pin.type === 'crew'
+      ? 11
+      : isLarge
+        ? 9
+        : 7;
   const icon = PIN_ICON[pin.type] ?? '•';
+  const fontSize = normalized ? 0.02 : 7;
 
   return (
     <G onPress={() => onPress?.(pin.id)}>
       {(pin.severity === 'critical' || selected) && (
-        <Circle
-          cx={cx}
-          cy={cy}
-          r={r + 5}
-          fill={pin.color}
-          opacity={0.2}
-        />
+        <Circle cx={cx} cy={cy} r={r + (normalized ? 0.01 : 5)} fill={pin.color} opacity={0.2} />
       )}
       <Circle
         cx={cx}
@@ -44,13 +59,13 @@ export function MapPin({ pin, selected, onPress }: Props) {
         r={r}
         fill={pin.color}
         stroke="#FFFFFF"
-        strokeWidth={selected ? 2.5 : 1.5}
+        strokeWidth={normalized ? 0.003 : selected ? 2.5 : 1.5}
       />
       {pin.type === 'crew' ? (
         <SvgText
           x={cx}
-          y={cy + 3.5}
-          fontSize={9}
+          y={cy + (normalized ? 0.008 : 3.5)}
+          fontSize={fontSize}
           fontWeight="700"
           fill="#FFFFFF"
           textAnchor="middle"
@@ -60,8 +75,8 @@ export function MapPin({ pin, selected, onPress }: Props) {
       ) : pin.value ? (
         <SvgText
           x={cx}
-          y={cy + 3}
-          fontSize={6}
+          y={cy + (normalized ? 0.007 : 3)}
+          fontSize={normalized ? 0.014 : 6}
           fontWeight="800"
           fill="#FFFFFF"
           textAnchor="middle"
@@ -71,8 +86,8 @@ export function MapPin({ pin, selected, onPress }: Props) {
       ) : (
         <SvgText
           x={cx}
-          y={cy + (icon === '▲' ? 3.5 : 3)}
-          fontSize={icon.length > 1 ? 5 : 7}
+          y={cy + (normalized ? 0.007 : icon === '▲' ? 3.5 : 3)}
+          fontSize={icon.length > 1 ? fontSize * 0.75 : fontSize}
           fontWeight="800"
           fill="#FFFFFF"
           textAnchor="middle"

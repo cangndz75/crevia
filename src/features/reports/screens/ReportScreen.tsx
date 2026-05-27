@@ -6,8 +6,14 @@ import type { DecisionRecord } from '@/core/models/DecisionRecord';
 import type { DailyReport } from '@/core/models/DailyReport';
 import type { GameMetrics } from '@/core/models/GameMetrics';
 import { PilotReportSummaryCard } from '@/features/reports/components/PilotReportSummaryCard';
+import { ReportContainerSummary } from '@/features/reports/components/ReportContainerSummary';
 import { ReportPersonnelSummary } from '@/features/reports/components/ReportPersonnelSummary';
 import { getPilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
+import { TutorialCoachOverlay } from '@/features/tutorial/TutorialCoachOverlay';
+import {
+  applyDay1TutorialReportCopy,
+  selectShowDay1TutorialReportCopy,
+} from '@/features/tutorial/tutorialSelectors';
 import { buildDailyEconomyReport } from '@/core/economy/economyReport';
 import {
   formatSourceAmount,
@@ -143,7 +149,7 @@ function ReportContent({
 
   return (
     <GameScreenShell screenTitle="Raporlar">
-      <Text style={typography.title}>Gün Sonu Raporu</Text>
+      <Text style={typography.title}>{report.title}</Text>
       <Text style={typography.caption}>Gün {report.day} tamamlandı</Text>
 
       {pilotReportContext ? (
@@ -152,6 +158,7 @@ function ReportContent({
 
       <LineList title="Özet" lines={summaryLines} />
       <ReportPersonnelSummary lines={report.personnelSummaryLines ?? []} />
+      <ReportContainerSummary lines={report.containerSummaryLines ?? []} />
       <LineList title="Uyarılar" lines={warnings} tone="warning" />
       <LineList title="Öne Çıkanlar" lines={highlights} tone="highlight" />
 
@@ -237,6 +244,7 @@ function ReportContent({
         onPress={onGoHub}
         style={styles.primaryAction}
       />
+      <TutorialCoachOverlay screen="daily_report" />
     </GameScreenShell>
   );
 }
@@ -285,9 +293,15 @@ export function ReportScreen() {
     decisionHistory,
   });
 
+  const useDay1ReportCopy = useGameStore(selectShowDay1TutorialReportCopy);
+  const displayReport = useMemo(
+    () => applyDay1TutorialReportCopy(report, useDay1ReportCopy),
+    [report, useDay1ReportCopy],
+  );
+
   return (
     <ReportContent
-      report={report}
+      report={displayReport}
       metrics={metrics}
       dayDecisions={dayDecisions}
       snapshotCount={snapshots.length}

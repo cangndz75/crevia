@@ -6,12 +6,13 @@ import {
 } from 'react-native-safe-area-context';
 
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
+import { EventsOperasyonHeader } from '@/features/events/components/EventsOperasyonHeader';
 import { CompactGameHeader } from '@/ui/components/CompactGameHeader';
 import { DashboardHeader } from '@/ui/components/DashboardHeader';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
 
-export type GameScreenHeaderVariant = 'compact' | 'dashboard' | 'none';
+export type GameScreenHeaderVariant = 'compact' | 'dashboard' | 'events' | 'none';
 
 type GameScreenShellProps = {
   children: ReactNode;
@@ -55,6 +56,8 @@ export function GameScreenShell({
   const headerNode =
     resolvedVariant === 'dashboard' ? (
       <DashboardHeader />
+    ) : resolvedVariant === 'events' ? (
+      <EventsOperasyonHeader />
     ) : resolvedVariant === 'compact' ? (
       <CompactGameHeader screenTitle={screenTitle} />
     ) : null;

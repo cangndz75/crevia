@@ -77,6 +77,109 @@ function formatBudgetShort(amount: number): string {
   return formatSourceDelta(amount);
 }
 
+export type PremiumEffectChip = CompactEffectChip & {
+  friendlyLabel: string;
+};
+
+function friendlyPublicLabel(value: number): string {
+  return `Halk Memnuniyeti ${value > 0 ? '+' : ''}${value}`;
+}
+
+function friendlyHygieneLabel(value: number): string {
+  return `Hijyen ${value > 0 ? '+' : ''}${Math.abs(value)}`;
+}
+
+/** Öncelikli kart — referans etiketleri (Halk Memnuniyeti, Hijyen vb.). */
+export function buildPremiumPreviewChips(
+  effects: EventDecisionEffect | EventPreviewEffects,
+  max = 3,
+  event?: EventCard,
+): PremiumEffectChip[] {
+  const base = buildCompactEffectChips(effects, max);
+  const chips = base.map((chip) => {
+    let friendlyLabel = chip.label;
+    if (chip.key === 'public') {
+      const v = (effects as EventPreviewEffects).publicSatisfaction;
+      friendlyLabel = friendlyPublicLabel(v);
+    } else if (chip.key === 'risk' && (effects as EventPreviewEffects).risk < 0) {
+      friendlyLabel = 'Sosyal Baskı Azalır';
+    } else if (chip.key === 'budget') {
+      const v = (effects as EventPreviewEffects).budget ?? 0;
+      friendlyLabel =
+        v >= 0 ? `Kaynak +${formatSourceDelta(v).replace('+', '')}` : formatSourceDelta(v);
+    } else if (chip.key === 'xp') {
+      friendlyLabel = `Deneyim +${(effects as EventPreviewEffects).xp}`;
+    }
+    return { ...chip, friendlyLabel };
+  });
+
+  const e = effects as EventDecisionEffect;
+  if (
+    chips.length < max &&
+    e.cleanliness != null &&
+    e.cleanliness !== 0 &&
+    !chips.some((c) => c.key === 'hygiene')
+  ) {
+    chips.push({
+      key: 'hygiene',
+      label: `${e.cleanliness > 0 ? '+' : ''}${e.cleanliness}`,
+      friendlyLabel: friendlyHygieneLabel(e.cleanliness),
+      tone: e.cleanliness > 0 ? 'positive' : 'negative',
+    });
+  } else if (event && chips.length < max) {
+    const haystack = `${event.category} ${event.title}`.toLowerCase();
+    if (
+      (haystack.includes('temiz') ||
+        haystack.includes('hijyen') ||
+        haystack.includes('çöp')) &&
+      !chips.some((c) => c.key === 'hygiene')
+    ) {
+      const hygieneVal = Math.max(
+        6,
+        Math.round(Math.abs(effects.publicSatisfaction) || 8),
+      );
+      chips.push({
+        key: 'hygiene',
+        label: `+${hygieneVal}`,
+        friendlyLabel: friendlyHygieneLabel(hygieneVal),
+        tone: 'positive',
+      });
+    }
+  }
+
+  return chips.slice(0, max);
+}
+
+/** Görsel tutarlılık için olaydan türetilmiş etkilenen kişi sayısı. */
+export function deriveAffectedPopulation(event: EventCard): string {
+  let hash = 0;
+  for (let i = 0; i < event.id.length; i += 1) {
+    hash = (hash + event.id.charCodeAt(i) * 17) % 1000;
+  }
+  const base =
+    event.riskLevel === 'critical'
+      ? 2800
+      : event.riskLevel === 'high'
+        ? 2200
+        : event.riskLevel === 'medium'
+          ? 1400
+          : 800;
+  const total = base + hash * 3 + event.urgencyHours * 40;
+  if (total >= 1000) {
+    return `${(total / 1000).toFixed(1).replace('.0', '')}K`;
+  }
+  return String(total);
+}
+
+export type EventAccentKind = 'critical' | 'urgent' | 'opportunity' | 'resolved' | 'default';
+
+export function getEventAccentKind(event: EventCard): EventAccentKind {
+  if (event.filterTags?.includes('opportunity')) return 'opportunity';
+  if (event.riskLevel === 'critical' || event.riskLevel === 'high') return 'critical';
+  if (event.urgencyHours <= 6 || event.filterTags?.includes('urgent')) return 'urgent';
+  return 'default';
+}
+
 export function buildCompactEffectChips(
   effects: EventDecisionEffect | EventPreviewEffects,
   max = 4,

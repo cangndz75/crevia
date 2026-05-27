@@ -1,6 +1,10 @@
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 
+import type { MapDistrictId } from '../data/mapAssets';
+
 export type PilotAreaId = 'merkez' | 'cumhuriyet' | 'sanayiPazar';
+
+export type MapViewMode = 'overview' | 'detail';
 
 export type RiskLevelLabel = 'Düşük' | 'Orta' | 'Yüksek';
 
@@ -51,8 +55,10 @@ export type MapPin = {
   icon: string;
   severity?: PinSeverity;
   value?: string;
-  /** Yalnızca bu pilot bölgede göster */
-  regionId: PilotDistrictId;
+  /** Pilot bölge (store) — geriye uyumluluk */
+  regionId?: PilotDistrictId;
+  /** Şehir haritası mahalle kimliği */
+  mapDistrictId?: MapDistrictId;
 };
 
 export type MapRegion = {

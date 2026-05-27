@@ -1,8 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { useCallback, useRef } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import type { ContainerState } from '@/core/containers/containerTypes';
 import type { EventCard } from '@/core/models/EventCard';
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import { colors } from '@/ui/theme/colors';
@@ -10,49 +10,91 @@ import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
+import { type MapDistrictId } from '../data/mapAssets';
+import {
+  mapDistrictFromPilot,
+  pilotAreaFromMapDistrict,
+} from '../data/mapDistrictMapping';
 import { getPilotPreset } from '../data/mapSelectors';
-import { districtFromPilotArea } from '../data/pilotAreaMapping';
-import type { ActiveLayers, MapFilterId, PilotAreaId } from '../types/map';
-import { LOCKED_REGION_MESSAGE } from '../types/map';
+import type { ActiveLayers, MapFilterId, MapViewMode, PilotAreaId } from '../types/map';
+import { getMapDistrictLabel } from '../utils/mapDistrictLabels';
+import { CityOverviewMap } from './CityOverviewMap';
+import { DistrictDetailMap } from './DistrictDetailMap';
 import { MapLegend } from './MapLegend';
-import { StyledPilotMap } from './StyledPilotMap';
+import type { ZoomableMapControls } from './ZoomableMapCanvas';
 
 type Props = {
+  viewMode: MapViewMode;
+  detailDistrictId: MapDistrictId;
   pilotAreaId: PilotAreaId;
   selectedDistrictId: PilotDistrictId;
   selectedFilter: MapFilterId;
   gameDay: number;
   activeLayers: ActiveLayers;
   activeEvents: EventCard[];
+  containerState?: ContainerState;
+  hideContainerSignals?: boolean;
   onLayersPress: () => void;
+  onDistrictSelect: (districtId: MapDistrictId) => void;
+  onBackToOverview: () => void;
   onPinPress?: (pinId: string) => void;
 };
 
 export function CityMapCard({
+  viewMode,
+  detailDistrictId,
   pilotAreaId,
   selectedDistrictId,
   selectedFilter,
   gameDay,
   activeLayers,
   activeEvents,
+  containerState,
+  hideContainerSignals = false,
   onLayersPress,
+  onDistrictSelect,
+  onBackToOverview,
   onPinPress,
 }: Props) {
   const preset = getPilotPreset(pilotAreaId);
-  const [lockedModalVisible, setLockedModalVisible] = useState(false);
-  const handleRegionPress = (areaId: PilotAreaId) => {
-    const districtId = districtFromPilotArea(areaId);
-    if (districtId !== selectedDistrictId) {
-      setLockedModalVisible(true);
-    }
-  };
+  const mapControlsRef = useRef<ZoomableMapControls>(null);
+  const isDetail = viewMode === 'detail';
+  const detailLabel = getMapDistrictLabel(detailDistrictId);
+  const detailPilotArea = pilotAreaFromMapDistrict(detailDistrictId);
+
+  const handleDistrictPress = useCallback(
+    (districtId: MapDistrictId) => {
+      onDistrictSelect(districtId);
+    },
+    [onDistrictSelect],
+  );
+
+  const focusLabel = isDetail
+    ? `${detailLabel} — detay harita`
+    : preset.mapFocusLabel;
 
   return (
-    <Animated.View entering={FadeIn.duration(400)} style={[styles.card, shadows.card]}>
+    <View style={[styles.card, shadows.card]}>
       <View style={styles.focusBadge}>
-        <Ionicons name="locate" size={12} color={preset.themeColor} />
-        <Text style={[styles.focusBadgeText, { color: preset.themeColor }]}>
-          {preset.mapFocusLabel}
+        {isDetail ? (
+          <Pressable
+            onPress={onBackToOverview}
+            style={styles.backBtn}
+            accessibilityLabel="Şehir haritasına dön"
+          >
+            <Ionicons name="chevron-back" size={16} color={colors.primary} />
+            <Text style={styles.backBtnText}>Şehir</Text>
+          </Pressable>
+        ) : (
+          <Ionicons name="locate" size={12} color={preset.themeColor} />
+        )}
+        <Text
+          style={[
+            styles.focusBadgeText,
+            { color: isDetail ? colors.textPrimary : preset.themeColor },
+          ]}
+        >
+          {focusLabel}
         </Text>
         {activeEvents.length > 0 && (
           <View style={styles.eventBadge}>
@@ -64,27 +106,59 @@ export function CityMapCard({
       </View>
 
       <View style={styles.mapArea}>
-        <StyledPilotMap
-          selectedPilotArea={pilotAreaId}
-          selectedDistrictId={selectedDistrictId}
-          selectedFilter={selectedFilter}
-          activeLayers={activeLayers}
-          gameDay={gameDay}
-          events={activeEvents}
-          onRegionPress={handleRegionPress}
-          onPinPress={onPinPress}
-        />
+        {isDetail ? (
+          <DistrictDetailMap
+            mapRef={mapControlsRef}
+            districtId={detailDistrictId}
+            districtLabel={detailLabel}
+            pilotAreaId={detailPilotArea}
+            selectedDistrictId={selectedDistrictId}
+            selectedFilter={selectedFilter}
+            activeLayers={activeLayers}
+            gameDay={gameDay}
+            events={activeEvents}
+            containerState={containerState}
+            onPinPress={onPinPress}
+          />
+        ) : (
+          <CityOverviewMap
+            mapRef={mapControlsRef}
+            selectedDistrictId={selectedDistrictId}
+            highlightedDistrictId={mapDistrictFromPilot(selectedDistrictId)}
+            pilotAreaId={pilotAreaId}
+            selectedFilter={selectedFilter}
+            activeLayers={activeLayers}
+            gameDay={gameDay}
+            events={activeEvents}
+            containerState={containerState}
+            hideContainerSignals={hideContainerSignals}
+            onDistrictPress={handleDistrictPress}
+            onPinPress={onPinPress}
+          />
+        )}
 
         <MapLegend filter={selectedFilter} />
 
         <View style={styles.zoomControls}>
-          <Pressable style={styles.zoomBtn}>
+          <Pressable
+            style={styles.zoomBtn}
+            onPress={() => mapControlsRef.current?.zoomIn()}
+            accessibilityLabel="Yakınlaştır"
+          >
             <Ionicons name="add" size={18} color={colors.textPrimary} />
           </Pressable>
-          <Pressable style={styles.zoomBtn}>
+          <Pressable
+            style={styles.zoomBtn}
+            onPress={() => mapControlsRef.current?.zoomOut()}
+            accessibilityLabel="Uzaklaştır"
+          >
             <Ionicons name="remove" size={18} color={colors.textPrimary} />
           </Pressable>
-          <Pressable style={styles.zoomBtn}>
+          <Pressable
+            style={styles.zoomBtn}
+            onPress={() => mapControlsRef.current?.reset()}
+            accessibilityLabel="Haritayı sığdır"
+          >
             <Ionicons name="locate" size={16} color={preset.themeColor} />
           </Pressable>
         </View>
@@ -94,31 +168,7 @@ export function CityMapCard({
           <Text style={styles.layersBtnText}>Katmanlar</Text>
         </Pressable>
       </View>
-
-      <Modal
-        visible={lockedModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setLockedModalVisible(false)}
-      >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setLockedModalVisible(false)}
-        >
-          <View style={[styles.modalCard, shadows.card]}>
-            <Ionicons name="lock-closed" size={28} color={colors.textSecondary} />
-            <Text style={styles.modalTitle}>{LOCKED_REGION_MESSAGE.title}</Text>
-            <Text style={styles.modalBody}>{LOCKED_REGION_MESSAGE.body}</Text>
-            <Pressable
-              style={styles.modalBtn}
-              onPress={() => setLockedModalVisible(false)}
-            >
-              <Text style={styles.modalBtnText}>Tamam</Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Modal>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -142,6 +192,17 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     flexWrap: 'wrap',
   },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingRight: 4,
+  },
+  backBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
   focusBadgeText: {
     fontSize: 12,
     fontWeight: '700',
@@ -162,7 +223,7 @@ const styles = StyleSheet.create({
     height: 300,
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: '#F4F0E6',
+    backgroundColor: '#E8E4DA',
   },
   zoomControls: {
     position: 'absolute',
@@ -198,45 +259,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: colors.textPrimary,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  modalCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xxl,
-    padding: spacing.xl,
-    alignItems: 'center',
-    gap: spacing.md,
-    maxWidth: 320,
-    width: '100%',
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  modalBody: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  modalBtn: {
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryMuted,
-  },
-  modalBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.primary,
   },
 });

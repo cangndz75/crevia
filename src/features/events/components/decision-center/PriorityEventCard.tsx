@@ -1,86 +1,105 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
-import { DecisionOptions } from '@/features/events/components/decision-center/DecisionOptions';
-import { EventEffectsRow } from '@/features/events/components/decision-center/EventEffectsRow';
-import { FeaturedEventScene } from '@/features/events/components/decision-center/FeaturedEventScene';
-import { getRiskLevelColor } from '@/features/events/utils/eventPresentation';
+import { EventEffectChips } from '@/features/events/components/decision-center/EventEffectChips';
+import { EventThumbnail } from '@/features/events/components/decision-center/EventThumbnail';
+import { eventsScreen } from '@/features/events/theme/eventsScreenTokens';
+import {
+  buildPremiumPreviewChips,
+  deriveAffectedPopulation,
+} from '@/features/events/utils/eventUiHelpers';
 import {
   formatUrgencyLabel,
   getRiskLevelLabel,
 } from '@/core/content/mockGameData';
-import type { DecisionAffordabilityCheck } from '@/core/economy/economyAffordability';
 import type { EventCard } from '@/core/models/EventCard';
-import { colors } from '@/ui/theme/colors';
-import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
-import { spacing } from '@/ui/theme/spacing';
-import { typography } from '@/ui/theme/typography';
 
 type PriorityEventCardProps = {
   event: EventCard;
-  selectedDecisionId: string | null;
-  onSelectDecision: (decisionId: string) => void;
-  affordabilityByDecisionId?: Record<string, DecisionAffordabilityCheck>;
 };
 
-export function PriorityEventCard({
-  event,
-  selectedDecisionId,
-  onSelectDecision,
-  affordabilityByDecisionId,
-}: PriorityEventCardProps) {
-  const riskColor = getRiskLevelColor(event.riskLevel);
+export function PriorityEventCard({ event }: PriorityEventCardProps) {
+  const router = useRouter();
+  const effectChips = buildPremiumPreviewChips(event.previewEffects, 3, event);
+  const affected = deriveAffectedPopulation(event);
+  const riskLabel = getRiskLevelLabel(event.riskLevel);
+
+  const openDecision = () => {
+    router.push(`/events/${event.id}`);
+  };
 
   return (
     <Animated.View
-      entering={FadeInUp.duration(320).springify().damping(20)}
+      entering={FadeInUp.duration(300).springify().damping(22)}
       style={[styles.card, shadows.card]}>
-      <View style={styles.goldAccent} />
+      <View style={styles.riskStripe} />
 
-      <View style={styles.priorityRow}>
-        <View style={styles.priorityBadge}>
-          <Ionicons name="pin" size={11} color={colors.hubGoldDark} />
-          <Text style={styles.priorityLabel}>ÖNCELİKLİ OLAY</Text>
-        </View>
-        <View style={styles.timePill}>
-          <Ionicons name="time-outline" size={12} color={colors.danger} />
-          <Text style={styles.timeText}>
-            {formatUrgencyLabel(event.urgencyHours)}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.visualWrap}>
-        <FeaturedEventScene event={event} />
-      </View>
-
-      <View style={styles.body}>
-        <Text style={styles.title}>{event.title}</Text>
-        <View style={styles.riskRow}>
-          <View style={[styles.riskDot, { backgroundColor: riskColor }]} />
-          <Text style={[styles.riskLabel, { color: riskColor }]}>
-            {getRiskLevelLabel(event.riskLevel)} Risk
-          </Text>
-        </View>
-        <Text style={styles.description}>{event.description}</Text>
-
-        <View style={styles.metaPill}>
-          <Ionicons name="list-outline" size={12} color={colors.textSecondary} />
-          <Text style={styles.metaText}>
-            {event.decisions.length} seçenek var
-          </Text>
+      <View style={styles.inner}>
+        <View style={styles.topRow}>
+          <View style={styles.priorityBadge}>
+            <Text style={styles.priorityLabel}>ÖNCELİKLİ OLAY</Text>
+          </View>
+          <View style={styles.riskBadge}>
+            <Text style={styles.riskBadgeText}>{riskLabel.toUpperCase()} RİSK</Text>
+          </View>
         </View>
 
-        <EventEffectsRow effects={event.previewEffects} />
+        <View style={styles.bodyRow}>
+          <EventThumbnail event={event} size={108} />
 
-        <DecisionOptions
-          decisions={event.decisions}
-          selectedId={selectedDecisionId}
-          onSelect={onSelectDecision}
-          affordabilityByDecisionId={affordabilityByDecisionId}
-        />
+          <View style={styles.content}>
+            <Text style={styles.title} numberOfLines={2}>
+              {event.title}
+            </Text>
+
+            <View style={styles.locationRow}>
+              <Ionicons name="location" size={13} color={eventsScreen.teal} />
+              <Text style={styles.location} numberOfLines={1}>
+                {event.district}
+              </Text>
+            </View>
+
+            <Text style={styles.description} numberOfLines={2}>
+              {event.description}
+            </Text>
+
+            <View style={styles.metaRow}>
+              <View style={styles.metaItem}>
+                <Ionicons name="time-outline" size={13} color={eventsScreen.critical} />
+                <Text style={styles.metaUrgent}>
+                  {formatUrgencyLabel(event.urgencyHours)}
+                </Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Ionicons name="people-outline" size={13} color={eventsScreen.textMuted} />
+                <Text style={styles.metaMuted}>{affected} etkilenen</Text>
+              </View>
+            </View>
+
+            <EventEffectChips chips={effectChips} />
+
+            <View style={styles.ctaRow}>
+              <Pressable
+                onPress={openDecision}
+                style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
+                accessibilityRole="button"
+                accessibilityLabel="Karar ver">
+                <LinearGradient
+                  colors={[eventsScreen.tealDark, eventsScreen.teal]}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={styles.ctaGradient}>
+                  <Text style={styles.ctaText}>Karar Ver</Text>
+                  <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </View>
+        </View>
       </View>
     </Animated.View>
   );
@@ -88,93 +107,138 @@ export function PriorityEventCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
+    backgroundColor: eventsScreen.card,
+    borderRadius: eventsScreen.radiusLg,
     overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: '#EDD9A3',
+    borderWidth: 1,
+    borderColor: eventsScreen.border,
   },
-  goldAccent: {
-    height: 3,
-    width: '100%',
-    backgroundColor: colors.hubGold,
-    opacity: 0.9,
+  riskStripe: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    backgroundColor: eventsScreen.critical,
+    zIndex: 2,
   },
-  priorityRow: {
+  inner: {
+    paddingLeft: 12,
+    paddingRight: 14,
+    paddingTop: 12,
+    paddingBottom: 14,
+    gap: 10,
+  },
+  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
+    gap: 8,
   },
   priorityBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    backgroundColor: eventsScreen.criticalMuted,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   priorityLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.6,
-    color: colors.hubGoldDark,
+    color: eventsScreen.critical,
   },
-  timePill: {
+  riskBadge: {
+    backgroundColor: eventsScreen.criticalMuted,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  riskBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    color: eventsScreen.critical,
+  },
+  bodyRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  content: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
+  },
+  title: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: eventsScreen.text,
+    letterSpacing: -0.3,
+    lineHeight: 22,
+  },
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  timeText: {
+  location: {
+    flex: 1,
     fontSize: 12,
-    fontWeight: '700',
-    color: colors.danger,
-  },
-  visualWrap: {
-    paddingHorizontal: spacing.lg,
-  },
-  body: {
-    padding: spacing.lg,
-    paddingTop: spacing.md,
-    gap: spacing.sm,
-  },
-  title: {
-    ...typography.title,
-    fontSize: 20,
-    letterSpacing: -0.3,
-  },
-  riskRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  riskDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  riskLabel: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
+    color: eventsScreen.textMuted,
   },
   description: {
-    ...typography.caption,
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 17,
+    color: eventsScreen.textMuted,
   },
-  metaPill: {
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 2,
+  },
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    alignSelf: 'flex-start',
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 5,
-    borderRadius: radius.sm,
+    gap: 4,
   },
-  metaText: {
+  metaUrgent: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: eventsScreen.critical,
+  },
+  metaMuted: {
     fontSize: 11,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: eventsScreen.textMuted,
+  },
+  ctaRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 4,
+  },
+  cta: {
+    borderRadius: 999,
+    overflow: 'hidden',
+    alignSelf: 'flex-end',
+  },
+  ctaPressed: {
+    opacity: 0.94,
+    transform: [{ scale: 0.98 }],
+  },
+  ctaGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    minWidth: 132,
+    justifyContent: 'center',
+  },
+  ctaText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
 });

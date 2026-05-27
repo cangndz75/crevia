@@ -17,12 +17,15 @@ import {
 import type { EventCard } from '@/core/models/EventCard';
 import type { GameState } from '@/core/models/GameState';
 import { enrichDailyEventSetWithDistrictEvents } from '@/core/districts/districtEventIntegration';
+import type { ContainerState } from '@/core/containers/containerTypes';
 
 export type GenerateDailyEventSetParams = {
   gameState: GameState;
   day: number;
   districtId: PilotDistrictId;
   events?: EventCard[];
+  /** Yoksa konteyner boost uygulanmaz. */
+  containerState?: ContainerState | null;
 };
 
 function buildContext(
@@ -225,6 +228,7 @@ export function generateDailyEventSet(
     day,
     districtId,
     events = pilotEvents,
+    containerState = null,
   } = params;
 
   const context = buildContext(gameState, day, districtId);
@@ -282,6 +286,7 @@ export function generateDailyEventSet(
         recentEventIds,
         districtMatch:
           eventMatchesDistrict(event, districtId) && !isSharedDistrictEvent(event),
+        containerState,
       }),
   );
 
@@ -304,6 +309,7 @@ export function generateDailyEventSet(
         theme,
         recentEventIds,
         districtMatch: eventMatchesDistrict(event, districtId),
+        containerState,
       }),
   );
   for (const event of quickPicked) {
@@ -327,6 +333,7 @@ export function generateDailyEventSet(
         theme,
         recentEventIds,
         districtMatch: eventMatchesDistrict(event, districtId),
+        containerState,
       }),
   );
   for (const event of opportunityPicked) {
@@ -388,6 +395,8 @@ export function generateDailyEventSet(
     districtId,
     dailyEventSet: baseDailyEventSet,
     randomFn: rng,
+    containerState,
+    catalog: events,
   });
 }
 

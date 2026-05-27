@@ -86,6 +86,14 @@ import {
   canAffordRestAction,
   getRestActionCost,
 } from '@/core/personnel/personnelRestActions';
+import {
+  processContainersAfterDecision,
+  processContainersEndOfDay,
+} from '@/core/containers/containerIntegration';
+import { createInitialContainerState } from '@/core/containers/containerSeed';
+import type { ContainerState } from '@/core/containers/containerTypes';
+import { buildPilotLeaderboardPersistUpdate } from '@/core/leaderboard/leaderboardSelectors';
+import type { LeaderboardEntry } from '@/core/leaderboard/leaderboardTypes';
 import { createInitialPersonnelState } from '@/core/personnel/personnelSeed';
 import type { PersonnelState, RestActionType } from '@/core/personnel/personnelTypes';
 
@@ -124,6 +132,16 @@ function buildInsufficientApplyDecisionResult(
 }
 
 import {
+  advanceTutorialState,
+  skipTutorialState,
+  startTutorialState,
+} from '@/features/tutorial/tutorialSelectors';
+import {
+  INITIAL_TUTORIAL_STATE,
+  type TutorialState,
+} from '@/features/tutorial/tutorialTypes';
+
+import {
   clearPersistedGame,
   GAME_STORAGE_KEY,
   gameJsonStorage,
@@ -158,6 +176,11 @@ type GameStoreState = {
   dailyGoalRuntime: DailyGoalRuntime;
   economyState: EconomyState;
   personnelState: PersonnelState;
+  containerState: ContainerState;
+  tutorialState: TutorialState;
+  /** Pilot tamamlanınca kaydedilen yerel en iyi skorlar (leaderboard UI sonraki aşama). */
+  bestPilotScores: LeaderboardEntry[];
+  lastPilotScore?: LeaderboardEntry;
   /** AsyncStorage'dan hydration tamamlandı mı? */
   _hasHydrated: boolean;
 };
@@ -192,6 +215,9 @@ type GameStoreActions = {
     teamId: string,
     restType: RestActionType,
   ) => { success: boolean; message: string };
+  ensureDay1TutorialStarted: () => void;
+  advanceTutorial: () => void;
+  skipTutorial: () => void;
 };
 
 export type GameStore = GameStoreState & GameStoreActions;
@@ -355,6 +381,10 @@ function applySeedBundle(
   | 'dailyGoalRuntime'
   | 'economyState'
   | 'personnelState'
+  | 'containerState'
+  | 'tutorialState'
+  | 'bestPilotScores'
+  | 'lastPilotScore'
 > {
   return {
     gameState: withSyncedPulse(bundle.gameState),
@@ -372,6 +402,10 @@ function applySeedBundle(
     dailyGoalRuntime: { ...INITIAL_DAILY_GOAL_RUNTIME },
     economyState: createInitialEconomyState(),
     personnelState: createInitialPersonnelState(),
+    containerState: createInitialContainerState(bundle.gameState.city.day),
+    tutorialState: { ...INITIAL_TUTORIAL_STATE },
+    bestPilotScores: [],
+    lastPilotScore: undefined,
   };
 }
 
@@ -402,6 +436,9 @@ export const useGameStore = create<GameStore>()(
   persist(
     (set, get) => ({
       ...applySeedBundle(initialBundle),
+      tutorialState: { ...INITIAL_TUTORIAL_STATE },
+      bestPilotScores: [],
+      lastPilotScore: undefined,
       lastBudgetDelta: null,
       _hasHydrated: false,
 
@@ -602,6 +639,8 @@ export const useGameStore = create<GameStore>()(
 
         let personnelState = current.personnelState;
         let personnelRuntime = current.dailyGoalRuntime;
+        let containerState = current.containerState;
+        let personnelAssigned = false;
 
         if (event && decision) {
           const personnelResult = processPersonnelAfterDecision(
@@ -616,6 +655,7 @@ export const useGameStore = create<GameStore>()(
             nextGameState.city.morale,
           );
           personnelState = personnelResult.personnelState;
+          personnelAssigned = personnelResult.assignment != null;
           personnelRuntime = {
             ...personnelRuntime,
             staffFatiguePeak: Math.max(
@@ -623,6 +663,27 @@ export const useGameStore = create<GameStore>()(
               personnelResult.staffFatiguePeak,
             ),
           };
+
+          const containerResult = processContainersAfterDecision({
+            containerState,
+            event: {
+              id: event.id,
+              neighborhoodId: event.neighborhoodId,
+              eventType: event.eventType,
+              title: event.title,
+              category: event.category,
+            },
+            decision: {
+              id: decision.id,
+              title: decision.title,
+              description: decision.description,
+              decisionStyle: decision.decisionStyle,
+              costs: decision.costs,
+            },
+            day: result.decisionRecord.day,
+            personnelAssigned,
+          });
+          containerState = containerResult.state;
 
           if (
             personnelResult.metricEffects &&
@@ -696,6 +757,7 @@ export const useGameStore = create<GameStore>()(
           dailyGoalsByDay,
           dailyGoalRuntime: personnelRuntime,
           personnelState,
+          containerState,
         });
 
         return {
@@ -829,9 +891,15 @@ export const useGameStore = create<GameStore>()(
           districtNames,
         );
 
+        const containerStateAfterNight = processContainersEndOfDay({
+          containerState: current.containerState,
+          day: closingDay,
+        }).state;
+
         const result = endDay(toEngineState(current), {
           skipEventSelection: skipGenericEventSelection,
           personnelReport,
+          containerState: containerStateAfterNight,
         });
 
         const personnelStateAfterNight = processPersonnelEndOfDay(
@@ -881,6 +949,7 @@ export const useGameStore = create<GameStore>()(
           const pilotRefresh = refreshPilotEventsFromGameState(
             advancedGameState,
             current.eventPool,
+            { containerState: containerStateAfterNight },
           );
           nextGameState = withSyncedPulse(pilotRefresh.gameState);
           nextEventPool = pilotRefresh.eventPool;
@@ -930,11 +999,12 @@ export const useGameStore = create<GameStore>()(
           currentDailyGoal: createDailyGoalForDay(nextDay),
           dailyGoalRuntime: { ...INITIAL_DAILY_GOAL_RUNTIME },
           personnelState: personnelStateAfterNight,
+          containerState: containerStateAfterNight,
         });
       },
 
       setSelectedPilotDistrict: (districtId) => {
-        const { gameState, eventPool } = get();
+        const { gameState, eventPool, containerState } = get();
         const withDistrict = withPilot(gameState, (pilot) => ({
           ...pilot,
           selectedDistrictId: districtId,
@@ -945,6 +1015,7 @@ export const useGameStore = create<GameStore>()(
         const pilotRefresh = refreshPilotEventsFromGameState(
           withDistrict,
           eventPool,
+          { containerState },
         );
         set({
           gameState: withSyncedPulse(pilotRefresh.gameState),
@@ -953,7 +1024,7 @@ export const useGameStore = create<GameStore>()(
       },
 
       startPilotDistrict: (districtId) => {
-        const { gameState, snapshots, eventPool } = get();
+        const { gameState, snapshots, eventPool, containerState } = get();
         const withPilotReset: GameState = {
           ...gameState,
           pilot: {
@@ -973,6 +1044,7 @@ export const useGameStore = create<GameStore>()(
         const pilotRefresh = refreshPilotEventsFromGameState(
           nextGameState,
           eventPool,
+          { containerState },
         );
         const syncedGameState = withSyncedPulse(pilotRefresh.gameState);
         set({
@@ -986,10 +1058,11 @@ export const useGameStore = create<GameStore>()(
       },
 
       refreshPilotEventsForCurrentDay: () => {
-        const { gameState, eventPool } = get();
+        const { gameState, eventPool, containerState } = get();
         const pilotRefresh = refreshPilotEventsFromGameState(
           gameState,
           eventPool,
+          { containerState },
         );
         if (!pilotRefresh.refreshed) {
           return;
@@ -1089,11 +1162,27 @@ export const useGameStore = create<GameStore>()(
             run,
           };
         });
+        const leaderboardUpdate = buildPilotLeaderboardPersistUpdate({
+          gameState: withSyncedPulse(
+            clearActiveEventsForGameState(withCompleted),
+          ),
+          personnelState: current.personnelState,
+          containerState: current.containerState,
+          decisionHistory: current.decisionHistory,
+          snapshots: current.snapshots,
+          economyState: current.economyState,
+          playerName: withCompleted.player.name,
+          bestPilotScores: current.bestPilotScores,
+          lastPilotScore: current.lastPilotScore,
+        });
+
         set({
           gameState: withSyncedPulse(
             clearActiveEventsForGameState(withCompleted),
           ),
           eventPool: [],
+          bestPilotScores: leaderboardUpdate.bestPilotScores,
+          lastPilotScore: leaderboardUpdate.lastPilotScore,
         });
       },
 
@@ -1117,6 +1206,28 @@ export const useGameStore = create<GameStore>()(
             pilot: createDefaultPilotState(),
           }),
         });
+      },
+
+      ensureDay1TutorialStarted: () => {
+        const { tutorialState, gameState } = get();
+        const day = gameState.pilot.currentPilotDay ?? gameState.city.day;
+        if (day !== 1 || gameState.pilot.status !== 'active') return;
+        if (tutorialState.day1Completed || tutorialState.skipped) return;
+        const next = startTutorialState(tutorialState);
+        if (next !== tutorialState) {
+          set({ tutorialState: next });
+        }
+      },
+
+      advanceTutorial: () => {
+        const { tutorialState } = get();
+        if (tutorialState.day1Completed || tutorialState.skipped) return;
+        if (!tutorialState.activeStepId) return;
+        set({ tutorialState: advanceTutorialState(tutorialState) });
+      },
+
+      skipTutorial: () => {
+        set({ tutorialState: skipTutorialState(get().tutorialState) });
       },
     }),
     {
@@ -1150,6 +1261,7 @@ export const useGameStore = create<GameStore>()(
         const pilotRefresh = refreshPilotEventsFromGameState(
           withPilotRun,
           saved.eventPool,
+          { containerState: saved.containerState },
         );
 
         return {
@@ -1168,6 +1280,10 @@ export const useGameStore = create<GameStore>()(
           dailyGoalRuntime: saved.dailyGoalRuntime,
           economyState: saved.economyState,
           personnelState: saved.personnelState,
+          containerState: saved.containerState,
+          tutorialState: saved.tutorialState ?? { ...INITIAL_TUTORIAL_STATE },
+          bestPilotScores: saved.bestPilotScores ?? [],
+          lastPilotScore: saved.lastPilotScore,
           lastBudgetDelta: null,
           _hasHydrated: true,
         };
@@ -1242,6 +1358,7 @@ export const selectPilotRun = (s: GameStore) => s.gameState.pilot.run;
 export const selectDailyEventSet = (s: GameStore) =>
   s.gameState.pilot.dailyEventSet ?? null;
 export const selectPersonnelState = (s: GameStore) => s.personnelState;
+export const selectContainerState = (s: GameStore) => s.containerState;
 
 export function getActiveEvent(eventId: string): EventCard | undefined {
   return useGameStore
