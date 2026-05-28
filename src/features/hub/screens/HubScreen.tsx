@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import { DAY1_STATUS_MUTED_NOTE } from '@/core/onboarding/onboardingPresentation';
+import { HubAuthorityProgressChip } from '@/features/hub/components/HubAuthorityProgressChip';
 import { HubCriticalEventCard } from '@/features/hub/components/HubCriticalEventCard';
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
 import { HubDailyGoalCard } from '@/features/hub/components/HubDailyGoalCard';
@@ -126,6 +127,8 @@ export function HubScreen() {
         <TutorialTarget targetKey="hub_metrics" highlighted={metricsHighlight}>
           <HubTaskTrackingHero />
         </TutorialTarget>
+
+        <HubAuthorityProgressChip />
 
         <View style={styles.criticalWrap}>
           {showInlineFocusHints && criticalEventHint ? (

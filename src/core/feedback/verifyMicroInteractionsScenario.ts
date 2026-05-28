@@ -167,7 +167,7 @@ export function verifyMicroInteractionsScenario(): VerifyMicroInteractionsOutcom
   );
 
   const loop = runFullLoopAnalysis();
-  record(checks, 'SAVE_VERSION değişmedi', SAVE_VERSION === 10);
+  record(checks, 'SAVE_VERSION değişmedi', SAVE_VERSION === 12);
   const loopNoCrash = loop.scenarios.every((s) => s.crashes === 0);
   record(checks, 'full loop invariant FAIL yok', loop.totalFAIL === 0 && loopNoCrash);
   record(

@@ -19,6 +19,8 @@ import { DecisionStrategyChip } from '@/features/events/components/DecisionStrat
 import { DecisionTradeoffLine } from '@/features/events/components/DecisionTradeoffLine';
 import type { DecisionAffordabilityCheck } from '@/core/economy/economyAffordability';
 import { formatSourceWithLabel } from '@/core/economy/economyFormatter';
+import { selectAuthorityPermissionPreviewForDecision } from '@/core/authority/authorityPermissionPreview';
+import type { AuthorityPermissionPreview } from '@/core/authority/authorityPermissionPreview';
 import { selectPersonnelImpactPreviewForDecision } from '@/core/personnel/personnelPresentation';
 import { selectVehicleImpactPreviewForDecision } from '@/core/vehicles/vehiclePresentation';
 import type { EventCard, EventDecision } from '@/core/models/EventCard';
@@ -41,6 +43,47 @@ import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+type AuthorityPermissionPreviewRowProps = {
+  preview: AuthorityPermissionPreview;
+};
+
+function AuthorityPermissionPreviewRow({ preview }: AuthorityPermissionPreviewRowProps) {
+  const toneStyle =
+    preview.tone === 'active'
+      ? styles.authorityPreviewActive
+      : preview.tone === 'locked_preview'
+        ? styles.authorityPreviewLocked
+        : styles.authorityPreviewWatching;
+
+  const iconName =
+    preview.tone === 'active'
+      ? 'shield-checkmark-outline'
+      : preview.tone === 'locked_preview'
+        ? 'trending-up-outline'
+        : 'eye-outline';
+
+  const iconColor =
+    preview.tone === 'active'
+      ? colors.primary
+      : preview.tone === 'locked_preview'
+        ? colors.hubGoldDark
+        : colors.secondary;
+
+  return (
+    <View style={[styles.authorityPreviewRow, toneStyle]}>
+      <Ionicons name={iconName} size={12} color={iconColor} />
+      <View style={styles.authorityPreviewTextWrap}>
+        <Text style={styles.authorityPreviewTitle} numberOfLines={1}>
+          {preview.title}
+        </Text>
+        <Text style={styles.authorityPreviewLine} numberOfLines={2}>
+          {preview.line}
+        </Text>
+      </View>
+    </View>
+  );
+}
 
 type DecisionOptionCardProps = {
   event: EventCard;
@@ -65,6 +108,7 @@ export function DecisionOptionCard({
   const personnelState = useGameStore(selectPersonnelState);
   const vehicleState = useGameStore(selectVehicleStateFromStore);
   const currentDay = useGameStore((s) => s.gameState.city.day);
+  const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
   const neighborhoods = useGameStore((s) => s.neighborhoods);
   const resources = useGameStore((s) => s.resources);
   const dailyPriorityKey = useGameStore((s) => s.dailyPriorityState?.selectedKey);
@@ -175,6 +219,19 @@ export function DecisionOptionCard({
       variant,
       vehiclePreview,
     ],
+  );
+
+  const authorityPreview = useMemo(
+    () =>
+      insufficient
+        ? null
+        : selectAuthorityPermissionPreviewForDecision({
+            authorityState,
+            decision,
+            event,
+            day: currentDay,
+          }),
+    [authorityState, currentDay, decision, event, insufficient],
   );
 
   const showPriorityChip = presentation.showPriorityChip;
@@ -292,6 +349,10 @@ export function DecisionOptionCard({
           <Text style={styles.detailLineMuted} numberOfLines={2}>
             {vehiclePreview.riskText}
           </Text>
+        ) : null}
+
+        {presentation.showDetail && authorityPreview?.visible ? (
+          <AuthorityPermissionPreviewRow preview={authorityPreview} />
         ) : null}
 
         {insufficient && affordability && variant !== 'quick' ? (
@@ -432,6 +493,44 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: colors.textSecondary,
+    lineHeight: 15,
+  },
+  authorityPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    marginTop: 1,
+  },
+  authorityPreviewActive: {
+    backgroundColor: colors.primaryMuted,
+    borderColor: 'rgba(26,143,138,0.18)',
+  },
+  authorityPreviewLocked: {
+    backgroundColor: colors.hubGoldMuted,
+    borderColor: 'rgba(212,160,23,0.22)',
+  },
+  authorityPreviewWatching: {
+    backgroundColor: colors.secondaryMuted,
+    borderColor: 'rgba(91,143,212,0.18)',
+  },
+  authorityPreviewTextWrap: {
+    flex: 1,
+    gap: 1,
+  },
+  authorityPreviewTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.textSecondary,
+    letterSpacing: 0.15,
+  },
+  authorityPreviewLine: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textPrimary,
     lineHeight: 15,
   },
   insufficientMeta: {

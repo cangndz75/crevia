@@ -82,6 +82,21 @@ export function ReportPilotCompletionCard({ summary }: ReportPilotCompletionCard
 
         <Text style={styles.subtitle}>{summary.subtitle}</Text>
 
+        {summary.authorityTitle ? (
+          <View style={styles.authoritySection}>
+            <Text style={styles.authoritySectionLabel}>Üst Yönetim Değerlendirmesi</Text>
+            <Text style={styles.authorityTitle}>{summary.authorityTitle}</Text>
+            {summary.authoritySubtitle ? (
+              <Text style={styles.authoritySubtitle}>{summary.authoritySubtitle}</Text>
+            ) : null}
+            {(summary.authorityLines ?? []).map((line, index) => (
+              <Text key={`authority-line-${index}`} style={styles.authorityLine}>
+                • {line}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+
         <GameButton
           title="Ana Operasyonu Önizle"
           onPress={() => router.push(MAIN_OPERATION_PREVIEW_ROUTE)}
@@ -159,6 +174,34 @@ const styles = StyleSheet.create({
   subtitle: {
     ...typography.caption,
     color: colors.hubGoldDark,
+    lineHeight: 18,
+  },
+  authoritySection: {
+    gap: spacing.xs,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  authoritySectionLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '700',
+  },
+  authorityTitle: {
+    ...typography.body,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  authoritySubtitle: {
+    ...typography.body,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+  authorityLine: {
+    ...typography.caption,
+    color: colors.textPrimary,
     lineHeight: 18,
   },
   cta: {

@@ -20,6 +20,7 @@ import {
   PILOT_MANAGEMENT_STYLE_LABELS,
   PILOT_MANAGEMENT_STYLE_TEXT,
 } from './pilotCompletionPresentation';
+import { buildPilotCompletionAuthorityFields } from '@/core/authority/authorityPilotCompletion';
 import type {
   PilotCompletionSummary,
   PilotManagementStyle,
@@ -496,6 +497,10 @@ export function buildPilotCompletionSummary(
   const carryOverCount = countCarryOverSignals(dailyPriorityByDay);
 
   const unlockedPreviewItems = buildUnlockPreviewItems(gameState, true);
+  const authorityFields = buildPilotCompletionAuthorityFields({
+    authorityState: gameState.pilot.authorityState,
+    day,
+  });
 
   return {
     isCompleted: true,
@@ -517,6 +522,7 @@ export function buildPilotCompletionSummary(
     carryOverCount,
     unlockedPreviewItems,
     nextChapterText: buildNeighborhoodTransitionText(gameState),
+    ...authorityFields,
   };
 }
 

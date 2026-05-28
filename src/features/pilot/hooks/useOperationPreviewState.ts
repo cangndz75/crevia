@@ -2,6 +2,10 @@ import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
 import {
+  buildOperationPreviewAuthoritySummary,
+} from '@/core/authority/authorityPresentation';
+import { normalizeAuthorityState } from '@/core/authority/authoritySeed';
+import {
   buildPilotCompletionSummary,
   type PilotCompletionSummary,
 } from '@/core/pilotCompletion';
@@ -266,6 +270,11 @@ export function useOperationPreviewState(
           : 'Pilot tamam — sırada şehir haritası var.'
       : 'Pilot bölgesini tamamla; ardından şehir haritası açılacak.';
 
+    const authoritySummary = buildOperationPreviewAuthoritySummary(
+      normalizeAuthorityState(pilot.authorityState, pilot.currentPilotDay),
+      pilot.currentPilotDay,
+    );
+
     const hasRealData = Boolean(run && (run.eventHistory.length > 0 || isCompleted));
 
     return {
@@ -285,6 +294,7 @@ export function useOperationPreviewState(
         unlock?.mainOperationPreviewUnlocked ?? isCompleted,
       districtName: run?.selectedDistrictName ?? profile?.shortName,
       completionSummary,
+      authoritySummary,
       heroPersonalizedText: completionSummary.isCompleted
         ? completionSummary.nextChapterText
         : undefined,

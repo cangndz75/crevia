@@ -1,3 +1,5 @@
+import type { AuthorityEvaluationSnapshot } from '@/core/authority/authorityTypes';
+
 export type PilotCompletionGrade =
   | 'excellent'
   | 'strong'
@@ -51,6 +53,12 @@ export type PilotCompletionSummary = {
   unlockedPreviewItems: PilotPreviewUnlockItem[];
 
   nextChapterText: string;
+
+  /** Pilot final yetki değerlendirmesi — dönem sonu snapshot. */
+  authorityEvaluation?: AuthorityEvaluationSnapshot;
+  authorityTitle?: string;
+  authoritySubtitle?: string;
+  authorityLines?: string[];
 };
 
 export const PILOT_COMPLETION_PAYMENT_BANNED_WORDS = [

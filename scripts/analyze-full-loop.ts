@@ -91,7 +91,7 @@ console.log('CREVIA — FULL LOOP QA + BALANCE ANALYZER');
 // eslint-disable-next-line no-console
 console.log('══════════════════════════════════════════════════');
 // eslint-disable-next-line no-console
-console.log(`SAVE_VERSION ok: ${result.saveVersionOk ? 'yes (10)' : 'NO'}`);
+console.log(`SAVE_VERSION ok: ${result.saveVersionOk ? 'yes (12)' : 'NO'}`);
 
 // eslint-disable-next-line no-console
 console.log('\n┌─────────────────────────┬────────┬───────┬─────────┬──────┬──────────┐');

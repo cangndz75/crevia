@@ -167,6 +167,27 @@ import type {
   HubQuickActionResult,
   HubQuickActionState,
 } from '@/core/hubQuickActions';
+import {
+  applyDailyAuthorityTrustGain,
+  calculateDailyAuthorityTrustGain,
+} from '@/core/authority/authorityEngine';
+import { buildAuthorityDailyGainInput } from '@/core/authority/authoritySelectors';
+import {
+  buildAuthorityDailySummaryLines,
+  buildDay1AuthoritySummaryLines,
+} from '@/core/authority/authorityPresentation';
+import { normalizeAuthorityState } from '@/core/authority/authoritySeed';
+import {
+  mergeAuthorityEvaluationIntoDailyReport,
+  processPilotCompletionAuthority,
+  resolvePilotAuthorityEvaluationScore,
+} from '@/core/authority/authorityPilotCompletion';
+import {
+  processDailyBadgeEvaluation,
+  processPilotCompletionBadgeEvaluation,
+} from '@/core/badges/badgeEngine';
+import { buildDay1BadgeSummaryLines } from '@/core/badges/badgePresentation';
+import { buildDailyBadgeEvaluationInput } from '@/core/badges/badgeSelectors';
 
 export type ApplyDecisionInsufficientReason =
   | 'insufficient_source'
@@ -1641,6 +1662,83 @@ export const useGameStore = create<GameStore>()(
           },
         );
 
+        const metricsBefore = (() => {
+          const prevSnapshots = current.snapshots.filter(
+            (snapshot) => snapshot.day < closingDay,
+          );
+          const lastSnapshot = prevSnapshots[prevSnapshots.length - 1];
+          if (lastSnapshot?.metrics) {
+            return {
+              publicSatisfaction: lastSnapshot.metrics.publicSatisfaction,
+              staffMorale: lastSnapshot.metrics.staffMorale,
+              budget: lastSnapshot.metrics.budget,
+            };
+          }
+          return {
+            publicSatisfaction: current.gameState.city.publicSatisfaction,
+            staffMorale: current.gameState.city.morale,
+            budget: current.gameState.city.budget,
+          };
+        })();
+
+        const closingAuthorityState = normalizeAuthorityState(
+          current.gameState.pilot.authorityState,
+          closingDay,
+        );
+        const authorityGainInput = buildAuthorityDailyGainInput({
+          day: closingDay,
+          dailyEventSet: current.gameState.pilot.dailyEventSet,
+          decisionHistory: current.decisionHistory,
+          activeEvents: current.gameState.events,
+          dailyGoalState: closingGoalState,
+          metricsBefore,
+          metricsAfter: metricsFromCity(current.gameState.city),
+          socialPulseStateBefore: socialPulseStateBeforeNight,
+          socialPulseStateAfter: socialPulseStateAfterNight,
+          butterflyHookState: closingHookState,
+        });
+        const authorityDailyGain = calculateDailyAuthorityTrustGain(
+          authorityGainInput,
+          closingAuthorityState,
+        );
+        const authorityStateAfterGain = applyDailyAuthorityTrustGain(
+          closingAuthorityState,
+          authorityDailyGain,
+          closingDay,
+        );
+        const authoritySummaryLines =
+          closingDay === 1
+            ? buildDay1AuthoritySummaryLines()
+            : buildAuthorityDailySummaryLines(
+                authorityDailyGain,
+                authorityStateAfterGain,
+              );
+
+        const dailyBadgeInput = buildDailyBadgeEvaluationInput({
+          day: closingDay,
+          decisionHistory: current.decisionHistory,
+          activeEvents: current.gameState.events,
+          dailyEventSet: current.gameState.pilot.dailyEventSet,
+          dailyGoalState: closingGoalState,
+          metricsBefore,
+          metricsAfter: metricsFromCity(current.gameState.city),
+          socialPulseStateBefore: socialPulseStateBeforeNight,
+          socialPulseStateAfter: socialPulseStateAfterNight,
+          butterflyHookState: closingHookState,
+          containerState: containerStateAfterNight,
+          vehicleState: vehicleStateAfterNight,
+          authorityDailyGain,
+        });
+        const badgeEvaluationResult = processDailyBadgeEvaluation({
+          badgeState: current.gameState.pilot.badgeState,
+          day: closingDay,
+          input: dailyBadgeInput,
+        });
+        const badgeSummaryLines =
+          closingDay === 1
+            ? buildDay1BadgeSummaryLines()
+            : badgeEvaluationResult.summaryLines;
+
         const result = endDay(toEngineState(current), {
           skipEventSelection: skipGenericEventSelection,
           personnelReport,
@@ -1653,6 +1751,8 @@ export const useGameStore = create<GameStore>()(
           butterflySummaryLines,
           carryOverSummaryLines,
           hubQuickActionState: current.hubQuickActionState,
+          authorityDailyGain,
+          authoritySummaryLines,
         });
 
         let nextGameState = withSyncedPulse(result.nextState);
@@ -1661,6 +1761,8 @@ export const useGameStore = create<GameStore>()(
         nextGameState = withPilot(nextGameState, (pilot) => ({
           ...pilot,
           butterflyHookState: closingHookState,
+          authorityState: authorityStateAfterGain,
+          badgeState: badgeEvaluationResult.badgeState,
         }));
 
         if (pilotActiveBeforeEnd && nextGameState.pilot.run) {
@@ -1700,6 +1802,17 @@ export const useGameStore = create<GameStore>()(
             undefined,
           carryOverSummaryLines:
             result.dailyReport.carryOverSummaryLines ?? carryOverSummaryLines,
+          authorityDailyGain:
+            result.dailyReport.authorityDailyGain ?? authorityDailyGain,
+          authoritySummaryLines:
+            result.dailyReport.authoritySummaryLines ?? authoritySummaryLines,
+          badgeEvaluation:
+            badgeEvaluationResult.snapshot.earnedBadgeIds.length > 0 ||
+            badgeEvaluationResult.snapshot.progressLines.length > 0
+              ? badgeEvaluationResult.snapshot
+              : undefined,
+          badgeSummaryLines:
+            badgeSummaryLines.length > 0 ? badgeSummaryLines : undefined,
         };
 
         const dailyGoalsByDay = {
@@ -1976,12 +2089,37 @@ export const useGameStore = create<GameStore>()(
       completePilot: (finalResult) => {
         const current = get();
         const { gameState } = current;
+        const alreadyCompleted = gameState.pilot.status === 'completed';
         const finalMetrics = metricsFromCity(gameState.city);
         const closingDay = gameState.pilot.currentPilotDay;
+        const pilotRunId = gameState.pilot.run?.id;
+
+        const pilotScore = resolvePilotAuthorityEvaluationScore({
+          finalResult: gameState.pilot.finalResult ?? finalResult,
+          lastPilotScore: current.lastPilotScore,
+          fallbackScore: finalResult.score,
+        });
+
+        const authorityResult = processPilotCompletionAuthority({
+          authorityState: gameState.pilot.authorityState,
+          evaluationDay: closingDay >= 7 ? 7 : closingDay,
+          pilotScore,
+          pilotRunId,
+          skipIfAlreadyApplied: true,
+        });
+
+        const badgePilotResult = processPilotCompletionBadgeEvaluation({
+          badgeState: gameState.pilot.badgeState,
+          day: closingDay >= 7 ? 7 : closingDay,
+          pilotRunId,
+          authorityEvaluationStatus: authorityResult.evaluation.evaluationStatus,
+          authorityPromoted: authorityResult.evaluation.promoted,
+          skipIfAlreadyApplied: true,
+        });
 
         const withCompleted = withPilot(gameState, (pilot) => {
           let run = pilot.run;
-          if (run) {
+          if (run && !alreadyCompleted) {
             run = recordPilotDailySnapshot({
               run,
               day: closingDay,
@@ -1995,8 +2133,10 @@ export const useGameStore = create<GameStore>()(
           return {
             ...pilot,
             status: 'completed' as const,
-            finalResult,
+            finalResult: pilot.finalResult ?? finalResult,
             run,
+            authorityState: authorityResult.authorityState,
+            badgeState: badgePilotResult.badgeState,
           };
         });
         const leaderboardUpdate = buildPilotLeaderboardPersistUpdate({
@@ -2013,6 +2153,12 @@ export const useGameStore = create<GameStore>()(
           lastPilotScore: current.lastPilotScore,
         });
 
+        const nextDailyReport = mergeAuthorityEvaluationIntoDailyReport(
+          current.lastDailyReport,
+          authorityResult.evaluation,
+          authorityResult.evaluationLines,
+        );
+
         set({
           gameState: withSyncedPulse(
             clearActiveEventsForGameState(withCompleted),
@@ -2020,6 +2166,7 @@ export const useGameStore = create<GameStore>()(
           eventPool: [],
           bestPilotScores: leaderboardUpdate.bestPilotScores,
           lastPilotScore: leaderboardUpdate.lastPilotScore,
+          ...(nextDailyReport ? { lastDailyReport: nextDailyReport } : {}),
         });
       },
 

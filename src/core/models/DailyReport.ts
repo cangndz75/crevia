@@ -1,3 +1,9 @@
+import type {
+  AuthorityDailyGainSnapshot,
+  AuthorityEvaluationSnapshot,
+} from '@/core/authority/authorityTypes';
+import type { BadgeEvaluationSnapshot } from '@/core/badges/badgeTypes';
+
 export type DailyReportStat = {
   label: string;
   value: string;
@@ -44,5 +50,17 @@ export type DailyReport = {
   carryOverSummaryLines?: string[];
   /** Hub hızlı aksiyon özeti — snapshot (en fazla 2 satır). */
   quickActionSummaryLines?: string[];
+  /** Gün sonu yetki güveni snapshot'ı. */
+  authorityDailyGain?: AuthorityDailyGainSnapshot;
+  /** Gün sonu yetki özeti satırları. */
+  authoritySummaryLines?: string[];
+  /** Pilot final yetki değerlendirmesi — yalnızca dönem sonu. */
+  authorityEvaluation?: AuthorityEvaluationSnapshot;
+  /** Pilot final yetki değerlendirme satırları. */
+  authorityEvaluationLines?: string[];
+  /** Gün sonu rozet değerlendirmesi — snapshot. */
+  badgeEvaluation?: BadgeEvaluationSnapshot;
+  /** Gün sonu rozet özeti satırları. */
+  badgeSummaryLines?: string[];
   createdAt?: string;
 };

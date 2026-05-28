@@ -41,6 +41,10 @@ import {
   normalizePersistedHubQuickActionState,
 } from '@/core/hubQuickActions';
 import type { HubQuickActionState } from '@/core/hubQuickActions';
+import {
+  normalizePersistedAuthorityState,
+} from '@/core/authority/authoritySeed';
+import { normalizePersistedBadgeState } from '@/core/badges/badgeSeed';
 
 import type { GameStore } from './useGameStore';
 
@@ -48,7 +52,9 @@ import type { GameStore } from './useGameStore';
 // Save version & storage key
 // ---------------------------------------------------------------------------
 
-export const SAVE_VERSION = 10;
+export const SAVE_VERSION = 12;
+const SAVE_VERSION_11 = 11;
+const SAVE_VERSION_10 = 10;
 const SAVE_VERSION_9 = 9;
 const SAVE_VERSION_8 = 8;
 const SAVE_VERSION_7 = 7;
@@ -211,6 +217,14 @@ function ensurePilotOnGameState(gameState: GameState): GameState {
     butterflyHookState: normalizeButterflyHookState(
       pilot.butterflyHookState ?? createDefaultButterflyHookState(),
     ),
+    authorityState: normalizePersistedAuthorityState(
+      pilot.authorityState,
+      pilot.currentPilotDay,
+    ),
+    badgeState: normalizePersistedBadgeState(
+      pilot.badgeState,
+      pilot.currentPilotDay,
+    ),
   };
   if (pilot === gameState.pilot) {
     return gameState;
@@ -364,6 +378,8 @@ export function normalizePersistedSave(
     version !== SAVE_VERSION_7 &&
     version !== SAVE_VERSION_8 &&
     version !== SAVE_VERSION_9 &&
+    version !== SAVE_VERSION_10 &&
+    version !== SAVE_VERSION_11 &&
     version !== SAVE_VERSION
   ) {
     return null;

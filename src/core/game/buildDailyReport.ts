@@ -19,6 +19,7 @@ import {
 } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 import type { NeighborhoodReportStatus } from '@/core/neighborhoodIdentity/neighborhoodIdentityTypes';
 import type { DailyPriorityReportResult } from '@/core/dailyPriority/dailyPriorityTypes';
+import type { AuthorityDailyGainSnapshot } from '@/core/authority/authorityTypes';
 import { buildHubQuickActionReportSummaryLines } from '@/core/hubQuickActions/hubQuickActionPresentation';
 import type { HubQuickActionState } from '@/core/hubQuickActions/hubQuickActionTypes';
 
@@ -52,6 +53,10 @@ export type BuildDailyReportParams = {
   carryOverSummaryLines?: string[];
   /** Gün kapanışı hub hızlı aksiyon durumu — özet satırları için. */
   hubQuickActionState?: HubQuickActionState | null;
+  /** Gün sonu yetki güveni snapshot'ı. */
+  authorityDailyGain?: AuthorityDailyGainSnapshot | null;
+  /** Gün sonu yetki özet satırları. */
+  authoritySummaryLines?: string[];
 };
 
 function formatCurrency(amount: number): string {
@@ -326,6 +331,11 @@ export function buildDailyReport(params: BuildDailyReportParams): DailyReport {
         : undefined,
     quickActionSummaryLines:
       quickActionSummaryLines.length > 0 ? quickActionSummaryLines : undefined,
+    authorityDailyGain: params.authorityDailyGain ?? undefined,
+    authoritySummaryLines:
+      params.authoritySummaryLines && params.authoritySummaryLines.length > 0
+        ? params.authoritySummaryLines.slice(0, 3)
+        : undefined,
     createdAt: new Date().toISOString(),
   };
 }

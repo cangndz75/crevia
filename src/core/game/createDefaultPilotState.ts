@@ -1,4 +1,6 @@
 import { createDefaultButterflyHookState } from '@/core/events/butterflyHookEngine';
+import { createInitialAuthorityState } from '@/core/authority/authoritySeed';
+import { createInitialBadgeState } from '@/core/badges/badgeSeed';
 import type { PilotGameState } from '@/core/models/PilotGameState';
 
 export function createDefaultPilotState(): PilotGameState {
@@ -11,5 +13,7 @@ export function createDefaultPilotState(): PilotGameState {
     pendingConsequences: [],
     run: null,
     butterflyHookState: createDefaultButterflyHookState(),
+    authorityState: createInitialAuthorityState(1),
+    badgeState: createInitialBadgeState(1),
   };
 }

@@ -524,10 +524,10 @@ function verifySocialQuickActionIsolation(): void {
 }
 
 function verifyPersistHydrate(): void {
-  if (SAVE_VERSION === 10) {
-    pass('SAVE_VERSION is current (10)');
+  if (SAVE_VERSION === 12) {
+    pass('SAVE_VERSION is current (12)');
   } else {
-    fail('SAVE_VERSION', `expected 10, got ${SAVE_VERSION}`);
+    fail('SAVE_VERSION', `expected 12, got ${SAVE_VERSION}`);
   }
 
   const bundle = createDay1Seed();

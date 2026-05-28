@@ -3,6 +3,7 @@ import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getPilotDistrictHeroImage } from '@/features/hub/utils/hubAssets';
+import { OperationPreviewAuthorityCard } from '@/features/pilot/components/operation-preview/OperationPreviewAuthorityCard';
 import { OperationPreviewFooterCTA } from '@/features/pilot/components/operation-preview/OperationPreviewFooterCTA';
 import { OperationPreviewHeader } from '@/features/pilot/components/operation-preview/OperationPreviewHeader';
 import { OperationPreviewHero } from '@/features/pilot/components/operation-preview/OperationPreviewHero';
@@ -61,6 +62,7 @@ export function MainOperationPreviewScreen() {
           chips={preview.chips}
           personalizedChips={preview.personalizedChips}
         />
+        <OperationPreviewAuthorityCard summary={preview.authoritySummary} />
         <OperationPreviewRoadmap
           steps={preview.roadmapSteps}
           hint={preview.roadmapHint}

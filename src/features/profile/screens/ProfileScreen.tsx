@@ -9,6 +9,8 @@ import {
 } from 'react-native-safe-area-context';
 
 import { buildLeaderboardPrestigeSummary } from '@/features/leaderboard/utils/leaderboardProfileModel';
+import { ProfileAuthorityCard } from '@/features/profile/components/ProfileAuthorityCard';
+import { ProfileBadgeShowcaseCard } from '@/features/profile/components/ProfileBadgeShowcaseCard';
 import { OperationSummaryCard } from '@/features/profile/components/OperationSummaryCard';
 import { OperatorBadgeRow } from '@/features/profile/components/OperatorBadgeRow';
 import { ProfileHeroCard } from '@/features/profile/components/ProfileHeroCard';
@@ -21,6 +23,8 @@ import {
   buildProfileViewModel,
   buildTodayStatusLines,
 } from '@/features/profile/utils/profileModel';
+import { buildProfileAuthoritySummaryFromPilot } from '@/features/profile/utils/profileAuthorityModel';
+import { buildProfileBadgeShowcaseSummary } from '@/features/profile/utils/profileBadgeModel';
 import { useGameStatus } from '@/store/gameSelectors';
 import { useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
@@ -34,6 +38,7 @@ export function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const status = useGameStatus();
   const player = useGameStore((s) => s.gameState.player);
+  const pilot = useGameStore((s) => s.gameState.pilot);
   const bestPilotScores = useGameStore((s) => s.bestPilotScores);
   const lastPilotScore = useGameStore((s) => s.lastPilotScore);
 
@@ -48,6 +53,22 @@ export function ProfileScreen() {
   );
   const badges = useMemo(() => buildProfileBadges(model), [model]);
   const todayLines = useMemo(() => buildTodayStatusLines(model), [model]);
+  const authoritySummary = useMemo(
+    () =>
+      buildProfileAuthoritySummaryFromPilot(
+        pilot.authorityState,
+        pilot.currentPilotDay,
+      ),
+    [pilot.authorityState, pilot.currentPilotDay],
+  );
+  const badgeShowcaseSummary = useMemo(
+    () =>
+      buildProfileBadgeShowcaseSummary(
+        pilot.badgeState,
+        pilot.currentPilotDay,
+      ),
+    [pilot.badgeState, pilot.currentPilotDay],
+  );
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
@@ -88,6 +109,14 @@ export function ProfileScreen() {
             entering={FadeIn.duration(300).delay(120)}
             style={[styles.floatingPanel, shadows.card]}>
             <OperationSummaryCard model={model} statusLines={todayLines} />
+          </Animated.View>
+
+          <Animated.View entering={FadeIn.duration(300).delay(130)}>
+            <ProfileAuthorityCard summary={authoritySummary} />
+          </Animated.View>
+
+          <Animated.View entering={FadeIn.duration(300).delay(135)}>
+            <ProfileBadgeShowcaseCard summary={badgeShowcaseSummary} />
           </Animated.View>
 
           <Animated.View entering={FadeIn.duration(300).delay(140)}>

@@ -1,4 +1,6 @@
 import type { ButterflyHookState } from '@/core/events/butterflyHookTypes';
+import type { AuthorityState } from '@/core/authority/authorityTypes';
+import type { BadgeState } from '@/core/badges/badgeTypes';
 import type { DailyEventSet } from './DailyEventSet';
 import type { PilotDistrictId } from './DistrictProfile';
 import type { PilotRun } from './PilotRun';
@@ -52,4 +54,8 @@ export type PilotGameState = {
   eventContentRecentProfileIds?: string[];
   /** Karar yankısı hook'ları — günler arası persist. */
   butterflyHookState?: ButterflyHookState;
+  /** Yetki güveni ve resmi unvan durumu — günlük gain, dönem değerlendirmesi. */
+  authorityState?: AuthorityState;
+  /** Rozet ilerlemesi ve kazanımları. */
+  badgeState?: BadgeState;
 };
