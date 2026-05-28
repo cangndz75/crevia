@@ -1,3 +1,4 @@
+import type { ButterflyHookState } from '@/core/events/butterflyHookTypes';
 import type { DailyEventSet } from './DailyEventSet';
 import type { PilotDistrictId } from './DistrictProfile';
 import type { PilotRun } from './PilotRun';
@@ -49,4 +50,6 @@ export type PilotGameState = {
   /** Event içerik varyasyonu — son üretilen başlık/profil (persist opsiyonel). */
   eventContentRecentTitles?: string[];
   eventContentRecentProfileIds?: string[];
+  /** Karar yankısı hook'ları — günler arası persist. */
+  butterflyHookState?: ButterflyHookState;
 };

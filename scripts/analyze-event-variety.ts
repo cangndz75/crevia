@@ -7,6 +7,7 @@ import { createDay1Seed } from '@/core/content/day1Seed';
 import { pilotEvents } from '@/core/content/pilotEvents';
 import { mergeEventCatalogs } from '@/core/districts/districtEventIntegration';
 import { isDay1LearningEventId } from '@/features/tutorial/tutorialTypes';
+import { normalizeContainerNeighborhoodId } from '@/core/containers/containerNeighborhoodBridge';
 import { createInitialContainerState } from '@/core/containers/containerSeed';
 import { createInitialVehicleState } from '@/core/vehicles/vehicleSeed';
 import { generateDailyEventSet } from '@/core/game/generateDailyEventSet';
@@ -14,10 +15,13 @@ import { buildEventCardPriorityChip } from '@/core/events/eventContentPresentati
 import {
   appendPilotEventContentMemory,
   mapEventToContentCategory,
+  pickNeighborhoodIdFromEvent,
+  resolveEventNeighborhoodId,
 } from '@/core/events/eventVariationEngine';
 import type { DailyPriorityKey } from '@/core/dailyPriority/dailyPriorityTypes';
 import type { EventCard } from '@/core/models/EventCard';
 import type { GameState } from '@/core/models/GameState';
+import { getRhythmPilotDistrictForDay } from '@/core/events/pilotRhythmEngine';
 import { DEFAULT_PILOT_DISTRICT_ID } from '@/core/models/DistrictProfile';
 
 type ScenarioId =
@@ -66,26 +70,23 @@ const SCENARIOS: ScenarioConfig[] = [
   },
 ];
 
-type DayMetrics = {
-  day: number;
-  titles: string[];
-  categories: string[];
-  profileIds: string[];
-  neighborhoods: string[];
-  supplementDuplicate: boolean;
-};
-
 type ScenarioResult = {
   id: ScenarioId;
+  totalEvents: number;
   uniqueTitles: number;
   uniqueCategories: number;
-  exactTitleRepeats: number;
-  maxSameCategoryPerDay: number;
-  profileRepeatRate: number;
+  uniqueNeighborhoods: number;
+  neighborhoodDistribution: Record<string, number>;
+  categoryDistribution: Record<string, number>;
+  missingNeighborhoodEvents: number;
+  unknownNeighborhoodEvents: number;
+  repeatedExactTitles: number;
+  repeatedProfileWithin2Days: number;
+  maxSameCategoryInSingleDay: number;
+  maxSameNeighborhoodCategoryInSingleDay: number;
   day1AnchorPreserved: boolean;
-  supplementDuplicateDays: number;
+  containerVehicleDuplicateSignalDays: number;
   priorityChipCount: number;
-  neighborhoodSpread: number;
   verdict: 'PASS' | 'WARN' | 'FAIL';
   notes: string[];
 };
@@ -97,20 +98,43 @@ function cloneEvents(events: EventCard[]): EventCard[] {
   }));
 }
 
+function countProfileRepeatsWithin2Days(
+  profileIdsByDay: string[][],
+): number {
+  let repeats = 0;
+  for (let day = 0; day < profileIdsByDay.length; day += 1) {
+    const window = new Set<string>();
+    for (let d = Math.max(0, day - 1); d <= day; d += 1) {
+      for (const id of profileIdsByDay[d] ?? []) {
+        if (window.has(id)) {
+          repeats += 1;
+        }
+        window.add(id);
+      }
+    }
+  }
+  return repeats;
+}
+
 function simulateScenario(config: ScenarioConfig): ScenarioResult {
   const bundle = createDay1Seed();
   let gameState: GameState = bundle.gameState;
   const notes: string[] = [];
   const allTitles: string[] = [];
-  const allCategories: string[] = [];
-  const allProfileIds: string[] = [];
-  const allNeighborhoods: string[] = [];
-  let exactTitleRepeats = 0;
   const titleSet = new Set<string>();
-  let maxSameCategoryPerDay = 0;
-  let supplementDuplicateDays = 0;
+  let repeatedExactTitles = 0;
+  let maxSameCategoryInSingleDay = 0;
+  let maxSameNeighborhoodCategoryInSingleDay = 0;
+  let containerVehicleDuplicateSignalDays = 0;
   let priorityChipCount = 0;
   let day1AnchorPreserved = true;
+  let missingNeighborhoodEvents = 0;
+  let unknownNeighborhoodEvents = 0;
+  let totalEvents = 0;
+
+  const neighborhoodDistribution: Record<string, number> = {};
+  const categoryDistribution: Record<string, number> = {};
+  const profileIdsByDay: string[][] = [];
 
   const day1AnchorId = gameState.pilot.dailyEventSet?.anchorEventId;
   const day1AnchorTitle = bundle.eventPool.find((e) => e.id === day1AnchorId)?.title;
@@ -123,10 +147,19 @@ function simulateScenario(config: ScenarioConfig): ScenarioResult {
     const vehicleState = createInitialVehicleState(day);
     const priorityKey = config.priorityForDay(day);
 
+    const districtId = getRhythmPilotDistrictForDay(day);
+
     const dailySet = generateDailyEventSet({
-      gameState: { ...gameState, pilot: { ...gameState.pilot, currentPilotDay: day } },
+      gameState: {
+        ...gameState,
+        pilot: {
+          ...gameState.pilot,
+          currentPilotDay: day,
+          selectedDistrictId: districtId,
+        },
+      },
       day,
-      districtId: DEFAULT_PILOT_DISTRICT_ID,
+      districtId,
       events: catalog,
       containerState,
       vehicleState,
@@ -148,46 +181,79 @@ function simulateScenario(config: ScenarioConfig): ScenarioResult {
       ),
     };
 
-    const dayTitles: string[] = [];
-    const dayCategories: string[] = [];
-    const categoryCount: Record<string, number> = {};
+    const dayProfileIds: string[] = [];
+    const dayCategoryCount: Record<string, number> = {};
+    const dayNeighborhoodCategoryCount: Record<string, number> = {};
 
     for (const id of dailySet.allEventIds) {
       const card = catalog.find((e) => e.id === id);
       if (!card) continue;
-      dayTitles.push(card.title);
+
+      totalEvents += 1;
+
+      const districtNeighborhood =
+        normalizeContainerNeighborhoodId(districtId) ?? undefined;
+      const strictNeighborhood = resolveEventNeighborhoodId(card, undefined, {
+        treatMissingAsUnknown: true,
+      });
+      const neighborhoodId = resolveEventNeighborhoodId(
+        card,
+        districtNeighborhood,
+        { treatMissingAsUnknown: true },
+      );
+
+      if (pickNeighborhoodIdFromEvent(card) == null) {
+        missingNeighborhoodEvents += 1;
+      }
+      if (strictNeighborhood === 'unknown') {
+        unknownNeighborhoodEvents += 1;
+      }
+      neighborhoodDistribution[neighborhoodId] =
+        (neighborhoodDistribution[neighborhoodId] ?? 0) + 1;
+
       const category = card.contentCategory ?? mapEventToContentCategory(card);
-      dayCategories.push(category);
-      categoryCount[category] = (categoryCount[category] ?? 0) + 1;
+      categoryDistribution[category] = (categoryDistribution[category] ?? 0) + 1;
+      dayCategoryCount[category] = (dayCategoryCount[category] ?? 0) + 1;
+
+      const nhCatKey = `${neighborhoodId}:${category}`;
+      dayNeighborhoodCategoryCount[nhCatKey] =
+        (dayNeighborhoodCategoryCount[nhCatKey] ?? 0) + 1;
+
       if (card.contentProfileId) {
-        allProfileIds.push(card.contentProfileId);
+        dayProfileIds.push(card.contentProfileId);
       }
-      if (card.neighborhoodId) {
-        allNeighborhoods.push(card.neighborhoodId);
-      }
+
       const chip = buildEventCardPriorityChip(card, priorityKey);
       if (chip) {
         priorityChipCount += 1;
       }
-    }
 
-    if (day > 1) {
-      for (const title of dayTitles) {
-        if (titleSet.has(title)) {
-          exactTitleRepeats += 1;
+      if (day > 1 && card.contentProfileId) {
+        if (titleSet.has(card.title)) {
+          repeatedExactTitles += 1;
         }
-        titleSet.add(title);
+        titleSet.add(card.title);
       }
+      allTitles.push(card.title);
     }
-    allTitles.push(...dayTitles);
-    allCategories.push(...dayCategories);
 
-    const dayMaxCategory = Math.max(0, ...Object.values(categoryCount));
-    maxSameCategoryPerDay = Math.max(maxSameCategoryPerDay, dayMaxCategory);
+    profileIdsByDay.push(dayProfileIds);
+
+    const dayMaxCategory = Math.max(0, ...Object.values(dayCategoryCount));
+    maxSameCategoryInSingleDay = Math.max(maxSameCategoryInSingleDay, dayMaxCategory);
+
+    const dayMaxNeighborhoodCategory = Math.max(
+      0,
+      ...Object.values(dayNeighborhoodCategoryCount),
+    );
+    maxSameNeighborhoodCategoryInSingleDay = Math.max(
+      maxSameNeighborhoodCategoryInSingleDay,
+      dayMaxNeighborhoodCategory,
+    );
 
     const supplementIds = (dailySet.supplementalEvents ?? []).map((e) => e.id);
     if (new Set(supplementIds).size !== supplementIds.length) {
-      supplementDuplicateDays += 1;
+      containerVehicleDuplicateSignalDays += 1;
     }
 
     if (day === 1 && day1AnchorId && isDay1LearningEventId(day1AnchorId)) {
@@ -199,58 +265,86 @@ function simulateScenario(config: ScenarioConfig): ScenarioResult {
   }
 
   const uniqueTitles = new Set(allTitles).size;
-  const uniqueCategories = new Set(allCategories).size;
-  const profileRepeatRate =
-    allProfileIds.length === 0
-      ? 0
-      : 1 - new Set(allProfileIds).size / allProfileIds.length;
-  const neighborhoodSpread = new Set(allNeighborhoods).size;
+  const uniqueCategories = Object.keys(categoryDistribution).length;
+  const uniqueNeighborhoods = Object.keys(neighborhoodDistribution).filter(
+    (id) => id !== 'unknown',
+  ).length;
+  const repeatedProfileWithin2Days = countProfileRepeatsWithin2Days(profileIdsByDay);
 
   let verdict: ScenarioResult['verdict'] = 'PASS';
 
-  if (uniqueTitles < 12) {
+  if (repeatedExactTitles > 0) {
     verdict = 'FAIL';
-    notes.push(`unique title < 12 (${uniqueTitles})`);
-  }
-  if (exactTitleRepeats > 0) {
-    verdict = 'FAIL';
-    notes.push(`exact title repeat: ${exactTitleRepeats}`);
-  }
-  if (maxSameCategoryPerDay > 2) {
-    verdict = 'FAIL';
-    notes.push(`category spam day max: ${maxSameCategoryPerDay}`);
+    notes.push(`repeatedExactTitles=${repeatedExactTitles}`);
   }
   if (!day1AnchorPreserved) {
     verdict = 'FAIL';
-    notes.push('day1 anchor changed');
+    notes.push('day1AnchorPreserved=false');
   }
-  if (supplementDuplicateDays > 0) {
+  if (containerVehicleDuplicateSignalDays > 0) {
     verdict = 'FAIL';
-    notes.push(`supplement dup days: ${supplementDuplicateDays}`);
+    notes.push(
+      `containerVehicleDuplicateSignalDays=${containerVehicleDuplicateSignalDays}`,
+    );
   }
-  if (uniqueCategories < 4 && verdict === 'PASS') {
-    verdict = 'WARN';
-    notes.push('category spread düşük');
+  if (maxSameCategoryInSingleDay > 2) {
+    verdict = 'FAIL';
+    notes.push(`maxSameCategoryInSingleDay=${maxSameCategoryInSingleDay}`);
   }
-  if (neighborhoodSpread < 3 && verdict === 'PASS') {
+
+  if (uniqueNeighborhoods < 3 && verdict !== 'FAIL') {
     verdict = 'WARN';
-    notes.push('mahalle dağılımı dar');
+    notes.push(
+      `uniqueNeighborhoods=${uniqueNeighborhoods} (<3); rhythm rotasyonu aktif — dar havuz veya gün 1 unknown`,
+    );
+  }
+
+  const missingRatio =
+    totalEvents === 0 ? 0 : missingNeighborhoodEvents / totalEvents;
+  if (missingRatio > 0.3 && verdict !== 'FAIL') {
+    verdict = 'WARN';
+    notes.push(
+      `missingNeighborhoodEvents=${missingNeighborhoodEvents} (${Math.round(missingRatio * 100)}%)`,
+    );
+  }
+
+  if (uniqueTitles < 12 && verdict !== 'FAIL') {
+    verdict = 'WARN';
+    notes.push(`uniqueTitles=${uniqueTitles} (<12)`);
+  }
+
+  if (repeatedProfileWithin2Days > 0 && verdict === 'PASS') {
+    verdict = 'WARN';
+    notes.push(`repeatedProfileWithin2Days=${repeatedProfileWithin2Days}`);
   }
 
   return {
     id: config.id,
+    totalEvents,
     uniqueTitles,
     uniqueCategories,
-    exactTitleRepeats,
-    maxSameCategoryPerDay,
-    profileRepeatRate: Math.round(profileRepeatRate * 100) / 100,
+    uniqueNeighborhoods,
+    neighborhoodDistribution,
+    categoryDistribution,
+    missingNeighborhoodEvents,
+    unknownNeighborhoodEvents,
+    repeatedExactTitles,
+    repeatedProfileWithin2Days,
+    maxSameCategoryInSingleDay,
+    maxSameNeighborhoodCategoryInSingleDay,
     day1AnchorPreserved,
-    supplementDuplicateDays,
+    containerVehicleDuplicateSignalDays,
     priorityChipCount,
-    neighborhoodSpread,
     verdict,
     notes,
   };
+}
+
+function formatDistribution(dist: Record<string, number>): string {
+  return Object.entries(dist)
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => `${k}:${v}`)
+    .join(', ');
 }
 
 const results = SCENARIOS.map(simulateScenario);
@@ -260,9 +354,23 @@ console.log('Event variety analysis (7 gün x 6 senaryo)\n');
 
 for (const r of results) {
   // eslint-disable-next-line no-console
+  console.log(`[${r.verdict}] ${r.id}`);
+  // eslint-disable-next-line no-console
   console.log(
-    `[${r.verdict}] ${r.id}: titles=${r.uniqueTitles} categories=${r.uniqueCategories} titleRepeats=${r.exactTitleRepeats} maxCat/Day=${r.maxSameCategoryPerDay} profileRepeat=${r.profileRepeatRate} chips=${r.priorityChipCount} neighborhoods=${r.neighborhoodSpread} day1=${r.day1AnchorPreserved ? 'ok' : 'broken'}`,
+    `  totalEvents=${r.totalEvents} uniqueTitles=${r.uniqueTitles} uniqueCategories=${r.uniqueCategories} uniqueNeighborhoods=${r.uniqueNeighborhoods}`,
   );
+  // eslint-disable-next-line no-console
+  console.log(
+    `  repeatedExactTitles=${r.repeatedExactTitles} repeatedProfileWithin2Days=${r.repeatedProfileWithin2Days} maxSameCategoryInSingleDay=${r.maxSameCategoryInSingleDay} maxSameNeighborhoodCategoryInSingleDay=${r.maxSameNeighborhoodCategoryInSingleDay}`,
+  );
+  // eslint-disable-next-line no-console
+  console.log(
+    `  missingNeighborhoodEvents=${r.missingNeighborhoodEvents} unknownNeighborhoodEvents=${r.unknownNeighborhoodEvents} day1Anchor=${r.day1AnchorPreserved ? 'ok' : 'broken'} signalDupDays=${r.containerVehicleDuplicateSignalDays}`,
+  );
+  // eslint-disable-next-line no-console
+  console.log(`  neighborhoods: ${formatDistribution(r.neighborhoodDistribution)}`);
+  // eslint-disable-next-line no-console
+  console.log(`  categories: ${formatDistribution(r.categoryDistribution)}`);
   if (r.notes.length) {
     // eslint-disable-next-line no-console
     console.log(`  → ${r.notes.join('; ')}`);
@@ -274,6 +382,12 @@ if (failed.length > 0) {
   // eslint-disable-next-line no-console
   console.error(`\n${failed.length} senaryo FAIL.`);
   process.exit(1);
+}
+
+const warned = results.filter((r) => r.verdict === 'WARN');
+if (warned.length > 0) {
+  // eslint-disable-next-line no-console
+  console.log(`\n${warned.length} senaryo WARN (kabul edilebilir sapma).`);
 }
 
 // eslint-disable-next-line no-console

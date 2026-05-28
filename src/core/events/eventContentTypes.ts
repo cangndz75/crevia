@@ -13,7 +13,9 @@ export type EventContentCategory =
   | 'sidewalk_occupation'
   | 'opportunity'
   | 'butterfly'
-  | 'permanent_solution';
+  | 'permanent_solution'
+  | 'inspection_gap'
+  | 'community_support';
 
 export type EventNarrativeTone =
   | 'calm'
@@ -107,3 +109,13 @@ export type EventPriorityRelation =
   | 'resource_pressure'
   | 'social_relief'
   | 'operational_gain';
+
+/** İçerik zenginleştirme metadata — opsiyonel, persist zorunlu değil. */
+export type EventContentMeta = {
+  profileId: string;
+  category: EventContentCategory;
+  narrativeTone: EventNarrativeTone;
+  priorityRelation?: EventPriorityRelation;
+  archetypeLabels?: string[];
+  neighborhoodId?: string;
+};

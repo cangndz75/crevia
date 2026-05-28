@@ -38,5 +38,7 @@ export type DailyReport = {
     status: 'completed' | 'failed' | 'at_risk' | 'active';
     resultText: string;
   }>;
+  /** Karar yankısı özeti — snapshot (en fazla 2 satır). */
+  butterflySummaryLines?: string[];
   createdAt?: string;
 };

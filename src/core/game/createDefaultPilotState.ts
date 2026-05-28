@@ -1,3 +1,4 @@
+import { createDefaultButterflyHookState } from '@/core/events/butterflyHookEngine';
 import type { PilotGameState } from '@/core/models/PilotGameState';
 
 export function createDefaultPilotState(): PilotGameState {
@@ -9,5 +10,6 @@ export function createDefaultPilotState(): PilotGameState {
     completedEventIds: [],
     pendingConsequences: [],
     run: null,
+    butterflyHookState: createDefaultButterflyHookState(),
   };
 }

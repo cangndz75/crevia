@@ -73,4 +73,10 @@ export type DecisionResultSnapshot = {
     tone: 'supportive' | 'balanced' | 'risky' | 'neutral';
     scoreDelta: number;
   };
+  butterflyHint?: {
+    title: string;
+    text: string;
+    tone: 'info' | 'warning' | 'opportunity';
+    dueText?: string;
+  };
 };

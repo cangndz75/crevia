@@ -358,6 +358,30 @@ function wasteProfiles(): EventContentProfile[] {
       decisions: WASTE_DECISIONS,
       variationRules: { excludeDay1Tutorial: true },
     }),
+    profile({
+      id: 'waste_istasyon_transfer_litter_pressure',
+      category: 'waste_container',
+      titleTemplates: [
+        'İstasyon geçiş hattında küçük atıklar hızla görünür oldu',
+        'Yolcu yoğunluğu transfer noktasında atık baskısı yaratıyor',
+      ],
+      descriptionTemplates: [
+        'Geçiş saatlerinde biriken küçük atıklar kısa sürede fark ediliyor. Temizlik gecikirse yolcu tepkisi büyüyebilir.',
+        'Transfer hattındaki yoğunluk konteyner doluluğunu erken saatlere çekiyor.',
+      ],
+      fieldNoteTemplates: [
+        'Hat görevlisi sabah ilk seferde ikinci bildirimi yaptı.',
+        'Saha ekibi, yoğunluğun öğleden önce zirve yaptığını iletti.',
+      ],
+      allowedNeighborhoods: ['istasyon'],
+      preferredNeighborhoodArchetypes: ['transit_crossroads'],
+      preferredPriorityKeys: ['operation_stability', 'public_relief'],
+      tags: ['waste', 'transit', 'litter', 'transfer'],
+      narrativeTone: 'urgent',
+      baseSeverity: 'medium',
+      decisions: WASTE_DECISIONS,
+      variationRules: { avoidRepeatWithinDays: 2 },
+    }),
   ];
 }
 
@@ -711,8 +735,132 @@ function permanentProfiles(): EventContentProfile[] {
   ];
 }
 
+const INSPECTION_DECISIONS: EventContentDecisionBlueprint[] = [
+  bp({
+    id: 'inspect_now',
+    intent: 'inspect',
+    title: 'Denetim ekibini hemen gönder',
+    description: 'Boşluğu sahada doğrula ve kayıt altına al.',
+    shortTradeoff: 'Risk görünür azalır, ekip yükü artar',
+    riskHint: 'Diğer hatlar kısa süre bekleyebilir',
+    recommendedForPriority: ['operation_stability'],
+  }),
+  bp({
+    id: 'checklist',
+    intent: 'monitor',
+    title: 'Kontrol listesi aç',
+    description: 'Standart denetim akışını başlat.',
+    shortTradeoff: 'Dengeli, orta hızda etki',
+    riskHint: 'Acil boşluk kapanmayabilir',
+    recommendedForPriority: ['resource_protection', 'operation_stability'],
+  }),
+  bp({
+    id: 'coord_inspect',
+    intent: 'coordinate',
+    title: 'Saha sorumlusuyla koordine et',
+    description: 'Denetim planını birlikte netleştir.',
+    shortTradeoff: 'Kaynak korur, sonuç gecikebilir',
+    riskHint: 'Görünür müdahale sınırlı kalır',
+    recommendedForPriority: ['resource_protection'],
+  }),
+  bp({
+    id: 'defer_inspect',
+    intent: 'delay',
+    title: 'Denetimi ertele',
+    description: 'Bugünkü kaynakları koru, riski izle.',
+    shortTradeoff: 'Kaynak korur, boşluk büyüyebilir',
+    riskHint: 'Şikayet veya denetim uyarısı artabilir',
+    discouragedForPriority: ['operation_stability'],
+    recommendedForPriority: ['resource_protection'],
+  }),
+];
+
+const COMMUNITY_SUPPORT_DECISIONS: EventContentDecisionBlueprint[] = [
+  bp({
+    id: 'accept_help',
+    intent: 'coordinate',
+    title: 'Gönüllü desteğini kabul et',
+    description: 'Mahalle desteğini planlı şekilde sahaya bağla.',
+    shortTradeoff: 'Sosyal güven artar, koordinasyon gerekir',
+    riskHint: 'Plansız katılım kaliteyi düşürebilir',
+    recommendedForPriority: ['public_relief'],
+  }),
+  bp({
+    id: 'pilot_support',
+    intent: 'invest',
+    title: 'Küçük destek paketi ver',
+    description: 'Malzeme ve yönlendirme ile kampanyayı güçlendir.',
+    shortTradeoff: 'Hızlı görünürlük, bütçe kullanımı',
+    riskHint: 'Kaynak baskısı oluşabilir',
+    recommendedForPriority: ['public_relief'],
+    discouragedForPriority: ['resource_protection'],
+  }),
+  bp({
+    id: 'inform_community',
+    intent: 'communicate',
+    title: 'Mahalleyle bilgilendirme yap',
+    description: 'Katılım kurallarını ve süreyi netleştir.',
+    shortTradeoff: 'Beklenti yönetimi, sınırlı saha etkisi',
+    riskHint: 'Fiziksel sonuç gecikebilir',
+    recommendedForPriority: ['public_relief', 'resource_protection'],
+  }),
+  bp({
+    id: 'monitor_support',
+    intent: 'monitor',
+    title: 'Desteği izle, şimdilik müdahale etme',
+    description: 'Gönüllü hareketi ölç, kaynak ayırma.',
+    shortTradeoff: 'Kaynak korur, fırsat kaçabilir',
+    riskHint: 'Mahalle motivasyonu düşebilir',
+    recommendedForPriority: ['resource_protection'],
+  }),
+];
+
 function extraProfiles(): EventContentProfile[] {
   return [
+    profile({
+      id: 'inspection_gap_merkez',
+      category: 'inspection_gap',
+      titleTemplates: [
+        'Merkez hattında denetim boşluğu uyarısı',
+        'Çarşı çevresinde kontrol kaydı eksik görünüyor',
+      ],
+      descriptionTemplates: [
+        'Son denetim turu gecikmiş. Görünür bölgede boşluk kısa sürede fark edilebilir.',
+        'Kayıt eksikliği operasyon planını zayıflatıyor; öncelik netleştirilmeli.',
+      ],
+      fieldNoteTemplates: [
+        'Denetim sorumlusu kayıt boşluğunu sabah brifinginde işaret etti.',
+        'Saha notu: kontrol listesi iki gündür güncellenmemiş.',
+      ],
+      allowedNeighborhoods: ['merkez'],
+      preferredPriorityKeys: ['operation_stability'],
+      tags: ['inspection', 'gap', 'merkez'],
+      narrativeTone: 'warning',
+      baseSeverity: 'medium',
+      decisions: INSPECTION_DECISIONS,
+    }),
+    profile({
+      id: 'community_support_cumhuriyet',
+      category: 'community_support',
+      titleTemplates: [
+        'Cumhuriyet’te mahalle gönüllü desteği teklif edildi',
+        'Okul çevresinde topluluk temizlik desteği başlıyor',
+      ],
+      descriptionTemplates: [
+        'Mahalle gönüllüleri kısa süreli destek sunmak istiyor. Koordinasyon iyi giderse güven artar.',
+        'Veli ve komşu grubu okul çıkışı için yardım planlıyor; beklenti yönetimi önemli.',
+      ],
+      fieldNoteTemplates: [
+        'Muhtar yardımı koordinasyon için uygun saat bildirdi.',
+        'Gönüllü temsilcisi öğleden önce ofisi aradı.',
+      ],
+      allowedNeighborhoods: ['cumhuriyet'],
+      preferredPriorityKeys: ['public_relief'],
+      tags: ['community', 'volunteer', 'support'],
+      narrativeTone: 'community',
+      baseSeverity: 'low',
+      decisions: COMMUNITY_SUPPORT_DECISIONS,
+    }),
     profile({
       id: 'noise_merkez_night',
       category: 'noise',

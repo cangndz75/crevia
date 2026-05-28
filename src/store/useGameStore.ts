@@ -18,6 +18,14 @@ import {
   shouldClearPilotActiveEvents,
 } from '@/core/game/clearActiveEventsForGameState';
 import { refreshPilotEventsFromGameState } from '@/core/game/refreshPilotEventsFromGameState';
+import {
+  createDefaultButterflyHookState,
+  expireOldButterflyHooks,
+  markHookResolvedByEvent,
+  normalizeButterflyHookState,
+  tryRegisterButterflyHookAfterDecision,
+} from '@/core/events/butterflyHookEngine';
+import { buildButterflyReportLines } from '@/core/events/butterflyHookPresentation';
 import { syncCityDayWithPilotDay } from '@/core/game/syncCityDayWithPilotDay';
 import { syncInitialSnapshotWithGameState } from '@/core/game/syncInitialSnapshotWithGameState';
 import { endDay, type EndDayState } from '@/core/game/endDay';
@@ -1118,6 +1126,40 @@ export const useGameStore = create<GameStore>()(
               dailyPriorityImpact: priorityEval.impact,
             };
           }
+
+          let butterflyHookState = normalizeButterflyHookState(
+            nextGameState.pilot.butterflyHookState ??
+              createDefaultButterflyHookState(),
+          );
+
+          if (event.butterflyMeta?.hookId) {
+            butterflyHookState = markHookResolvedByEvent(
+              butterflyHookState,
+              event.butterflyMeta.hookId,
+              result.decisionRecord.day,
+            );
+          } else if (result.decisionRecord.day > 1) {
+            const registered = tryRegisterButterflyHookAfterDecision({
+              day: result.decisionRecord.day,
+              event,
+              decision,
+              dailyPriorityKey: dailyPriorityState?.selectedKey,
+              neighborhoodId: event.neighborhoodId,
+              hookState: butterflyHookState,
+            });
+            butterflyHookState = registered.state;
+            if (registered.hint && lastDecisionResult) {
+              lastDecisionResult = {
+                ...lastDecisionResult,
+                butterflyHint: registered.hint,
+              };
+            }
+          }
+
+          nextGameState = withPilot(nextGameState, (pilot) => ({
+            ...pilot,
+            butterflyHookState,
+          }));
         }
 
         set({
@@ -1412,6 +1454,18 @@ export const useGameStore = create<GameStore>()(
           focalNeighborhoodId: focalNeighborhood,
         });
 
+        let closingHookState = expireOldButterflyHooks(
+          normalizeButterflyHookState(
+            current.gameState.pilot.butterflyHookState ??
+              createDefaultButterflyHookState(),
+          ),
+          closingDay,
+        );
+        const butterflySummaryLines = buildButterflyReportLines(
+          closingHookState.hooks,
+          closingDay,
+        );
+
         const result = endDay(toEngineState(current), {
           skipEventSelection: skipGenericEventSelection,
           personnelReport,
@@ -1421,10 +1475,16 @@ export const useGameStore = create<GameStore>()(
           socialPulseStateBefore: socialPulseStateBeforeNight,
           dailyGoalState: closingGoalState,
           dailyPriorityResult: buildDailyPriorityReportResult(closingPriorityState),
+          butterflySummaryLines,
         });
 
         let nextGameState = withSyncedPulse(result.nextState);
         let nextEventPool = current.eventPool;
+
+        nextGameState = withPilot(nextGameState, (pilot) => ({
+          ...pilot,
+          butterflyHookState: closingHookState,
+        }));
 
         if (pilotActiveBeforeEnd && nextGameState.pilot.run) {
           const endMetrics = metricsFromCity(nextGameState.city);

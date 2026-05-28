@@ -1,3 +1,5 @@
+import type { EventContentMeta } from '@/core/events/eventContentTypes';
+import type { PilotRhythmMeta } from '@/core/events/pilotRhythmTypes';
 import type { DistrictBonusFlags } from '@/core/xp/types';
 import type { PilotDayTheme, PilotEventType } from './PilotDayPlan';
 
@@ -136,6 +138,15 @@ export type EventCard = {
   contentProfileId?: string;
   contentCategory?: string;
   contentFutureHookHint?: string;
+  contentMeta?: EventContentMeta;
+  rhythmMeta?: PilotRhythmMeta;
+  /** Butterfly Hook Lite — takip olayı metadata (opsiyonel). */
+  butterflyMeta?: {
+    hookId: string;
+    sourceEventId?: string;
+    sourceDecisionTitle?: string;
+    label: string;
+  };
 };
 
 export type EventDecisionContentHints = {

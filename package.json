@@ -66,7 +66,11 @@
     "verify:neighborhood-identity": "npx tsx scripts/verify-neighborhood-identity.ts",
     "verify:daily-priority": "npx tsx scripts/verify-daily-priority.ts",
     "verify:event-content": "npx tsx scripts/verify-event-content.ts",
+    "verify:pilot-rhythm": "npx tsx scripts/verify-pilot-rhythm.ts",
+    "verify:butterfly-hooks": "npx tsx scripts/verify-butterfly-hooks.ts",
+    "analyze:butterfly-hooks": "npx tsx scripts/analyze-butterfly-hooks.ts",
     "analyze:event-variety": "npx tsx scripts/analyze-event-variety.ts",
+    "analyze:pilot-rhythm": "npx tsx scripts/analyze-pilot-rhythm.ts",
     "analyze:social": "npx tsx scripts/analyze-social-balance.ts",
     "analyze:social-decisions": "npx tsx scripts/analyze-social-decisions.ts",
     "verify:all": "npm run typecheck && npm run verify:pilot-systems && npm run verify:social && npm run analyze:social && npm run analyze:social-decisions && npm run verify:vehicles && npm run verify:containers && npm run verify:container-events && npm run verify:personnel && npm run verify:leaderboard"

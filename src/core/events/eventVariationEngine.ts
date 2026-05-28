@@ -1,3 +1,4 @@
+import { normalizeContainerNeighborhoodId } from '@/core/containers/containerNeighborhoodBridge';
 import { createSeededRandom, hashSeed } from '@/core/game/createSeededRandom';
 import { getNeighborhoodIdentity } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 import { normalizeNeighborhoodId } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
@@ -12,8 +13,10 @@ import {
   EVENT_CONTENT_PROFILES,
   getEventContentProfileById,
 } from './eventContentLibrary';
+import { getPilotRhythmPlan } from './pilotRhythmConstants';
 import type {
   EventContentCategory,
+  EventContentMeta,
   EventContentProfile,
   EventContentVariationContext,
   EventVariationHistory,
@@ -64,20 +67,84 @@ export function mapEventToContentCategory(event: EventCard): EventContentCategor
   if (cat.includes('bakım') || cat.includes('maintenance')) {
     return 'maintenance';
   }
+  if (cat.includes('denetim') || cat.includes('inspection')) {
+    return 'inspection_gap';
+  }
+  if (cat.includes('community_support') || cat.includes('gönüllü')) {
+    return 'community_support';
+  }
   return 'citizen_complaint';
+}
+
+type EventNeighborhoodFields = EventCard & {
+  relatedNeighborhoodId?: string;
+  districtId?: string;
+  targetNeighborhoodId?: string;
+  location?: { neighborhoodId?: string };
+  contentMeta?: EventContentMeta;
+  context?: { neighborhoodId?: string };
+};
+
+export type ResolveEventNeighborhoodOptions = {
+  fallbackNeighborhoodId?: string;
+  /** Analyzer/metrics: mahalle yoksa 'unknown' döner (oyun fallback'i cumhuriyet). */
+  treatMissingAsUnknown?: boolean;
+};
+
+/** Event kartından canonical mahalle id çıkarır; bilinmeyen id crash etmez. */
+export function pickNeighborhoodIdFromEvent(event: EventCard): string | null {
+  const extended = event as EventNeighborhoodFields;
+  const candidates = [
+    event.neighborhoodId,
+    extended.relatedNeighborhoodId,
+    extended.districtId,
+    extended.targetNeighborhoodId,
+    extended.location?.neighborhoodId,
+    extended.contentMeta?.neighborhoodId,
+    extended.context?.neighborhoodId,
+    event.district,
+  ];
+
+  for (const candidate of candidates) {
+    const normalized =
+      normalizeNeighborhoodId(candidate) ??
+      normalizeContainerNeighborhoodId(candidate);
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  for (const pilotDistrictId of event.districtIds ?? []) {
+    const fromPilot = normalizeContainerNeighborhoodId(pilotDistrictId);
+    if (fromPilot) {
+      return fromPilot;
+    }
+  }
+
+  return null;
 }
 
 export function resolveEventNeighborhoodId(
   event: EventCard,
   fallbackDistrictNeighborhood?: string,
+  options?: ResolveEventNeighborhoodOptions,
 ): string {
-  const fromEvent =
-    normalizeNeighborhoodId(event.neighborhoodId) ??
-    normalizeNeighborhoodId(event.district);
+  const fromEvent = pickNeighborhoodIdFromEvent(event);
   if (fromEvent) {
     return fromEvent;
   }
-  return normalizeNeighborhoodId(fallbackDistrictNeighborhood) ?? 'cumhuriyet';
+
+  const fromFallback =
+    normalizeNeighborhoodId(fallbackDistrictNeighborhood) ??
+    normalizeNeighborhoodId(options?.fallbackNeighborhoodId);
+  if (fromFallback) {
+    return fromFallback;
+  }
+
+  if (options?.treatMissingAsUnknown) {
+    return 'unknown';
+  }
+  return 'cumhuriyet';
 }
 
 export function buildEventVariationHistory(
@@ -400,6 +467,8 @@ export function applyContentProfileToEvent(
     : undefined;
   const identity = getNeighborhoodIdentity(context.neighborhoodId);
 
+  const archetypeLabels = profile.decisionBlueprints.map((bp) => bp.strategyLabel);
+
   return {
     ...event,
     title,
@@ -415,6 +484,13 @@ export function applyContentProfileToEvent(
     contentFutureHookHint: profile.futureHook
       ? 'Bu karar ileride tekrar gündeme gelebilir.'
       : undefined,
+    contentMeta: {
+      profileId: profile.id,
+      category: profile.category,
+      narrativeTone: profile.narrativeTone,
+      archetypeLabels,
+      neighborhoodId: context.neighborhoodId,
+    },
     decisions: buildDecisionsFromBlueprints(event, profile, context.dailyPriorityKey),
   };
 }
@@ -424,14 +500,20 @@ export function enrichEventWithContentVariation(
   context: EventContentVariationContext,
 ): EventCard {
   const profile = selectContentProfileForEvent(event, context);
+  const identity = getNeighborhoodIdentity(context.neighborhoodId);
+  const withNeighborhood = {
+    ...event,
+    neighborhoodId: context.neighborhoodId,
+    district: identity.shortName,
+  };
+
   if (!profile) {
     if (context.history.recentTitles.includes(event.title)) {
-      const identity = getNeighborhoodIdentity(context.neighborhoodId);
       const deduped = `${event.title} · ${identity.shortName}`;
       context.history.recentTitles.push(deduped);
-      return { ...event, neighborhoodId: context.neighborhoodId, district: identity.shortName, title: deduped };
+      return { ...withNeighborhood, title: deduped };
     }
-    return event;
+    return withNeighborhood;
   }
   context.batchProfileIds.push(profile.id);
   context.batchCategories.push(profile.category);
@@ -480,7 +562,10 @@ export function appendPilotEventContentMemory(
 export function enrichDailyEventSetWithEventContent(
   params: EnrichDailyEventSetParams,
 ): DailyEventSet {
-  const { dailyEventSet, catalog, gameState, day, dailyPriorityKey } = params;
+  const { dailyEventSet, catalog, gameState, day, dailyPriorityKey, districtId } =
+    params;
+  const pilotDistrictNeighborhood =
+    normalizeContainerNeighborhoodId(districtId) ?? undefined;
   if (day <= 1) {
     return dailyEventSet;
   }
@@ -501,7 +586,17 @@ export function enrichDailyEventSetWithEventContent(
     if (!card) {
       return;
     }
-    const neighborhoodId = resolveEventNeighborhoodId(card);
+    const plan = getPilotRhythmPlan(day);
+    const cardNeighborhood = pickNeighborhoodIdFromEvent(card);
+    let neighborhoodId = resolveEventNeighborhoodId(card, pilotDistrictNeighborhood);
+    if (
+      day > 1 &&
+      pilotDistrictNeighborhood &&
+      plan.preferredNeighborhoods?.includes(pilotDistrictNeighborhood) &&
+      cardNeighborhood !== pilotDistrictNeighborhood
+    ) {
+      neighborhoodId = pilotDistrictNeighborhood;
+    }
     const context: EventContentVariationContext = {
       day,
       neighborhoodId,

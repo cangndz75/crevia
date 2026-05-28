@@ -12,6 +12,11 @@ import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import type { GameState } from '@/core/models/GameState';
 import type { DailyPriorityKey } from '@/core/dailyPriority/dailyPriorityTypes';
 import {
+  applyButterflyHookFollowUpToDailySet,
+  expireOldButterflyHooks,
+  normalizeButterflyHookState,
+} from '@/core/events/butterflyHookEngine';
+import {
   appendPilotEventContentMemory,
   enrichDailyEventSetWithEventContent,
 } from '@/core/events/eventVariationEngine';
@@ -154,8 +159,17 @@ export function ensureDailyEventsForDay(
 
   const mergedCatalog = mergeEventCatalogs(catalog, currentEventPool);
 
-  const dailyEventSet = generateDailyEventSet({
-    gameState,
+  const hookState = expireOldButterflyHooks(
+    normalizeButterflyHookState(gameState.pilot.butterflyHookState),
+    day,
+  );
+  const gameStateForGen: GameState = {
+    ...gameState,
+    pilot: { ...gameState.pilot, butterflyHookState: hookState },
+  };
+
+  let dailyEventSet = generateDailyEventSet({
+    gameState: gameStateForGen,
     day,
     districtId,
     events: mergedCatalog,
@@ -164,10 +178,34 @@ export function ensureDailyEventsForDay(
     dailyPriorityKey: options?.dailyPriorityKey,
   });
 
+  const butterflyApplied = applyButterflyHookFollowUpToDailySet({
+    dailyEventSet,
+    gameState: gameStateForGen,
+    day,
+    districtId,
+    dailyPriorityKey: options?.dailyPriorityKey,
+  });
+  dailyEventSet = butterflyApplied.dailyEventSet;
+  if (butterflyApplied.supplementalEvents.length > 0) {
+    for (const card of butterflyApplied.supplementalEvents) {
+      if (!mergedCatalog.some((e) => e.id === card.id)) {
+        mergedCatalog.push(card);
+      }
+    }
+  }
+
   dailyEventSet.generatedAt = new Date().toISOString();
 
+  const gameStateWithHooks: GameState = {
+    ...gameStateForGen,
+    pilot: {
+      ...gameStateForGen.pilot,
+      butterflyHookState: butterflyApplied.hookState,
+    },
+  };
+
   const applied = applyDailySetToGameState(
-    gameState,
+    gameStateWithHooks,
     dailyEventSet,
     mergedCatalog,
     options?.dailyPriorityKey,

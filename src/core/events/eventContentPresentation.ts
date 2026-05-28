@@ -27,6 +27,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   noise: 'Gürültü',
   sidewalk_occupation: 'Kaldırım',
   butterfly: 'Kelebek etki',
+  inspection_gap: 'Denetim boşluğu',
+  community_support: 'Topluluk desteği',
 };
 
 export function getEventPriorityRelation(

@@ -53,6 +53,8 @@ export type EndDayOptions = {
   dailyGoalState?: DailyGoalState | null;
   /** Gün sonu günlük öncelik sonucu — rapor snapshot. */
   dailyPriorityResult?: DailyPriorityReportResult | null;
+  /** Karar yankısı özeti — rapor snapshot. */
+  butterflySummaryLines?: string[];
 };
 
 function getMetrics(state: EndDayState) {
@@ -144,6 +146,7 @@ export function endDay(
     socialPulseStateBefore: options?.socialPulseStateBefore,
     dailyGoalState: options?.dailyGoalState,
     dailyPriorityResult: options?.dailyPriorityResult,
+    butterflySummaryLines: options?.butterflySummaryLines,
   });
 
   let nextState: EndDayState = applyUnresolvedEventPenalty({

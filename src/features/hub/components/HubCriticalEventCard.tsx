@@ -17,6 +17,7 @@ import {
   buildEventCardPriorityChip,
   buildEventCategoryChip,
 } from '@/core/events/eventContentPresentation';
+import { getPilotRhythmChipLabel } from '@/core/events/pilotRhythmPresentation';
 import {
   getNeighborhoodIdentityChipLabel,
   normalizeNeighborhoodId,
@@ -148,6 +149,7 @@ export function HubCriticalEventCard() {
   const featuredId = useGameStore((s) => s.gameState.featuredEventId);
   const advisorBody = useGameStore((s) => s.gameState.eventAdvisor.body);
   const dailyPriorityKey = useGameStore((s) => s.dailyPriorityState?.selectedKey);
+  const currentDay = useGameStore((s) => s.gameState.city.day);
 
   const event = useMemo(() => {
     const featured = activeEvents.find((e) => e.id === featuredId);
@@ -193,6 +195,7 @@ export function HubCriticalEventCard() {
       : null;
   const categoryChip = buildEventCategoryChip(event);
   const priorityChip = buildEventCardPriorityChip(event, dailyPriorityKey);
+  const rhythmChip = getPilotRhythmChipLabel(event, currentDay);
 
   return (
     <Animated.View
@@ -231,6 +234,11 @@ export function HubCriticalEventCard() {
           {priorityChip ? (
             <Text style={styles.priorityRelationText} numberOfLines={1}>
               {priorityChip}
+            </Text>
+          ) : null}
+          {rhythmChip && !priorityChip ? (
+            <Text style={styles.rhythmChipText} numberOfLines={1}>
+              {rhythmChip}
             </Text>
           ) : null}
 
@@ -410,6 +418,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: colors.primary,
+    marginTop: 2,
+  },
+  rhythmChipText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   quoteWrap: {

@@ -10,6 +10,7 @@ const ALIAS_TO_CONTAINER_NEIGHBORHOOD: Record<string, ContainerNeighborhoodId> =
     cumhuriyet: 'cumhuriyet',
     sanayi: 'sanayi',
     industrial_market: 'sanayi',
+    industrialmarket: 'sanayi',
     sanayipazar: 'sanayi',
     pazar: 'sanayi',
     istasyon: 'istasyon',
@@ -48,6 +49,10 @@ export function normalizeContainerNeighborhoodId(
   }
   if (isContainerNeighborhoodId(value)) {
     return value;
+  }
+  const trimmed = value.trim();
+  if (trimmed in ALIAS_TO_CONTAINER_NEIGHBORHOOD) {
+    return ALIAS_TO_CONTAINER_NEIGHBORHOOD[trimmed] ?? null;
   }
   const key = normalizeKey(value);
   return ALIAS_TO_CONTAINER_NEIGHBORHOOD[key] ?? null;

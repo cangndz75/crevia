@@ -22,6 +22,10 @@ import type { PersonnelState, PersonnelTeam } from '@/core/personnel/personnelTy
 import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
 import type { PlayerProgress } from '@/core/xp/types';
 import type { GameState } from '@/core/models/GameState';
+import {
+  createDefaultButterflyHookState,
+  normalizeButterflyHookState,
+} from '@/core/events/butterflyHookEngine';
 import type { PilotGameState } from '@/core/models/PilotGameState';
 
 import {
@@ -39,7 +43,8 @@ import type { GameStore } from './useGameStore';
 // Save version & storage key
 // ---------------------------------------------------------------------------
 
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
+const SAVE_VERSION_8 = 8;
 const SAVE_VERSION_7 = 7;
 const SAVE_VERSION_6 = 6;
 const SAVE_VERSION_5 = 5;
@@ -183,16 +188,26 @@ function ensurePilotOnGameState(gameState: GameState): GameState {
   if (!isValidPilotState(gameState.pilot)) {
     return {
       ...gameState,
-      pilot: createDefaultPilotState(),
+      pilot: {
+        ...createDefaultPilotState(),
+        butterflyHookState: createDefaultButterflyHookState(),
+      },
     };
   }
-  if (gameState.pilot.run === undefined) {
-    return {
-      ...gameState,
-      pilot: { ...gameState.pilot, run: null },
-    };
+  let pilot = gameState.pilot;
+  if (pilot.run === undefined) {
+    pilot = { ...pilot, run: null };
   }
-  return gameState;
+  pilot = {
+    ...pilot,
+    butterflyHookState: normalizeButterflyHookState(
+      pilot.butterflyHookState ?? createDefaultButterflyHookState(),
+    ),
+  };
+  if (pilot === gameState.pilot) {
+    return gameState;
+  }
+  return { ...gameState, pilot };
 }
 
 function isValidDailyGoal(val: unknown): val is DailyGoal {
@@ -339,6 +354,7 @@ export function normalizePersistedSave(
     version !== SAVE_VERSION_5 &&
     version !== SAVE_VERSION_6 &&
     version !== SAVE_VERSION_7 &&
+    version !== SAVE_VERSION_8 &&
     version !== SAVE_VERSION
   ) {
     return null;

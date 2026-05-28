@@ -12,6 +12,7 @@ import { ReportSocialSummary } from '@/features/reports/components/ReportSocialS
 import { ReportDailyGoalsSummary } from '@/features/reports/components/ReportDailyGoalsSummary';
 import { ReportDailyPrioritySummary } from '@/features/reports/components/ReportDailyPrioritySummary';
 import { buildDay1TutorialPriorityLine } from '@/core/dailyPriority/dailyPriorityPresentation';
+import { ReportButterflySummary } from '@/features/reports/components/ReportButterflySummary';
 import { ReportPersonnelSummary } from '@/features/reports/components/ReportPersonnelSummary';
 import { getPilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
 import { TutorialCoachOverlay } from '@/features/tutorial/TutorialCoachOverlay';
@@ -173,6 +174,7 @@ function ReportContent({
         }
       />
       <ReportDailyGoalsSummary results={report.dailyGoalResults} />
+      <ReportButterflySummary lines={report.butterflySummaryLines ?? []} />
       <ReportPersonnelSummary lines={report.personnelSummaryLines ?? []} />
       <ReportContainerSummary lines={report.containerSummaryLines ?? []} />
       <ReportVehicleSummary lines={report.vehicleSummaryLines ?? []} />

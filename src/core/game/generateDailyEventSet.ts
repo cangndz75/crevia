@@ -33,6 +33,12 @@ import {
   mapEventToContentCategory,
 } from '@/core/events/eventVariationEngine';
 import type { EventContentCategory } from '@/core/events/eventContentTypes';
+import {
+  applyPilotRhythmToDailyEventSet,
+  getPilotRhythmPlan,
+  resolveRhythmEventNeighborhood,
+  scoreEventForRhythm,
+} from '@/core/events/pilotRhythmEngine';
 
 export type GenerateDailyEventSetParams = {
   gameState: GameState;
@@ -79,6 +85,23 @@ function cloneEventCards(events: EventCard[]): EventCard[] {
     ...event,
     decisions: event.decisions.map((decision) => ({ ...decision })),
   }));
+}
+
+/** İç pipeline catalog mutasyonlarını çağıran havuza yansıtır. */
+function syncCatalogToSource(
+  source: EventCard[],
+  target: EventCard[],
+): void {
+  const byId = new Map(source.map((e) => [e.id, e]));
+  for (let i = 0; i < target.length; i += 1) {
+    const updated = byId.get(target[i]!.id);
+    if (updated) {
+      target[i] = {
+        ...updated,
+        decisions: updated.decisions.map((d) => ({ ...d })),
+      };
+    }
+  }
 }
 
 function pickWeightedUnique(
@@ -259,6 +282,24 @@ export function generateDailyEventSet(
     batchCategories.push(mapEventToContentCategory(event));
   };
 
+  const trackRhythmNeighborhood = (event: EventCard) => {
+    const nh = resolveRhythmEventNeighborhood(event);
+    if (nh) {
+      rhythmNeighborhoodsSeen.push(nh);
+    }
+  };
+
+  const buildRhythmContext = () => ({
+    day,
+    gameState,
+    dailyPriorityKey,
+    neighborhoods: rhythmNeighborhoodsSeen,
+    batchCategories: [...batchCategories],
+    recentEventTitles: gameState.pilot.eventContentRecentTitles,
+    recentProfileIds: gameState.pilot.eventContentRecentProfileIds,
+    pilotDistrictId: districtId,
+  });
+
   const tutorialActive = day <= 1;
   const vehicleSignals: VehicleEventSignal[] = vehicleState
     ? createVehicleEventSignals(vehicleState, {
@@ -274,6 +315,8 @@ export function generateDailyEventSet(
   });
   const theme = dayPlan?.theme;
   const counts = getDailyEventCounts(day);
+  const rhythmPlan = getPilotRhythmPlan(day);
+  const rhythmNeighborhoodsSeen: string[] = [];
   const runId = gameState.pilot.run?.id ?? null;
   const seed = buildSeed(districtId, day, runId);
   const rng = createSeededRandom(seed);
@@ -303,7 +346,7 @@ export function generateDailyEventSet(
         ...weightBase,
         districtMatch: districtMatchFor?.(event),
       });
-      return applyVehicleCandidateWeightSuppression(
+      const suppressed = applyVehicleCandidateWeightSuppression(
         raw,
         event,
         pool,
@@ -311,6 +354,12 @@ export function generateDailyEventSet(
         day,
         tutorialActive,
       );
+      const rhythmBonus = scoreEventForRhythm(
+        event,
+        rhythmPlan,
+        buildRhythmContext(),
+      );
+      return Math.max(1, suppressed + rhythmBonus);
     };
 
   const selectedIds = new Set<string>();
@@ -338,6 +387,7 @@ export function generateDailyEventSet(
   if (anchorEvent) {
     assignRole(anchorEventId, 'anchor');
     trackCategory(anchorEvent);
+    trackRhythmNeighborhood(anchorEvent);
   }
 
   let sidePool = listSideCandidates(catalog, context, day, selectedIds);
@@ -358,6 +408,7 @@ export function generateDailyEventSet(
   for (const event of sidePicked) {
     assignRole(event.id, 'side');
     trackCategory(event);
+    trackRhythmNeighborhood(event);
   }
 
   let remainingPool = listDayCandidates(catalog, context, day, selectedIds, {
@@ -379,6 +430,7 @@ export function generateDailyEventSet(
   for (const event of quickPicked) {
     assignRole(event.id, 'quick');
     trackCategory(event);
+    trackRhythmNeighborhood(event);
   }
 
   const afterQuickExclude = new Set(selectedIds);
@@ -403,6 +455,7 @@ export function generateDailyEventSet(
   for (const event of opportunityPicked) {
     assignRole(event.id, 'opportunity');
     trackCategory(event);
+    trackRhythmNeighborhood(event);
   }
 
   let butterflyEventIds: string[] = [];
@@ -473,7 +526,7 @@ export function generateDailyEventSet(
     catalog,
   });
 
-  return enrichDailyEventSetWithEventContent({
+  const withContent = enrichDailyEventSetWithEventContent({
     dailyEventSet: withVehicle,
     catalog,
     gameState,
@@ -481,6 +534,20 @@ export function generateDailyEventSet(
     districtId,
     dailyPriorityKey,
   });
+
+  const withRhythm = applyPilotRhythmToDailyEventSet({
+    dailyEventSet: withContent,
+    catalog,
+    gameState,
+    day,
+    dailyPriorityKey,
+  });
+
+  if (events !== pilotEvents) {
+    syncCatalogToSource(catalog, events);
+  }
+
+  return withRhythm;
 }
 
 export function resolveEventCardsFromDailySet(

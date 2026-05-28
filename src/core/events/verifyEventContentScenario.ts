@@ -8,7 +8,10 @@ import { createSeededRandom, hashSeed } from '@/core/game/createSeededRandom';
 import type { DailyPriorityKey } from '@/core/dailyPriority/dailyPriorityTypes';
 import type { EventCard } from '@/core/models/EventCard';
 import type { GameState } from '@/core/models/GameState';
-import { DEFAULT_PILOT_DISTRICT_ID } from '@/core/models/DistrictProfile';
+import {
+  DEFAULT_PILOT_DISTRICT_ID,
+  type PilotDistrictId,
+} from '@/core/models/DistrictProfile';
 
 import {
   EVENT_CONTENT_PROFILES,
@@ -24,13 +27,32 @@ import {
   enrichDailyEventSetWithEventContent,
   isProfileBlocked,
   mapEventToContentCategory,
+  pickNeighborhoodIdFromEvent,
   rankProfilesForEvent,
+  resolveEventNeighborhoodId,
   selectContentProfileForEvent,
 } from './eventVariationEngine';
 import type {
   EventContentCategory,
   EventContentVariationContext,
 } from './eventContentTypes';
+
+const DECLARED_CONTENT_CATEGORIES: EventContentCategory[] = [
+  'citizen_complaint',
+  'waste_container',
+  'social_pressure',
+  'vehicle_route',
+  'personnel_morale',
+  'maintenance',
+  'market_vendor',
+  'noise',
+  'sidewalk_occupation',
+  'opportunity',
+  'butterfly',
+  'permanent_solution',
+  'inspection_gap',
+  'community_support',
+];
 
 const CANONICAL_NEIGHBORHOODS = [
   'merkez',
@@ -115,6 +137,32 @@ export function verifyEventContentScenario(): VerifyEventContentOutcome {
       `En az 25 content profile (${profileCount})`,
       `Profile sayısı yetersiz: ${profileCount}`,
     ) && ok;
+
+  const wasteCount = EVENT_CONTENT_PROFILES.filter(
+    (p) => p.category === 'waste_container',
+  ).length;
+  ok =
+    assert(
+      checks,
+      wasteCount >= 6,
+      `waste_container profil sayısı >= 6 (${wasteCount})`,
+      `waste_container yetersiz: ${wasteCount}`,
+    ) && ok;
+
+  const libraryCategoryCounts: Partial<Record<EventContentCategory, number>> = {};
+  for (const p of EVENT_CONTENT_PROFILES) {
+    libraryCategoryCounts[p.category] = (libraryCategoryCounts[p.category] ?? 0) + 1;
+  }
+  const unusedDeclared = DECLARED_CONTENT_CATEGORIES.filter(
+    (cat) => (libraryCategoryCounts[cat] ?? 0) === 0,
+  );
+  if (unusedDeclared.length > 0) {
+    checks.push(
+      `⚠ declared but unused categories: ${unusedDeclared.join(', ')}`,
+    );
+  } else {
+    checks.push('✓ Tüm declared kategorilerde en az 1 profil');
+  }
 
   for (const profile of EVENT_CONTENT_PROFILES) {
     const hasTemplates =
@@ -385,7 +433,87 @@ export function verifyEventContentScenario(): VerifyEventContentOutcome {
         'Event kart priority chip',
         'Priority chip üretilemedi',
       ) && ok;
+
+    ok =
+      assert(
+        checks,
+        enriched.contentMeta?.profileId === picked.id &&
+          enriched.contentMeta?.neighborhoodId === 'sanayi',
+        'contentMeta neighborhoodId enrichment',
+        'contentMeta neighborhoodId eksik',
+      ) && ok;
   }
+
+  const resolverCanonical = new Set<string>();
+  const baseCard = sampleEventForCategory('waste_container');
+  for (const nid of CANONICAL_NEIGHBORHOODS) {
+    const resolved = resolveEventNeighborhoodId({
+      ...baseCard,
+      neighborhoodId: nid,
+      district: '',
+      districtIds: [],
+    });
+    if (resolved === nid) {
+      resolverCanonical.add(resolved);
+    }
+  }
+  const pilotDistrictPairs: Array<[string, string]> = [
+    ['central', 'merkez'],
+    ['cumhuriyet', 'cumhuriyet'],
+    ['industrial_market', 'sanayi'],
+  ];
+  for (const [pilotId, expected] of pilotDistrictPairs) {
+    const resolved = resolveEventNeighborhoodId({
+      ...baseCard,
+      neighborhoodId: undefined,
+      district: '',
+      districtIds: [pilotId as PilotDistrictId],
+    });
+    if (resolved === expected) {
+      resolverCanonical.add(resolved);
+    }
+  }
+  ok =
+    assert(
+      checks,
+      resolverCanonical.size >= 3,
+      `Mahalle resolver >=3 canonical (${resolverCanonical.size})`,
+      `Canonical mahalle yetersiz: ${resolverCanonical.size}`,
+    ) && ok;
+
+  const cardWithoutMetaNeighborhood: EventCard = {
+    ...sampleEventForCategory('waste_container'),
+    neighborhoodId: 'merkez',
+    contentMeta: {
+      profileId: 'test',
+      category: 'waste_container',
+      narrativeTone: 'operational',
+    },
+  };
+  ok =
+    assert(
+      checks,
+      resolveEventNeighborhoodId(cardWithoutMetaNeighborhood) === 'merkez',
+      'contentMeta olmadan neighborhoodId alanından okuma',
+      'Mahalle resolver contentMeta olmadan başarısız',
+    ) && ok;
+
+  const bareEvent: EventCard = {
+    ...sampleEventForCategory('waste_container'),
+    neighborhoodId: undefined,
+    district: '',
+    districtIds: [],
+  };
+  const unknownResolved = resolveEventNeighborhoodId(bareEvent, undefined, {
+    treatMissingAsUnknown: true,
+  });
+  ok =
+    assert(
+      checks,
+      unknownResolved === 'unknown' && pickNeighborhoodIdFromEvent(bareEvent) == null,
+      'Bilinmeyen mahalle → unknown (crash yok)',
+      'Unknown mahalle fallback hatalı',
+    ) && ok;
 
   return { ok, checks };
 }

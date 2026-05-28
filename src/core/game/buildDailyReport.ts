@@ -44,6 +44,8 @@ export type BuildDailyReportParams = {
   dailyGoalState?: DailyGoalState | null;
   /** Gün sonu günlük öncelik sonucu — snapshot. */
   dailyPriorityResult?: DailyPriorityReportResult | null;
+  /** Karar yankısı satırları — snapshot (en fazla 2). */
+  butterflySummaryLines?: string[];
 };
 
 function formatCurrency(amount: number): string {
@@ -303,6 +305,10 @@ export function buildDailyReport(params: BuildDailyReportParams): DailyReport {
     dailyGoalResults:
       dailyGoalResults.length > 0 ? dailyGoalResults : undefined,
     dailyPriorityResult: params.dailyPriorityResult ?? undefined,
+    butterflySummaryLines:
+      params.butterflySummaryLines && params.butterflySummaryLines.length > 0
+        ? params.butterflySummaryLines.slice(0, 2)
+        : undefined,
     createdAt: new Date().toISOString(),
   };
 }

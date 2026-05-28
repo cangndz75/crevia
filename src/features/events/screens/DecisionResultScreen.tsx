@@ -142,6 +142,30 @@ export function DecisionResultScreen() {
               </View>
             ) : null}
 
+            {result.butterflyHint ? (
+              <View
+                style={[
+                  styles.butterflyHintCard,
+                  result.butterflyHint.tone === 'warning'
+                    ? styles.butterflyHintWarning
+                    : result.butterflyHint.tone === 'opportunity'
+                      ? styles.butterflyHintOpportunity
+                      : styles.butterflyHintInfo,
+                ]}>
+                <Text style={styles.butterflyHintTitle}>
+                  {result.butterflyHint.title}
+                </Text>
+                <Text style={styles.butterflyHintText}>
+                  {result.butterflyHint.text}
+                </Text>
+                {result.butterflyHint.dueText ? (
+                  <Text style={styles.butterflyHintDue}>
+                    {result.butterflyHint.dueText}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+
             <Animated.View entering={FadeInUp.delay(120).duration(320)}>
               <DecisionImpactMetricRow metrics={result.metricChanges} />
             </Animated.View>
@@ -330,6 +354,43 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: eventDetail.tealDark,
     lineHeight: 17,
+  },
+  butterflyHintCard: {
+    borderRadius: eventDetail.smallRadius,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    gap: 4,
+  },
+  butterflyHintInfo: {
+    backgroundColor: colors.secondaryMuted,
+    borderColor: 'rgba(59, 130, 246, 0.2)',
+  },
+  butterflyHintWarning: {
+    backgroundColor: colors.warningMuted,
+    borderColor: 'rgba(234, 179, 8, 0.25)',
+  },
+  butterflyHintOpportunity: {
+    backgroundColor: colors.successMuted,
+    borderColor: 'rgba(34, 197, 94, 0.2)',
+  },
+  butterflyHintTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.35,
+  },
+  butterflyHintText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: eventDetail.textDark,
+    lineHeight: 17,
+  },
+  butterflyHintDue: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
   missingBox: {
     backgroundColor: eventDetail.card,
