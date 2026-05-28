@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
+import { DAY1_STATUS_MUTED_NOTE } from '@/core/onboarding/onboardingPresentation';
 import { HubCriticalEventCard } from '@/features/hub/components/HubCriticalEventCard';
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
 import { HubDailyGoalCard } from '@/features/hub/components/HubDailyGoalCard';
@@ -25,7 +26,7 @@ import { TutorialTarget } from '@/features/tutorial/TutorialTarget';
 import { OnboardingCoachBubble } from '@/features/onboarding/components/OnboardingCoachBubble';
 import { OnboardingFocusHint } from '@/features/onboarding/components/OnboardingFocusHint';
 import { useOnboardingHint } from '@/features/onboarding/hooks/useOnboardingHint';
-import { selectOnboardingHubVisibilityFromStore } from '@/core/onboarding/onboardingSelectors';
+import { useOnboardingHubVisibility } from '@/features/onboarding/hooks/useOnboardingHubVisibility';
 import {
   selectActiveTutorialStepForScreen,
   selectIsDay1TutorialActive,
@@ -36,6 +37,10 @@ import { GameScreenShell } from '@/ui/components/GameScreenShell';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
 
+/**
+ * Merkez ekranı — mockup sırası:
+ * Görev Takibi → Kritik Olay → Ödüller → Hızlı Aksiyonlar → Sosyal/Filo → Personel → Bölge → Gün Bitir
+ */
 export function HubScreen() {
   const router = useRouter();
   const endCurrentDay = useGameStore((s) => s.endCurrentDay);
@@ -45,18 +50,8 @@ export function HubScreen() {
     selectActiveTutorialStepForScreen(s, 'hub'),
   );
   const tutorialActive = useGameStore(selectIsDay1TutorialActive);
-  const hubVisibility = useGameStore((s) =>
-    selectOnboardingHubVisibilityFromStore({
-      gameState: s.gameState,
-      tutorialState: s.tutorialState,
-      dailyPriorityState: s.dailyPriorityState,
-      dailyGoalState: s.dailyGoalState,
-      lastDecisionResult: s.lastDecisionResult,
-      lastDailyReport: s.lastDailyReport,
-      decisionHistory: s.decisionHistory,
-      onboardingDismissedHintIds: s.onboardingDismissedHintIds,
-    }),
-  );
+  const hubVisibility = useOnboardingHubVisibility();
+  const isDay1Layout = hubVisibility.showDailyPriorityCompact;
   const { coachHint, dismissHint } = useOnboardingHint('hub');
   const { focusHint: criticalEventHint } = useOnboardingHint(
     'hub',
@@ -74,6 +69,12 @@ export function HubScreen() {
     'day2_goals_intro',
   );
 
+  const showInlineFocusHints = !coachHint && !hubTutorialStep;
+  const showLiveFlowHint =
+    showInlineFocusHints &&
+    !!liveFlowHint &&
+    !hubVisibility.showTodayFlowPlaceholder;
+
   const metricsHighlight = useTutorialHighlight('hub', 'hub_metrics');
   const criticalHighlight = useTutorialHighlight('hub', 'critical_event_card');
   const socialHighlight = useTutorialHighlight('hub', 'social_signal_card');
@@ -83,6 +84,34 @@ export function HubScreen() {
     endCurrentDay();
     router.push('/reports');
   };
+
+  const todayFlowBlock =
+    hubVisibility.showTodayFlow || hubVisibility.showTodayFlowPlaceholder ? (
+      <>
+        <HubTodayFlowStrip />
+        {showLiveFlowHint ? (
+          <OnboardingFocusHint
+            hint={liveFlowHint!}
+            onDismiss={() => dismissHint(liveFlowHint!.id)}
+          />
+        ) : null}
+      </>
+    ) : null;
+
+  const day1FocusStack = isDay1Layout ? (
+    <View style={styles.day1Focus}>
+      <HubDailyPriorityCard />
+      {hubVisibility.showQuickActionsPanel ? <HubQuickActionsPanel /> : null}
+      {todayFlowBlock}
+    </View>
+  ) : null;
+
+  const day2PriorityBlock = !isDay1Layout ? (
+    <View style={styles.priorityWrap}>
+      <HubDailyPriorityCard />
+      {hubVisibility.showCarryOverStrip ? <HubCarryOverSignalStrip /> : null}
+    </View>
+  ) : null;
 
   return (
     <GameScreenShell
@@ -98,22 +127,8 @@ export function HubScreen() {
           <HubTaskTrackingHero />
         </TutorialTarget>
 
-        <View style={styles.priorityWrap}>
-          <HubDailyPriorityCard />
-          {hubVisibility.showCarryOverStrip ? <HubCarryOverSignalStrip /> : null}
-          {hubVisibility.showTodayFlow || hubVisibility.showTodayFlowPlaceholder ? (
-            <HubTodayFlowStrip />
-          ) : null}
-          {liveFlowHint ? (
-            <OnboardingFocusHint
-              hint={liveFlowHint}
-              onDismiss={() => dismissHint(liveFlowHint.id)}
-            />
-          ) : null}
-        </View>
-
         <View style={styles.criticalWrap}>
-          {criticalEventHint ? (
+          {showInlineFocusHints && criticalEventHint ? (
             <View style={styles.hintPad}>
               <OnboardingFocusHint
                 hint={criticalEventHint}
@@ -130,16 +145,35 @@ export function HubScreen() {
 
         <HubRewardsJourney />
 
-        {hubVisibility.showQuickActionsPanel ? <HubQuickActionsPanel /> : null}
+        {day1FocusStack}
+
+        {!isDay1Layout && showInlineFocusHints && day2GoalsHint ? (
+          <View style={styles.hintPad}>
+            <OnboardingFocusHint
+              hint={day2GoalsHint}
+              onDismiss={() => dismissHint(day2GoalsHint.id)}
+            />
+          </View>
+        ) : null}
+
+        {!isDay1Layout ? day2PriorityBlock : null}
+
+        {!isDay1Layout && hubVisibility.showQuickActionsPanel ? (
+          <HubQuickActionsPanel />
+        ) : null}
+
+        {!isDay1Layout ? (
+          <View style={styles.priorityWrap}>{todayFlowBlock}</View>
+        ) : null}
 
         <HubStatusCardsRow
-          hidden={tutorialActive || !hubVisibility.showStatusCardsRow}
+          hidden={tutorialActive}
           mutedNote={
-            hubVisibility.muteStatusCards ? 'Yakında önem kazanacak' : undefined
+            hubVisibility.muteStatusCards ? DAY1_STATUS_MUTED_NOTE : undefined
           }
         />
-        {hubVisibility.showPersonnelStrip ? <HubPersonnelStrip /> : null}
-        <HubRegionPulseSection />
+
+        <HubPersonnelStrip />
 
         {showSocialCard ? (
           <TutorialTarget
@@ -149,15 +183,9 @@ export function HubScreen() {
           </TutorialTarget>
         ) : null}
 
-        {day2GoalsHint ? (
-          <View style={styles.hintPad}>
-            <OnboardingFocusHint
-              hint={day2GoalsHint}
-              onDismiss={() => dismissHint(day2GoalsHint.id)}
-            />
-          </View>
-        ) : null}
-        <HubDailyGoalCard onEndDay={handleEndDay} />
+        <HubRegionPulseSection />
+
+        <HubDailyGoalCard onEndDay={handleEndDay} endDayOnly />
         <HubPilotReportBanner />
 
         {eventCount > 1 && (
@@ -195,18 +223,21 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   body: {
-    gap: 12,
+    gap: 14,
     paddingBottom: spacing.xxxl,
   },
   bodyWithCoach: {
-    paddingBottom: spacing.xxxl + 150,
+    paddingBottom: spacing.xxxl + 120,
   },
   priorityWrap: {
     gap: 8,
     paddingHorizontal: spacing.lg,
   },
+  day1Focus: {
+    gap: 16,
+  },
   criticalWrap: {
-    marginTop: -spacing.xs,
+    marginTop: -2,
   },
   hintPad: {
     paddingHorizontal: spacing.lg,
@@ -218,6 +249,7 @@ const styles = StyleSheet.create({
     gap: 4,
     marginHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
+    minHeight: 44,
   },
   moreEventsText: {
     fontSize: 13,

@@ -47,6 +47,10 @@ import {
 } from './hubQuickActionRouteEffects';
 import { shouldShowDecisionDetailImpact } from '@/features/events/utils/decisionTradeoffPresentation';
 import {
+  areAllHubQuickActionsLocked,
+  resolveHubQuickActionsLayoutMode,
+} from '@/features/hub/hubUiPresentation';
+import {
   buildHubQuickActionCards,
   getHubQuickActionStatusLabel,
 } from './hubQuickActionPresentation';
@@ -392,6 +396,26 @@ export function verifyHubQuickActionsScenario(): {
     'Day 1 disabled presentation',
     day1Cards.every((c) => c.status === 'disabled' && c.statusLabel === 'Yakında'),
     day1Cards.map((c) => c.statusLabel).join(','),
+  );
+  assert(
+    checks,
+    'Day 1 hub UI locked-rail layout',
+    areAllHubQuickActionsLocked(day1Cards) &&
+      resolveHubQuickActionsLayoutMode(day1Cards, true) === 'locked-rail',
+    resolveHubQuickActionsLayoutMode(day1Cards, true),
+  );
+  assert(
+    checks,
+    'Day 2 hub UI compact-rail layout',
+    resolveHubQuickActionsLayoutMode(
+      selectHubQuickActionCards({
+        hubQuickActionState: createInitialHubQuickActionState(2),
+        currentDay: 2,
+        day1Disabled: false,
+      }),
+      false,
+    ) === 'compact-rail',
+    'compact-rail',
   );
 
   const personnelBefore = createInitialPersonnelState();

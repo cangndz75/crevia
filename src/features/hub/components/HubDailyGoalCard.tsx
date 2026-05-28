@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  type SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -20,9 +21,11 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type HubDailyGoalCardProps = {
   onEndDay: () => void;
+  /** Görev Takibi hero hedefi gösteriyorsa yalnızca Günü Bitir çubuğu */
+  endDayOnly?: boolean;
 };
 
-export function HubDailyGoalCard({ onEndDay }: HubDailyGoalCardProps) {
+export function HubDailyGoalCard({ onEndDay, endDayOnly = false }: HubDailyGoalCardProps) {
   const goal = useGameStore((s) => selectPrimaryDailyGoal(s.dailyGoalState));
   const showGoalsPlaceholder = useGameStore((s) => {
     if (selectPrimaryDailyGoal(s.dailyGoalState)) return false;
@@ -48,7 +51,7 @@ export function HubDailyGoalCard({ onEndDay }: HubDailyGoalCardProps) {
   }));
 
   if (!goal) {
-    if (!showGoalsPlaceholder) return null;
+    if (!showGoalsPlaceholder || endDayOnly) return null;
     return (
       <View style={[styles.panel, shadows.card]}>
         <View style={styles.goalSection}>
@@ -65,6 +68,14 @@ export function HubDailyGoalCard({ onEndDay }: HubDailyGoalCardProps) {
   }
 
   const progressRatio = goal.progressPercent / 100;
+
+  if (endDayOnly) {
+    return (
+      <View style={[styles.panel, styles.panelEndDayOnly, shadows.card]}>
+        <EndDayButton onEndDay={onEndDay} scale={scale} animatedStyle={animatedStyle} />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.panel, shadows.card]}>
@@ -100,36 +111,50 @@ export function HubDailyGoalCard({ onEndDay }: HubDailyGoalCardProps) {
         </View>
       </View>
 
-      <View style={styles.endDayFooter}>
-        <AnimatedPressable
-          onPress={onEndDay}
-          onPressIn={() => {
-            scale.value = withSpring(0.98, { damping: 15, stiffness: 300 });
-          }}
-          onPressOut={() => {
-            scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Günü bitir"
-          style={[styles.endDayBtn, animatedStyle]}>
-          <LinearGradient
-            colors={['#0F4A47', colors.headerTealDark, colors.primary]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.endDayGradient}>
-            <View style={styles.endDayLeft}>
-              <View style={styles.flagBadge}>
-                <Ionicons name="flag" size={15} color="#FFFFFF" />
-              </View>
-              <View style={styles.endDayTextCol}>
-                <Text style={styles.endDayTitle}>Günü Bitir</Text>
-                <Text style={styles.endDayHint}>Günün raporunu gör</Text>
-              </View>
+      <EndDayButton onEndDay={onEndDay} scale={scale} animatedStyle={animatedStyle} />
+    </View>
+  );
+}
+
+function EndDayButton({
+  onEndDay,
+  scale,
+  animatedStyle,
+}: {
+  onEndDay: () => void;
+  scale: SharedValue<number>;
+  animatedStyle: ReturnType<typeof useAnimatedStyle>;
+}) {
+  return (
+    <View style={styles.endDayFooter}>
+      <AnimatedPressable
+        onPress={onEndDay}
+        onPressIn={() => {
+          scale.value = withSpring(0.98, { damping: 15, stiffness: 300 });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="Günü bitir"
+        style={[styles.endDayBtn, animatedStyle]}>
+        <LinearGradient
+          colors={['#0F4A47', colors.headerTealDark, colors.primary]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.endDayGradient}>
+          <View style={styles.endDayLeft}>
+            <View style={styles.flagBadge}>
+              <Ionicons name="flag" size={15} color="#FFFFFF" />
             </View>
-            <Ionicons name="chevron-forward" size={19} color="rgba(255,255,255,0.95)" />
-          </LinearGradient>
-        </AnimatedPressable>
-      </View>
+            <View style={styles.endDayTextCol}>
+              <Text style={styles.endDayTitle}>Günü Bitir</Text>
+              <Text style={styles.endDayHint}>Günün raporunu gör</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={19} color="rgba(255,255,255,0.95)" />
+        </LinearGradient>
+      </AnimatedPressable>
     </View>
   );
 }
@@ -138,24 +163,28 @@ const styles = StyleSheet.create({
   panel: {
     marginHorizontal: spacing.lg,
     backgroundColor: colors.surface,
-    borderRadius: radius.xl,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#E8D9B8',
+    borderColor: 'rgba(232, 155, 46, 0.22)',
     overflow: 'hidden',
+  },
+  panelEndDayOnly: {
+    borderColor: 'rgba(26, 143, 138, 0.2)',
+    backgroundColor: '#FFFCF7',
   },
   goalSection: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 12,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 10,
     backgroundColor: colors.hubGoldMuted,
   },
   trophyCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.surface,
     borderWidth: 1.5,
     borderColor: colors.hubGold,
@@ -174,7 +203,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.9,
   },
   goalText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
     color: colors.textPrimary,
     letterSpacing: -0.2,
@@ -239,8 +268,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 15,
+    paddingVertical: 12,
     paddingHorizontal: 14,
+    minHeight: 44,
   },
   endDayLeft: {
     flexDirection: 'row',

@@ -14,16 +14,19 @@ import { colors } from "@/ui/theme/colors";
 import { radius } from "@/ui/theme/radius";
 import { spacing } from "@/ui/theme/spacing";
 
-/** Sağ pill için üst sınır — greeting alanı korunur */
-const RESOURCE_PILL_MAX_WIDTH = 128;
+const RESOURCE_PILL_MAX_WIDTH = 118;
 
-function buildPilotMetaLine(day: number, districtName: string): string {
+function buildPilotMetaLine(
+  day: number,
+  districtName: string,
+  level: number,
+): string {
   const short = districtName.split(" ")[0] ?? districtName;
-  return `${day}. Gün · ${short}`;
+  return `${day}. Gün · ${short} · Sv.${level}`;
 }
 
 /**
- * Merkez header — avatar + greeting | sağda kaynak/XP pill.
+ * Merkez header — kompakt avatar + meta | kaynak/XP + kısayollar.
  */
 export function DashboardHeader() {
   const router = useRouter();
@@ -31,14 +34,19 @@ export function DashboardHeader() {
   const status = useGameStatus();
   const greeting = useMemo(() => getTimeGreeting(), []);
   const metaLine = useMemo(
-    () => buildPilotMetaLine(status.currentDay, status.selectedDistrictName),
-    [status.currentDay, status.selectedDistrictName],
+    () =>
+      buildPilotMetaLine(
+        status.currentDay,
+        status.selectedDistrictName,
+        status.level,
+      ),
+    [status.currentDay, status.selectedDistrictName, status.level],
   );
   const skylineSource = useMemo(
     () => getPilotDistrictHeroImage(status.selectedDistrictId),
     [status.selectedDistrictId],
   );
-  const greetingLine = `${greeting.title} ${status.playerName} ${greeting.emoji}`;
+  const greetingShort = `${greeting.title}, ${status.playerName}`;
 
   return (
     <View style={styles.outer}>
@@ -46,7 +54,7 @@ export function DashboardHeader() {
         colors={[colors.headerTealDark, colors.headerTeal, "#1E9A95"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.gradient, { paddingTop: insets.top + spacing.sm }]}
+        style={[styles.gradient, { paddingTop: insets.top + spacing.xs }]}
       >
         <Image
           source={skylineSource}
@@ -64,7 +72,7 @@ export function DashboardHeader() {
               style={styles.avatarPress}
             >
               <HeaderAvatar
-                size={56}
+                size={48}
                 level={status.level}
                 showLevelBadge
                 borderColor="rgba(255,255,255,0.9)"
@@ -78,35 +86,57 @@ export function DashboardHeader() {
                 adjustsFontSizeToFit
                 minimumFontScale={0.88}
               >
-                {greetingLine}
+                {greetingShort}
+                <Text style={styles.greetingEmoji}> {greeting.emoji}</Text>
               </Text>
               <Text style={styles.meta} numberOfLines={1}>
                 {metaLine}
               </Text>
-              <View style={styles.levelPill}>
-                <Text style={styles.levelPillText}>Seviye {status.level}</Text>
-              </View>
             </View>
 
-            <View style={styles.resourcePill}>
-              <View style={styles.pillHalf}>
-                <Ionicons name="wallet" size={12} color={colors.hubGold} />
-                <View style={styles.pillTextCol}>
+            <View style={styles.rightCol}>
+              <View style={styles.resourcePill}>
+                <View style={styles.pillHalf}>
+                  <Ionicons name="wallet" size={11} color={colors.hubGold} />
                   <Text style={styles.pillValue} numberOfLines={1}>
                     {status.sourceShort}
                   </Text>
-                  <Text style={styles.pillLabel}>Kaynak</Text>
                 </View>
-              </View>
-              <View style={styles.pillDivider} />
-              <View style={styles.pillHalf}>
-                <Ionicons name="star" size={11} color={colors.hubGold} />
-                <View style={styles.pillTextCol}>
+                <View style={styles.pillDivider} />
+                <View style={styles.pillHalf}>
+                  <Ionicons name="star" size={10} color={colors.hubGold} />
                   <Text style={styles.pillValue} numberOfLines={1}>
                     {status.xp}/{status.xpTarget}
                   </Text>
-                  <Text style={styles.pillLabel}>XP</Text>
                 </View>
+              </View>
+              <View style={styles.shortcutRow}>
+                <Pressable
+                  onPress={() => router.push("/leaderboard" as Href)}
+                  style={({ pressed }) => [
+                    styles.squareShortcut,
+                    pressed && styles.shortcutPressed,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Liderlik tablosu"
+                >
+                  <Ionicons name="podium-outline" size={16} color={colors.hubGold} />
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push("/social" as Href)}
+                  style={({ pressed }) => [
+                    styles.squareShortcut,
+                    pressed && styles.shortcutPressed,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Bildirimler ve sosyal nabız"
+                >
+                  <Ionicons
+                    name="notifications-outline"
+                    size={16}
+                    color="rgba(255,255,255,0.95)"
+                  />
+                </Pressable>
               </View>
             </View>
           </View>
@@ -130,7 +160,7 @@ const styles = StyleSheet.create({
   },
   gradient: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: 16,
+    paddingBottom: 12,
     position: "relative",
   },
   skyline: {
@@ -142,7 +172,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: 20,
+    height: 16,
   },
   content: {
     zIndex: 1,
@@ -158,63 +188,51 @@ const styles = StyleSheet.create({
   greetCol: {
     flex: 1,
     minWidth: 0,
-    gap: 3,
-    paddingRight: 4,
+    gap: 2,
+    paddingRight: 2,
   },
   greeting: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "800",
     color: colors.textInverse,
-    letterSpacing: -0.35,
+    letterSpacing: -0.3,
+  },
+  greetingEmoji: {
+    fontSize: 15,
   },
   meta: {
     fontSize: 11,
     fontWeight: "600",
-    color: "rgba(255,255,255,0.8)",
+    color: "rgba(255,255,255,0.82)",
   },
-  levelPill: {
-    alignSelf: "flex-start",
-    marginTop: 1,
-    backgroundColor: "rgba(0,0,0,0.22)",
-    borderWidth: 1,
-    borderColor: "rgba(245,183,49,0.55)",
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-    borderRadius: radius.full,
-  },
-  levelPillText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: colors.hubGold,
+  rightCol: {
+    alignItems: "flex-end",
+    gap: 6,
+    flexShrink: 0,
   },
   resourcePill: {
     flexDirection: "row",
     alignItems: "center",
-    flexShrink: 0,
     width: RESOURCE_PILL_MAX_WIDTH,
     backgroundColor: "rgba(255,255,255,0.14)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.22)",
-    borderRadius: radius.lg,
-    paddingHorizontal: 7,
-    paddingVertical: 6,
+    borderRadius: radius.md,
+    paddingHorizontal: 6,
+    paddingVertical: 5,
     gap: 4,
   },
   pillHalf: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 3,
     minWidth: 0,
   },
-  pillTextCol: {
-    flex: 1,
-    minWidth: 0,
-    gap: 0,
-  },
   pillDivider: {
     width: 1,
-    height: 22,
+    height: 18,
     backgroundColor: "rgba(255,255,255,0.24)",
     flexShrink: 0,
   },
@@ -223,11 +241,24 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: colors.textInverse,
     letterSpacing: -0.2,
+    flexShrink: 1,
   },
-  pillLabel: {
-    fontSize: 7,
-    fontWeight: "700",
-    color: "rgba(255,255,255,0.8)",
-    letterSpacing: 0.2,
+  shortcutRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  squareShortcut: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.22)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  shortcutPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.97 }],
   },
 });

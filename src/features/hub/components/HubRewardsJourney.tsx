@@ -3,8 +3,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
-import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
-import { hubAssets } from '@/features/hub/utils/hubAssets';
 import { useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
@@ -13,63 +11,11 @@ import { spacing } from '@/ui/theme/spacing';
 
 type Milestone = {
   id: string;
-  label: string;
+  shortLabel: string;
+  caption: string;
   completed: boolean;
   icon: keyof typeof Ionicons.glyphMap;
 };
-
-function MilestoneNode({ milestone }: { milestone: Milestone }) {
-  return (
-    <View style={milestoneStyles.node}>
-      <View
-        style={[
-          milestoneStyles.iconWrap,
-          milestone.completed ? milestoneStyles.iconDone : milestoneStyles.iconPending,
-        ]}>
-        <Ionicons
-          name={milestone.completed ? 'checkmark' : milestone.icon}
-          size={12}
-          color={milestone.completed ? colors.success : 'rgba(255,255,255,0.85)'}
-        />
-      </View>
-      <Text style={milestoneStyles.label} numberOfLines={2}>
-        {milestone.label}
-      </Text>
-    </View>
-  );
-}
-
-const milestoneStyles = StyleSheet.create({
-  node: {
-    alignItems: 'center',
-    gap: 4,
-    flex: 1,
-    minWidth: 0,
-  },
-  iconWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-  },
-  iconDone: {
-    backgroundColor: 'rgba(59, 175, 122, 0.25)',
-    borderColor: colors.success,
-  },
-  iconPending: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderColor: 'rgba(255,255,255,0.35)',
-  },
-  label: {
-    fontSize: 8,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.88)',
-    textAlign: 'center',
-    lineHeight: 10,
-  },
-});
 
 export function HubRewardsJourney() {
   const currentDay = useGameStore((s) => s.gameState.city.day);
@@ -77,57 +23,89 @@ export function HubRewardsJourney() {
 
   const milestones: Milestone[] = [
     {
-      id: 'day1',
-      label: '1 Gün\nTamamlandı',
+      id: 'd1',
+      shortLabel: '1',
+      caption: '1 Gün Tamamlandı',
       completed: currentDay > 1,
       icon: 'checkmark-circle',
     },
     {
-      id: 'day3',
-      label: '3 Gün\nÖdül',
+      id: 'd3',
+      shortLabel: '3',
+      caption: '3 Gün Ödül',
       completed: currentDay >= 3,
-      icon: 'gift',
+      icon: 'gift-outline',
     },
     {
-      id: 'day7',
-      label: '7 Gün\nBüyük Ödül',
+      id: 'd7',
+      shortLabel: '7',
+      caption: '7 Gün Büyük Ödül',
       completed: currentDay >= 7,
-      icon: 'gift',
+      icon: 'trophy-outline',
     },
   ];
 
   return (
     <Animated.View entering={FadeIn.duration(260)} style={styles.wrap}>
-      <Text style={styles.sectionTitle}>ÖDÜLLERİN YOLCULUĞU</Text>
       <LinearGradient
-        colors={[colors.headerTealDark, colors.headerTeal, '#1E9A95']}
+        colors={['#0B3D3A', '#0F4A47', '#157A76']}
         start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={[styles.banner, shadows.card]}>
-        <View style={styles.leftCol}>
-          <View style={styles.streakRow}>
-            <Ionicons name="flame" size={16} color={colors.hubGold} />
+        <View style={styles.topRow}>
+          <View style={styles.streakBadge}>
+            <View style={styles.flameCircle}>
+              <Ionicons name="flame" size={16} color="#fff" />
+            </View>
             <Text style={styles.streakText}>{streak} Günlük Seri</Text>
           </View>
-
-          <View style={styles.trackRow}>
-            <View style={styles.trackLine} />
-            {milestones.map((m) => (
-              <MilestoneNode key={m.id} milestone={m} />
-            ))}
+          <View style={styles.chestWrap}>
+            <Ionicons name="gift" size={36} color={colors.hubGold} />
           </View>
         </View>
 
-        <View style={styles.rightCol}>
-          <HubAssetImage
-            source={hubAssets.dailyGoalBadge}
-            containerStyle={styles.chestImage}
-            contentFit="contain"
-          />
-          <Text style={styles.ctaText} numberOfLines={3}>
-            Devam et, daha büyük ödüller seni bekliyor!
-          </Text>
+        <View style={styles.trackRow}>
+          {milestones.map((m, index) => (
+            <View key={m.id} style={styles.milestoneCol}>
+              <View style={styles.nodeRow}>
+                {index > 0 ? (
+                  <View
+                    style={[
+                      styles.connector,
+                      milestones[index - 1]!.completed && styles.connectorDone,
+                    ]}
+                  />
+                ) : null}
+                <View
+                  style={[
+                    styles.node,
+                    m.completed ? styles.nodeDone : styles.nodePending,
+                  ]}>
+                  {m.completed ? (
+                    <Ionicons name="checkmark" size={12} color={colors.success} />
+                  ) : (
+                    <Ionicons name={m.icon} size={14} color={colors.hubGold} />
+                  )}
+                </View>
+                {index < milestones.length - 1 ? (
+                  <View
+                    style={[
+                      styles.connector,
+                      m.completed && styles.connectorDone,
+                    ]}
+                  />
+                ) : null}
+              </View>
+              <Text style={styles.milestoneCaption} numberOfLines={2}>
+                {m.caption}
+              </Text>
+            </View>
+          ))}
         </View>
+
+        <Text style={styles.footer}>
+          Devam et, daha büyük ödüller seni bekliyor!
+        </Text>
       </LinearGradient>
     </Animated.View>
   );
@@ -135,70 +113,101 @@ export function HubRewardsJourney() {
 
 const styles = StyleSheet.create({
   wrap: {
-    gap: 6,
     paddingHorizontal: spacing.lg,
   },
-  sectionTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.textSecondary,
-    letterSpacing: 0.5,
-  },
   banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
     borderRadius: radius.xl,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 10,
+    padding: 14,
+    gap: 12,
     overflow: 'hidden',
   },
-  leftCol: {
-    flex: 1,
-    minWidth: 0,
-    gap: 10,
-  },
-  streakRow: {
+  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    justifyContent: 'space-between',
+  },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  flameCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.hubGold,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   streakText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '800',
-    color: colors.textInverse,
-    letterSpacing: -0.2,
+    color: '#fff',
+    letterSpacing: -0.3,
+  },
+  chestWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   trackRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    position: 'relative',
+    justifyContent: 'space-between',
     gap: 4,
   },
-  trackLine: {
-    position: 'absolute',
-    top: 11,
-    left: '12%',
-    right: '12%',
-    height: 2,
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    borderRadius: 1,
-  },
-  rightCol: {
-    width: 88,
+  milestoneCol: {
+    flex: 1,
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
+    minWidth: 0,
+  },
+  nodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    justifyContent: 'center',
+  },
+  connector: {
+    flex: 1,
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    maxWidth: 24,
+  },
+  connectorDone: {
+    backgroundColor: colors.hubGold,
+  },
+  node: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
     flexShrink: 0,
   },
-  chestImage: {
-    width: 52,
-    height: 52,
+  nodeDone: {
+    backgroundColor: 'rgba(59, 175, 122, 0.25)',
+    borderColor: colors.success,
   },
-  ctaText: {
+  nodePending: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(245, 183, 49, 0.5)',
+  },
+  milestoneCaption: {
     fontSize: 9,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.88)',
     textAlign: 'center',
     lineHeight: 12,
+  },
+  footer: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.75)',
+    textAlign: 'center',
   },
 });

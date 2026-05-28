@@ -1,11 +1,10 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import {
   selectActiveTutorialStepForScreen,
   selectDay1TutorialEventId,
-  selectIsDay1TutorialEligible,
   selectTutorialHighlightTarget,
 } from '@/features/tutorial/tutorialSelectors';
 import { useGameStore } from '@/store/useGameStore';
@@ -23,21 +22,13 @@ export function TutorialCoachOverlay({
   bottomOffset = 0,
 }: TutorialCoachOverlayProps) {
   const router = useRouter();
-  const eligible = useGameStore(selectIsDay1TutorialEligible);
   const step = useGameStore((s) => selectActiveTutorialStepForScreen(s, screen));
   const highlightTarget = useGameStore((s) =>
     selectTutorialHighlightTarget(s, screen),
   );
   const day1EventId = useGameStore(selectDay1TutorialEventId);
-  const ensureStarted = useGameStore((s) => s.ensureDay1TutorialStarted);
   const advanceTutorial = useGameStore((s) => s.advanceTutorial);
   const skipTutorial = useGameStore((s) => s.skipTutorial);
-
-  useEffect(() => {
-    if (eligible && screen === 'hub') {
-      ensureStarted();
-    }
-  }, [eligible, ensureStarted, screen]);
 
   const handlePrimary = useCallback(() => {
     if (!step) return;

@@ -93,7 +93,7 @@ export const ONBOARDING_HINTS: readonly OnboardingHint[] = [
     dayMax: 1,
     screen: 'hub',
     title: 'Bugünün Akışı',
-    text: 'Bugünün Akışı, gün içinde olanları kısa kısa gösterir. Çözülen olaylar hemen kaybolmaz, sonuçlandı moduna geçer.',
+    text: 'Kararlarından sonra gelişmeler burada kısa satırlar halinde görünür.',
     tone: 'info',
     priority: 60,
     dismissible: true,

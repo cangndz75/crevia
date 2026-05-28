@@ -7,8 +7,6 @@ import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { spacing } from '@/ui/theme/spacing';
 
-import { OnboardingStepPill } from './OnboardingStepPill';
-
 type OnboardingFocusHintProps = {
   hint: OnboardingHint;
   onDismiss?: () => void;
@@ -27,29 +25,28 @@ export function OnboardingFocusHint({ hint, onDismiss }: OnboardingFocusHintProp
       <View style={styles.row}>
         <Ionicons
           name={TONE_ICON[hint.tone]}
-          size={16}
+          size={14}
           color={colors.headerTealDark}
           style={styles.icon}
         />
         <View style={styles.body}>
-          {hint.stepPill ? (
-            <OnboardingStepPill
-              label={hint.stepPill}
-              tone={hint.stepPill === 'Yeni' ? 'new' : 'info'}
-            />
-          ) : null}
           {hint.title ? (
-            <Text style={styles.title}>{hint.title}</Text>
+            <Text style={styles.title} numberOfLines={1}>
+              {hint.title}
+            </Text>
           ) : null}
-          <Text style={styles.text}>{mobileSafeLine(hint.text, 160)}</Text>
+          <Text style={styles.text} numberOfLines={2}>
+            {mobileSafeLine(hint.text, 96)}
+          </Text>
         </View>
         {hint.dismissible && onDismiss ? (
           <Pressable
             onPress={onDismiss}
             hitSlop={8}
+            style={styles.closeBtn}
             accessibilityRole="button"
             accessibilityLabel="İpucunu kapat">
-            <Ionicons name="close" size={18} color={colors.textSecondary} />
+            <Ionicons name="close" size={14} color={colors.textSecondary} />
           </Pressable>
         ) : null}
       </View>
@@ -64,32 +61,37 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D4E8E4',
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    marginBottom: 6,
+    paddingVertical: 6,
+    marginBottom: 4,
+    maxHeight: 110,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: 6,
   },
   icon: {
-    marginTop: 2,
+    marginTop: 1,
     flexShrink: 0,
   },
   body: {
     flex: 1,
-    gap: 4,
+    gap: 2,
     minWidth: 0,
   },
   title: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     color: colors.headerTealDark,
   },
   text: {
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 11,
+    lineHeight: 15,
     color: colors.textSecondary,
     flexShrink: 1,
+  },
+  closeBtn: {
+    marginTop: -2,
+    marginRight: -2,
   },
 });

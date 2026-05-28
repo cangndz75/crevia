@@ -690,6 +690,13 @@ export const useGameStore = create<GameStore>()(
         const current = get();
         const targetDay = day ?? current.gameState.city.day;
         const priorityState = bootstrapDailyPriorityState(current, targetDay);
+        const existingForDay = current.dailyPriorityByDay[targetDay];
+        if (
+          current.dailyPriorityState === priorityState &&
+          existingForDay === priorityState
+        ) {
+          return;
+        }
         set({
           dailyPriorityState: priorityState,
           dailyPriorityByDay: {
@@ -1878,6 +1885,7 @@ export const useGameStore = create<GameStore>()(
           ),
           eventPool: pilotRefresh.eventPool,
         });
+        get().ensureDay1TutorialStarted();
       },
 
       refreshPilotEventsForCurrentDay: () => {
@@ -2173,6 +2181,7 @@ export const useGameStore = create<GameStore>()(
         }
         if (state) {
           state.ensureDailyPriorityForDay();
+          state.ensureDay1TutorialStarted();
         }
       },
     },

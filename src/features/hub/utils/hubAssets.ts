@@ -21,6 +21,12 @@ export const hubAssets = {
     maint: require('@/assets/icons/actions/ic_action_maintenance_01.png'),
     announce: require('@/assets/icons/actions/ic_action_announcement_01.png'),
   },
+  day1Plan: {
+    heroBuilding: require('@/assets/districts/central/district_central_overview_01.png'),
+    progressStar: require('@/assets/badges/badge_daily_goal_01.png'),
+    progressChest: require('@/assets/ui/ui_budget_reward_01.png'),
+    mahalleThumb: require('@/assets/districts/central/district_central_overview_02.png'),
+  },
 } as const;
 
 const pilotDistrictHero: Record<PilotDistrictId, ImageSource> = {

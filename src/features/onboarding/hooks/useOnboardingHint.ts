@@ -7,15 +7,26 @@ import {
   selectOnboardingFocusHint,
   selectOnboardingFocusHintByMoment,
 } from '@/core/onboarding/onboardingSelectors';
-import type { OnboardingMoment, OnboardingScreen } from '@/core/onboarding/onboardingTypes';
+import { ONBOARDING_HINTS } from '@/core/onboarding/onboardingPresentation';
+import type {
+  OnboardingHint,
+  OnboardingMoment,
+  OnboardingScreen,
+} from '@/core/onboarding/onboardingTypes';
 import { useGameStore } from '@/store/useGameStore';
+
+function resolveHintById(id: string | null): OnboardingHint | null {
+  if (!id) return null;
+  const found = ONBOARDING_HINTS.find((h) => h.id === id);
+  return found ? { ...found } : null;
+}
 
 export function useOnboardingHint(
   screen: OnboardingScreen,
   focusTargetKey?: string,
   focusMoment?: OnboardingMoment,
 ) {
-  const { coachHint, focusHint, dismiss } = useGameStore(
+  const { coachHintId, focusHintId, dismiss } = useGameStore(
     useShallow((s) => {
       const ctx = buildOnboardingContextFromStore(
         {
@@ -34,8 +45,8 @@ export function useOnboardingHint(
         ? selectOnboardingFocusHintByMoment(ctx, focusMoment)
         : selectOnboardingFocusHint(ctx, focusTargetKey);
       return {
-        coachHint: selectOnboardingCoachHint(ctx),
-        focusHint: focus,
+        coachHintId: selectOnboardingCoachHint(ctx)?.id ?? null,
+        focusHintId: focus?.id ?? null,
         dismiss: s.dismissOnboardingHint,
       };
     }),
@@ -43,10 +54,10 @@ export function useOnboardingHint(
 
   return useMemo(
     () => ({
-      coachHint,
-      focusHint,
+      coachHint: resolveHintById(coachHintId),
+      focusHint: resolveHintById(focusHintId),
       dismissHint: dismiss,
     }),
-    [coachHint, dismiss, focusHint],
+    [coachHintId, dismiss, focusHintId],
   );
 }

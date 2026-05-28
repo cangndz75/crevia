@@ -7,8 +7,8 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import type { HubQuickActionCardModel } from '@/core/hubQuickActions';
+import { HUB_QUICK_ACTION_COMPACT_CARD_MAX_HEIGHT } from '@/features/hub/hubUiPresentation';
 import { colors } from '@/ui/theme/colors';
-import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -16,9 +16,14 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 type Props = {
   card: HubQuickActionCardModel;
   onPress: () => void;
+  variant?: 'compact';
 };
 
-export function HubQuickActionCard({ card, onPress }: Props) {
+export function HubQuickActionCard({
+  card,
+  onPress,
+  variant = 'compact',
+}: Props) {
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -59,17 +64,27 @@ export function HubQuickActionCard({ card, onPress }: Props) {
           <Ionicons
             name={card.iconName as keyof typeof Ionicons.glyphMap}
             size={16}
-            color={colors.primary}
+            color={card.used ? colors.textSecondary : colors.primary}
           />
         </View>
         <View style={[styles.chip, chipTone]}>
-          <Text style={styles.chipText}>{card.statusLabel}</Text>
+          {card.used ? (
+            <Ionicons
+              name="checkmark"
+              size={9}
+              color={colors.textSecondary}
+              style={styles.chipIcon}
+            />
+          ) : null}
+          <Text style={styles.chipText} numberOfLines={1}>
+            {card.statusLabel}
+          </Text>
         </View>
       </View>
       <Text style={styles.title} numberOfLines={1}>
         {card.title}
       </Text>
-      <Text style={styles.subtitle} numberOfLines={2}>
+      <Text style={styles.subtitle} numberOfLines={variant === 'compact' ? 1 : 2}>
         {caption}
       </Text>
     </AnimatedPressable>
@@ -79,63 +94,73 @@ export function HubQuickActionCard({ card, onPress }: Props) {
 const styles = StyleSheet.create({
   card: {
     width: 148,
+    maxHeight: HUB_QUICK_ACTION_COMPACT_CARD_MAX_HEIGHT,
+    minHeight: 72,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(26, 143, 138, 0.1)',
     padding: 10,
-    gap: 6,
+    gap: 4,
     ...shadows.soft,
   },
   cardUsed: {
-    opacity: 0.72,
+    backgroundColor: '#FAFAF8',
+    borderColor: 'rgba(26, 143, 138, 0.12)',
   },
   cardDisabled: {
-    opacity: 0.85,
+    backgroundColor: colors.backgroundAlt,
   },
   topRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 6,
+    gap: 4,
   },
   iconWrap: {
     width: 28,
     height: 28,
-    borderRadius: 8,
+    borderRadius: 9,
     backgroundColor: colors.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: '58%',
     borderRadius: 999,
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 2,
+    gap: 2,
+  },
+  chipIcon: {
+    marginRight: 1,
   },
   chipReady: {
     backgroundColor: colors.primaryMuted,
   },
   chipUsed: {
-    backgroundColor: colors.border,
+    backgroundColor: colors.backgroundAlt,
   },
   chipDisabled: {
     backgroundColor: colors.warningMuted,
   },
   chipText: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '800',
     color: colors.textSecondary,
+    flexShrink: 1,
   },
   title: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     color: colors.textPrimary,
   },
   subtitle: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '500',
     color: colors.textSecondary,
-    lineHeight: 13,
-    minHeight: 26,
+    lineHeight: 12,
   },
 });

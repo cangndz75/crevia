@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   FadeInUp,
@@ -22,6 +23,7 @@ import {
   getNeighborhoodIdentityChipLabel,
   normalizeNeighborhoodId,
 } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
+import { eventSeverity } from '@/core/utils/eventPriority';
 import { EventLifecycleBadge } from '@/features/events/components/EventLifecycleBadge';
 import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
 import { getEventHeroImage, hubAssets } from '@/features/hub/utils/hubAssets';
@@ -38,18 +40,18 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 function formatUrgencyRemaining(hours: number): string {
   const h = Math.floor(hours);
   const m = Math.round((hours - h) * 60);
-  if (h > 0 && m > 0) return `${h}s ${m}dk kaldı`;
-  if (h > 0) return `${h}s kaldı`;
-  if (m > 0) return `${m}dk kaldı`;
+  if (h > 0 && m > 0) return `${h}s ${m}dk`;
+  if (h > 0) return `${h}s`;
+  if (m > 0) return `${m}dk`;
   return 'Acil';
 }
 
 export function HubCriticalEventCard() {
   const router = useRouter();
 
-  const presentation = useGameStore(
-    useShallow((s) => {
-      const slice: LiveFlowStoreSlice = {
+  const flowSlice = useGameStore(
+    useShallow(
+      (s): LiveFlowStoreSlice => ({
         gameState: s.gameState,
         eventPool: s.eventPool,
         decisionHistory: s.decisionHistory,
@@ -58,20 +60,25 @@ export function HubCriticalEventCard() {
         dailyPriorityByDay: s.dailyPriorityByDay,
         dailyGoalsByDay: s.dailyGoalsByDay,
         isDay1Tutorial: selectIsDay1TutorialActive(s),
-      };
-      return selectHubPrimaryEventPresentation(
-        buildLiveFlowStoreSliceFromGameStore(slice),
-      );
-    }),
+      }),
+    ),
   );
 
-  const decisionRecord = useGameStore((s) => {
+  const presentation = useMemo(
+    () =>
+      selectHubPrimaryEventPresentation(
+        buildLiveFlowStoreSliceFromGameStore(flowSlice),
+      ),
+    [flowSlice],
+  );
+
+  const decisionRecord = useMemo(() => {
     if (!presentation?.event) return undefined;
     return getDecisionRecordForEvent(
       presentation.event.id,
-      s.decisionHistory,
+      flowSlice.decisionHistory,
     );
-  });
+  }, [flowSlice.decisionHistory, presentation]);
 
   const ctaScale = useSharedValue(1);
   const ctaAnim = useAnimatedStyle(() => ({
@@ -89,7 +96,9 @@ export function HubCriticalEventCard() {
           contentFit="contain"
         />
         <Text style={styles.emptyTitle}>Bugün kritik olay yok</Text>
-        <Text style={styles.emptySub}>Ekip hazır, yeni uyarı beklenmiyor.</Text>
+        <Text style={styles.emptySub} numberOfLines={1}>
+          Ekip hazır, yeni uyarı beklenmiyor.
+        </Text>
       </Animated.View>
     );
   }
@@ -97,6 +106,8 @@ export function HubCriticalEventCard() {
   const { event, lifecycle } = presentation;
   const isResolved = lifecycle.status === 'resolved_today';
   const resolvedPalette = getResolvedCardColors(lifecycle.tone);
+  const severity = eventSeverity(event);
+  const isHighSeverity = !isResolved && severity >= 4;
 
   const goToEvent = () => {
     if (isResolved) {
@@ -112,7 +123,10 @@ export function HubCriticalEventCard() {
       ? getNeighborhoodIdentityChipLabel(neighborhoodId)
       : event.district;
   const categoryLabel = buildEventCategoryChip(event);
-  const statusLine = event.contextTag || categoryLabel;
+  const descriptionLine =
+    event.description?.trim() ||
+    event.contextTag ||
+    categoryLabel;
 
   return (
     <Animated.View
@@ -125,29 +139,41 @@ export function HubCriticalEventCard() {
               borderColor: resolvedPalette.border,
               backgroundColor: resolvedPalette.bg,
             }
-          : null,
+          : isHighSeverity
+            ? styles.cardUrgent
+            : styles.cardActive,
       ]}>
+      {isHighSeverity ? (
+        <View style={[styles.accentBar, { backgroundColor: colors.warning }]} />
+      ) : null}
+
       <View style={styles.header}>
-        {isResolved ? (
-          <View
+        <View style={styles.headerLeft}>
+          {isResolved ? (
+            <View
+              style={[
+                styles.flameBadge,
+                { backgroundColor: resolvedPalette.badgeBg },
+              ]}>
+              <Ionicons
+                name="checkmark"
+                size={13}
+                color={resolvedPalette.badgeText}
+              />
+            </View>
+          ) : (
+            <View style={styles.flameBadge}>
+              <Ionicons name="flame" size={13} color="#FFFFFF" />
+            </View>
+          )}
+          <Text
             style={[
-              styles.flameBadge,
-              { backgroundColor: resolvedPalette.badgeBg },
+              styles.headerText,
+              isResolved ? { color: resolvedPalette.badgeText } : null,
             ]}>
-            <Ionicons name="checkmark" size={14} color={resolvedPalette.badgeText} />
-          </View>
-        ) : (
-          <View style={styles.flameBadge}>
-            <Ionicons name="flame" size={14} color="#FFFFFF" />
-          </View>
-        )}
-        <Text
-          style={[
-            styles.headerText,
-            isResolved ? { color: resolvedPalette.badgeText } : null,
-          ]}>
-          {isResolved ? 'SONUÇLANDI' : 'KRİTİK OLAY'}
-        </Text>
+            {isResolved ? 'Sonuçlandı' : 'Kritik Olay'}
+          </Text>
+        </View>
         <View style={styles.badgeWrap}>
           <EventLifecycleBadge lifecycle={lifecycle} compact />
         </View>
@@ -158,42 +184,50 @@ export function HubCriticalEventCard() {
         style={({ pressed }) => [styles.body, getPressFeedbackStyle({ pressed })]}
         accessibilityRole="button">
         <View style={styles.contentCol}>
+          <View style={styles.chipRow}>
+            <View style={styles.neighborhoodChip}>
+              <Text style={styles.chipText} numberOfLines={1}>
+                {neighborhoodLabel}
+              </Text>
+            </View>
+            <View style={styles.categoryChip}>
+              <Text style={styles.chipText} numberOfLines={1}>
+                {categoryLabel}
+              </Text>
+            </View>
+          </View>
+
           <Text style={styles.title} numberOfLines={2}>
             {event.title}
           </Text>
-          <View style={styles.metaRow}>
-            <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
-            <Text style={styles.metaText} numberOfLines={1}>
-              {neighborhoodLabel}
-            </Text>
-            <Text style={styles.metaDot}>·</Text>
-            <Text style={styles.metaText} numberOfLines={1}>
-              {statusLine}
-            </Text>
-          </View>
+
           {isResolved ? (
-            <Text style={styles.resolvedSummary} numberOfLines={2}>
+            <Text style={styles.summary} numberOfLines={1}>
               {lifecycle.summaryText ??
                 (decisionRecord
                   ? `${decisionRecord.decisionLabel} uygulandı.`
-                  : 'Olay bugün çözüldü. Etkisi gün sonu raporuna yansıyacak.')}
+                  : 'Olay bugün çözüldü.')}
             </Text>
           ) : (
-            <View style={styles.timerRow}>
-              <Ionicons name="time-outline" size={13} color={colors.warning} />
-              <Text style={styles.timerText}>
-                {formatUrgencyRemaining(event.urgencyHours)}
+            <>
+              <Text style={styles.summary} numberOfLines={1}>
+                {descriptionLine}
               </Text>
-            </View>
+              <View style={styles.timerRow}>
+                <Ionicons name="time-outline" size={12} color={colors.warning} />
+                <Text style={styles.timerText}>
+                  {formatUrgencyRemaining(event.urgencyHours)} kaldı
+                </Text>
+              </View>
+            </>
           )}
         </View>
 
         {!isResolved ? (
-          <View style={styles.imageWrap}>
+          <View style={styles.thumbWrap}>
             <HubAssetImage
               source={getEventHeroImage(event.id, event.category)}
               containerStyle={styles.eventImage}
-              style={styles.eventImageInner}
               contentFit="contain"
             />
           </View>
@@ -210,7 +244,7 @@ export function HubCriticalEventCard() {
           }}
           onPress={goToEvent}
           accessibilityRole="button"
-          accessibilityLabel={lifecycle.ctaLabel ?? 'Karar ver'}
+          accessibilityLabel={lifecycle.ctaLabel ?? 'İncele'}
           style={[styles.cta, ctaAnim]}>
           {isResolved ? (
             <View
@@ -218,10 +252,15 @@ export function HubCriticalEventCard() {
                 styles.ctaResolved,
                 { backgroundColor: resolvedPalette.badgeBg },
               ]}>
-              <Text style={[styles.ctaResolvedText, { color: resolvedPalette.badgeText }]}>
+              <Text
+                style={[styles.ctaResolvedText, { color: resolvedPalette.badgeText }]}>
                 {lifecycle.ctaLabel ?? 'Sonucu Gör'}
               </Text>
-              <Ionicons name="chevron-forward" size={16} color={resolvedPalette.badgeText} />
+              <Ionicons
+                name="chevron-forward"
+                size={15}
+                color={resolvedPalette.badgeText}
+              />
             </View>
           ) : (
             <LinearGradient
@@ -229,8 +268,10 @@ export function HubCriticalEventCard() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.ctaGradient}>
-              <Text style={styles.ctaText}>{lifecycle.ctaLabel ?? 'Karar Ver'}</Text>
-              <Ionicons name="chevron-forward" size={16} color="#fff" />
+              <Text style={styles.ctaText}>
+                {lifecycle.ctaLabel ?? 'İncele'}
+              </Text>
+              <Ionicons name="chevron-forward" size={15} color="#fff" />
             </LinearGradient>
           )}
         </AnimatedPressable>
@@ -243,17 +284,30 @@ const styles = StyleSheet.create({
   card: {
     marginHorizontal: spacing.lg,
     backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    borderWidth: 2,
-    borderColor: colors.warning,
+    borderRadius: 26,
+    borderWidth: 1,
     overflow: 'hidden',
+    position: 'relative',
+  },
+  cardActive: {
+    borderColor: 'rgba(232, 155, 46, 0.35)',
+  },
+  cardUrgent: {
+    borderColor: 'rgba(232, 155, 46, 0.55)',
+  },
+  accentBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    zIndex: 1,
   },
   emptyCard: {
-    padding: spacing.xl,
+    padding: spacing.lg,
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
     borderColor: colors.border,
-    borderWidth: 1,
   },
   emptyTitle: {
     fontSize: 14,
@@ -265,23 +319,28 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   emptyImage: {
-    width: 72,
-    height: 72,
+    width: 64,
+    height: 64,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
     paddingHorizontal: 14,
     paddingTop: 12,
-    paddingBottom: 4,
+    paddingBottom: 2,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
   },
   badgeWrap: {
-    marginLeft: 'auto',
+    flexShrink: 0,
   },
   flameBadge: {
-    width: 26,
-    height: 26,
+    width: 24,
+    height: 24,
     borderRadius: 8,
     backgroundColor: colors.warning,
     alignItems: 'center',
@@ -291,43 +350,57 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     color: colors.warning,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   body: {
     flexDirection: 'row',
     paddingHorizontal: 14,
-    paddingTop: 6,
-    paddingBottom: 10,
+    paddingTop: 4,
+    paddingBottom: 8,
     gap: 10,
     alignItems: 'flex-start',
   },
   contentCol: {
     flex: 1,
-    gap: 6,
+    gap: 5,
     minWidth: 0,
   },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 5,
+  },
+  neighborhoodChip: {
+    maxWidth: '55%',
+    backgroundColor: colors.primaryMuted,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+  },
+  categoryChip: {
+    maxWidth: '45%',
+    backgroundColor: colors.backgroundAlt,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+  },
+  chipText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
   title: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '800',
     color: colors.textPrimary,
-    letterSpacing: -0.35,
-    lineHeight: 22,
+    letterSpacing: -0.3,
+    lineHeight: 20,
   },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    flexWrap: 'wrap',
-  },
-  metaText: {
-    fontSize: 11,
-    fontWeight: '600',
+  summary: {
+    fontSize: 12,
+    fontWeight: '500',
     color: colors.textSecondary,
-    flexShrink: 1,
-  },
-  metaDot: {
-    fontSize: 11,
-    color: colors.textSecondary,
+    lineHeight: 16,
   },
   timerRow: {
     flexDirection: 'row',
@@ -335,19 +408,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   timerText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: colors.warning,
   },
-  resolvedSummary: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    lineHeight: 16,
-  },
-  imageWrap: {
-    width: 80,
-    height: 72,
+  thumbWrap: {
+    width: 64,
+    height: 58,
     borderRadius: radius.lg,
     overflow: 'hidden',
     backgroundColor: colors.backgroundAlt,
@@ -357,41 +424,41 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  eventImageInner: {
-    borderRadius: radius.lg,
-  },
   footer: {
     paddingHorizontal: 14,
-    paddingBottom: 14,
-    paddingTop: 2,
+    paddingBottom: 12,
+    paddingTop: 0,
   },
   cta: {
     borderRadius: radius.full,
     overflow: 'hidden',
+    minHeight: 44,
   },
   ctaGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    paddingVertical: 13,
+    paddingVertical: 11,
     paddingHorizontal: 16,
+    minHeight: 44,
   },
   ctaResolved: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    paddingVertical: 13,
+    paddingVertical: 11,
     paddingHorizontal: 16,
     borderRadius: radius.full,
+    minHeight: 44,
   },
   ctaResolvedText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
   },
   ctaText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
     color: '#fff',
     letterSpacing: -0.2,

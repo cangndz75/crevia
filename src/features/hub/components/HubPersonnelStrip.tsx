@@ -111,7 +111,7 @@ export function HubPersonnelStrip() {
 
 const styles = StyleSheet.create({
   wrap: {
-    gap: spacing.sm,
+    gap: 6,
     marginHorizontal: spacing.lg,
   },
   header: {
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     color: colors.textSecondary,
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   seeAllBtn: {
     flexDirection: 'row',
@@ -136,9 +136,9 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   scrollContent: {
-    gap: spacing.md,
-    paddingVertical: spacing.xs,
-    paddingRight: spacing.lg,
+    gap: 8,
+    paddingVertical: 2,
+    paddingRight: spacing.sm,
   },
   cardSpacing: {
     marginRight: 0,
