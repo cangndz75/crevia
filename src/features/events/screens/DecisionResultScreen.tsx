@@ -1,8 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DecisionImpactMetricRow } from '@/features/events/components/DecisionImpactMetricRow';
@@ -17,7 +17,10 @@ import {
   selectLastDecisionResult,
   useGameStore,
 } from '@/store/useGameStore';
+import { OnboardingCoachBubble } from '@/features/onboarding/components/OnboardingCoachBubble';
+import { useOnboardingHint } from '@/features/onboarding/hooks/useOnboardingHint';
 import { TutorialCoachOverlay } from '@/features/tutorial/TutorialCoachOverlay';
+import { selectActiveTutorialStepForScreen } from '@/features/tutorial/tutorialSelectors';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
 
@@ -84,6 +87,10 @@ export function DecisionResultScreen() {
 
   const chipColors = CHIP_COLORS[result.resultTone];
   const heroGradient = HERO_GRADIENTS[result.resultTone];
+  const legacyTutorialStep = useGameStore((s) =>
+    selectActiveTutorialStepForScreen(s, 'decision_result'),
+  );
+  const { coachHint, dismissHint } = useOnboardingHint('decision_result');
 
   return (
     <View style={styles.root}>
@@ -104,7 +111,8 @@ export function DecisionResultScreen() {
           </View>
         ) : (
           <>
-            <Animated.View entering={FadeIn.duration(360)}>
+            <Animated.View
+              entering={FadeInUp.duration(320).springify().damping(22)}>
               <LinearGradient
                 colors={[...heroGradient]}
                 style={styles.heroCard}>
@@ -125,13 +133,17 @@ export function DecisionResultScreen() {
             </Animated.View>
 
             {result.dailyGoalImpact ? (
-              <View style={styles.goalImpactCard}>
+              <Animated.View
+                entering={FadeInUp.delay(80).duration(260)}
+                style={styles.goalImpactCard}>
                 <Text style={styles.goalImpactText}>{result.dailyGoalImpact}</Text>
-              </View>
+              </Animated.View>
             ) : null}
 
             {result.dailyPriorityImpact ? (
-              <View style={styles.goalImpactCard}>
+              <Animated.View
+                entering={FadeInUp.delay(100).duration(260)}
+                style={styles.goalImpactCard}>
                 <Text style={styles.goalImpactLabel}>Günlük Öncelik Etkisi</Text>
                 <Text style={styles.goalImpactTitle}>
                   {result.dailyPriorityImpact.title}
@@ -139,11 +151,12 @@ export function DecisionResultScreen() {
                 <Text style={styles.goalImpactText}>
                   {result.dailyPriorityImpact.text}
                 </Text>
-              </View>
+              </Animated.View>
             ) : null}
 
             {result.butterflyHint ? (
-              <View
+              <Animated.View
+                entering={FadeInUp.delay(110).duration(260)}
                 style={[
                   styles.butterflyHintCard,
                   result.butterflyHint.tone === 'warning'
@@ -163,16 +176,16 @@ export function DecisionResultScreen() {
                     {result.butterflyHint.dueText}
                   </Text>
                 ) : null}
-              </View>
+              </Animated.View>
             ) : null}
 
-            <Animated.View entering={FadeInUp.delay(120).duration(320)}>
+            <Animated.View entering={FadeInUp.delay(140).duration(300)}>
               <DecisionImpactMetricRow metrics={result.metricChanges} />
             </Animated.View>
 
             {result.subsystemOutcomes.length > 0 ? (
               <Animated.View
-                entering={FadeInUp.delay(200).duration(320)}
+                entering={FadeInUp.delay(220).duration(300)}
                 style={styles.outcomeGrid}>
                 {result.subsystemOutcomes.map((outcome) => (
                   <DecisionSubsystemOutcomeCard
@@ -184,31 +197,37 @@ export function DecisionResultScreen() {
             ) : null}
 
             {result.highlightLines.length > 0 ? (
-              <View style={styles.linesCard}>
+              <Animated.View
+                entering={FadeInUp.delay(280).duration(260)}
+                style={styles.linesCard}>
                 <Text style={styles.linesTitle}>Kazançlar</Text>
                 {result.highlightLines.map((line) => (
                   <Text key={line} style={styles.lineGood}>
                     • {line}
                   </Text>
                 ))}
-              </View>
+              </Animated.View>
             ) : null}
 
             {result.riskLines.length > 0 ? (
-              <View style={styles.linesCard}>
+              <Animated.View
+                entering={FadeInUp.delay(300).duration(260)}
+                style={styles.linesCard}>
                 <Text style={styles.linesTitle}>Dikkat Edilecekler</Text>
                 {result.riskLines.map((line) => (
                   <Text key={line} style={styles.lineRisk}>
                     • {line}
                   </Text>
                 ))}
-              </View>
+              </Animated.View>
             ) : null}
 
             {result.nextSuggestion ? (
-              <View style={styles.suggestionCard}>
+              <Animated.View
+                entering={FadeInUp.delay(320).duration(260)}
+                style={styles.suggestionCard}>
                 <Text style={styles.suggestionText}>{result.nextSuggestion}</Text>
-              </View>
+              </Animated.View>
             ) : null}
           </>
         )}
@@ -218,13 +237,20 @@ export function DecisionResultScreen() {
         onGoHub={goHub}
         secondaryLabel={secondary?.label}
         onSecondaryPress={
-          secondary ? () => router.push(secondary.route) : undefined
+          secondary ? () => router.push(secondary.route as Href) : undefined
         }
       />
       <TutorialCoachOverlay
         screen="decision_result"
         bottomOffset={Math.max(insets.bottom, 12) + 88}
       />
+      {coachHint && !legacyTutorialStep ? (
+        <OnboardingCoachBubble
+          hint={coachHint}
+          onDismiss={() => dismissHint(coachHint.id)}
+          bottomOffset={Math.max(insets.bottom, 12) + 88}
+        />
+      ) : null}
     </View>
   );
 }

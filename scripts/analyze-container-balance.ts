@@ -20,10 +20,9 @@ import type {
 const PILOT_DAYS = 7;
 
 const ELEVATED_LABELS: NeighborhoodContainerStatusLabel[] = [
-  'Doluluk Artıyor',
-  'Taşma Riski',
-  'Koku Baskısı',
-  'Bakım Gerekli',
+  'Takipte',
+  'Baskılı',
+  'Yüksek',
   'Kritik',
 ];
 
@@ -353,12 +352,12 @@ function evaluateBalance(results: ScenarioResult[]): BalanceFinding[] {
   if (day1SanayiStatus === 'Kritik') {
     findings.push({
       verdict: 'WARN',
-      message: `no_decisions day1 sanayi=${day1SanayiStatus} (prefer Taşma Riski / Doluluk Artıyor)`,
+      message: `no_decisions day1 sanayi=${day1SanayiStatus} (prefer Yüksek / Baskılı / Takipte)`,
     });
   } else if (
-    day1SanayiStatus === 'Taşma Riski' ||
-    day1SanayiStatus === 'Doluluk Artıyor' ||
-    day1SanayiStatus === 'Koku Baskısı'
+    day1SanayiStatus === 'Yüksek' ||
+    day1SanayiStatus === 'Baskılı' ||
+    day1SanayiStatus === 'Takipte'
   ) {
     findings.push({
       verdict: 'PASS',
@@ -427,10 +426,13 @@ function evaluateBalance(results: ScenarioResult[]): BalanceFinding[] {
       verdict: 'FAIL',
       message: 'no_decisions: yesilvadi kritik at day 7 (too aggressive daily drift)',
     });
-  } else if (noDec.summary.yesilvadiFinalStatus === 'Taşma Riski') {
+  } else if (
+    noDec.summary.yesilvadiFinalStatus === 'Yüksek' ||
+    noDec.summary.yesilvadiFinalStatus === 'Baskılı'
+  ) {
     findings.push({
       verdict: 'WARN',
-      message: 'no_decisions: yesilvadi taşma riski at day 7 (watch drift)',
+      message: `no_decisions: yesilvadi ${noDec.summary.yesilvadiFinalStatus} at day 7 (watch drift)`,
     });
   } else {
     findings.push({

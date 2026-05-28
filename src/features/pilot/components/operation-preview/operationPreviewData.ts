@@ -22,6 +22,8 @@ export type SystemCardItem = {
   title: string;
   description: string;
   tag: string;
+  /** Kart durumu — kilit / yakında / önizleme */
+  statusTag: string;
   icon: keyof typeof Ionicons.glyphMap;
   emphasis?: boolean;
   locked: boolean;
@@ -92,6 +94,7 @@ export const SYSTEM_CARDS: SystemCardItem[] = [
     title: 'Şehir Haritası',
     description: 'Tek bölgeden tüm şehir ağına geç.',
     tag: 'Şehir',
+    statusTag: 'Kilitli',
     icon: 'map-outline',
     emphasis: true,
     locked: true,
@@ -101,6 +104,7 @@ export const SYSTEM_CARDS: SystemCardItem[] = [
     title: 'Çoklu Mahalle Yönetimi',
     description: 'Farklı karakterde mahalleleri aynı anda yönet.',
     tag: 'Strateji',
+    statusTag: 'Yakında',
     icon: 'grid-outline',
     emphasis: true,
     locked: true,
@@ -110,6 +114,7 @@ export const SYSTEM_CARDS: SystemCardItem[] = [
     title: 'Kelebek Etkisi',
     description: 'Küçük kararların uzun vadeli sonuçlarını takip et.',
     tag: 'Etki',
+    statusTag: 'Kilitli',
     icon: 'git-branch-outline',
     locked: true,
   },
@@ -118,6 +123,7 @@ export const SYSTEM_CARDS: SystemCardItem[] = [
     title: 'Araç ve Rota',
     description: 'Filo, rota ve bakım kararlarını optimize et.',
     tag: 'Operasyon',
+    statusTag: 'Kilitli',
     icon: 'car-outline',
     locked: true,
   },
@@ -126,6 +132,7 @@ export const SYSTEM_CARDS: SystemCardItem[] = [
     title: 'Personel Yönetimi',
     description: 'Moral, yorgunluk ve vardiya dengesini yönet.',
     tag: 'Ekip',
+    statusTag: 'Kilitli',
     icon: 'people-outline',
     locked: true,
   },
@@ -134,6 +141,7 @@ export const SYSTEM_CARDS: SystemCardItem[] = [
     title: 'Sosyal Medya Baskısı',
     description: 'Krizleri yönet, halk algısını koru.',
     tag: 'Algı',
+    statusTag: 'Kilitli',
     icon: 'megaphone-outline',
     locked: true,
   },

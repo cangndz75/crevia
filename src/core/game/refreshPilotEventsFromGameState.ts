@@ -7,12 +7,14 @@ import type { ContainerState } from '@/core/containers/containerTypes';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import type { EventCard } from '@/core/models/EventCard';
 import type { GameState } from '@/core/models/GameState';
+import type { CarryOverEvaluationInput } from '@/core/carryOver/carryOverTypes';
 import type { DailyPriorityKey } from '@/core/dailyPriority/dailyPriorityTypes';
 
 export type RefreshPilotEventsFromGameStateOptions = {
   containerState?: ContainerState | null;
   vehicleState?: VehicleState | null;
   dailyPriorityKey?: DailyPriorityKey;
+  carryOverEvaluationInput?: CarryOverEvaluationInput;
 };
 
 export type RefreshPilotEventsFromGameStateResult = {
@@ -43,6 +45,7 @@ export function refreshPilotEventsFromGameState(
     containerState: options?.containerState ?? null,
     vehicleState: options?.vehicleState ?? null,
     dailyPriorityKey: options?.dailyPriorityKey,
+    carryOverEvaluationInput: options?.carryOverEvaluationInput,
   });
 
   if (!ensured.ensured) {

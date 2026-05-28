@@ -73,7 +73,7 @@ export function HubRegionPulseSection() {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Bölge Nabzı</Text>
+        <Text style={styles.sectionTitle}>BÖLGE NABZI</Text>
         <Pressable
           style={styles.seeAllBtn}
           onPress={() => router.push('/risks')}
@@ -135,9 +135,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 11,
     fontWeight: '800',
-    color: colors.textPrimary,
+    color: colors.textSecondary,
+    letterSpacing: 0.5,
   },
   seeAllBtn: {
     flexDirection: 'row',

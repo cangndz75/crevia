@@ -1,4 +1,11 @@
-import { applyVehicleDecisionEffects } from './vehicleDecisionEffects';
+import type { RoutePreparationAssignment } from '@/core/hubQuickActions/hubQuickActionTypes';
+import { resolveRoutePreparationModifier } from '@/core/hubQuickActions/hubQuickActionRouteEffects';
+
+import {
+  applyVehicleDecisionEffects,
+  inferVehicleDecisionAction,
+  selectBestVehicleForAction,
+} from './vehicleDecisionEffects';
 import { processVehiclesEndOfDay } from './vehicleEngine';
 import { createInitialVehicleState } from './vehicleSeed';
 import type {
@@ -21,15 +28,34 @@ export function processVehiclesAfterDecisionForStore(params: {
   event?: VehicleDecisionEventInput;
   decision: VehicleDecisionChoiceInput;
   day: number;
+  routePreparation?: RoutePreparationAssignment;
 }): VehicleState {
   const resolvedDay = Math.max(1, params.day);
   const vehicleState =
     params.vehicleState ?? createInitialVehicleState(resolvedDay);
 
-  return applyVehicleDecisionEffects({
-    vehicleState,
+  const action = inferVehicleDecisionAction(params.event, params.decision);
+  const selectedVehicle =
+    action === 'none'
+      ? null
+      : selectBestVehicleForAction(vehicleState, action);
+
+  const routeModifier = resolveRoutePreparationModifier({
+    routePreparation: params.routePreparation,
+    currentDay: resolvedDay,
     event: params.event,
     decision: params.decision,
-    day: resolvedDay,
-  }).state;
+    decisionAction: action,
+    affectedVehicleId: selectedVehicle?.id ?? null,
+  });
+
+  return applyVehicleDecisionEffects(
+    {
+      vehicleState,
+      event: params.event,
+      decision: params.decision,
+      day: resolvedDay,
+    },
+    routeModifier,
+  ).state;
 }

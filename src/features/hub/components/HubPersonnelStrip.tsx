@@ -1,6 +1,8 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCallback } from 'react';
 import {
   Alert,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,7 +16,6 @@ import { useGameStore } from '@/store/useGameStore';
 import { PersonnelTeamCard } from '@/ui/components/personnel/PersonnelTeamCard';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
-import { typography } from '@/ui/theme/typography';
 
 export function HubPersonnelStrip() {
   const teams = usePersonnelTeams();
@@ -70,8 +71,21 @@ export function HubPersonnelStrip() {
   return (
     <Animated.View entering={FadeIn.duration(280)} style={styles.wrap}>
       <View style={styles.header}>
-        <Text style={styles.title}>Personel Durumu</Text>
-        <Text style={styles.subtitle}>Canlı ekip kaynağı — dinlendirme trade-off</Text>
+        <Text style={styles.title}>PERSONEL DURUMU</Text>
+        <Pressable
+          style={styles.seeAllBtn}
+          onPress={() =>
+            Alert.alert(
+              'Personel',
+              'Ekip detayları Merkez ekranındaki kartlardan yönetilir.',
+              [{ text: 'Tamam' }],
+            )
+          }
+          accessibilityRole="button"
+          accessibilityLabel="Tüm personeli gör">
+          <Text style={styles.seeAllText}>Tümünü Gör</Text>
+          <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
+        </Pressable>
       </View>
 
       <ScrollView
@@ -101,14 +115,24 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
   },
   header: {
-    gap: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   title: {
-    ...typography.subtitle,
-    fontSize: 16,
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.textSecondary,
+    letterSpacing: 0.5,
   },
-  subtitle: {
-    ...typography.caption,
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  seeAllText: {
+    fontSize: 12,
+    fontWeight: '600',
     color: colors.textSecondary,
   },
   scrollContent: {

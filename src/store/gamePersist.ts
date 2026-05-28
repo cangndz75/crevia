@@ -36,6 +36,11 @@ import {
 import type { LeaderboardEntry } from '@/core/leaderboard/leaderboardTypes';
 import { createNotSelectedPriorityState } from '@/core/dailyPriority/dailyPriorityEngine';
 import type { DailyPriorityState } from '@/core/dailyPriority/dailyPriorityTypes';
+import {
+  createInitialHubQuickActionState,
+  normalizePersistedHubQuickActionState,
+} from '@/core/hubQuickActions';
+import type { HubQuickActionState } from '@/core/hubQuickActions';
 
 import type { GameStore } from './useGameStore';
 
@@ -43,7 +48,8 @@ import type { GameStore } from './useGameStore';
 // Save version & storage key
 // ---------------------------------------------------------------------------
 
-export const SAVE_VERSION = 9;
+export const SAVE_VERSION = 10;
+const SAVE_VERSION_9 = 9;
 const SAVE_VERSION_8 = 8;
 const SAVE_VERSION_7 = 7;
 const SAVE_VERSION_6 = 6;
@@ -81,6 +87,7 @@ export type PersistedGameState = Pick<
   | 'containerState'
   | 'vehicleState'
   | 'socialPulseState'
+  | 'hubQuickActionState'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -116,6 +123,7 @@ export function partialiseGameState(
     containerState: state.containerState,
     vehicleState: state.vehicleState,
     socialPulseState: state.socialPulseState,
+    hubQuickActionState: state.hubQuickActionState,
     tutorialState: state.tutorialState,
     bestPilotScores: state.bestPilotScores,
     lastPilotScore: state.lastPilotScore,
@@ -355,6 +363,7 @@ export function normalizePersistedSave(
     version !== SAVE_VERSION_6 &&
     version !== SAVE_VERSION_7 &&
     version !== SAVE_VERSION_8 &&
+    version !== SAVE_VERSION_9 &&
     version !== SAVE_VERSION
   ) {
     return null;
@@ -416,6 +425,15 @@ export function normalizePersistedSave(
     containerState,
     vehicleState,
     socialPulseState,
+    hubQuickActionState: ((): HubQuickActionState => {
+      if (raw.hubQuickActionState != null) {
+        return normalizePersistedHubQuickActionState(
+          raw.hubQuickActionState,
+          currentDay,
+        );
+      }
+      return createInitialHubQuickActionState(currentDay);
+    })(),
     neighborhoods: raw.neighborhoods as PersistedGameState['neighborhoods'],
     resources: raw.resources as PersistedGameState['resources'],
     eventPool: raw.eventPool as PersistedGameState['eventPool'],

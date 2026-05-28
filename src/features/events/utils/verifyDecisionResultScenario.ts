@@ -1,5 +1,13 @@
+import { pilotEvents } from '@/core/content/pilotEvents';
 import { createDay1Seed } from '@/core/content/day1Seed';
+import { checkDecisionAffordability } from '@/core/economy/economyAffordability';
 import { applyDecision } from '@/core/game/applyDecision';
+import {
+  createFinalLowCostCloseoutDecision,
+  ensureAtLeastOneAffordableDecision,
+  FINAL_LOW_COST_CLOSEOUT_DECISION_ID,
+} from '@/core/game/decisionAffordabilityFallback';
+import { PILOT_FINAL_EVENT_ID } from '@/core/game/calculatePilotFinalResult';
 import { isContainerRelevantEvent } from '@/core/containers/containerDecisionEffects';
 import { createInitialContainerState } from '@/core/containers/containerSeed';
 import {
@@ -361,6 +369,151 @@ export function verifyDecisionResultScenario(): VerifyDecisionResultOutcome {
     [],
   );
   assert(checks, 'karışık delta mixed tone üretir', mixedTone === 'mixed');
+
+  const positiveTone = inferResultTone(
+    [
+      {
+        key: 'publicSatisfaction',
+        label: 'Halk',
+        delta: 6,
+        direction: 'up',
+        isGood: true,
+      },
+      {
+        key: 'operationRisk',
+        label: 'Risk',
+        delta: -4,
+        direction: 'down',
+        isGood: true,
+      },
+    ],
+    [{ key: 'personnel', title: 'P', status: 'good', primaryText: 'ok' }],
+    { decision: { id: 'd', title: 'T', description: '', style: 'bold', effects: { publicSatisfaction: 0, budget: 0, morale: 0, risk: 0, xp: 0 }, decisionStyle: 'fast' } },
+  );
+  assert(checks, 'positive case positive döner', positiveTone === 'positive');
+
+  const negativeTone = inferResultTone(
+    [
+      {
+        key: 'operationRisk',
+        label: 'Risk',
+        delta: 10,
+        direction: 'up',
+        isGood: false,
+      },
+    ],
+    [{ key: 'container', title: 'K', status: 'critical', primaryText: 'kritik' }],
+  );
+  assert(checks, 'critical subsystem negative döner', negativeTone === 'negative');
+
+  const permanentTone = inferResultTone(
+    [
+      {
+        key: 'publicSatisfaction',
+        label: 'Halk',
+        delta: 5,
+        direction: 'up',
+        isGood: true,
+      },
+      {
+        key: 'budget',
+        label: 'Bütçe',
+        delta: -8000,
+        direction: 'down',
+        isGood: false,
+      },
+    ],
+    [],
+    {
+      decision: {
+        id: 'perm',
+        title: 'Kalıcı',
+        description: '',
+        style: 'cautious',
+        decisionStyle: 'permanent',
+        effects: { publicSatisfaction: 0, budget: 0, morale: 0, risk: 0, xp: 0 },
+      },
+    },
+  );
+  assert(
+    checks,
+    'permanent budget düşüşü otomatik negative değil',
+    permanentTone === 'mixed' || permanentTone === 'positive',
+  );
+
+  const monitorTone = inferResultTone(
+    [
+      { key: 'budget', label: 'B', delta: 0, direction: 'flat', isGood: true },
+      { key: 'operationRisk', label: 'R', delta: 1, direction: 'up', isGood: false },
+    ],
+    [{ key: 'personnel', title: 'P', status: 'neutral', primaryText: 'izle' }],
+    {
+      decision: {
+        id: 'mon',
+        title: 'İzle',
+        description: '',
+        style: 'balanced',
+        decisionStyle: 'planned',
+        effects: { publicSatisfaction: 0, budget: 0, morale: 0, risk: 0, xp: 0 },
+      },
+    },
+  );
+  assert(
+    checks,
+    'monitor/planned neutral veya mixed',
+    monitorTone === 'neutral' || monitorTone === 'mixed',
+  );
+
+  const toneA = inferResultTone(
+    [{ key: 'budget', label: 'B', delta: 2, direction: 'up', isGood: true }],
+    [],
+  );
+  const toneB = inferResultTone(
+    [{ key: 'budget', label: 'B', delta: 2, direction: 'up', isGood: true }],
+    [],
+  );
+  assert(checks, 'inferResultTone deterministic', toneA === toneB);
+
+  const finalEvent = pilotEvents.find((e) => e.id === PILOT_FINAL_EVENT_ID);
+  assert(checks, 'day7 final event bulunur', finalEvent != null);
+  if (finalEvent) {
+    const lowBudget = ensureAtLeastOneAffordableDecision(finalEvent, 500);
+    const affordable = lowBudget.decisions.some(
+      (d) =>
+        checkDecisionAffordability({
+          economyState: {
+            currentSource: 500,
+            startingSource: 500,
+            totalEarned: 0,
+            totalSpent: 0,
+            transactions: [],
+          },
+          decision: d,
+        }).canAfford,
+    );
+    assert(checks, 'day7 final düşük bütçede affordable karar', affordable);
+    assert(
+      checks,
+      'final low-cost decision id mevcut',
+      lowBudget.decisions.some((d) => d.id === FINAL_LOW_COST_CLOSEOUT_DECISION_ID),
+    );
+  }
+
+  const fallbackDecision = createFinalLowCostCloseoutDecision();
+  assert(
+    checks,
+    'final fallback maliyet sıfır',
+    checkDecisionAffordability({
+      economyState: {
+        currentSource: 100,
+        startingSource: 100,
+        totalEarned: 0,
+        totalSpent: 0,
+        transactions: [],
+      },
+      decision: fallbackDecision,
+    }).canAfford,
+  );
 
   const fallback = createEmptyDecisionResultFallback();
   assert(

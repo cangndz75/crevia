@@ -72,16 +72,35 @@ function StatusChip({
   );
 }
 
+export type PersonalizedPreviewChip = {
+  id: string;
+  label: string;
+  tone: StatusChipItem['tone'];
+};
+
 type OperationPreviewStatusChipsProps = {
   chips: OperationPreviewChipView[];
+  personalizedChips?: PersonalizedPreviewChip[] | null;
 };
 
 export function OperationPreviewStatusChips({
   chips,
+  personalizedChips,
 }: OperationPreviewStatusChipsProps) {
+  const items =
+    personalizedChips && personalizedChips.length > 0
+      ? personalizedChips.map((chip) => ({
+          id: chip.id,
+          label: chip.label,
+          icon: 'checkmark-circle' as const,
+          tone: chip.tone,
+          active: true,
+        }))
+      : chips;
+
   return (
     <View style={styles.wrap}>
-      {chips.map((item, index) => (
+      {items.map((item, index) => (
         <StatusChip key={item.id} item={item} index={index} />
       ))}
     </View>

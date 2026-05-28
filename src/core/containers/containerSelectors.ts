@@ -77,20 +77,17 @@ export function selectWorstContainerNeighborhood(
 }
 
 function buildHubDetail(status: NeighborhoodContainerStatus): string {
-  if (status.criticalContainerCount > 0) {
-    return `${status.criticalContainerCount} noktada taşma riski`;
+  if (status.statusLabel === 'Kritik') {
+    return `${status.criticalContainerCount} noktada kritik baskı`;
   }
-  if (status.statusLabel === 'Koku Baskısı') {
-    return 'Koku baskısı yükseliyor';
+  if (status.statusLabel === 'Yüksek') {
+    return `Yüksek baskı · ortalama doluluk %${Math.round(status.averageFillRate)}`;
   }
-  if (status.statusLabel === 'Bakım Gerekli') {
-    return 'Bakım ihtiyacı artıyor';
+  if (status.statusLabel === 'Baskılı') {
+    return 'Atık baskısı artıyor';
   }
-  if (status.statusLabel === 'Doluluk Artıyor') {
-    return `Ortalama doluluk %${Math.round(status.averageFillRate)}`;
-  }
-  if (status.statusLabel === 'Taşma Riski' || status.statusLabel === 'Kritik') {
-    return `Ortalama doluluk %${Math.round(status.averageFillRate)}`;
+  if (status.statusLabel === 'Takipte') {
+    return `Takipte · ortalama doluluk %${Math.round(status.averageFillRate)}`;
   }
   return `Ortalama doluluk %${Math.round(status.averageFillRate)}`;
 }
@@ -102,16 +99,12 @@ function severityFromStatus(
     return 'critical';
   }
   if (
-    status.statusLabel === 'Taşma Riski' ||
+    status.statusLabel === 'Yüksek' ||
     status.worstOverflowRisk === 'critical'
   ) {
     return 'high';
   }
-  if (
-    status.statusLabel === 'Koku Baskısı' ||
-    status.statusLabel === 'Bakım Gerekli' ||
-    status.statusLabel === 'Doluluk Artıyor'
-  ) {
+  if (status.statusLabel === 'Baskılı' || status.statusLabel === 'Takipte') {
     return 'medium';
   }
   return 'low';
@@ -228,20 +221,20 @@ export function selectContainerSummaryLines(state: ContainerState): string[] {
 
     const name = toDisplayContainerNeighborhoodName(status.neighborhoodId);
 
-    if (status.criticalContainerCount > 0) {
+    if (status.statusLabel === 'Kritik') {
       lines.push(
-        `${name}'de ${status.criticalContainerCount} noktada taşma riski yükseldi.`,
+        `${name}'de ${status.criticalContainerCount} noktada kritik atık baskısı var.`,
       );
       continue;
     }
 
-    if (status.statusLabel === 'Koku Baskısı') {
-      lines.push(`${name}'de koku baskısı takip edilmeli.`);
+    if (status.statusLabel === 'Yüksek') {
+      lines.push(`${name}'de atık baskısı yüksek; toplama önceliği önerilir.`);
       continue;
     }
 
-    if (status.statusLabel === 'Bakım Gerekli') {
-      lines.push(`${name}'de bakım ihtiyacı artıyor.`);
+    if (status.statusLabel === 'Baskılı') {
+      lines.push(`${name}'de atık baskısı artıyor; saha takibi önerilir.`);
       continue;
     }
 

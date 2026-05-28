@@ -524,10 +524,10 @@ function verifySocialQuickActionIsolation(): void {
 }
 
 function verifyPersistHydrate(): void {
-  if (SAVE_VERSION === 9) {
-    pass('SAVE_VERSION is current (9)');
+  if (SAVE_VERSION === 10) {
+    pass('SAVE_VERSION is current (10)');
   } else {
-    fail('SAVE_VERSION', `expected 9, got ${SAVE_VERSION}`);
+    fail('SAVE_VERSION', `expected 10, got ${SAVE_VERSION}`);
   }
 
   const bundle = createDay1Seed();
@@ -633,14 +633,20 @@ function verifyLeaderboardSlice(): void {
 function verifyRoutesExist(): void {
   const root = resolve(process.cwd(), 'src', 'app');
   const required = [
-    'social.tsx',
     'leaderboard.tsx',
     'risks/index.tsx',
     'events/pilot-final-report.tsx',
     'reports/index.tsx',
     'index.tsx',
   ];
+  const socialRouteCandidates = ['social.tsx', 'social/index.tsx'];
   const missing = required.filter((rel) => !existsSync(resolve(root, rel)));
+  const hasSocialRoute = socialRouteCandidates.some((rel) =>
+    existsSync(resolve(root, rel)),
+  );
+  if (!hasSocialRoute) {
+    missing.push(socialRouteCandidates.join(' or '));
+  }
   if (missing.length === 0) {
     pass('expo-router files exist for hub/report/social/leaderboard/risks/pilot-final');
   } else {

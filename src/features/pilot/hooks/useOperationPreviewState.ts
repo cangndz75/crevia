@@ -1,6 +1,10 @@
 import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
+import {
+  buildPilotCompletionSummary,
+  type PilotCompletionSummary,
+} from '@/core/pilotCompletion';
 import { canCompletePilot } from '@/core/game/calculatePilotFinalResult';
 import { getDistrictProfile } from '@/core/content/districtProfiles';
 import {
@@ -50,15 +54,34 @@ export type UseOperationPreviewStateOptions = {
 export function useOperationPreviewState(
   options?: UseOperationPreviewStateOptions,
 ) {
-  const { pilot, city, hasHydrated, districtId, gameState } = useGameStore(
+  const storeSlice = useGameStore(
     useShallow((s) => ({
       pilot: s.gameState.pilot,
       city: s.gameState.city,
       hasHydrated: s._hasHydrated,
       districtId: s.gameState.pilot.selectedDistrictId,
       gameState: s.gameState,
+      decisionHistory: s.decisionHistory,
+      dailyPriorityByDay: s.dailyPriorityByDay,
+      dailyGoalsByDay: s.dailyGoalsByDay,
+      lastDailyReport: s.lastDailyReport,
+      lastPilotScore: s.lastPilotScore,
+      snapshots: s.snapshots,
     })),
   );
+  const {
+    pilot,
+    city,
+    hasHydrated,
+    districtId,
+    gameState,
+    decisionHistory,
+    dailyPriorityByDay,
+    dailyGoalsByDay,
+    lastDailyReport,
+    lastPilotScore,
+    snapshots,
+  } = storeSlice;
 
   return useMemo(() => {
     const run = pilot.run;
@@ -178,20 +201,69 @@ export function useOperationPreviewState(
       }
     });
 
+    const completionSummary: PilotCompletionSummary = buildPilotCompletionSummary({
+      gameState,
+      decisionHistory,
+      dailyPriorityByDay,
+      dailyGoalsByDay,
+      lastDailyReport,
+      lastPilotScore,
+      snapshots,
+    });
+
+    const unlockItemsById = new Map(
+      completionSummary.unlockedPreviewItems.map((item) => [item.id, item]),
+    );
+
     const systemCards: SystemCardItem[] = SYSTEM_CARDS.map((card) => {
+      const unlockItem = unlockItemsById.get(card.id);
+      const statusTag = unlockItem?.tag ?? (card.locked ? 'Kilitli' : 'Önizleme');
+      const locked =
+        unlockItem?.status === 'locked' ||
+        (!(unlock?.cityMapPreviewUnlocked ?? false) && card.id === 'city-map') ||
+        (unlockItem?.status !== 'completed' && card.id !== 'city-map');
+
       if (card.id === 'city-map') {
         return {
           ...card,
-          locked: !(unlock?.cityMapPreviewUnlocked ?? false),
+          locked: !(unlock?.cityMapPreviewUnlocked ?? false) && !isCompleted,
+          statusTag: isCompleted
+            ? unlock?.cityMapPreviewUnlocked
+              ? 'Yakında'
+              : 'Önizleme'
+            : 'Kilitli',
+          description: isCompleted
+            ? 'Pilot tamamlandı; şehir haritası ana operasyon açılışında sıradaki adım.'
+            : card.description,
         };
       }
-      return { ...card, locked: true };
+
+      if (card.id === 'butterfly' && isCompleted) {
+        return {
+          ...card,
+          locked: false,
+          statusTag: 'Pilotla hazırlandı',
+          description:
+            'Pilot kararlarının yankıları kayıt altında; ana operasyonda genişleyecek.',
+        };
+      }
+
+      return {
+        ...card,
+        locked: locked && card.id !== 'butterfly',
+        statusTag,
+        description: isCompleted
+          ? `${card.description} Pilot tamamlandı, ana operasyon açılışı yakında.`
+          : card.description,
+      };
     });
 
     const roadmapHint = isCompleted
-      ? reportReady
-        ? 'Pilot tamam — 7 günlük rapor hazır.'
-        : 'Pilot tamam — sırada şehir haritası var.'
+      ? completionSummary.strongestMetricLabel
+        ? `Bu pilotta en güçlü alanın: ${completionSummary.strongestMetricLabel}.`
+        : reportReady
+          ? 'Pilot tamam — 7 günlük rapor hazır.'
+          : 'Pilot tamam — sırada şehir haritası var.'
       : 'Pilot bölgesini tamamla; ardından şehir haritası açılacak.';
 
     const hasRealData = Boolean(run && (run.eventHistory.length > 0 || isCompleted));
@@ -212,6 +284,46 @@ export function useOperationPreviewState(
       mainOperationPreviewUnlocked:
         unlock?.mainOperationPreviewUnlocked ?? isCompleted,
       districtName: run?.selectedDistrictName ?? profile?.shortName,
+      completionSummary,
+      heroPersonalizedText: completionSummary.isCompleted
+        ? completionSummary.nextChapterText
+        : undefined,
+      headerSubtitle: completionSummary.isCompleted
+        ? `Pilot tamamlandı · ${completionSummary.gradeLabel} · Yönetim tarzı: ${completionSummary.managementStyleLabel}`
+        : 'Pilot bölge tamamlandı. Şehir ölçeği yakında açılıyor.',
+      personalizedChips: completionSummary.isCompleted
+        ? [
+            { id: 'done', label: 'Pilot tamamlandı', tone: 'success' as const },
+            {
+              id: 'grade',
+              label: completionSummary.gradeLabel,
+              tone: 'info' as const,
+            },
+            {
+              id: 'style',
+              label: completionSummary.managementStyleLabel,
+              tone: 'warning' as const,
+            },
+            {
+              id: 'report',
+              label: '7 günlük rapor hazır',
+              tone: 'info' as const,
+            },
+          ]
+        : null,
     };
-  }, [pilot, city, hasHydrated, districtId, gameState, options?.forcePilotComplete]);
+  }, [
+    pilot,
+    city,
+    hasHydrated,
+    districtId,
+    gameState,
+    decisionHistory,
+    dailyPriorityByDay,
+    dailyGoalsByDay,
+    lastDailyReport,
+    lastPilotScore,
+    snapshots,
+    options?.forcePilotComplete,
+  ]);
 }

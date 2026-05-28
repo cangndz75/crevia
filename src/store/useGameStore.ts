@@ -26,6 +26,10 @@ import {
   tryRegisterButterflyHookAfterDecision,
 } from '@/core/events/butterflyHookEngine';
 import { buildButterflyReportLines } from '@/core/events/butterflyHookPresentation';
+import { buildCarryOverSignalsForDay } from '@/core/carryOver/carryOverEngine';
+import { buildCarryOverReportLines } from '@/core/carryOver/carryOverPresentation';
+import { buildCarryOverEvaluationInput } from '@/core/carryOver/carryOverSelectors';
+import type { CarryOverEvaluationInput } from '@/core/carryOver/carryOverTypes';
 import { syncCityDayWithPilotDay } from '@/core/game/syncCityDayWithPilotDay';
 import { syncInitialSnapshotWithGameState } from '@/core/game/syncInitialSnapshotWithGameState';
 import { endDay, type EndDayState } from '@/core/game/endDay';
@@ -152,6 +156,17 @@ import {
   buildDecisionResultCitySlice,
   buildDecisionResultSnapshot,
 } from '@/features/events/utils/decisionResultModel';
+import {
+  createInitialHubQuickActionState,
+  normalizePersistedHubQuickActionState,
+  processHubQuickActionForStore,
+} from '@/core/hubQuickActions';
+import { HUB_QUICK_ACTION_DEFINITIONS } from '@/core/hubQuickActions/hubQuickActionConstants';
+import type {
+  HubQuickActionId,
+  HubQuickActionResult,
+  HubQuickActionState,
+} from '@/core/hubQuickActions';
 
 export type ApplyDecisionInsufficientReason =
   | 'insufficient_source'
@@ -244,7 +259,10 @@ type GameStoreState = {
   containerState: ContainerState;
   vehicleState: VehicleState;
   socialPulseState: SocialPulseState;
+  hubQuickActionState: HubQuickActionState;
   tutorialState: TutorialState;
+  /** Oturum içi onboarding ipucu kapatmaları — persist edilmez. */
+  onboardingDismissedHintIds: string[];
   /** Pilot tamamlanınca kaydedilen yerel en iyi skorlar (leaderboard UI sonraki aşama). */
   bestPilotScores: LeaderboardEntry[];
   lastPilotScore?: LeaderboardEntry;
@@ -296,9 +314,11 @@ type GameStoreActions = {
   applySocialQuickAction: (
     input: ApplySocialQuickActionInput,
   ) => ApplySocialQuickActionResult;
+  performHubQuickAction: (actionId: HubQuickActionId) => HubQuickActionResult;
   ensureDay1TutorialStarted: () => void;
   advanceTutorial: () => void;
   skipTutorial: () => void;
+  dismissOnboardingHint: (hintId: string) => void;
 };
 
 export type GameStore = GameStoreState & GameStoreActions;
@@ -370,6 +390,27 @@ function withSyncedPulse(gameState: GameState): GameState {
     ...gameState,
     cityPulse: buildCityPulse(gameState.city),
   };
+}
+
+function buildStoreCarryOverInput(
+  slice: Pick<
+    GameStoreState,
+    'gameState' | 'dailyPriorityByDay' | 'dailyGoalsByDay' | 'lastDailyReport'
+  >,
+  day?: number,
+): CarryOverEvaluationInput {
+  return buildCarryOverEvaluationInput(
+    {
+      gameState: slice.gameState,
+      dailyPriorityByDay: slice.dailyPriorityByDay,
+      dailyGoalsByDay: slice.dailyGoalsByDay,
+      lastDailyReport: slice.lastDailyReport,
+    },
+    {
+      butterflyHookState: slice.gameState.pilot.butterflyHookState,
+      day,
+    },
+  );
 }
 
 function withPilot(
@@ -468,6 +509,7 @@ function applySeedBundle(
   | 'containerState'
   | 'vehicleState'
   | 'socialPulseState'
+  | 'hubQuickActionState'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -514,6 +556,9 @@ function applySeedBundle(
     containerState: createInitialContainerState(bundle.gameState.city.day),
     vehicleState: createInitialVehicleState(bundle.gameState.city.day),
     socialPulseState: createInitialSocialPulseState(bundle.gameState.city.day),
+    hubQuickActionState: createInitialHubQuickActionState(
+      bundle.gameState.city.day,
+    ),
     tutorialState: { ...INITIAL_TUTORIAL_STATE },
     bestPilotScores: [],
     lastPilotScore: undefined,
@@ -608,6 +653,7 @@ export const useGameStore = create<GameStore>()(
     (set, get) => ({
       ...applySeedBundle(initialBundle),
       tutorialState: { ...INITIAL_TUTORIAL_STATE },
+      onboardingDismissedHintIds: [],
       bestPilotScores: [],
       lastPilotScore: undefined,
       lastBudgetDelta: null,
@@ -790,7 +836,11 @@ export const useGameStore = create<GameStore>()(
       },
 
       initializeDay1: () => {
-        set(applySeedBundle(createDay1Seed()));
+        set({
+          ...applySeedBundle(createDay1Seed()),
+          tutorialState: { ...INITIAL_TUTORIAL_STATE },
+          onboardingDismissedHintIds: [],
+        });
       },
 
       resetGame: () => {
@@ -932,6 +982,10 @@ export const useGameStore = create<GameStore>()(
         >['assignment'] = null;
 
         if (event && decision) {
+          const hubForDay = normalizePersistedHubQuickActionState(
+            current.hubQuickActionState,
+            result.decisionRecord.day,
+          );
           const personnelResult = processPersonnelAfterDecision(
             {
               personnelState,
@@ -940,6 +994,7 @@ export const useGameStore = create<GameStore>()(
               day: result.decisionRecord.day,
               neighborhoods: current.neighborhoods,
               resources: result.nextState.resources ?? current.resources,
+              fieldDuty: hubForDay.fieldDuty,
             },
             nextGameState.city.morale,
           );
@@ -996,6 +1051,7 @@ export const useGameStore = create<GameStore>()(
               costs: decision.costs,
             },
             day: result.decisionRecord.day,
+            routePreparation: hubForDay.routePreparation,
           });
 
           socialPulseState = processSocialPulseAfterDecisionForStore(
@@ -1328,6 +1384,94 @@ export const useGameStore = create<GameStore>()(
         return result;
       },
 
+      performHubQuickAction: (actionId) => {
+        const current = get();
+        const currentDay = current.gameState.city.day;
+        const def = HUB_QUICK_ACTION_DEFINITIONS[actionId];
+
+        if (currentDay <= 1) {
+          const blocked: HubQuickActionResult = {
+            actionId,
+            title: def.title,
+            tone: 'warning',
+            resultLine: 'Öğretici günde hızlı hamleler henüz açılmadı.',
+            day: currentDay,
+          };
+          set({
+            hubQuickActionState: {
+              ...normalizePersistedHubQuickActionState(
+                current.hubQuickActionState,
+                currentDay,
+              ),
+              lastResult: blocked,
+            },
+          });
+          return blocked;
+        }
+
+        const normalized = normalizePersistedHubQuickActionState(
+          current.hubQuickActionState,
+          currentDay,
+        );
+        const output = processHubQuickActionForStore({
+          actionId,
+          currentDay,
+          state: normalized,
+          fieldDutyContext:
+            actionId === 'field_duty'
+              ? {
+                  personnelState: current.personnelState,
+                  activeEvents: current.gameState.events,
+                  neighborhoods: current.neighborhoods,
+                  containerState: current.containerState,
+                  socialPulseState: current.socialPulseState,
+                }
+              : undefined,
+          routePreparationContext:
+            actionId === 'route_preparation'
+              ? {
+                  activeEvents: current.gameState.events,
+                  neighborhoods: current.neighborhoods,
+                  vehicleState: current.vehicleState,
+                  containerState: current.containerState,
+                }
+              : undefined,
+          neighborhoodPatrolContext:
+            actionId === 'neighborhood_patrol'
+              ? {
+                  activeEvents: current.gameState.events,
+                  neighborhoods: current.neighborhoods,
+                  containerState: current.containerState,
+                  socialPulseState: current.socialPulseState,
+                  vehicleState: current.vehicleState,
+                }
+              : undefined,
+          socialResponseContext:
+            actionId === 'social_response'
+              ? {
+                  activeEvents: current.gameState.events,
+                  neighborhoods: current.neighborhoods,
+                  socialPulseState: current.socialPulseState,
+                }
+              : undefined,
+        });
+
+        const storePatch: {
+          hubQuickActionState: HubQuickActionState;
+          socialPulseState?: typeof current.socialPulseState;
+        } = {
+          hubQuickActionState: {
+            ...output.state,
+            lastResult: output.result,
+          },
+        };
+        if (output.socialPulseState) {
+          storePatch.socialPulseState = output.socialPulseState;
+        }
+        set(storePatch);
+        return output.result;
+      },
+
       useQuickAction: (actionId) => {
         const current = get();
         const quickResult = processQuickActionDailyGoal({
@@ -1466,6 +1610,30 @@ export const useGameStore = create<GameStore>()(
           closingDay,
         );
 
+        const dailyGoalsByDayForCarry = {
+          ...current.dailyGoalsByDay,
+          [closingDay]: closingGoalState,
+        };
+        const dailyPriorityByDayForCarry = {
+          ...current.dailyPriorityByDay,
+          [closingDay]: closingPriorityState,
+        };
+        const carryOverInputForReport = buildStoreCarryOverInput(
+          {
+            gameState: current.gameState,
+            dailyPriorityByDay: dailyPriorityByDayForCarry,
+            dailyGoalsByDay: dailyGoalsByDayForCarry,
+            lastDailyReport: current.lastDailyReport,
+          },
+          closingDay,
+        );
+        const carryOverSummaryLines = buildCarryOverReportLines(
+          buildCarryOverSignalsForDay(carryOverInputForReport),
+          {
+            hideOverlapWhenButterflyReport: butterflySummaryLines.length > 0,
+          },
+        );
+
         const result = endDay(toEngineState(current), {
           skipEventSelection: skipGenericEventSelection,
           personnelReport,
@@ -1476,6 +1644,8 @@ export const useGameStore = create<GameStore>()(
           dailyGoalState: closingGoalState,
           dailyPriorityResult: buildDailyPriorityReportResult(closingPriorityState),
           butterflySummaryLines,
+          carryOverSummaryLines,
+          hubQuickActionState: current.hubQuickActionState,
         });
 
         let nextGameState = withSyncedPulse(result.nextState);
@@ -1521,6 +1691,8 @@ export const useGameStore = create<GameStore>()(
             result.dailyReport.dailyPriorityResult ??
             buildDailyPriorityReportResult(closingPriorityState) ??
             undefined,
+          carryOverSummaryLines:
+            result.dailyReport.carryOverSummaryLines ?? carryOverSummaryLines,
         };
 
         const dailyGoalsByDay = {
@@ -1544,6 +1716,15 @@ export const useGameStore = create<GameStore>()(
               containerState: containerStateAfterNight,
               vehicleState: vehicleStateAfterNight,
               dailyPriorityKey: current.dailyPriorityState?.selectedKey,
+              carryOverEvaluationInput: buildStoreCarryOverInput(
+                {
+                  gameState: advancedGameState,
+                  dailyPriorityByDay,
+                  dailyGoalsByDay,
+                  lastDailyReport: dailyReport,
+                },
+                advancedGameState.city.day,
+              ),
             },
           );
           nextGameState = withSyncedPulse(pilotRefresh.gameState);
@@ -1625,6 +1806,7 @@ export const useGameStore = create<GameStore>()(
           containerState: containerStateAfterNight,
           vehicleState: vehicleStateAfterNight,
           socialPulseState: socialPulseStateAfterNight,
+          hubQuickActionState: createInitialHubQuickActionState(nextDay),
         });
       },
 
@@ -1637,13 +1819,15 @@ export const useGameStore = create<GameStore>()(
           currentPilotDay: 1,
           dailyEventSet: undefined,
         }));
+        const store = get();
         const pilotRefresh = refreshPilotEventsFromGameState(
           withDistrict,
           eventPool,
           {
             containerState,
             vehicleState,
-            dailyPriorityKey: get().dailyPriorityState?.selectedKey,
+            dailyPriorityKey: store.dailyPriorityState?.selectedKey,
+            carryOverEvaluationInput: buildStoreCarryOverInput(store),
           },
         );
         set({
@@ -1671,13 +1855,18 @@ export const useGameStore = create<GameStore>()(
         );
         const alignedGameState = syncCityDayWithPilotDay(withMetrics);
         const nextGameState = withSyncedPulse(alignedGameState);
+        const storeBefore = get();
         const pilotRefresh = refreshPilotEventsFromGameState(
           nextGameState,
           eventPool,
           {
             containerState,
             vehicleState,
-            dailyPriorityKey: get().dailyPriorityState?.selectedKey,
+            dailyPriorityKey: storeBefore.dailyPriorityState?.selectedKey,
+            carryOverEvaluationInput: buildStoreCarryOverInput({
+              ...storeBefore,
+              gameState: nextGameState,
+            }),
           },
         );
         const syncedGameState = withSyncedPulse(pilotRefresh.gameState);
@@ -1692,14 +1881,16 @@ export const useGameStore = create<GameStore>()(
       },
 
       refreshPilotEventsForCurrentDay: () => {
-        const { gameState, eventPool, containerState, vehicleState } = get();
+        const store = get();
+        const { gameState, eventPool, containerState, vehicleState } = store;
         const pilotRefresh = refreshPilotEventsFromGameState(
           gameState,
           eventPool,
           {
             containerState,
             vehicleState,
-            dailyPriorityKey: get().dailyPriorityState?.selectedKey,
+            dailyPriorityKey: store.dailyPriorityState?.selectedKey,
+            carryOverEvaluationInput: buildStoreCarryOverInput(store),
           },
         );
         if (!pilotRefresh.refreshed) {
@@ -1867,6 +2058,12 @@ export const useGameStore = create<GameStore>()(
       skipTutorial: () => {
         set({ tutorialState: skipTutorialState(get().tutorialState) });
       },
+
+      dismissOnboardingHint: (hintId) => {
+        const ids = get().onboardingDismissedHintIds;
+        if (ids.includes(hintId)) return;
+        set({ onboardingDismissedHintIds: [...ids, hintId] });
+      },
     }),
     {
       name: GAME_STORAGE_KEY,
@@ -1903,6 +2100,12 @@ export const useGameStore = create<GameStore>()(
             containerState: saved.containerState,
             vehicleState: saved.vehicleState,
             dailyPriorityKey: saved.dailyPriorityState?.selectedKey,
+            carryOverEvaluationInput: buildStoreCarryOverInput({
+              gameState: withPilotRun,
+              dailyPriorityByDay: saved.dailyPriorityByDay ?? {},
+              dailyGoalsByDay: saved.dailyGoalsByDay ?? {},
+              lastDailyReport: saved.lastDailyReport,
+            }),
           },
         );
 
@@ -1950,6 +2153,10 @@ export const useGameStore = create<GameStore>()(
           containerState: saved.containerState,
           vehicleState: saved.vehicleState,
           socialPulseState: saved.socialPulseState,
+          hubQuickActionState: normalizePersistedHubQuickActionState(
+            saved.hubQuickActionState,
+            withSyncedPulse(pilotRefresh.gameState).city.day,
+          ),
           tutorialState: saved.tutorialState ?? { ...INITIAL_TUTORIAL_STATE },
           bestPilotScores: saved.bestPilotScores ?? [],
           lastPilotScore: saved.lastPilotScore,

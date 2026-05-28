@@ -24,6 +24,7 @@ import {
   FULL_REST_NIGHT_RECOVERY_BONUS,
   LIGHT_DUTY_FATIGUE_MULTIPLIER,
   LIGHT_DUTY_HEAVY_SUCCESS_PENALTY,
+  MISTAKE_RISK,
   REST_EFFECTS,
   RISK_TO_TASK_DIFFICULTY,
   ROLE_TASK_TAGS,
@@ -634,15 +635,31 @@ export function calculateTaskSuccessScoreFromInput(
   return calculateTaskSuccessScore(input);
 }
 
+export type PersonnelTaskScoreModifiers = {
+  successBonus: number;
+  riskReduction: number;
+};
+
 export function applyPersonnelTaskResult(
   team: PersonnelTeam,
   input: PersonnelTaskInput,
   taskMeta: { eventId: string; decisionId: string },
   mistakeContext?: PersonnelMistakeDayContext,
+  scoreModifiers?: PersonnelTaskScoreModifiers,
 ): { team: PersonnelTeam; result: PersonnelTaskResult } {
   const fatigueGain = calculateTaskFatigueGain(input);
   let successScore = calculateTaskSuccessScore(input);
-  const mistakeRisk = calculatePersonnelMistakeRisk(input, successScore);
+  if (scoreModifiers?.successBonus) {
+    successScore = clamp(successScore + scoreModifiers.successBonus, 0, 100);
+  }
+  let mistakeRisk = calculatePersonnelMistakeRisk(input, successScore);
+  if (scoreModifiers?.riskReduction) {
+    mistakeRisk = clamp(
+      mistakeRisk - scoreModifiers.riskReduction,
+      MISTAKE_RISK.min,
+      MISTAKE_RISK.max,
+    );
+  }
   const mistakeRiskLevel = resolveMistakeRiskLevel(mistakeRisk);
 
   let operationalIncident =

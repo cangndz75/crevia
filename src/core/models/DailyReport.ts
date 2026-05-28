@@ -40,5 +40,9 @@ export type DailyReport = {
   }>;
   /** Karar yankısı özeti — snapshot (en fazla 2 satır). */
   butterflySummaryLines?: string[];
+  /** Dünden kalan sinyal özeti — snapshot (en fazla 2 satır). */
+  carryOverSummaryLines?: string[];
+  /** Hub hızlı aksiyon özeti — snapshot (en fazla 2 satır). */
+  quickActionSummaryLines?: string[];
   createdAt?: string;
 };

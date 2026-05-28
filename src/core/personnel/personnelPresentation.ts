@@ -14,6 +14,15 @@ import {
   inferTaskDifficulty,
   isHeavyTaskDifficulty,
 } from './personnelEngine';
+import type {
+  FieldDutyAssignment,
+  NeighborhoodPatrolAssignment,
+} from '@/core/hubQuickActions/hubQuickActionTypes';
+import {
+  applyFieldDutyScoreModifiers,
+  resolveFieldDutyPersonnelModifier,
+} from '@/core/hubQuickActions/hubQuickActionPersonnelEffects';
+import { resolveNeighborhoodPatrolModifier } from '@/core/hubQuickActions/hubQuickActionNeighborhoodPatrolEffects';
 import { buildCompetencyPreviewText } from './personnelCompetency';
 import {
   buildMistakeRiskDecisionLine,
@@ -49,11 +58,16 @@ export type PersonnelImpactPreview = {
   decisionMistakeLine?: string | null;
   /** Güçlü/zayıf yetkinlik uyumu — yalnızca uç değerlerde */
   competencyText?: string | null;
+  /** Saha nöbeti hazırlık bonusu — eşleşen kararlarda */
+  fieldDutyLine?: string | null;
+  neighborhoodPatrolLine?: string | null;
 };
 
 export type PersonnelImpactPreviewExtras = {
   neighborhoods?: Neighborhood[];
   resources?: GameResources;
+  fieldDuty?: FieldDutyAssignment;
+  neighborhoodPatrol?: NeighborhoodPatrolAssignment;
 };
 
 const DEFAULT_RESOURCES: GameResources = {
@@ -381,6 +395,8 @@ function computePersonnelImpactPreview(params: {
   day: number;
   neighborhoods?: Neighborhood[];
   resources?: GameResources;
+  fieldDuty?: FieldDutyAssignment;
+  neighborhoodPatrol?: NeighborhoodPatrolAssignment;
 }): PersonnelImpactPreview {
   const {
     personnelState,
@@ -421,8 +437,31 @@ function computePersonnelImpactPreview(params: {
 
   const estimatedFatigueGain = calculateTaskFatigueGain(taskInput);
 
-  const successScore = calculateTaskSuccessScore(taskInput);
-  const mistakeRisk = calculatePersonnelMistakeRisk(taskInput, successScore);
+  const fieldDutyModifier = resolveFieldDutyPersonnelModifier({
+    fieldDuty: params.fieldDuty,
+    currentDay: day,
+    event,
+    decision,
+    assignedTeamId: team.id,
+    assignedTeamName: team.name,
+  });
+
+  const patrolModifier = resolveNeighborhoodPatrolModifier({
+    neighborhoodPatrol: params.neighborhoodPatrol,
+    currentDay: day,
+    event,
+    decision,
+  });
+
+  const baseSuccessScore = calculateTaskSuccessScore(taskInput);
+  const baseMistakeRisk = calculatePersonnelMistakeRisk(taskInput, baseSuccessScore);
+  const adjusted = applyFieldDutyScoreModifiers(
+    baseSuccessScore,
+    baseMistakeRisk,
+    fieldDutyModifier,
+  );
+  const successScore = adjusted.successScore;
+  const mistakeRisk = adjusted.mistakeRisk;
   const mistakeRiskLevel = resolveMistakeRiskLevel(mistakeRisk);
   const estimatedMoraleDelta = estimateMoraleDeltaPreview(taskInput, successScore);
   const estimatedSuccessLevel = mapSuccessScoreToLevel(successScore);
@@ -464,6 +503,8 @@ function computePersonnelImpactPreview(params: {
         : buildMistakeRiskPreviewText(mistakeRiskLevel, taskInput),
     decisionMistakeLine: buildMistakeRiskDecisionLine(mistakeRiskLevel),
     competencyText: buildCompetencyPreviewText(taskInput.competencyScore ?? 50),
+    fieldDutyLine: fieldDutyModifier.line ?? null,
+    neighborhoodPatrolLine: patrolModifier.line ?? null,
   };
 
   return preview;
@@ -516,5 +557,7 @@ export function selectPersonnelImpactPreviewForDecision(
     day,
     neighborhoods: extras?.neighborhoods,
     resources: extras?.resources,
+    fieldDuty: extras?.fieldDuty,
+    neighborhoodPatrol: extras?.neighborhoodPatrol,
   });
 }

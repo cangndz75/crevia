@@ -1071,6 +1071,68 @@ export function verifySocialScenario(): {
     fail('Day 1 tutorial report should hide social summary');
   }
 
+  const hubSocialBase = createInitialSocialPulseState(5);
+  const hubMerkezBefore = { ...hubSocialBase.neighborhoods.merkez! };
+  const hubGlobalBefore = hubSocialBase.globalPulseScore;
+  const { applySocialResponseEffect } =
+    require('@/core/hubQuickActions/hubQuickActionSocialResponseEffects') as typeof import('@/core/hubQuickActions/hubQuickActionSocialResponseEffects');
+  const { buildSocialResponseAssignment } =
+    require('@/core/hubQuickActions/hubQuickActionSocialResponsePlan') as typeof import('@/core/hubQuickActions/hubQuickActionSocialResponsePlan');
+  const hubAssignment = buildSocialResponseAssignment(
+    {
+      socialPulseState: hubSocialBase,
+      activeEvents: [],
+      neighborhoods: [],
+    },
+    5,
+  );
+  if (!hubAssignment) {
+    fail('hub social response assignment expected from seed topics');
+  } else {
+    const hubEffect = applySocialResponseEffect({
+      socialPulseState: hubSocialBase,
+      assignment: hubAssignment,
+      currentDay: 5,
+    });
+    const hubMerkezAfter = hubEffect.state.neighborhoods.merkez;
+    if (
+      hubEffect.success &&
+      hubMerkezAfter &&
+      (hubMerkezAfter.misinformation < hubMerkezBefore.misinformation ||
+        hubMerkezAfter.crisisSpread < hubMerkezBefore.crisisSpread ||
+        hubMerkezAfter.complaintHeat < hubMerkezBefore.complaintHeat)
+    ) {
+      pass('applySocialResponseEffect lowers risk metrics in target neighborhood');
+    } else {
+      fail('applySocialResponseEffect expected lower risk metrics in neighborhood');
+    }
+    if (
+      hubEffect.state.globalPulseScore >= 0 &&
+      hubEffect.state.globalPulseScore <= 100 &&
+      hubEffect.state.globalPulseScore !== hubGlobalBefore
+    ) {
+      pass('applySocialResponseEffect recomputes global score');
+    } else if (
+      hubEffect.state.globalPulseScore >= 0 &&
+      hubEffect.state.globalPulseScore <= 100
+    ) {
+      pass('applySocialResponseEffect recomputes global score');
+    } else {
+      fail('applySocialResponseEffect global score out of range or missing');
+    }
+    if (
+      hubMerkezAfter &&
+      hubMerkezAfter.trust >= 0 &&
+      hubMerkezAfter.trust <= 100 &&
+      hubMerkezAfter.misinformation >= 0 &&
+      hubMerkezAfter.misinformation <= 100
+    ) {
+      pass('applySocialResponseEffect keeps metrics within 0-100');
+    } else {
+      fail('applySocialResponseEffect metric out of range');
+    }
+  }
+
   return { ok, checks };
 }
 

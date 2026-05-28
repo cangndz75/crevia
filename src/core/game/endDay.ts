@@ -13,6 +13,7 @@ import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import type { SocialPulseState } from '@/core/social/socialTypes';
 import type { DailyGoalState } from '@/core/dailyGoals/dailyGoalTypes';
 import type { DailyPriorityReportResult } from '@/core/dailyPriority/dailyPriorityTypes';
+import type { HubQuickActionState } from '@/core/hubQuickActions/hubQuickActionTypes';
 
 const UNRESOLVED_SATISFACTION_PENALTY = 2;
 const UNRESOLVED_MORALE_PENALTY = 1;
@@ -55,6 +56,10 @@ export type EndDayOptions = {
   dailyPriorityResult?: DailyPriorityReportResult | null;
   /** Karar yankısı özeti — rapor snapshot. */
   butterflySummaryLines?: string[];
+  /** Dünden kalan sinyal özeti — rapor snapshot. */
+  carryOverSummaryLines?: string[];
+  /** Gün kapanışı hub hızlı aksiyon durumu — rapor özet satırları. */
+  hubQuickActionState?: HubQuickActionState | null;
 };
 
 function getMetrics(state: EndDayState) {
@@ -147,6 +152,8 @@ export function endDay(
     dailyGoalState: options?.dailyGoalState,
     dailyPriorityResult: options?.dailyPriorityResult,
     butterflySummaryLines: options?.butterflySummaryLines,
+    carryOverSummaryLines: options?.carryOverSummaryLines,
+    hubQuickActionState: options?.hubQuickActionState,
   });
 
   let nextState: EndDayState = applyUnresolvedEventPenalty({

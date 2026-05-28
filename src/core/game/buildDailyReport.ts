@@ -19,6 +19,8 @@ import {
 } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 import type { NeighborhoodReportStatus } from '@/core/neighborhoodIdentity/neighborhoodIdentityTypes';
 import type { DailyPriorityReportResult } from '@/core/dailyPriority/dailyPriorityTypes';
+import { buildHubQuickActionReportSummaryLines } from '@/core/hubQuickActions/hubQuickActionPresentation';
+import type { HubQuickActionState } from '@/core/hubQuickActions/hubQuickActionTypes';
 
 const LOW_SATISFACTION = 50;
 const LOW_MORALE = 50;
@@ -46,6 +48,10 @@ export type BuildDailyReportParams = {
   dailyPriorityResult?: DailyPriorityReportResult | null;
   /** Karar yankısı satırları — snapshot (en fazla 2). */
   butterflySummaryLines?: string[];
+  /** Dünden kalan sinyal satırları — snapshot (en fazla 2). */
+  carryOverSummaryLines?: string[];
+  /** Gün kapanışı hub hızlı aksiyon durumu — özet satırları için. */
+  hubQuickActionState?: HubQuickActionState | null;
 };
 
 function formatCurrency(amount: number): string {
@@ -274,6 +280,11 @@ export function buildDailyReport(params: BuildDailyReportParams): DailyReport {
 
   const dailyGoalResults = buildDailyGoalReportResults(params.dailyGoalState);
 
+  const quickActionSummaryLines = buildHubQuickActionReportSummaryLines(
+    params.hubQuickActionState ?? undefined,
+    day,
+  );
+
   const focalNeighborhoodId = resolveFocalNeighborhoodId(
     decisionsToday,
     activeEvents,
@@ -309,6 +320,12 @@ export function buildDailyReport(params: BuildDailyReportParams): DailyReport {
       params.butterflySummaryLines && params.butterflySummaryLines.length > 0
         ? params.butterflySummaryLines.slice(0, 2)
         : undefined,
+    carryOverSummaryLines:
+      params.carryOverSummaryLines && params.carryOverSummaryLines.length > 0
+        ? params.carryOverSummaryLines.slice(0, 2)
+        : undefined,
+    quickActionSummaryLines:
+      quickActionSummaryLines.length > 0 ? quickActionSummaryLines : undefined,
     createdAt: new Date().toISOString(),
   };
 }

@@ -1,7 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   FadeInUp,
@@ -9,23 +8,26 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import { useShallow } from 'zustand/react/shallow';
 
-import { formatSourceDelta } from '@/core/economy/economyFormatter';
-import type { EventPreviewEffects } from '@/core/models/EventCard';
-import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
+import { buildEventCategoryChip } from '@/core/events/eventContentPresentation';
+import { getResolvedCardColors } from '@/core/liveFlow/liveFlowPresentation';
 import {
-  buildEventCardPriorityChip,
-  buildEventCategoryChip,
-} from '@/core/events/eventContentPresentation';
-import { getPilotRhythmChipLabel } from '@/core/events/pilotRhythmPresentation';
+  buildLiveFlowStoreSliceFromGameStore,
+  selectHubPrimaryEventPresentation,
+  type LiveFlowStoreSlice,
+} from '@/core/liveFlow/liveFlowSelectors';
+import { getDecisionRecordForEvent } from '@/core/liveFlow/eventLifecycleEngine';
 import {
   getNeighborhoodIdentityChipLabel,
   normalizeNeighborhoodId,
 } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
-import { deriveCrisisQueue } from '@/features/hub/utils/hubDerived';
+import { EventLifecycleBadge } from '@/features/events/components/EventLifecycleBadge';
+import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
 import { getEventHeroImage, hubAssets } from '@/features/hub/utils/hubAssets';
-import { getCriticalEventQuote } from '@/features/hub/utils/hubPresentation';
-import { selectActiveEvents, useGameStore } from '@/store/useGameStore';
+import { selectIsDay1TutorialActive } from '@/features/tutorial/tutorialSelectors';
+import { useGameStore } from '@/store/useGameStore';
+import { getPressFeedbackStyle } from '@/ui/feedback/pressFeedback';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
@@ -33,137 +35,50 @@ import { spacing } from '@/ui/theme/spacing';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-function EventIllustration({
-  eventId,
-  category,
-}: {
-  eventId: string;
-  category: string;
-}) {
-  const image = getEventHeroImage(eventId, category);
-  return (
-    <View style={illStyles.wrap}>
-      <View style={illStyles.glow} />
-      <HubAssetImage
-        source={image}
-        containerStyle={illStyles.frame}
-        style={illStyles.image}
-        contentFit="contain"
-      />
-      <View style={illStyles.alertIcon}>
-        <Ionicons name="alert-circle" size={10} color="#fff" />
-      </View>
-    </View>
-  );
+function formatUrgencyRemaining(hours: number): string {
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  if (h > 0 && m > 0) return `${h}s ${m}dk kaldı`;
+  if (h > 0) return `${h}s kaldı`;
+  if (m > 0) return `${m}dk kaldı`;
+  return 'Acil';
 }
-
-const illStyles = StyleSheet.create({
-  wrap: {
-    width: 68,
-    alignSelf: 'flex-start',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    marginTop: 2,
-    flexShrink: 0,
-  },
-  glow: {
-    position: 'absolute',
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.warningMuted,
-    opacity: 0.75,
-  },
-  frame: {
-    width: 62,
-    height: 62,
-    borderRadius: 14,
-    overflow: 'hidden',
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: '#EDD9A3',
-  },
-  image: {
-    borderRadius: 14,
-  },
-  alertIcon: {
-    position: 'absolute',
-    top: -2,
-    right: 0,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.danger,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 2,
-    borderWidth: 2,
-    borderColor: colors.surface,
-  },
-});
-
-function ImpactChip({
-  label,
-  tone,
-}: {
-  label: string;
-  tone: 'positive' | 'negative' | 'warning';
-}) {
-  const bg =
-    tone === 'positive'
-      ? colors.successMuted
-      : tone === 'negative'
-        ? colors.dangerMuted
-        : colors.warningMuted;
-  const fg =
-    tone === 'positive'
-      ? colors.success
-      : tone === 'negative'
-        ? colors.danger
-        : colors.warning;
-  return (
-    <View style={[chipStyles.chip, { backgroundColor: bg }]}>
-      <Text style={[chipStyles.text, { color: fg }]}>{label}</Text>
-    </View>
-  );
-}
-
-const chipStyles = StyleSheet.create({
-  chip: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
-  },
-  text: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-});
 
 export function HubCriticalEventCard() {
   const router = useRouter();
-  const activeEvents = useGameStore(selectActiveEvents);
-  const featuredId = useGameStore((s) => s.gameState.featuredEventId);
-  const advisorBody = useGameStore((s) => s.gameState.eventAdvisor.body);
-  const dailyPriorityKey = useGameStore((s) => s.dailyPriorityState?.selectedKey);
-  const currentDay = useGameStore((s) => s.gameState.city.day);
 
-  const event = useMemo(() => {
-    const featured = activeEvents.find((e) => e.id === featuredId);
-    if (featured) return featured;
-    const queue = deriveCrisisQueue(activeEvents);
-    return queue[0]?.event ?? null;
-  }, [activeEvents, featuredId]);
+  const presentation = useGameStore(
+    useShallow((s) => {
+      const slice: LiveFlowStoreSlice = {
+        gameState: s.gameState,
+        eventPool: s.eventPool,
+        decisionHistory: s.decisionHistory,
+        lastDecisionResult: s.lastDecisionResult,
+        lastDailyReport: s.lastDailyReport,
+        dailyPriorityByDay: s.dailyPriorityByDay,
+        dailyGoalsByDay: s.dailyGoalsByDay,
+        isDay1Tutorial: selectIsDay1TutorialActive(s),
+      };
+      return selectHubPrimaryEventPresentation(
+        buildLiveFlowStoreSliceFromGameStore(slice),
+      );
+    }),
+  );
+
+  const decisionRecord = useGameStore((s) => {
+    if (!presentation?.event) return undefined;
+    return getDecisionRecordForEvent(
+      presentation.event.id,
+      s.decisionHistory,
+    );
+  });
 
   const ctaScale = useSharedValue(1);
   const ctaAnim = useAnimatedStyle(() => ({
     transform: [{ scale: ctaScale.value }],
   }));
 
-  if (!event) {
+  if (!presentation) {
     return (
       <Animated.View
         entering={FadeInUp.duration(280)}
@@ -179,116 +94,113 @@ export function HubCriticalEventCard() {
     );
   }
 
-  const effects: EventPreviewEffects = event.previewEffects;
-  const quote = getCriticalEventQuote(advisorBody);
-  const goToEvent = () => router.push(`/events/${event.id}`);
+  const { event, lifecycle } = presentation;
+  const isResolved = lifecycle.status === 'resolved_today';
+  const resolvedPalette = getResolvedCardColors(lifecycle.tone);
 
-  const hasImpacts =
-    effects.publicSatisfaction !== 0 ||
-    (effects.budget != null && effects.budget !== 0) ||
-    effects.risk !== 0;
+  const goToEvent = () => {
+    if (isResolved) {
+      router.push('/events/decision-result');
+      return;
+    }
+    router.push(`/events/${event.id}`);
+  };
 
   const neighborhoodId = event.neighborhoodId ?? event.district;
-  const neighborhoodChip =
+  const neighborhoodLabel =
     normalizeNeighborhoodId(neighborhoodId) != null
       ? getNeighborhoodIdentityChipLabel(neighborhoodId)
-      : null;
-  const categoryChip = buildEventCategoryChip(event);
-  const priorityChip = buildEventCardPriorityChip(event, dailyPriorityKey);
-  const rhythmChip = getPilotRhythmChipLabel(event, currentDay);
+      : event.district;
+  const categoryLabel = buildEventCategoryChip(event);
+  const statusLine = event.contextTag || categoryLabel;
 
   return (
     <Animated.View
       entering={FadeInUp.delay(30).duration(320).springify().damping(20)}
-      style={[styles.card, shadows.card]}>
-      <Pressable onPress={goToEvent} accessibilityRole="button">
-        <LinearGradient
-          colors={['#F2C97A', '#E5AD4A', '#D99B3A']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.flameBadge}>
-              <Ionicons name="flame" size={12} color={colors.hubGoldDark} />
-            </View>
-            <Text style={styles.headerText}>Günün Kritik Olayı</Text>
+      style={[
+        styles.card,
+        shadows.card,
+        isResolved
+          ? {
+              borderColor: resolvedPalette.border,
+              backgroundColor: resolvedPalette.bg,
+            }
+          : null,
+      ]}>
+      <View style={styles.header}>
+        {isResolved ? (
+          <View
+            style={[
+              styles.flameBadge,
+              { backgroundColor: resolvedPalette.badgeBg },
+            ]}>
+            <Ionicons name="checkmark" size={14} color={resolvedPalette.badgeText} />
           </View>
-          <View style={styles.priorityBadge}>
-            <Text style={styles.priorityText}>Yüksek Öncelik</Text>
+        ) : (
+          <View style={styles.flameBadge}>
+            <Ionicons name="flame" size={14} color="#FFFFFF" />
           </View>
-        </LinearGradient>
-      </Pressable>
+        )}
+        <Text
+          style={[
+            styles.headerText,
+            isResolved ? { color: resolvedPalette.badgeText } : null,
+          ]}>
+          {isResolved ? 'SONUÇLANDI' : 'KRİTİK OLAY'}
+        </Text>
+        <View style={styles.badgeWrap}>
+          <EventLifecycleBadge lifecycle={lifecycle} compact />
+        </View>
+      </View>
 
-      <Pressable onPress={goToEvent} style={styles.body} accessibilityRole="button">
-        <View style={styles.leftCol}>
+      <Pressable
+        onPress={goToEvent}
+        style={({ pressed }) => [styles.body, getPressFeedbackStyle({ pressed })]}
+        accessibilityRole="button">
+        <View style={styles.contentCol}>
           <Text style={styles.title} numberOfLines={2}>
             {event.title}
           </Text>
-          <View style={styles.locRow}>
-            <Ionicons name="location-outline" size={12} color={colors.hubGoldDark} />
-            <Text style={styles.locText} numberOfLines={1}>
-              {neighborhoodChip ?? event.district}
-              {categoryChip ? ` · ${categoryChip}` : ''}
+          <View style={styles.metaRow}>
+            <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
+            <Text style={styles.metaText} numberOfLines={1}>
+              {neighborhoodLabel}
+            </Text>
+            <Text style={styles.metaDot}>·</Text>
+            <Text style={styles.metaText} numberOfLines={1}>
+              {statusLine}
             </Text>
           </View>
-          {priorityChip ? (
-            <Text style={styles.priorityRelationText} numberOfLines={1}>
-              {priorityChip}
+          {isResolved ? (
+            <Text style={styles.resolvedSummary} numberOfLines={2}>
+              {lifecycle.summaryText ??
+                (decisionRecord
+                  ? `${decisionRecord.decisionLabel} uygulandı.`
+                  : 'Olay bugün çözüldü. Etkisi gün sonu raporuna yansıyacak.')}
             </Text>
-          ) : null}
-          {rhythmChip && !priorityChip ? (
-            <Text style={styles.rhythmChipText} numberOfLines={1}>
-              {rhythmChip}
-            </Text>
-          ) : null}
-
-          <View style={styles.quoteWrap}>
-            <HubAssetImage
-              source={hubAssets.advisorPortrait}
-              containerStyle={styles.quoteAvatar}
-              contentFit="cover"
-            />
-            <View style={styles.bubble}>
-              <Text style={styles.quoteText} numberOfLines={2}>
-                &ldquo;{quote}&rdquo;
+          ) : (
+            <View style={styles.timerRow}>
+              <Ionicons name="time-outline" size={13} color={colors.warning} />
+              <Text style={styles.timerText}>
+                {formatUrgencyRemaining(event.urgencyHours)}
               </Text>
             </View>
-          </View>
-
+          )}
         </View>
 
-        <EventIllustration eventId={event.id} category={event.category} />
+        {!isResolved ? (
+          <View style={styles.imageWrap}>
+            <HubAssetImage
+              source={getEventHeroImage(event.id, event.category)}
+              containerStyle={styles.eventImage}
+              style={styles.eventImageInner}
+              contentFit="contain"
+            />
+          </View>
+        ) : null}
       </Pressable>
 
       <View style={styles.footer}>
-        {hasImpacts ? (
-          <View style={styles.impactsBlock}>
-            <Text style={styles.impactsLabel}>Çözülmezse etkiler</Text>
-            <View style={styles.impacts}>
-              {effects.publicSatisfaction !== 0 && (
-                <ImpactChip
-                  label={`${effects.publicSatisfaction > 0 ? '+' : ''}${effects.publicSatisfaction} Memnuniyet`}
-                  tone={effects.publicSatisfaction > 0 ? 'positive' : 'negative'}
-                />
-              )}
-              {effects.budget != null && effects.budget !== 0 && (
-                <ImpactChip
-                  label={formatSourceDelta(effects.budget)}
-                  tone={effects.budget > 0 ? 'positive' : 'negative'}
-                />
-              )}
-              {effects.risk !== 0 && (
-                <ImpactChip
-                  label={`${effects.risk > 0 ? '+' : ''}${effects.risk} Risk`}
-                  tone="warning"
-                />
-              )}
-            </View>
-          </View>
-        ) : (
-          <View style={styles.impactsSpacer} />
-        )}
-
         <AnimatedPressable
           onPressIn={() => {
             ctaScale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
@@ -298,16 +210,29 @@ export function HubCriticalEventCard() {
           }}
           onPress={goToEvent}
           accessibilityRole="button"
-          accessibilityLabel="Karar ver"
+          accessibilityLabel={lifecycle.ctaLabel ?? 'Karar ver'}
           style={[styles.cta, ctaAnim]}>
-          <LinearGradient
-            colors={[colors.headerTealDark, colors.primary, '#24A89E']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.ctaGradient}>
-            <Text style={styles.ctaText}>Karar Ver</Text>
-            <Ionicons name="chevron-forward" size={16} color="#fff" />
-          </LinearGradient>
+          {isResolved ? (
+            <View
+              style={[
+                styles.ctaResolved,
+                { backgroundColor: resolvedPalette.badgeBg },
+              ]}>
+              <Text style={[styles.ctaResolvedText, { color: resolvedPalette.badgeText }]}>
+                {lifecycle.ctaLabel ?? 'Sonucu Gör'}
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={resolvedPalette.badgeText} />
+            </View>
+          ) : (
+            <LinearGradient
+              colors={[colors.headerTealDark, colors.primary, '#24A89E']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.ctaGradient}>
+              <Text style={styles.ctaText}>{lifecycle.ctaLabel ?? 'Karar Ver'}</Text>
+              <Ionicons name="chevron-forward" size={16} color="#fff" />
+            </LinearGradient>
+          )}
         </AnimatedPressable>
       </View>
     </Animated.View>
@@ -319,8 +244,8 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: '#E8D9B8',
+    borderWidth: 2,
+    borderColor: colors.warning,
     overflow: 'hidden',
   },
   emptyCard: {
@@ -328,6 +253,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     borderColor: colors.border,
+    borderWidth: 1,
   },
   emptyTitle: {
     fontSize: 14,
@@ -345,54 +271,39 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 8,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingTop: 12,
+    paddingBottom: 4,
   },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
+  badgeWrap: {
+    marginLeft: 'auto',
   },
   flameBadge: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(255,255,255,0.85)',
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    backgroundColor: colors.warning,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
-    color: '#5C3D0A',
-    letterSpacing: 0.2,
-  },
-  priorityBadge: {
-    backgroundColor: 'rgba(92, 61, 10, 0.12)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: 'rgba(92, 61, 10, 0.08)',
-  },
-  priorityText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#5C3D0A',
-    letterSpacing: 0.3,
+    color: colors.warning,
+    letterSpacing: 0.5,
   },
   body: {
     flexDirection: 'row',
     paddingHorizontal: 14,
-    paddingTop: 14,
+    paddingTop: 6,
     paddingBottom: 10,
     gap: 10,
-    backgroundColor: '#FFFCF7',
+    alignItems: 'flex-start',
   },
-  leftCol: {
+  contentCol: {
     flex: 1,
-    gap: 10,
+    gap: 6,
     minWidth: 0,
   },
   title: {
@@ -402,102 +313,82 @@ const styles = StyleSheet.create({
     letterSpacing: -0.35,
     lineHeight: 22,
   },
-  locRow: {
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: -2,
+    gap: 3,
+    flexWrap: 'wrap',
   },
-  locText: {
+  metaText: {
     fontSize: 11,
     fontWeight: '600',
     color: colors.textSecondary,
-    flex: 1,
+    flexShrink: 1,
   },
-  priorityRelationText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.primary,
-    marginTop: 2,
-  },
-  rhythmChipText: {
-    fontSize: 10,
-    fontWeight: '600',
+  metaDot: {
+    fontSize: 11,
     color: colors.textSecondary,
-    marginTop: 2,
   },
-  quoteWrap: {
+  timerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-    marginTop: 2,
-  },
-  quoteAvatar: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    marginTop: 1,
-  },
-  bubble: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    borderTopLeftRadius: 3,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  quoteText: {
-    fontSize: 10,
-    fontWeight: '600',
-    fontStyle: 'italic',
-    color: colors.textPrimary,
-    lineHeight: 13,
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingBottom: 14,
-    paddingTop: 4,
-    backgroundColor: '#FFFCF7',
-  },
-  impactsBlock: {
-    flex: 1,
-    minWidth: 0,
+    alignItems: 'center',
     gap: 4,
   },
-  impactsSpacer: {
-    flex: 1,
+  timerText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.warning,
   },
-  impactsLabel: {
-    fontSize: 10,
+  resolvedSummary: {
+    fontSize: 12,
     fontWeight: '600',
     color: colors.textSecondary,
+    lineHeight: 16,
   },
-  impacts: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 5,
+  imageWrap: {
+    width: 80,
+    height: 72,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    backgroundColor: colors.backgroundAlt,
+    flexShrink: 0,
+  },
+  eventImage: {
+    width: '100%',
+    height: '100%',
+  },
+  eventImageInner: {
+    borderRadius: radius.lg,
+  },
+  footer: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    paddingTop: 2,
   },
   cta: {
     borderRadius: radius.full,
     overflow: 'hidden',
-    flexShrink: 0,
-    minWidth: 128,
   },
   ctaGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    paddingVertical: 12,
+    paddingVertical: 13,
     paddingHorizontal: 16,
+  },
+  ctaResolved: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderRadius: radius.full,
+  },
+  ctaResolvedText: {
+    fontSize: 15,
+    fontWeight: '800',
   },
   ctaText: {
     fontSize: 15,

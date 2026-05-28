@@ -66,8 +66,23 @@ function OperationPreviewSystemCard({
           {card.description}
         </Text>
 
-        <View style={styles.tag}>
-          <Text style={styles.tagText}>{card.tag}</Text>
+        <View style={styles.tagRow}>
+          <View style={styles.tag}>
+            <Text style={styles.tagText}>{card.tag}</Text>
+          </View>
+          <View
+            style={[
+              styles.statusTag,
+              !card.locked && styles.statusTagOpen,
+            ]}>
+            <Text
+              style={[
+                styles.statusTagText,
+                !card.locked && styles.statusTagTextOpen,
+              ]}>
+              {card.statusTag}
+            </Text>
+          </View>
         </View>
       </GameCard>
     </Animated.View>
@@ -166,8 +181,13 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     flex: 1,
   },
+  tagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    alignItems: 'center',
+  },
   tag: {
-    alignSelf: 'flex-start',
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     borderRadius: radius.full,
@@ -180,5 +200,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textSecondary,
     letterSpacing: 0.3,
+  },
+  statusTag: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    backgroundColor: colors.hubGoldMuted,
+    borderWidth: 1,
+    borderColor: `${colors.hubGold}88`,
+  },
+  statusTagOpen: {
+    backgroundColor: colors.successMuted,
+    borderColor: `${colors.success}55`,
+  },
+  statusTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.hubGoldDark,
+  },
+  statusTagTextOpen: {
+    color: colors.success,
   },
 });

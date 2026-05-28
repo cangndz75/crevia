@@ -5,6 +5,12 @@ import {
   VEHICLE_PREVIEW_SHOW_THRESHOLDS,
   type VehicleDailyMetricDeltas,
 } from './vehicleConstants';
+import type { RoutePreparationAssignment } from '@/core/hubQuickActions/hubQuickActionTypes';
+import {
+  applyRoutePreparationToVehicleDeltas,
+  resolveRoutePreparationModifier,
+} from '@/core/hubQuickActions/hubQuickActionRouteEffects';
+
 import {
   getVehicleDecisionDeltasForAction,
   inferVehicleDecisionAction,
@@ -37,6 +43,7 @@ export type VehicleImpactPreview = {
   riskText?: string | null;
   unavailableText?: string | null;
   shouldShow: boolean;
+  routePreparationLine?: string | null;
 };
 
 export type SelectVehicleImpactPreviewParams = {
@@ -44,6 +51,7 @@ export type SelectVehicleImpactPreviewParams = {
   event?: VehicleDecisionEventInput;
   decision: VehicleDecisionChoiceInput;
   day: number;
+  routePreparation?: RoutePreparationAssignment;
 };
 
 function formatSignedDelta(value: number): string {
@@ -178,7 +186,7 @@ function buildNonePreview(): VehicleImpactPreview {
 export function selectVehicleImpactPreviewForDecision(
   params: SelectVehicleImpactPreviewParams,
 ): VehicleImpactPreview {
-  const { vehicleState, event, decision } = params;
+  const { vehicleState, event, decision, day, routePreparation } = params;
   const action = inferVehicleDecisionAction(event, decision);
 
   if (action === 'none') {
@@ -204,7 +212,17 @@ export function selectVehicleImpactPreviewForDecision(
     };
   }
 
-  const deltas = getVehicleDecisionDeltasForAction(action, decision);
+  const routeModifier = resolveRoutePreparationModifier({
+    routePreparation,
+    currentDay: day,
+    event,
+    decision,
+    decisionAction: action,
+    affectedVehicleId: vehicle.id,
+  });
+
+  const baseDeltas = getVehicleDecisionDeltasForAction(action, decision);
+  const deltas = applyRoutePreparationToVehicleDeltas(baseDeltas, routeModifier);
   const projected = projectVehicleMetrics(vehicle, deltas);
   const riskLevel = resolveVehiclePreviewRiskLevel(vehicle, projected, deltas);
   const available = true;
@@ -231,5 +249,6 @@ export function selectVehicleImpactPreviewForDecision(
     riskText: buildRiskText(riskLevel),
     unavailableText: null,
     shouldShow,
+    routePreparationLine: routeModifier.line ?? null,
   };
 }

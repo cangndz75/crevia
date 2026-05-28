@@ -11,12 +11,14 @@ import { spacing } from "@/ui/theme/spacing";
 
 type OperationPreviewFooterCTAProps = {
   onPilotReport: () => void;
-  onNormalOperation?: () => void;
+  onHub?: () => void;
+  onLeaderboard?: () => void;
 };
 
 export function OperationPreviewFooterCTA({
   onPilotReport,
-  onNormalOperation,
+  onHub,
+  onLeaderboard,
 }: OperationPreviewFooterCTAProps) {
   return (
     <Animated.View
@@ -42,11 +44,20 @@ export function OperationPreviewFooterCTA({
           </LinearGradient>
         </Pressable>
 
-        {onNormalOperation ? (
+        {onHub ? (
           <GameButton
-            title="Günlük Operasyona Git"
-            onPress={onNormalOperation}
+            title="Merkeze Dön"
+            onPress={onHub}
             variant="secondary"
+            style={styles.secondaryBtn}
+          />
+        ) : null}
+
+        {onLeaderboard ? (
+          <GameButton
+            title="Liderliği Gör"
+            onPress={onLeaderboard}
+            variant="ghost"
             style={styles.secondaryBtn}
           />
         ) : null}

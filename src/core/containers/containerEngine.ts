@@ -17,6 +17,7 @@ import {
   CONTAINER_MARKET_DAY_FILL_MULTIPLIER,
   CONTAINER_NEIGHBORHOOD_DAILY_PRESSURE,
   CONTAINER_NEIGHBORHOOD_IDS,
+  CONTAINER_COMPOSITE_CRITICAL,
   CONTAINER_FILL_THRESHOLDS,
   CONTAINER_MAINTENANCE_THRESHOLDS,
   CONTAINER_ODOR_THRESHOLDS,
@@ -56,6 +57,7 @@ export function calculateOverflowRisk(input: {
   fillRate: number;
   odorLevel: number;
   maintenanceNeed: number;
+  condition?: number;
   status?: ContainerUnitStatus;
 }): ContainerOverflowRisk {
   if (input.status === 'disabled') {
@@ -65,18 +67,23 @@ export function calculateOverflowRisk(input: {
   const fillRate = clampContainerValue(input.fillRate);
   const odorLevel = clampContainerValue(input.odorLevel);
   const maintenanceNeed = clampContainerValue(input.maintenanceNeed);
+  const condition = clampContainerValue(input.condition ?? 100);
 
-  if (
-    fillRate >= CONTAINER_FILL_THRESHOLDS.critical ||
-    odorLevel >= CONTAINER_ODOR_THRESHOLDS.critical
-  ) {
+  const compositeCritical =
+    fillRate >= CONTAINER_COMPOSITE_CRITICAL.imminentFill ||
+    (fillRate >= CONTAINER_COMPOSITE_CRITICAL.fillMin &&
+      odorLevel >= CONTAINER_COMPOSITE_CRITICAL.odorMin) ||
+    (maintenanceNeed >= CONTAINER_COMPOSITE_CRITICAL.maintenanceMin &&
+      condition <= CONTAINER_COMPOSITE_CRITICAL.conditionMax);
+
+  if (compositeCritical) {
     return 'critical';
   }
 
   if (
     fillRate >= CONTAINER_FILL_THRESHOLDS.high ||
     odorLevel >= CONTAINER_ODOR_THRESHOLDS.high ||
-    maintenanceNeed >= CONTAINER_MAINTENANCE_THRESHOLDS.critical
+    maintenanceNeed >= CONTAINER_MAINTENANCE_THRESHOLDS.high
   ) {
     return 'high';
   }
@@ -84,7 +91,7 @@ export function calculateOverflowRisk(input: {
   if (
     fillRate >= CONTAINER_FILL_THRESHOLDS.medium ||
     odorLevel >= CONTAINER_ODOR_THRESHOLDS.medium ||
-    maintenanceNeed >= CONTAINER_MAINTENANCE_THRESHOLDS.high
+    maintenanceNeed >= CONTAINER_MAINTENANCE_THRESHOLDS.watch
   ) {
     return 'medium';
   }
@@ -157,6 +164,7 @@ export function normalizeContainerUnit(unit: ContainerUnit): ContainerUnit {
     fillRate,
     odorLevel,
     maintenanceNeed,
+    condition,
     status: unit.status,
   });
 
@@ -172,6 +180,7 @@ export function normalizeContainerUnit(unit: ContainerUnit): ContainerUnit {
     fillRate,
     odorLevel,
     maintenanceNeed,
+    condition,
     status,
   });
 
@@ -216,13 +225,18 @@ function maxOverflowRisk(risks: ContainerOverflowRisk[]): ContainerOverflowRisk 
 }
 
 function resolveRecommendedAction(input: {
+  elevatedContainerCount: number;
   criticalContainerCount: number;
   averageFillRate: number;
   maintenancePressure: number;
   odorPressure: number;
   averageCondition: number;
 }): NeighborhoodContainerStatus['recommendedAction'] {
-  if (input.criticalContainerCount > 0 || input.averageFillRate >= 75) {
+  if (
+    input.criticalContainerCount > 0 ||
+    input.elevatedContainerCount >= 2 ||
+    input.averageFillRate >= 78
+  ) {
     return 'collect_now';
   }
   if (input.maintenancePressure >= 65) {
@@ -239,6 +253,7 @@ function resolveRecommendedAction(input: {
 
 function resolveStatusLabel(input: {
   severeOverflowUnitCount: number;
+  highContainerCount: number;
   elevatedContainerCount: number;
   worstOverflowRisk: ContainerOverflowRisk;
   odorPressure: number;
@@ -248,34 +263,48 @@ function resolveStatusLabel(input: {
   complaintPressure: number;
 }): NeighborhoodContainerStatusLabel {
   const isKritik =
-    (input.severeOverflowUnitCount >= 2 && input.averageFillRate >= 75) ||
-    (input.worstOverflowRisk === 'critical' &&
-      input.complaintPressure >= 75) ||
-    (input.averageFillRate >= 82 && input.odorPressure >= 75) ||
-    (input.maintenancePressure >= 80 && input.averageCondition <= 45);
+    input.severeOverflowUnitCount >= 2 ||
+    (input.severeOverflowUnitCount >= 1 &&
+      input.complaintPressure >= 78 &&
+      input.averageFillRate >= 82) ||
+    (input.averageFillRate >= 86 &&
+      input.odorPressure >= 74 &&
+      input.maintenancePressure >= 72);
 
   if (isKritik) {
     return 'Kritik';
   }
 
-  const isTasmaRiski =
+  const isYuksek =
+    input.severeOverflowUnitCount >= 1 ||
+    input.highContainerCount >= 2 ||
+    (input.highContainerCount >= 1 && input.averageFillRate >= 76) ||
     input.worstOverflowRisk === 'critical' ||
+    input.averageFillRate >= 80 ||
+    (input.averageFillRate >= 76 && input.odorPressure >= 70);
+
+  if (isYuksek) {
+    return 'Yüksek';
+  }
+
+  const isBaskili =
+    input.highContainerCount >= 1 ||
     input.worstOverflowRisk === 'high' ||
-    input.elevatedContainerCount >= 1 ||
-    input.averageFillRate >= 70;
+    input.elevatedContainerCount >= 2 ||
+    input.odorPressure >= 68 ||
+    input.maintenancePressure >= 68 ||
+    input.averageFillRate >= 72;
 
-  if (isTasmaRiski) {
-    return 'Taşma Riski';
+  if (isBaskili) {
+    return 'Baskılı';
   }
 
-  if (input.odorPressure >= 65) {
-    return 'Koku Baskısı';
-  }
-  if (input.maintenancePressure >= 65) {
-    return 'Bakım Gerekli';
-  }
-  if (input.averageFillRate >= 55) {
-    return 'Doluluk Artıyor';
+  if (
+    input.averageFillRate >= 55 ||
+    input.odorPressure >= 52 ||
+    input.maintenancePressure >= 52
+  ) {
+    return 'Takipte';
   }
   return 'Dengeli';
 }
@@ -294,6 +323,7 @@ function createEmptyNeighborhoodStatus(
     complaintPressure: 0,
     activeContainerCount: 0,
     criticalContainerCount: 0,
+    highContainerCount: 0,
     recommendedAction: 'monitor',
     statusLabel: 'Dengeli',
   };
@@ -346,16 +376,18 @@ export function buildNeighborhoodContainerStatus(
     ),
   );
 
-  const elevatedContainerCount = sourceUnits.filter(
-    (unit) =>
-      unit.overflowRisk === 'high' || unit.overflowRisk === 'critical',
-  ).length;
   const severeOverflowUnitCount = sourceUnits.filter(
     (unit) => unit.overflowRisk === 'critical',
   ).length;
+  const highContainerCount = sourceUnits.filter(
+    (unit) => unit.overflowRisk === 'high',
+  ).length;
+  const elevatedContainerCount =
+    severeOverflowUnitCount + highContainerCount;
 
   const recommendedAction = resolveRecommendedAction({
-    criticalContainerCount: elevatedContainerCount,
+    elevatedContainerCount,
+    criticalContainerCount: severeOverflowUnitCount,
     averageFillRate,
     maintenancePressure,
     odorPressure,
@@ -364,6 +396,7 @@ export function buildNeighborhoodContainerStatus(
 
   const statusLabel = resolveStatusLabel({
     severeOverflowUnitCount,
+    highContainerCount,
     elevatedContainerCount,
     worstOverflowRisk,
     odorPressure,
@@ -383,7 +416,8 @@ export function buildNeighborhoodContainerStatus(
     collectionDelayDays,
     complaintPressure,
     activeContainerCount,
-    criticalContainerCount: elevatedContainerCount,
+    criticalContainerCount: severeOverflowUnitCount,
+    highContainerCount,
     recommendedAction,
     statusLabel,
   };
@@ -529,6 +563,7 @@ export function calculateDailyMaintenanceGain(input: {
     fillRate: nextFillRate,
     odorLevel: unit.odorLevel,
     maintenanceNeed: unit.maintenanceNeed,
+    condition: nextCondition,
     status: unit.status,
   });
 
@@ -621,20 +656,20 @@ function buildContainerDailySummaryLines(
 
     const name = toDisplayContainerNeighborhoodName(status.neighborhoodId);
 
-    if (status.criticalContainerCount > 0) {
+    if (status.statusLabel === 'Kritik') {
       lines.push(
-        `${name}'de ${status.criticalContainerCount} noktada taşma riski yükseldi.`,
+        `${name}'de ${status.criticalContainerCount} noktada kritik atık baskısı var.`,
       );
       continue;
     }
 
-    if (status.statusLabel === 'Koku Baskısı') {
-      lines.push(`${name}'de koku baskısı takip edilmeli.`);
+    if (status.statusLabel === 'Yüksek') {
+      lines.push(`${name}'de atık baskısı yüksek; toplama önceliği önerilir.`);
       continue;
     }
 
-    if (status.statusLabel === 'Bakım Gerekli') {
-      lines.push(`${name}'de bakım ihtiyacı artıyor.`);
+    if (status.statusLabel === 'Baskılı') {
+      lines.push(`${name}'de atık baskısı artıyor; saha takibi önerilir.`);
       continue;
     }
 

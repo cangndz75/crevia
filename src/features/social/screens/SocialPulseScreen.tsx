@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -16,15 +16,9 @@ import { spacing } from '@/ui/theme/spacing';
 import { HotSocialTopicCard } from '../components/HotSocialTopicCard';
 import { NeighborhoodSocialRiskStrip } from '../components/NeighborhoodSocialRiskStrip';
 import { SocialActionButton } from '../components/SocialActionButton';
-import {
-  SocialLiveMentionsCard,
-  SocialLiveMentionsSheet,
-} from '../components/SocialLiveMentionsCard';
+import { SocialLiveMentionsCard } from '../components/SocialLiveMentionsCard';
 import { SocialNavHeader } from '../components/SocialNavHeader';
-import {
-  SocialOutcomeHistoryCard,
-  SocialOutcomeHistorySheet,
-} from '../components/SocialOutcomeHistoryCard';
+import { SocialOutcomeHistoryCard } from '../components/SocialOutcomeHistoryCard';
 import { SocialPulseSummaryCard } from '../components/SocialPulseSummaryCard';
 import { buildSocialPulseUiBundle } from '../utils/socialUiMappers';
 import { MOCK_SOCIAL_PULSE } from '../utils/socialUiModel';
@@ -44,8 +38,6 @@ export function SocialPulseScreen() {
   const currentDay = useGameStore((s) => s.gameState.city.day);
   const applySocialQuickAction = useGameStore((s) => s.applySocialQuickAction);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
-  const [outcomesOpen, setOutcomesOpen] = useState(false);
-  const [mentionsOpen, setMentionsOpen] = useState(false);
 
   const {
     summary,
@@ -128,27 +120,15 @@ export function SocialPulseScreen() {
         <View style={styles.exploreSection}>
           <SocialOutcomeHistoryCard
             outcomes={outcomes}
-            onPress={() => setOutcomesOpen(true)}
+            onPress={() => router.push('/social/outcome-history' as Href)}
           />
           <SocialLiveMentionsCard
             mentions={mentions}
             activeMentionCount={activeMentionCount}
-            onPress={() => setMentionsOpen(true)}
+            onPress={() => router.push('/social/mentions' as Href)}
           />
         </View>
       </ScrollView>
-
-      <SocialOutcomeHistorySheet
-        visible={outcomesOpen}
-        onClose={() => setOutcomesOpen(false)}
-        outcomes={outcomes}
-      />
-      <SocialLiveMentionsSheet
-        visible={mentionsOpen}
-        onClose={() => setMentionsOpen(false)}
-        mentions={mentions}
-        activeMentionCount={activeMentionCount}
-      />
     </View>
   );
 }

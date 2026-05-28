@@ -17,6 +17,7 @@ type OperationPreviewHeroProps = {
   districtImage: ImageSource;
   statusRows: OperationPreviewHeroRow[];
   mainOperationLocked: boolean;
+  personalizedSummary?: string;
 };
 
 function HeroStatusPill({
@@ -51,6 +52,7 @@ export function OperationPreviewHero({
   districtImage,
   statusRows,
   mainOperationLocked,
+  personalizedSummary,
 }: OperationPreviewHeroProps) {
   return (
     <Animated.View entering={FadeInUp.delay(140).duration(380).springify().damping(22)}>
@@ -60,6 +62,9 @@ export function OperationPreviewHero({
           Pilot bölgede aldığın kararlar, ana operasyondaki şehir stratejine temel
           olacak.
         </Text>
+        {personalizedSummary ? (
+          <Text style={styles.personalized}>{personalizedSummary}</Text>
+        ) : null}
 
         <View style={styles.visual}>
           <HubAssetImage
@@ -119,6 +124,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     color: colors.textSecondary,
+  },
+  personalized: {
+    ...typography.caption,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.hubGoldDark,
+    marginTop: -spacing.xs,
   },
   visual: {
     height: 168,

@@ -159,6 +159,7 @@ export function applyDay1TutorialReportCopy(
     containerSummaryLines: undefined,
     vehicleSummaryLines: undefined,
     socialSummaryLines: undefined,
+    quickActionSummaryLines: undefined,
     dailyGoalResults: [
       {
         title: 'İlk gün hedefi',

@@ -2,17 +2,23 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { DAILY_PRIORITY_CHOICES } from '@/core/dailyPriority/dailyPriorityConstants';
+import { playSelectionHaptic } from '@/core/feedback/hapticFeedback';
 import {
   getDailyPriorityChoice,
   getDailyPriorityStatusLabel,
   getDailyPriorityToneColors,
   getLatestPriorityImpactText,
-  buildDay1TutorialPriorityLine,
 } from '@/core/dailyPriority/dailyPriorityPresentation';
 import { isDailyPrioritySelectionRequired } from '@/core/dailyPriority/dailyPrioritySelectors';
 import type { DailyPriorityKey } from '@/core/dailyPriority/dailyPriorityTypes';
-import { selectIsDay1TutorialActive } from '@/features/tutorial/tutorialSelectors';
+import {
+  DAY1_PRIORITY_FALLBACK,
+  DAY2_PRIORITY_PROMPT,
+} from '@/core/onboarding/onboardingPresentation';
+import { selectOnboardingHubVisibilityFromStore } from '@/core/onboarding/onboardingSelectors';
+import { selectIsDay1TutorialEligible } from '@/features/tutorial/tutorialSelectors';
 import { useGameStore } from '@/store/useGameStore';
+import { getPressFeedbackStyle } from '@/ui/feedback/pressFeedback';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
@@ -21,23 +27,32 @@ import { spacing } from '@/ui/theme/spacing';
 export function HubDailyPriorityCard() {
   const currentDay = useGameStore((s) => s.gameState.city.day);
   const priorityState = useGameStore((s) => s.dailyPriorityState);
-  const isDay1 = useGameStore(selectIsDay1TutorialActive);
+  const isDay1Eligible = useGameStore(selectIsDay1TutorialEligible);
+  const hubVis = useGameStore((s) =>
+    selectOnboardingHubVisibilityFromStore({
+      gameState: s.gameState,
+      tutorialState: s.tutorialState,
+      dailyPriorityState: s.dailyPriorityState,
+      dailyGoalState: s.dailyGoalState,
+      lastDecisionResult: s.lastDecisionResult,
+      lastDailyReport: s.lastDailyReport,
+      decisionHistory: s.decisionHistory,
+      onboardingDismissedHintIds: s.onboardingDismissedHintIds,
+    }),
+  );
   const selectDailyPriority = useGameStore((s) => s.selectDailyPriority);
 
   const needsSelection = isDailyPrioritySelectionRequired(
     priorityState,
     currentDay,
-    isDay1,
+    isDay1Eligible,
   );
 
-  if (isDay1) {
-    if (!priorityState?.selectedKey) {
-      return null;
-    }
+  if (!hubVis.showDailyPrioritySelection && hubVis.showDailyPriorityCompact) {
     return (
       <View style={[styles.card, styles.cardCompact, shadows.soft]}>
         <Text style={styles.sectionLabel}>Günün Önceliği</Text>
-        <Text style={styles.day1Line}>{buildDay1TutorialPriorityLine()}</Text>
+        <Text style={styles.day1Line}>{DAY1_PRIORITY_FALLBACK}</Text>
       </View>
     );
   }
@@ -46,7 +61,9 @@ export function HubDailyPriorityCard() {
     return (
       <View style={[styles.card, shadows.card]}>
         <Text style={styles.title}>Bugünkü Önceliğin</Text>
-        <Text style={styles.subtitle}>Bugün hangi dengeyi öne alacaksın?</Text>
+        <Text style={styles.subtitle}>
+          {currentDay >= 2 ? DAY2_PRIORITY_PROMPT : 'Bugün hangi dengeyi öne alacaksın?'}
+        </Text>
         <View style={styles.choiceList}>
           {DAILY_PRIORITY_CHOICES.map((choice) => (
             <PriorityChoiceRow
@@ -57,7 +74,10 @@ export function HubDailyPriorityCard() {
               tradeoff={choice.tradeoffText}
               iconName={choice.iconName}
               visualTone={choice.visualTone}
-              onSelect={() => selectDailyPriority(choice.key)}
+              onSelect={() => {
+                playSelectionHaptic();
+                selectDailyPriority(choice.key);
+              }}
             />
           ))}
         </View>
@@ -133,7 +153,8 @@ function PriorityChoiceRow({
       onPress={onSelect}
       style={({ pressed }) => [
         styles.choiceRow,
-        { borderColor: tone.border, opacity: pressed ? 0.9 : 1 },
+        { borderColor: tone.border },
+        getPressFeedbackStyle({ pressed }),
       ]}
       accessibilityRole="button"
       accessibilityLabel={title}>

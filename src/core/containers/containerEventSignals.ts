@@ -83,12 +83,10 @@ function severityFromStatusLabel(
   switch (label) {
     case 'Kritik':
       return 'critical';
-    case 'Taşma Riski':
+    case 'Yüksek':
       return 'high';
-    case 'Doluluk Artıyor':
-      return 'medium';
-    case 'Koku Baskısı':
-    case 'Bakım Gerekli':
+    case 'Baskılı':
+    case 'Takipte':
       return 'medium';
     default:
       return 'low';
@@ -211,23 +209,26 @@ function buildWasteOverflowSignal(
 ): ContainerEventSignal | null {
   const highPressure =
     aggregate.statusLabel === 'Kritik' ||
-    aggregate.statusLabel === 'Taşma Riski' ||
+    aggregate.statusLabel === 'Yüksek' ||
     aggregate.criticalContainerCount >= 1 ||
-    aggregate.averageFillRate >= 70;
+    aggregate.highContainerCount >= 2 ||
+    aggregate.averageFillRate >= 72;
 
   if (!highPressure) {
     return null;
   }
 
   let severity: ContainerEventSignalSeverity = 'medium';
-  if (aggregate.statusLabel === 'Kritik') {
+  if (aggregate.statusLabel === 'Kritik' || aggregate.criticalContainerCount >= 2) {
     severity = 'critical';
-  } else if (aggregate.statusLabel === 'Taşma Riski') {
+  } else if (
+    aggregate.statusLabel === 'Yüksek' ||
+    aggregate.criticalContainerCount >= 1 ||
+    aggregate.averageFillRate >= 82
+  ) {
     severity = 'high';
-  } else if (aggregate.statusLabel === 'Doluluk Artıyor') {
+  } else if (aggregate.statusLabel === 'Baskılı') {
     severity = 'medium';
-  } else if (aggregate.averageFillRate >= 82) {
-    severity = 'high';
   }
 
   const sourceUnits =

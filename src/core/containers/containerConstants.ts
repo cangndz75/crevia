@@ -16,14 +16,23 @@ export const CONTAINER_NEIGHBORHOOD_IDS: readonly ContainerNeighborhoodId[] = [
 
 export const CONTAINER_FILL_THRESHOLDS = {
   medium: 55,
-  high: 70,
-  critical: 85,
+  high: 82,
+  critical: 92,
 } as const;
 
 export const CONTAINER_ODOR_THRESHOLDS = {
   medium: 45,
-  high: 65,
-  critical: 80,
+  high: 70,
+  critical: 85,
+} as const;
+
+/** Unit-level critical requires composite pressure, not a single spike. */
+export const CONTAINER_COMPOSITE_CRITICAL = {
+  fillMin: 90,
+  odorMin: 68,
+  maintenanceMin: 86,
+  conditionMax: 38,
+  imminentFill: 93,
 } as const;
 
 export const CONTAINER_CONDITION_THRESHOLDS = {
@@ -35,8 +44,8 @@ export const CONTAINER_CONDITION_THRESHOLDS = {
 
 export const CONTAINER_MAINTENANCE_THRESHOLDS = {
   watch: 45,
-  high: 65,
-  critical: 80,
+  high: 75,
+  critical: 88,
 } as const;
 
 export const CONTAINER_UNIT_FILL_OVERFLOW = 90;
@@ -74,11 +83,10 @@ export const CONTAINER_STATUS_LABEL_PRIORITY: Record<
   number
 > = {
   Dengeli: 0,
-  'Doluluk Artıyor': 1,
-  'Bakım Gerekli': 2,
-  'Koku Baskısı': 3,
-  'Taşma Riski': 4,
-  Kritik: 5,
+  Takipte: 1,
+  Baskılı: 2,
+  Yüksek: 3,
+  Kritik: 4,
 };
 
 export const CONTAINER_ACTION_LABELS: Record<
@@ -109,7 +117,7 @@ export const CONTAINER_NEIGHBORHOOD_DAILY_PRESSURE: Record<
 > = {
   merkez: 0.98,
   cumhuriyet: 0.82,
-  sanayi: 1.08,
+  sanayi: 1.05,
   istasyon: 0.92,
   yesilvadi: 0.55,
 };
@@ -136,9 +144,9 @@ export const CONTAINER_MAINTENANCE_GAIN_BY_TYPE: Record<ContainerType, number> =
 };
 
 export const CONTAINER_DAILY_UPDATE_LIMITS = {
-  maxFillGainPerDay: 15,
-  maxOdorGainPerDay: 12,
-  maxMaintenanceGainPerDay: 10,
+  maxFillGainPerDay: 13,
+  maxOdorGainPerDay: 11,
+  maxMaintenanceGainPerDay: 9,
   maxConditionLossPerDay: 3,
 } as const;
 

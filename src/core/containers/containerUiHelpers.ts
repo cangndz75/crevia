@@ -83,16 +83,12 @@ export function mapContainerSeverityFromStatus(
     return 'critical';
   }
   if (
-    status.statusLabel === 'Taşma Riski' ||
+    status.statusLabel === 'Yüksek' ||
     status.worstOverflowRisk === 'critical'
   ) {
     return 'high';
   }
-  if (
-    status.statusLabel === 'Koku Baskısı' ||
-    status.statusLabel === 'Bakım Gerekli' ||
-    status.statusLabel === 'Doluluk Artıyor'
-  ) {
+  if (status.statusLabel === 'Baskılı' || status.statusLabel === 'Takipte') {
     return 'medium';
   }
   return 'low';
@@ -104,11 +100,10 @@ export function getContainerStatusTone(
   switch (statusLabel) {
     case 'Kritik':
       return SEVERITY_TONES.critical;
-    case 'Taşma Riski':
+    case 'Yüksek':
       return SEVERITY_TONES.high;
-    case 'Koku Baskısı':
-    case 'Bakım Gerekli':
-    case 'Doluluk Artıyor':
+    case 'Baskılı':
+    case 'Takipte':
       return SEVERITY_TONES.medium;
     default:
       return SEVERITY_TONES.low;
@@ -180,19 +175,14 @@ const CALM_CONTAINER_REPORT_LINE = 'Atık operasyonu dengeli seyrini korudu.';
 function polishContainerReportLine(status: NeighborhoodContainerStatus): string {
   const name = toDisplayContainerNeighborhoodName(status.neighborhoodId);
 
-  if (status.criticalContainerCount > 0) {
-    return `${name}'de taşma riski yüksek; toplama rotası öneriliyor.`;
-  }
-
   switch (status.statusLabel) {
-    case 'Koku Baskısı':
-      return `${name}'de koku baskısı takip edilmeli.`;
-    case 'Bakım Gerekli':
-      return `${name}'de bakım ihtiyacı artıyor.`;
-    case 'Taşma Riski':
     case 'Kritik':
-      return `${name}'de taşma riski yüksek; toplama rotası öneriliyor.`;
-    case 'Doluluk Artıyor':
+      return `${name}'de kritik atık baskısı var; toplama rotası öneriliyor.`;
+    case 'Yüksek':
+      return `${name}'de atık baskısı yüksek; toplama rotası önerilir.`;
+    case 'Baskılı':
+      return `${name}'de atık baskısı artıyor; saha takibi önerilir.`;
+    case 'Takipte':
       return `${name}'de doluluk artıyor; rota takibi önerilir.`;
     case 'Dengeli':
       return `${name} dengeli seyrini korudu.`;

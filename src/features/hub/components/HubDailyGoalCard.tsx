@@ -8,6 +8,8 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { selectPrimaryDailyGoal } from '@/core/dailyGoals/dailyGoalSelectors';
+import { DAY1_GOALS_PLACEHOLDER } from '@/core/onboarding/onboardingPresentation';
+import { selectOnboardingHubVisibilityFromStore } from '@/core/onboarding/onboardingSelectors';
 import { useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
@@ -21,8 +23,23 @@ type HubDailyGoalCardProps = {
 };
 
 export function HubDailyGoalCard({ onEndDay }: HubDailyGoalCardProps) {
-  const currentDay = useGameStore((s) => s.gameState.city.day);
   const goal = useGameStore((s) => selectPrimaryDailyGoal(s.dailyGoalState));
+  const showGoalsPlaceholder = useGameStore((s) => {
+    if (selectPrimaryDailyGoal(s.dailyGoalState)) return false;
+    const day = s.gameState.city.day;
+    if (day > 2) return false;
+    const vis = selectOnboardingHubVisibilityFromStore({
+      gameState: s.gameState,
+      tutorialState: s.tutorialState,
+      dailyPriorityState: s.dailyPriorityState,
+      dailyGoalState: s.dailyGoalState,
+      lastDecisionResult: s.lastDecisionResult,
+      lastDailyReport: s.lastDailyReport,
+      decisionHistory: s.decisionHistory,
+      onboardingDismissedHintIds: s.onboardingDismissedHintIds,
+    });
+    return day <= 2 && !vis.showDailyPrioritySelection;
+  });
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -31,7 +48,20 @@ export function HubDailyGoalCard({ onEndDay }: HubDailyGoalCardProps) {
   }));
 
   if (!goal) {
-    return null;
+    if (!showGoalsPlaceholder) return null;
+    return (
+      <View style={[styles.panel, shadows.card]}>
+        <View style={styles.goalSection}>
+          <View style={styles.trophyCircle}>
+            <Ionicons name="flag-outline" size={18} color={colors.hubGoldDark} />
+          </View>
+          <View style={styles.goalContent}>
+            <Text style={styles.sectionLabel}>GÜNLÜK HEDEF</Text>
+            <Text style={styles.goalText}>{DAY1_GOALS_PLACEHOLDER}</Text>
+          </View>
+        </View>
+      </View>
+    );
   }
 
   const progressRatio = goal.progressPercent / 100;

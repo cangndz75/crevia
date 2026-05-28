@@ -1,3 +1,6 @@
+import type { RoutePreparationModifier } from '@/core/hubQuickActions/hubQuickActionRouteEffects';
+import { applyRoutePreparationToVehicleDeltas } from '@/core/hubQuickActions/hubQuickActionRouteEffects';
+
 import {
   VEHICLE_ACTION_CATEGORY_PRIORITY,
   VEHICLE_DECISION_ACTION_DELTAS,
@@ -297,8 +300,15 @@ export function applyVehicleDecisionEffect(
   event: VehicleDecisionEventInput | undefined,
   decision: VehicleDecisionChoiceInput,
   day: number,
+  routeModifier?: RoutePreparationModifier,
 ): VehicleUnit {
-  const deltas = getVehicleDecisionDeltasForAction(action, decision);
+  const baseDeltas = getVehicleDecisionDeltasForAction(action, decision);
+  const deltas = applyRoutePreparationToVehicleDeltas(baseDeltas, routeModifier ?? {
+    applies: false,
+    loadReduction: 0,
+    riskReduction: 0,
+    routeBonus: 0,
+  });
   const eventId = stringField(event?.id) ?? `decision-${decision.id}`;
 
   return {
@@ -324,6 +334,7 @@ export function applyVehicleDecisionEffect(
 
 export function applyVehicleDecisionEffects(
   input: VehicleDecisionInput,
+  routeModifier?: RoutePreparationModifier,
 ): VehicleDecisionResult {
   const action = inferVehicleDecisionAction(input.event, input.decision);
 
@@ -350,6 +361,7 @@ export function applyVehicleDecisionEffects(
     input.event,
     input.decision,
     input.day,
+    routeModifier,
   );
 
   const units = input.vehicleState.units.map((unit) =>

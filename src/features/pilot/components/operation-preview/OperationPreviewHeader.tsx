@@ -11,11 +11,13 @@ import { typography } from '@/ui/theme/typography';
 type OperationPreviewHeaderProps = {
   onBack: () => void;
   onInfo: () => void;
+  subtitle?: string;
 };
 
 export function OperationPreviewHeader({
   onBack,
   onInfo,
+  subtitle = 'Pilot bölge tamamlandı. Şehir ölçeği yakında açılıyor.',
 }: OperationPreviewHeaderProps) {
   const insets = useSafeAreaInsets();
 
@@ -31,9 +33,7 @@ export function OperationPreviewHeader({
 
       <View style={styles.center}>
         <Text style={styles.title}>Ana Operasyon Önizlemesi</Text>
-        <Text style={styles.subtitle}>
-          Pilot bölge tamamlandı. Şehir ölçeği yakında açılıyor.
-        </Text>
+        <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
 
       <Pressable

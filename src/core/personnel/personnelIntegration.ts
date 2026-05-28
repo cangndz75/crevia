@@ -1,3 +1,5 @@
+import type { FieldDutyAssignment } from '@/core/hubQuickActions/hubQuickActionTypes';
+import { resolveFieldDutyPersonnelModifier } from '@/core/hubQuickActions/hubQuickActionPersonnelEffects';
 import type { DecisionAppliedEffects } from '@/core/models/DecisionRecord';
 import type { EventCard, EventDecision } from '@/core/models/EventCard';
 import type { GameResources } from '@/core/models/GameResources';
@@ -29,6 +31,7 @@ export type ProcessPersonnelDecisionParams = {
   day: number;
   neighborhoods: Neighborhood[];
   resources: GameResources;
+  fieldDuty?: FieldDutyAssignment;
 };
 
 export type ProcessPersonnelDecisionResult = {
@@ -53,7 +56,7 @@ export function processPersonnelAfterDecision(
   params: ProcessPersonnelDecisionParams,
   currentCityMorale: number,
 ): ProcessPersonnelDecisionResult {
-  const { personnelState, event, decision, day, neighborhoods, resources } =
+  const { personnelState, event, decision, day, neighborhoods, resources, fieldDuty } =
     params;
 
   const preferredRole = inferPreferredRole(event, decision);
@@ -100,6 +103,15 @@ export function processPersonnelAfterDecision(
     existingIncidents: personnelState.dayIncidents ?? [],
   };
 
+  const fieldDutyModifier = resolveFieldDutyPersonnelModifier({
+    fieldDuty,
+    currentDay: day,
+    event,
+    decision,
+    assignedTeamId: team.id,
+    assignedTeamName: team.name,
+  });
+
   const { team: updatedTeam, result } = applyPersonnelTaskResult(
     team,
     taskInput,
@@ -108,6 +120,12 @@ export function processPersonnelAfterDecision(
       decisionId: decision.id,
     },
     mistakeContext,
+    fieldDutyModifier.applies
+      ? {
+          successBonus: fieldDutyModifier.successBonus,
+          riskReduction: fieldDutyModifier.riskReduction,
+        }
+      : undefined,
   );
 
   const assignment: PersonnelDayAssignment = {

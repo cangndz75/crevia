@@ -10,12 +10,10 @@ import { getTimeGreeting } from "@/core/utils/timeGreeting";
 import { getPilotDistrictHeroImage } from "@/features/hub/utils/hubAssets";
 import { useGameStatus } from "@/store/gameSelectors";
 import { HeaderAvatar } from "@/ui/components/game-header/HeaderAvatar";
-import { HeaderNotifyButton } from "@/ui/components/game-header/HeaderNotifyButton";
 import { colors } from "@/ui/theme/colors";
 import { radius } from "@/ui/theme/radius";
 import { spacing } from "@/ui/theme/spacing";
 
-const NOTIFY_DOT = "#FF9500";
 /** Sağ pill için üst sınır — greeting alanı korunur */
 const RESOURCE_PILL_MAX_WIDTH = 128;
 
@@ -25,7 +23,7 @@ function buildPilotMetaLine(day: number, districtName: string): string {
 }
 
 /**
- * Merkez header — 2. referans: avatar + greeting | sağda tek kaynak/XP pill, zil üst sağda.
+ * Merkez header — avatar + greeting | sağda kaynak/XP pill.
  */
 export function DashboardHeader() {
   const router = useRouter();
@@ -40,7 +38,6 @@ export function DashboardHeader() {
     () => getPilotDistrictHeroImage(status.selectedDistrictId),
     [status.selectedDistrictId],
   );
-  const hasNotify = status.notificationCount > 0;
   const greetingLine = `${greeting.title} ${status.playerName} ${greeting.emoji}`;
 
   return (
@@ -57,16 +54,6 @@ export function DashboardHeader() {
           contentFit="cover"
           contentPosition="bottom"
         />
-
-        <View style={[styles.notifyWrap, { top: insets.top + spacing.sm }]}>
-          <HeaderNotifyButton
-            count={hasNotify ? 1 : 0}
-            light
-            dotOnly
-            compact
-            dotColor={NOTIFY_DOT}
-          />
-        </View>
 
         <View style={styles.content}>
           <View style={styles.mainRow}>
@@ -157,14 +144,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     height: 20,
   },
-  notifyWrap: {
-    position: "absolute",
-    right: spacing.lg,
-    zIndex: 3,
-  },
   content: {
     zIndex: 1,
-    paddingRight: 40,
   },
   mainRow: {
     flexDirection: "row",

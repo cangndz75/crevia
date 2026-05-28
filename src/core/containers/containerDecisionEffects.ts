@@ -424,8 +424,8 @@ function getActionEffectSpec(
     case 'prioritize_route':
       return {
         deltas: {
-          fillRate: -38,
-          odorLevel: -22,
+          fillRate: -40,
+          odorLevel: -23,
           condition: 0,
           maintenanceNeed: -3,
           lastCollectedDay: 'set',

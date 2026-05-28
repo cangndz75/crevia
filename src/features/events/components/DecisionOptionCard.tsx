@@ -1,34 +1,46 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useShallow } from 'zustand/react/shallow';
-
-import { DecisionEffectPills } from '@/features/events/components/DecisionEffectPills';
-import { ImpactStatGrid } from '@/features/events/components/ImpactStatGrid';
+import { useCallback, useMemo } from 'react';
 import {
-  buildBonusPotentialPills,
-  buildDecisionEffectPills,
-} from '@/features/events/utils/eventDecisionPresentation';
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
+import Animated from 'react-native-reanimated';
+
+import { playSelectionHaptic } from '@/core/feedback/hapticFeedback';
+
+import { DecisionImpactRow } from '@/features/events/components/DecisionImpactRow';
+import { DecisionPriorityFitChip } from '@/features/events/components/DecisionPriorityFitChip';
+import { DecisionRiskChip } from '@/features/events/components/DecisionRiskChip';
+import { DecisionStrategyChip } from '@/features/events/components/DecisionStrategyChip';
+import { DecisionTradeoffLine } from '@/features/events/components/DecisionTradeoffLine';
 import type { DecisionAffordabilityCheck } from '@/core/economy/economyAffordability';
 import { formatSourceWithLabel } from '@/core/economy/economyFormatter';
 import { selectPersonnelImpactPreviewForDecision } from '@/core/personnel/personnelPresentation';
 import { selectVehicleImpactPreviewForDecision } from '@/core/vehicles/vehiclePresentation';
-import {
-  buildDecisionPriorityHint,
-  getDecisionShortTradeoff,
-  getDecisionStrategyLabel,
-} from '@/core/events/eventContentPresentation';
 import type { EventCard, EventDecision } from '@/core/models/EventCard';
+import { buildDecisionOptionCardPresentation } from '@/features/events/utils/decisionOptionCardIntegration';
+import {
+  buildDecisionPrepLines,
+  getDecisionOptionVariantConfig,
+  type DecisionOptionCardVariant,
+} from '@/features/events/utils/decisionTradeoffPresentation';
 import {
   useGameStore,
   selectPersonnelState,
   selectVehicleStateFromStore,
 } from '@/store/useGameStore';
+import { decisionOptionCardAllowsPressFeedback } from '@/ui/feedback/pressFeedback';
+import { usePressScaleFeedback } from '@/ui/feedback/usePressScaleFeedback';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
-import { typography } from '@/ui/theme/typography';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type DecisionOptionCardProps = {
   event: EventCard;
@@ -36,6 +48,8 @@ type DecisionOptionCardProps = {
   selected: boolean;
   onSelect: () => void;
   affordability?: DecisionAffordabilityCheck;
+  variant?: DecisionOptionCardVariant;
+  containerStyle?: StyleProp<ViewStyle>;
 };
 
 export function DecisionOptionCard({
@@ -44,231 +58,265 @@ export function DecisionOptionCard({
   selected,
   onSelect,
   affordability,
+  variant = 'full',
+  containerStyle,
 }: DecisionOptionCardProps) {
+  const variantConfig = getDecisionOptionVariantConfig(variant);
   const personnelState = useGameStore(selectPersonnelState);
   const vehicleState = useGameStore(selectVehicleStateFromStore);
   const currentDay = useGameStore((s) => s.gameState.city.day);
-  const neighborhoods = useGameStore(useShallow((s) => s.neighborhoods));
+  const neighborhoods = useGameStore((s) => s.neighborhoods);
   const resources = useGameStore((s) => s.resources);
   const dailyPriorityKey = useGameStore((s) => s.dailyPriorityState?.selectedKey);
+  const fieldDuty = useGameStore((s) => {
+    const day = s.gameState.city.day;
+    const hub = s.hubQuickActionState;
+    return hub.day === day ? hub.fieldDuty : undefined;
+  });
+  const routePreparation = useGameStore((s) => {
+    const day = s.gameState.city.day;
+    const hub = s.hubQuickActionState;
+    return hub.day === day ? hub.routePreparation : undefined;
+  });
+  const neighborhoodPatrol = useGameStore((s) => {
+    const day = s.gameState.city.day;
+    const hub = s.hubQuickActionState;
+    return hub.day === day ? hub.neighborhoodPatrol : undefined;
+  });
+
+  const insufficient =
+    affordability != null && affordability.cost > 0 && !affordability.canAfford;
 
   const vehiclePreview = useMemo(
     () =>
-      selectVehicleImpactPreviewForDecision({
-        vehicleState,
-        event: {
-          id: event.id,
-          eventType: event.eventType,
-          title: event.title,
-          description: event.description,
-          category: event.category,
-          neighborhoodId: event.neighborhoodId,
-          districtIds: event.districtIds,
-          tags: event.filterTags,
-        },
-        decision: {
-          id: decision.id,
-          title: decision.title,
-          description: decision.description,
-          style: decision.style,
-          decisionStyle: decision.decisionStyle,
-          costs: decision.costs,
-        },
-        day: currentDay,
-      }),
-    [
-      currentDay,
-      decision.decisionStyle,
-      decision.description,
-      decision.id,
-      decision.style,
-      decision.title,
-      event.category,
-      event.description,
-      event.eventType,
-      event.filterTags,
-      event.id,
-      event.neighborhoodId,
-      event.title,
-      vehicleState,
-    ],
+      insufficient
+        ? null
+        : selectVehicleImpactPreviewForDecision({
+            vehicleState,
+            event: {
+              id: event.id,
+              eventType: event.eventType,
+              title: event.title,
+              description: event.description,
+              category: event.category,
+              neighborhoodId: event.neighborhoodId,
+              districtIds: event.districtIds,
+              tags: event.filterTags,
+            },
+            decision: {
+              id: decision.id,
+              title: decision.title,
+              description: decision.description,
+              style: decision.style,
+              decisionStyle: decision.decisionStyle,
+              costs: decision.costs,
+            },
+            day: currentDay,
+            routePreparation,
+          }),
+    [currentDay, decision, event, insufficient, routePreparation, vehicleState],
   );
 
   const personnelPreview = useMemo(
     () =>
-      selectPersonnelImpactPreviewForDecision(
-        event,
-        decision,
-        personnelState,
-        currentDay,
-        { neighborhoods, resources },
-      ),
-    [currentDay, decision.id, event.id, neighborhoods, personnelState, resources],
+      insufficient
+        ? null
+        : selectPersonnelImpactPreviewForDecision(
+            event,
+            decision,
+            personnelState,
+            currentDay,
+            { neighborhoods, resources, fieldDuty, neighborhoodPatrol },
+          ),
+    [
+      currentDay,
+      decision,
+      event,
+      fieldDuty,
+      neighborhoodPatrol,
+      insufficient,
+      neighborhoods,
+      personnelState,
+      resources,
+    ],
   );
 
-  const effectPills = buildDecisionEffectPills(decision.effects, decision.costs);
-  const bonusPills = buildBonusPotentialPills(decision.districtBonusFlags);
-  const insufficient =
-    affordability != null && affordability.cost > 0 && !affordability.canAfford;
+  const prepLines = useMemo(
+    () =>
+      buildDecisionPrepLines({
+        fieldDutyLine: personnelPreview?.fieldDutyLine,
+        routePreparationLine: vehiclePreview?.routePreparationLine,
+        neighborhoodPatrolLine: personnelPreview?.neighborhoodPatrolLine,
+      }),
+    [
+      personnelPreview?.fieldDutyLine,
+      personnelPreview?.neighborhoodPatrolLine,
+      vehiclePreview?.routePreparationLine,
+    ],
+  );
+
+  const presentation = useMemo(
+    () =>
+      buildDecisionOptionCardPresentation({
+        event,
+        decision,
+        variant,
+        dailyPriorityKey,
+        personnelPreview,
+        vehiclePreview,
+        affordability,
+      }),
+    [
+      affordability,
+      dailyPriorityKey,
+      decision,
+      event,
+      personnelPreview,
+      variant,
+      vehiclePreview,
+    ],
+  );
+
+  const showPriorityChip = presentation.showPriorityChip;
+  const allowsPress = decisionOptionCardAllowsPressFeedback(insufficient);
+  const { animatedStyle, onPressIn, onPressOut } = usePressScaleFeedback(!allowsPress);
+
+  const handlePress = useCallback(() => {
+    if (!allowsPress) return;
+    playSelectionHaptic();
+    onSelect();
+  }, [allowsPress, onSelect]);
 
   return (
-    <Pressable
-      onPress={insufficient ? undefined : onSelect}
-      disabled={insufficient}
-      style={({ pressed }) => [
-        styles.card,
-        shadows.card,
-        selected && !insufficient && styles.cardSelected,
-        insufficient && styles.cardInsufficient,
-        pressed && !insufficient && styles.pressed,
-      ]}
-      accessibilityRole="button"
-      accessibilityState={{ selected, disabled: insufficient }}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{decision.title}</Text>
-        {decision.recommended ? (
-          <View style={styles.recommended}>
-            <Ionicons name="star" size={10} color={colors.primary} />
-            <Text style={styles.recommendedText}>ÖNERİLEN</Text>
+    <View style={containerStyle}>
+      <AnimatedPressable
+        onPress={allowsPress ? handlePress : undefined}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        disabled={!allowsPress}
+        style={[
+          styles.card,
+          variantConfig.compactPadding && styles.cardCompact,
+          variant === 'quick' && styles.cardQuick,
+          shadows.card,
+          selected && !insufficient && styles.cardSelected,
+          selected && !insufficient && variant === 'full' && styles.cardSelectedFull,
+          insufficient && styles.cardInsufficient,
+          animatedStyle,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={`${decision.title}, ${presentation.tradeoff}`}
+        accessibilityState={{ selected, disabled: insufficient }}>
+        {insufficient && presentation.unavailableReason ? (
+          <View style={styles.unavailableBanner}>
+            <Ionicons name="lock-closed-outline" size={14} color={colors.warning} />
+            <Text style={styles.unavailableText} numberOfLines={1}>
+              {presentation.unavailableReason}
+            </Text>
           </View>
         ) : null}
-      </View>
 
-      <Text style={styles.description}>{decision.description}</Text>
+        <View style={styles.topRow}>
+          <DecisionStrategyChip
+            label={presentation.strategyLabel}
+            tone={presentation.strategyTone}
+          />
+          <View style={styles.topRowRight}>
+            {showPriorityChip ? (
+              <DecisionPriorityFitChip fit={presentation.priorityFit!} />
+            ) : (
+              <DecisionRiskChip level={presentation.riskLevel} />
+            )}
+            {showPriorityChip ? (
+              <DecisionRiskChip level={presentation.riskLevel} />
+            ) : null}
+          </View>
+        </View>
 
-      {getDecisionShortTradeoff(decision) ? (
-        <Text style={styles.tradeoff} numberOfLines={2}>
-          {getDecisionShortTradeoff(decision)}
-        </Text>
-      ) : null}
-
-      {getDecisionStrategyLabel(decision) ? (
-        <View style={styles.strategyChip}>
-          <Text style={styles.strategyChipText}>
-            {getDecisionStrategyLabel(decision)}
+        <View style={styles.titleRow}>
+          <Text
+            style={[styles.title, variantConfig.compactPadding && styles.titleCompact]}
+            numberOfLines={variantConfig.titleMaxLines}>
+            {decision.title}
           </Text>
+          {decision.recommended && !insufficient ? (
+            <View style={styles.recommended}>
+              <Ionicons name="star" size={10} color={colors.primary} />
+            </View>
+          ) : null}
         </View>
-      ) : null}
 
-      {buildDecisionPriorityHint(decision, dailyPriorityKey) ? (
-        <Text style={styles.priorityHint} numberOfLines={1}>
-          {buildDecisionPriorityHint(decision, dailyPriorityKey)}
-        </Text>
-      ) : null}
-
-      {effectPills.length > 0 ? (
-        <View style={styles.pillSection}>
-          <Text style={styles.pillSectionLabel}>Tahmini etkiler</Text>
-          <DecisionEffectPills pills={effectPills} />
-        </View>
-      ) : (
-        <ImpactStatGrid
-          effects={decision.effects}
-          costs={decision.costs}
-          qualitative
+        <DecisionTradeoffLine
+          text={presentation.tradeoff}
+          numberOfLines={variantConfig.maxTradeoffLines}
+          compact={variantConfig.compactPadding}
         />
-      )}
 
-      {bonusPills.length > 0 ? (
-        <View style={styles.pillSection}>
-          <Text style={styles.pillSectionLabel}>Bonus potansiyeli</Text>
-          <DecisionEffectPills pills={bonusPills} />
-        </View>
-      ) : null}
+        {!insufficient && presentation.primaryImpacts.length > 0 ? (
+          <View style={styles.impactBlock}>
+            {presentation.primaryImpacts.map((impact) => (
+              <DecisionImpactRow key={impact.key} impact={impact} />
+            ))}
+            {presentation.extraSummary ? (
+              <Text style={styles.extraImpacts} numberOfLines={1}>
+                {presentation.extraSummary}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
 
-      {personnelPreview.decisionLine ? (
-        <View
-          style={[
-            styles.personnelPreview,
-            personnelPreview.riskLevel === 'high' && styles.personnelPreviewRisk,
-          ]}>
-          <Text
-            style={[
-              styles.personnelPreviewText,
-              personnelPreview.isLowImpact && styles.personnelPreviewMuted,
-            ]}>
-            {personnelPreview.decisionLine}
+        {presentation.showDetail
+          ? prepLines.lines.map((line) => (
+              <Text
+                key={line}
+                style={styles.detailLinePositive}
+                numberOfLines={2}>
+                {line}
+              </Text>
+            ))
+          : null}
+
+        {presentation.showDetail && prepLines.overflowLine ? (
+          <Text style={styles.detailLineMuted} numberOfLines={1}>
+            {prepLines.overflowLine}
           </Text>
-          {personnelPreview.decisionRiskLine ? (
-            <Text style={styles.personnelPreviewRiskText}>
-              {personnelPreview.decisionRiskLine}
-            </Text>
-          ) : null}
-          {personnelPreview.decisionMistakeLine ? (
-            <Text style={styles.personnelPreviewMistakeLine}>
-              {personnelPreview.decisionMistakeLine}
-            </Text>
-          ) : null}
-          {personnelPreview.mistakeRiskText ? (
-            <Text style={styles.personnelPreviewMistakeDetail}>
-              {personnelPreview.mistakeRiskText}
-            </Text>
-          ) : null}
-          {personnelPreview.competencyText ? (
-            <Text style={styles.personnelPreviewCompetency}>
-              {personnelPreview.competencyText}
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
+        ) : null}
 
-      {vehiclePreview.shouldShow ? (
-        <View
-          style={[
-            styles.vehiclePreview,
-            vehiclePreview.riskLevel === 'high' && styles.vehiclePreviewRisk,
-            vehiclePreview.riskLevel === 'medium' && styles.vehiclePreviewMedium,
-          ]}>
-          <Text style={styles.vehiclePreviewLabel}>Tahmini araç</Text>
-          <Text
-            style={[
-              styles.vehiclePreviewText,
-              !vehiclePreview.available && styles.vehiclePreviewUnavailable,
-            ]}
-            numberOfLines={2}>
-            {vehiclePreview.shortText}
+        {presentation.showDetail && personnelPreview?.decisionMistakeLine ? (
+          <Text style={styles.detailLine} numberOfLines={2}>
+            {personnelPreview.decisionMistakeLine}
           </Text>
-          {vehiclePreview.riskText ? (
-            <Text style={styles.vehiclePreviewRiskText} numberOfLines={2}>
-              {vehiclePreview.riskText}
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
+        ) : null}
 
-      {insufficient && affordability ? (
-        <View style={styles.insufficientWrap}>
-          <View style={styles.insufficientPill}>
+        {presentation.showDetail && vehiclePreview?.riskText ? (
+          <Text style={styles.detailLineMuted} numberOfLines={2}>
+            {vehiclePreview.riskText}
+          </Text>
+        ) : null}
+
+        {insufficient && affordability && variant !== 'quick' ? (
+          <View style={styles.insufficientMeta}>
+            <Text style={styles.insufficientDetail}>
+              Maliyet: {affordability.formattedCost}
+            </Text>
+            <Text style={styles.insufficientDetail}>
+              Mevcut: {formatSourceWithLabel(affordability.currentSource)}
+            </Text>
+          </View>
+        ) : null}
+
+        {decision.delayHint && !insufficient && variant === 'full' ? (
+          <View style={styles.hint}>
             <Ionicons
-              name="alert-circle-outline"
-              size={12}
+              name="information-circle-outline"
+              size={13}
               color={colors.warning}
             />
-            <Text style={styles.insufficientTitle}>Kaynak yetersiz</Text>
+            <Text style={styles.hintText}>Yarın etkisi olabilir</Text>
           </View>
-          <Text style={styles.insufficientDetail}>
-            Maliyet: {affordability.formattedCost}
-          </Text>
-          <Text style={styles.insufficientDetail}>
-            Mevcut: {formatSourceWithLabel(affordability.currentSource)}
-          </Text>
-          <Text style={styles.insufficientMissing}>
-            Eksik: {affordability.formattedMissingSource} Kaynak
-          </Text>
-        </View>
-      ) : null}
-
-      {decision.delayHint && !insufficient ? (
-        <View style={styles.hint}>
-          <Ionicons
-            name="information-circle-outline"
-            size={14}
-            color={colors.warning}
-          />
-          <Text style={styles.hintText}>Yarın etkisi olabilir</Text>
-        </View>
-      ) : null}
-    </Pressable>
+        ) : null}
+      </AnimatedPressable>
+    </View>
   );
 }
 
@@ -276,209 +324,132 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
-    padding: spacing.lg,
-    gap: spacing.md,
+    padding: spacing.md,
+    gap: spacing.sm,
     borderWidth: 2,
     borderColor: 'transparent',
+  },
+  cardCompact: {
+    padding: spacing.sm,
+    gap: 6,
+    borderRadius: radius.lg,
+  },
+  cardQuick: {
+    maxHeight: 156,
+    overflow: 'hidden',
   },
   cardSelected: {
     borderColor: colors.primary,
     backgroundColor: '#FAFFFE',
   },
+  cardSelectedFull: {
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 2,
+  },
   cardInsufficient: {
-    opacity: 0.72,
+    opacity: 0.78,
     borderColor: colors.warningMuted,
     backgroundColor: colors.backgroundAlt,
   },
-  pressed: {
-    opacity: 0.96,
-  },
-  insufficientWrap: {
-    gap: 4,
-    paddingTop: spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  insufficientPill: {
+  unavailableBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    alignSelf: 'flex-start',
+    gap: 6,
     backgroundColor: colors.warningMuted,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: radius.sm,
   },
-  insufficientTitle: {
+  unavailableText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.warning,
+    flex: 1,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.xs,
+    flexWrap: 'wrap',
+  },
+  topRowRight: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    justifyContent: 'flex-end',
+    flexShrink: 1,
+    maxWidth: '58%',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+  },
+  title: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '800',
+    lineHeight: 21,
+    color: colors.textPrimary,
+  },
+  titleCompact: {
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  recommended: {
+    marginTop: 2,
+    backgroundColor: colors.primaryMuted,
+    padding: 4,
+    borderRadius: radius.sm,
+  },
+  impactBlock: {
+    gap: 6,
+    marginTop: 2,
+  },
+  extraImpacts: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    paddingLeft: 4,
+  },
+  detailLinePositive: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1A6B5C',
+    lineHeight: 15,
+  },
+  detailLine: {
     fontSize: 11,
     fontWeight: '700',
     color: colors.warning,
+    lineHeight: 15,
+  },
+  detailLineMuted: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    lineHeight: 15,
+  },
+  insufficientMeta: {
+    gap: 2,
+    paddingTop: 2,
   },
   insufficientDetail: {
     fontSize: 11,
     fontWeight: '600',
     color: colors.textSecondary,
   },
-  insufficientMissing: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.warning,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  title: {
-    ...typography.subtitle,
-    flex: 1,
-    fontSize: 17,
-  },
-  recommended: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.primaryMuted,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radius.sm,
-  },
-  recommendedText: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-    color: colors.primary,
-  },
-  description: {
-    ...typography.caption,
-    lineHeight: 20,
-  },
-  tradeoff: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    lineHeight: 17,
-  },
-  strategyChip: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.backgroundAlt,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: radius.sm,
-  },
-  strategyChipText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.primary,
-    letterSpacing: 0.2,
-  },
-  priorityHint: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.secondary,
-  },
-  pillSection: {
-    gap: spacing.xs,
-  },
-  pillSectionLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
-    color: colors.textSecondary,
-  },
-  personnelPreview: {
-    gap: 3,
-    paddingTop: spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  personnelPreviewRisk: {
-    borderTopColor: colors.warningMuted,
-  },
-  personnelPreviewText: {
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  personnelPreviewMuted: {
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
-  personnelPreviewRiskText: {
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: '600',
-    color: colors.warning,
-  },
-  personnelPreviewMistakeLine: {
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: '700',
-    color: colors.warning,
-  },
-  personnelPreviewMistakeDetail: {
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
-  personnelPreviewCompetency: {
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: '600',
-    color: colors.secondary,
-  },
-  vehiclePreview: {
-    gap: 2,
-    paddingTop: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingBottom: spacing.xs,
-    borderRadius: radius.md,
-    backgroundColor: colors.backgroundAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  vehiclePreviewMedium: {
-    borderColor: colors.warningMuted,
-    backgroundColor: colors.warningMuted,
-  },
-  vehiclePreviewRisk: {
-    borderColor: colors.warningMuted,
-    backgroundColor: colors.warningMuted,
-  },
-  vehiclePreviewLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
-    color: colors.textSecondary,
-  },
-  vehiclePreviewText: {
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  vehiclePreviewUnavailable: {
-    color: colors.warning,
-  },
-  vehiclePreviewRiskText: {
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: '500',
-    color: colors.warning,
-  },
   hint: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: -spacing.xs,
+    gap: 5,
   },
   hintText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: colors.warning,
   },

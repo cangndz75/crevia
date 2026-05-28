@@ -1,23 +1,31 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
 import type { DecisionRecord } from '@/core/models/DecisionRecord';
 import type { DailyReport } from '@/core/models/DailyReport';
 import type { GameMetrics } from '@/core/models/GameMetrics';
 import { PilotReportSummaryCard } from '@/features/reports/components/PilotReportSummaryCard';
 import { ReportContainerSummary } from '@/features/reports/components/ReportContainerSummary';
+import { ReportQuickActionsSummary } from '@/features/reports/components/ReportQuickActionsSummary';
 import { ReportVehicleSummary } from '@/features/reports/components/ReportVehicleSummary';
 import { ReportSocialSummary } from '@/features/reports/components/ReportSocialSummary';
 import { ReportDailyGoalsSummary } from '@/features/reports/components/ReportDailyGoalsSummary';
 import { ReportDailyPrioritySummary } from '@/features/reports/components/ReportDailyPrioritySummary';
+import { ReportPilotCompletionCard } from '@/features/reports/components/ReportPilotCompletionCard';
+import { useReportPilotCompletionSummary } from '@/features/pilot/hooks/usePilotCompletionSummary';
 import { buildDay1TutorialPriorityLine } from '@/core/dailyPriority/dailyPriorityPresentation';
 import { ReportButterflySummary } from '@/features/reports/components/ReportButterflySummary';
+import { ReportCarryOverSummary } from '@/features/reports/components/ReportCarryOverSummary';
 import { ReportPersonnelSummary } from '@/features/reports/components/ReportPersonnelSummary';
 import { getPilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
+import { OnboardingCoachBubble } from '@/features/onboarding/components/OnboardingCoachBubble';
+import { useOnboardingHint } from '@/features/onboarding/hooks/useOnboardingHint';
 import { TutorialCoachOverlay } from '@/features/tutorial/TutorialCoachOverlay';
 import {
   applyDay1TutorialReportCopy,
+  selectActiveTutorialStepForScreen,
   selectShowDay1TutorialReportCopy,
 } from '@/features/tutorial/tutorialSelectors';
 import { buildDailyEconomyReport } from '@/core/economy/economyReport';
@@ -133,6 +141,7 @@ type ReportContentProps = {
   nextLevelXp: number;
   xpToNextLevel: number;
   onGoHub: () => void;
+  pilotCompletionSummary: ReturnType<typeof useReportPilotCompletionSummary>;
 };
 
 function ReportContent({
@@ -148,11 +157,17 @@ function ReportContent({
   nextLevelXp,
   xpToNextLevel,
   onGoHub,
+  pilotCompletionSummary,
 }: ReportContentProps) {
   const summaryLines = report.summaryLines ?? [];
   const identityLine = report.neighborhoodIdentityLine;
   const warnings = report.warnings ?? [];
   const highlights = report.highlights ?? [];
+  const isDay1Report = report.day === 1;
+  const legacyTutorialStep = useGameStore((s) =>
+    selectActiveTutorialStepForScreen(s, 'daily_report'),
+  );
+  const { coachHint, dismissHint } = useOnboardingHint('daily_report');
 
   return (
     <GameScreenShell screenTitle="Raporlar">
@@ -160,21 +175,47 @@ function ReportContent({
       <Text style={typography.caption}>Gün {report.day} tamamlandı</Text>
 
       {pilotReportContext ? (
-        <PilotReportSummaryCard context={pilotReportContext} />
+        <Animated.View entering={FadeInUp.duration(280).springify().damping(22)}>
+          <PilotReportSummaryCard context={pilotReportContext} />
+        </Animated.View>
       ) : null}
 
-      <LineList title="Özet" lines={summaryLines} />
+      <Animated.View entering={FadeInUp.delay(60).duration(260)}>
+        <LineList title="Özet" lines={summaryLines} />
+      </Animated.View>
       {identityLine ? (
         <Text style={typography.caption}>{identityLine}</Text>
       ) : null}
-      <ReportDailyPrioritySummary
-        result={report.dailyPriorityResult}
-        day1Line={
-          report.day === 1 ? buildDay1TutorialPriorityLine() : undefined
-        }
-      />
-      <ReportDailyGoalsSummary results={report.dailyGoalResults} />
-      <ReportButterflySummary lines={report.butterflySummaryLines ?? []} />
+      <Animated.View entering={FadeInUp.delay(100).duration(260)}>
+        <ReportDailyPrioritySummary
+          result={report.dailyPriorityResult}
+          day1Line={
+            report.day === 1 ? buildDay1TutorialPriorityLine() : undefined
+          }
+        />
+      </Animated.View>
+      <Animated.View entering={FadeInUp.delay(140).duration(260)}>
+        <ReportDailyGoalsSummary results={report.dailyGoalResults ?? []} />
+      </Animated.View>
+      {pilotCompletionSummary ? (
+        <ReportPilotCompletionCard summary={pilotCompletionSummary} />
+      ) : null}
+      {!isDay1Report ? (
+        <Animated.View entering={FadeInUp.delay(180).duration(260)}>
+          <ReportButterflySummary lines={report.butterflySummaryLines ?? []} />
+        </Animated.View>
+      ) : null}
+      {!isDay1Report ? (
+        <Animated.View entering={FadeInUp.delay(220).duration(260)}>
+          <ReportCarryOverSummary
+            lines={report.carryOverSummaryLines ?? []}
+            compact={(report.butterflySummaryLines?.length ?? 0) > 0}
+          />
+        </Animated.View>
+      ) : null}
+      {!isDay1Report ? (
+        <ReportQuickActionsSummary lines={report.quickActionSummaryLines ?? []} />
+      ) : null}
       <ReportPersonnelSummary lines={report.personnelSummaryLines ?? []} />
       <ReportContainerSummary lines={report.containerSummaryLines ?? []} />
       <ReportVehicleSummary lines={report.vehicleSummaryLines ?? []} />
@@ -265,6 +306,12 @@ function ReportContent({
         style={styles.primaryAction}
       />
       <TutorialCoachOverlay screen="daily_report" />
+      {coachHint && !legacyTutorialStep ? (
+        <OnboardingCoachBubble
+          hint={coachHint}
+          onDismiss={() => dismissHint(coachHint.id)}
+        />
+      ) : null}
     </GameScreenShell>
   );
 }
@@ -318,6 +365,7 @@ export function ReportScreen() {
     () => applyDay1TutorialReportCopy(report, useDay1ReportCopy),
     [report, useDay1ReportCopy],
   );
+  const pilotCompletionSummary = useReportPilotCompletionSummary(displayReport.day);
 
   return (
     <ReportContent
@@ -333,6 +381,7 @@ export function ReportScreen() {
       nextLevelXp={playerProgress.nextLevelXp}
       xpToNextLevel={playerProgress.xpToNextLevel}
       onGoHub={onGoHub}
+      pilotCompletionSummary={pilotCompletionSummary}
     />
   );
 }

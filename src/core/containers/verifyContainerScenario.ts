@@ -21,10 +21,9 @@ import {
 import type { ContainerUnit, NeighborhoodContainerStatusLabel } from './containerTypes';
 
 const ELEVATED_STATUS_LABELS: NeighborhoodContainerStatusLabel[] = [
-  'Doluluk Artıyor',
-  'Taşma Riski',
-  'Koku Baskısı',
-  'Bakım Gerekli',
+  'Takipte',
+  'Baskılı',
+  'Yüksek',
   'Kritik',
 ];
 

@@ -16,6 +16,10 @@ import {
   checkDecisionAffordability,
   type DecisionAffordabilityCheck,
 } from '@/core/economy/economyAffordability';
+import {
+  playSuccessHaptic,
+  playWarningHaptic,
+} from '@/core/feedback/hapticFeedback';
 import { AdvisorRecommendationBar } from '@/features/events/components/AdvisorRecommendationBar';
 import { EventContainerContextCard } from '@/features/events/components/EventContainerContextCard';
 import { EventDetailsAccordion } from '@/features/events/components/EventDetailsAccordion';
@@ -25,6 +29,7 @@ import { EventStatusTimeline } from '@/features/events/components/EventStatusTim
 import { FieldNoteCard } from '@/features/events/components/FieldNoteCard';
 import { NeighborhoodIdentityMiniCard } from '@/features/neighborhoods/components/NeighborhoodIdentityMiniCard';
 import { FieldResourcesCard } from '@/features/events/components/FieldResourcesCard';
+import { EventDecisionList } from '@/features/events/components/EventDecisionList';
 import { QuickDecisionActions } from '@/features/events/components/QuickDecisionActions';
 import { EventInspectPhase } from '@/features/events/components/event-workflow/EventInspectPhase';
 import { EventPlanPhase } from '@/features/events/components/event-workflow/EventPlanPhase';
@@ -53,7 +58,17 @@ import {
   splitEventTitle,
 } from '@/features/events/utils/eventDetailDecisionUtils';
 import { getFieldNoteForEvent } from '@/features/events/utils/eventDecisionPresentation';
-import { formatUrgencyLabel, getRiskLevelLabel } from '@/core/content/mockGameData';
+import {
+  buildEventLifecycleContext,
+  buildEventLifecycleMeta,
+  getDecisionRecordForEvent,
+  resolveEventCardById,
+} from '@/core/liveFlow/eventLifecycleEngine';
+import { getPilotRhythmChipLabel } from '@/core/events/pilotRhythmPresentation';
+import { ResolvedEventSummaryCard } from '@/features/events/components/ResolvedEventSummaryCard';
+import { buildEventDetailHeaderChips } from '@/features/events/utils/decisionTradeoffPresentation';
+import { OnboardingFocusHint } from '@/features/onboarding/components/OnboardingFocusHint';
+import { useOnboardingHint } from '@/features/onboarding/hooks/useOnboardingHint';
 import {
   TutorialCoachOverlay,
   useTutorialHighlight,
@@ -80,7 +95,11 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
   const insets = useSafeAreaInsets();
   const [operationStep, setOperationStep] = useState<OperationWorkflowStepId>('inspect');
 
-  const event = useGameStore((s) => s.gameState.events.find((e) => e.id === eventId));
+  const event = useGameStore((s) =>
+    resolveEventCardById(eventId, s.gameState.events, s.eventPool),
+  );
+  const decisionHistory = useGameStore((s) => s.decisionHistory);
+  const lastDecisionResult = useGameStore((s) => s.lastDecisionResult);
   const applyDecisionAction = useGameStore((s) => s.applyDecision);
   const economyState = useGameStore((s) => s.economyState);
   const personnelState = useGameStore(selectPersonnelState);
@@ -89,9 +108,27 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
   const isDay1Tutorial = useGameStore(selectIsDay1TutorialActive);
   const dailyEventSet = useGameStore((s) => s.gameState.pilot.dailyEventSet);
   const containerState = useGameStore(selectContainerState);
+  const dailyPriorityKey = useGameStore((s) => s.dailyPriorityState?.selectedKey);
 
   const [applying, setApplying] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+
+  const lifecycle = useMemo(() => {
+    if (!event) return null;
+    const ctx = buildEventLifecycleContext({
+      currentDay,
+      decisionHistory,
+      solvedEventIds: useGameStore.getState().gameState.solvedEvents.map((e) => e.id),
+      lastDecisionResult: lastDecisionResult ?? undefined,
+      isDay1Tutorial,
+    });
+    return buildEventLifecycleMeta(event, ctx, decisionHistory);
+  }, [event, currentDay, decisionHistory, lastDecisionResult, isDay1Tutorial]);
+
+  const decisionRecord = useMemo(
+    () => (event ? getDecisionRecordForEvent(event.id, decisionHistory) : undefined),
+    [event, decisionHistory],
+  );
 
   const quickActions = useMemo(
     () => (event ? resolveQuickActions(event) : []),
@@ -223,10 +260,35 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
     [event],
   );
 
+  const quickDecisionIds = useMemo(
+    () => quickActions.map((a) => a.decision.id),
+    [quickActions],
+  );
+
+  const headerChips = useMemo(() => {
+    if (!event) return [];
+    return buildEventDetailHeaderChips({
+      event,
+      neighborhoodLabel: event.district,
+      dailyPriorityKey,
+      rhythmLabel: getPilotRhythmChipLabel(event, event.day ?? currentDay),
+    });
+  }, [currentDay, dailyPriorityKey, event]);
+
   const timelineHighlight = useTutorialHighlight('event_detail', 'event_status_timeline');
   const insightHighlight = useTutorialHighlight('event_detail', 'event_insight_card');
   const resourcesHighlight = useTutorialHighlight('event_detail', 'field_resources_card');
   const decisionsHighlight = useTutorialHighlight('event_detail', 'quick_decisions');
+  const { focusHint: eventDetailHint, dismissHint } = useOnboardingHint(
+    'event_detail',
+    undefined,
+    'event_detail_intro',
+  );
+  const { focusHint: decisionCardHint } = useOnboardingHint(
+    'event_detail',
+    'quick_decisions',
+    'decision_card_intro',
+  );
 
   const compactLayout = width < 360;
   const titleSize = compactLayout ? 32 : width < 390 ? 36 : 40;
@@ -239,6 +301,7 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
 
   const showInsufficientSourceAlert = useCallback(
     (affordability: DecisionAffordabilityCheck) => {
+      playWarningHaptic();
       Alert.alert(
         'Kaynak yetersiz',
         `Bu karar için ${affordability.formattedMissingSource} Kaynak daha gerekiyor.`,
@@ -285,6 +348,7 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
         }
         return;
       }
+      playSuccessHaptic();
       router.push('/events/decision-result');
     } catch {
       Alert.alert(
@@ -337,7 +401,44 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
     );
   }
 
-  const priorityLabel = getRiskLevelLabel(event.riskLevel);
+  if (lifecycle?.status === 'archived') {
+    return (
+      <View style={styles.notFound}>
+        <View style={styles.notFoundIcon}>
+          <Ionicons name="archive-outline" size={40} color={colors.textSecondary} />
+        </View>
+        <Text style={styles.notFoundTitle}>Arşivlendi</Text>
+        <Text style={styles.notFoundBody}>
+          Bu olay önceki günden arşivlendi. Güncel operasyon merkezinden devam et.
+        </Text>
+        <GameButton
+          title="Operasyon Merkezine Dön"
+          onPress={goToHub}
+          style={styles.notFoundBtn}
+        />
+      </View>
+    );
+  }
+
+  if (lifecycle?.status === 'resolved_today') {
+    return (
+      <View style={styles.root}>
+        <EventHeader />
+        <ScrollView
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingBottom: bottomPadding, paddingTop: spacing.md },
+          ]}>
+          <ResolvedEventSummaryCard
+            event={event}
+            lifecycle={lifecycle}
+            decisionRecord={decisionRecord}
+            onBackToHub={goToHub}
+          />
+        </ScrollView>
+      </View>
+    );
+  }
 
   if (showInspectPhase) {
     return (
@@ -434,18 +535,17 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
               {getOfficerRoleLabel(currentDay)}
             </Text>
             <Text style={styles.officerDay}>Gün {event.day ?? currentDay}</Text>
-            <View style={styles.chipRow}>
-              <View style={styles.chip}>
-                <Text style={styles.chipText}>
-                  {formatUrgencyLabel(event.urgencyHours)}
-                </Text>
+            {headerChips.length > 0 ? (
+              <View style={styles.chipRow}>
+                {headerChips.map((chip) => (
+                  <View key={chip.key} style={styles.chip}>
+                    <Text style={styles.chipText} numberOfLines={1}>
+                      {chip.label}
+                    </Text>
+                  </View>
+                ))}
               </View>
-              <View style={styles.chip}>
-                <Text style={styles.chipText} numberOfLines={1}>
-                  Öncelik: {priorityLabel}
-                </Text>
-              </View>
-            </View>
+            ) : null}
           </View>
         </View>
 
@@ -464,6 +564,13 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
             <EventInsightCard event={event} />
           </TutorialTarget>
         </View>
+
+        {eventDetailHint ? (
+          <OnboardingFocusHint
+            hint={eventDetailHint}
+            onDismiss={() => dismissHint(eventDetailHint.id)}
+          />
+        ) : null}
 
         <FieldNoteCard body={fieldNoteBody} />
 
@@ -488,15 +595,36 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           </TutorialTarget>
         </View>
 
+        {decisionCardHint ? (
+          <OnboardingFocusHint
+            hint={decisionCardHint}
+            onDismiss={() => dismissHint(decisionCardHint.id)}
+          />
+        ) : null}
+
         <TutorialTarget
           targetKey="quick_decisions"
           highlighted={decisionsHighlight}>
           <QuickDecisionActions
+            event={event}
             actions={quickActions}
             selectedDecisionId={effectiveSelectedId}
             onSelect={setSelectedDecisionId}
+            affordabilityByDecisionId={decisionAffordability}
+            variant="quick"
           />
         </TutorialTarget>
+
+        <View style={styles.sectionGap}>
+          <EventDecisionList
+            event={event}
+            selectedDecisionId={effectiveSelectedId}
+            onSelect={setSelectedDecisionId}
+            affordabilityByDecisionId={decisionAffordability}
+            excludeDecisionIds={quickDecisionIds}
+            variant="full"
+          />
+        </View>
 
         <View style={styles.sectionGap}>
           <EventDetailsAccordion

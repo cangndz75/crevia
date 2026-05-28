@@ -62,10 +62,9 @@ export type NeighborhoodContainerRecommendedAction =
 
 export type NeighborhoodContainerStatusLabel =
   | 'Dengeli'
-  | 'Doluluk Artıyor'
-  | 'Taşma Riski'
-  | 'Koku Baskısı'
-  | 'Bakım Gerekli'
+  | 'Takipte'
+  | 'Baskılı'
+  | 'Yüksek'
   | 'Kritik';
 
 export type NeighborhoodContainerStatus = {
@@ -78,7 +77,10 @@ export type NeighborhoodContainerStatus = {
   collectionDelayDays: number;
   complaintPressure: number;
   activeContainerCount: number;
+  /** overflowRisk === 'critical' unit count */
   criticalContainerCount: number;
+  /** overflowRisk === 'high' unit count */
+  highContainerCount: number;
   recommendedAction: NeighborhoodContainerRecommendedAction;
   statusLabel: NeighborhoodContainerStatusLabel;
 };

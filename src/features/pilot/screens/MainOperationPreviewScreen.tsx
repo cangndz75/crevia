@@ -23,7 +23,7 @@ export function MainOperationPreviewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const districtId = useGameStore((s) => s.gameState.pilot.selectedDistrictId);
-  const preview = useOperationPreviewState({ forcePilotComplete: true });
+  const preview = useOperationPreviewState();
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -43,7 +43,11 @@ export function MainOperationPreviewScreen() {
   return (
     <View style={[styles.root, { paddingBottom: insets.bottom }]}>
       <View style={styles.headerWrap}>
-        <OperationPreviewHeader onBack={handleBack} onInfo={handleInfo} />
+        <OperationPreviewHeader
+          onBack={handleBack}
+          onInfo={handleInfo}
+          subtitle={preview.headerSubtitle}
+        />
       </View>
 
       <ScrollView
@@ -53,7 +57,10 @@ export function MainOperationPreviewScreen() {
           { paddingBottom: spacing.xxl + insets.bottom },
         ]}
         showsVerticalScrollIndicator={false}>
-        <OperationPreviewStatusChips chips={preview.chips} />
+        <OperationPreviewStatusChips
+          chips={preview.chips}
+          personalizedChips={preview.personalizedChips}
+        />
         <OperationPreviewRoadmap
           steps={preview.roadmapSteps}
           hint={preview.roadmapHint}
@@ -62,12 +69,20 @@ export function MainOperationPreviewScreen() {
           districtImage={getPilotDistrictHeroImage(districtId)}
           statusRows={preview.heroRows}
           mainOperationLocked={preview.mainLocked}
+          personalizedSummary={preview.heroPersonalizedText}
         />
         <OperationPreviewLegacyCard values={preview.legacyValues} />
         <OperationPreviewSystemsGrid cards={preview.systemCards} />
         <OperationPreviewFooterCTA
-          onPilotReport={() => router.push('/events/pilot-final-report')}
-          onNormalOperation={() => router.replace('/events')}
+          onPilotReport={() => {
+            if (router.canGoBack()) {
+              router.back();
+              return;
+            }
+            router.push('/reports');
+          }}
+          onHub={() => router.replace('/')}
+          onLeaderboard={() => router.push('/leaderboard')}
         />
       </ScrollView>
     </View>

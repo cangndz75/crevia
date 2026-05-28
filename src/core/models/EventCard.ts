@@ -147,6 +147,11 @@ export type EventCard = {
     sourceDecisionTitle?: string;
     label: string;
   };
+  carryOverMeta?: {
+    signalId: string;
+    label: string;
+    tone: 'positive' | 'mixed' | 'warning' | 'neutral';
+  };
 };
 
 export type EventDecisionContentHints = {

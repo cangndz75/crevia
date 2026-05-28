@@ -153,29 +153,188 @@ export function inferDecisionTone(decision: EventDecision): DecisionResultTone {
   }
 }
 
+export type InferResultToneContext = {
+  decision?: EventDecision;
+  dailyPriorityImpact?: {
+    tone: 'supportive' | 'balanced' | 'risky' | 'neutral';
+    scoreDelta?: number;
+  };
+  hasButterflyHint?: boolean;
+};
+
+function decisionStyleKey(decision?: EventDecision): string | undefined {
+  return decision?.decisionStyle ?? decision?.style;
+}
+
+function isMeaningfulBadMetric(m: DecisionMetricChange): boolean {
+  if (m.isGood || m.delta === 0) return false;
+  if (m.key === 'budget' && m.delta > -1500) return false;
+  if (m.key === 'operationRisk' && m.delta < 4) return false;
+  if (m.key === 'personnelMorale' && m.delta > -4) return false;
+  if (m.key === 'publicSatisfaction' && m.delta > -3) return false;
+  return true;
+}
+
+function isSoftPersonnelWarning(outcome: DecisionSubsystemOutcome): boolean {
+  if (outcome.key !== 'personnel' || outcome.status !== 'warning') {
+    return false;
+  }
+  const text = outcome.primaryText.toLowerCase();
+  return (
+    text.includes('kısmen') ||
+    text.includes('yorgunluk') ||
+    text.includes('sınırlı kaldı')
+  );
+}
+
+function hasMeaningfulSubsystemWarning(
+  outcomes: DecisionSubsystemOutcome[],
+): boolean {
+  return outcomes.some(
+    (o) =>
+      o.status === 'critical' ||
+      (o.status === 'warning' && !isSoftPersonnelWarning(o)),
+  );
+}
+
+function computeToneScore(
+  metricChanges: DecisionMetricChange[],
+  subsystemOutcomes: DecisionSubsystemOutcome[],
+  context?: InferResultToneContext,
+): number {
+  let score = 0;
+
+  for (const m of metricChanges) {
+    if (m.delta === 0) continue;
+    const weight =
+      m.key === 'operationRisk' ? 3 : m.key === 'publicSatisfaction' ? 2 : 1;
+    score += (m.isGood ? 1 : -1) * weight;
+  }
+
+  for (const o of subsystemOutcomes) {
+    if (o.status === 'critical') score -= 5;
+    else if (o.status === 'warning') score -= 2;
+    else if (o.status === 'good') score += 2;
+  }
+
+  const style = decisionStyleKey(context?.decision);
+  if (style === 'fast' || style === 'bold') score += 1;
+  if (style === 'planned' || style === 'resource_saving') score -= 1;
+  if (style === 'risk') score -= 2;
+
+  if (context?.dailyPriorityImpact?.tone === 'supportive') score += 2;
+  if (context?.dailyPriorityImpact?.tone === 'risky') score -= 3;
+  if (context?.hasButterflyHint) score -= 1;
+
+  return score;
+}
+
 export function inferResultTone(
   metricChanges: DecisionMetricChange[],
   subsystemOutcomes: DecisionSubsystemOutcome[],
+  context?: InferResultToneContext,
 ): DecisionResultSummaryTone {
   const hasCritical = subsystemOutcomes.some((o) => o.status === 'critical');
-  const hasWarning = subsystemOutcomes.some((o) => o.status === 'warning');
+  const hasWarning = hasMeaningfulSubsystemWarning(subsystemOutcomes);
 
   const goodDeltas = metricChanges.filter((m) => m.delta !== 0 && m.isGood).length;
-  const badDeltas = metricChanges.filter((m) => m.delta !== 0 && !m.isGood).length;
+  const badDeltas = metricChanges.filter((m) => isMeaningfulBadMetric(m)).length;
 
+  const satisfaction = metricChanges.find((m) => m.key === 'publicSatisfaction');
   const risk = metricChanges.find((m) => m.key === 'operationRisk');
   const morale = metricChanges.find((m) => m.key === 'personnelMorale');
+  const budget = metricChanges.find((m) => m.key === 'budget');
+
+  const style = decisionStyleKey(context?.decision);
+
+  if (context?.dailyPriorityImpact?.tone === 'risky' && (badDeltas > 0 || hasWarning)) {
+    return hasCritical ? 'negative' : 'mixed';
+  }
 
   if (hasCritical || (risk && risk.delta >= 8) || (morale && morale.delta <= -10)) {
     return 'negative';
   }
 
-  if (goodDeltas > 0 && (badDeltas > 0 || hasWarning)) {
+  if (
+    satisfaction &&
+    satisfaction.delta <= -5 &&
+    (badDeltas > 0 || hasWarning)
+  ) {
+    return 'negative';
+  }
+
+  if (style === 'permanent') {
+    const satUp = satisfaction && satisfaction.delta > 0;
+    const budgetDown = budget && budget.delta < 0;
+    if (satUp && !hasCritical) {
+      return hasWarning || budgetDown ? 'mixed' : 'positive';
+    }
+  }
+
+  const toneScore = computeToneScore(metricChanges, subsystemOutcomes, context);
+
+  if (style === 'fast' && goodDeltas > 0) {
+    if (badDeltas > 0 || hasWarning) {
+      if (toneScore >= 3 && !hasCritical) return 'positive';
+      return 'mixed';
+    }
+    if (!hasCritical) return 'positive';
+  }
+
+  if (
+    (style === 'planned' || style === 'resource_saving') &&
+    metricChanges.every((m) => Math.abs(m.delta) <= 4) &&
+    !hasCritical
+  ) {
+    if (goodDeltas === 0 && badDeltas === 0 && !hasWarning) return 'neutral';
+    if (toneScore <= 0 && !hasWarning && badDeltas === 0) return 'neutral';
+    if (hasWarning || badDeltas > 0) return toneScore >= 2 ? 'mixed' : 'neutral';
+  }
+
+  if (
+    context?.dailyPriorityImpact?.tone === 'supportive' &&
+    goodDeltas > 0 &&
+    !hasCritical
+  ) {
+    if (badDeltas > 0 || hasWarning) return 'mixed';
+    return 'positive';
+  }
+
+  if (
+    goodDeltas >= 2 &&
+    badDeltas === 0 &&
+    !hasCritical &&
+    !hasWarning &&
+    satisfaction &&
+    satisfaction.delta > 0
+  ) {
+    return 'positive';
+  }
+
+  if (goodDeltas > 0 && badDeltas > 0) {
+    if (toneScore >= 4 && !hasCritical) return 'positive';
     return 'mixed';
   }
 
-  if (goodDeltas > 0 && badDeltas === 0 && !hasWarning) {
-    return 'positive';
+  if (goodDeltas > 0 && hasWarning && !hasCritical) {
+    if (toneScore >= 4) return 'positive';
+    if (toneScore <= -2) return 'negative';
+    return 'mixed';
+  }
+
+  if (goodDeltas > 0 && badDeltas === 0 && !hasWarning && !hasCritical) {
+    return toneScore >= 2 ? 'positive' : 'mixed';
+  }
+
+  if (
+    metricChanges.every((m) => Math.abs(m.delta) <= 2) &&
+    subsystemOutcomes.every(
+      (o) => o.status === 'neutral' || isSoftPersonnelWarning(o),
+    ) &&
+    !hasWarning &&
+    !hasCritical
+  ) {
+    return 'neutral';
   }
 
   if (metricChanges.every((m) => m.delta === 0) && subsystemOutcomes.length === 0) {
@@ -183,8 +342,15 @@ export function inferResultTone(
   }
 
   if (badDeltas > 0) {
+    if (toneScore <= -4 || hasCritical) return 'negative';
     return 'mixed';
   }
+
+  if (toneScore >= 4) return 'positive';
+  if (toneScore <= -4) return 'negative';
+  if (toneScore <= -1 && hasWarning) return 'mixed';
+  if (toneScore >= 2) return 'positive';
+  if (toneScore >= 1) return 'mixed';
 
   return 'neutral';
 }
@@ -473,11 +639,14 @@ export function buildContainerOutcome(
     };
   }
 
-  if (fillDelta >= 4 || odorDelta >= 4 || (after?.criticalContainerCount ?? 0) > 0) {
+  const criticalBefore = before?.criticalContainerCount ?? 0;
+  const criticalAfter = after?.criticalContainerCount ?? 0;
+
+  if (fillDelta >= 4 || odorDelta >= 4 || criticalAfter > criticalBefore) {
     return {
       key: 'container',
       title: 'Konteyner',
-      status: after?.criticalContainerCount ? 'critical' : 'warning',
+      status: criticalAfter > criticalBefore ? 'critical' : 'warning',
       primaryText: `${displayName}'de toplama gecikmesi riski devam ediyor.`,
       secondaryText: after?.statusLabel
         ? `Durum: ${after.statusLabel}`
@@ -688,7 +857,9 @@ export function buildDecisionResultSnapshot(
     params.gameStateAfter,
   );
   const subsystemOutcomes = buildSubsystemOutcomes(params);
-  const resultTone = inferResultTone(metricChanges, subsystemOutcomes);
+  const resultTone = inferResultTone(metricChanges, subsystemOutcomes, {
+    decision,
+  });
   const { summaryTitle, summaryText } = buildDecisionSummary(
     resultTone,
     decision,

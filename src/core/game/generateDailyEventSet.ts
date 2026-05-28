@@ -25,6 +25,8 @@ import {
 } from '@/core/vehicles/vehicleEventSignals';
 import type { VehicleEventSignal } from '@/core/vehicles/vehicleEventSignals';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
+import type { CarryOverSignal } from '@/core/carryOver/carryOverTypes';
+import { getCarryOverWeightDeltaForEvent } from '@/core/carryOver/carryOverEngine';
 import type { DailyPriorityKey } from '@/core/dailyPriority/dailyPriorityTypes';
 import {
   buildEventVariationHistory,
@@ -50,6 +52,8 @@ export type GenerateDailyEventSetParams = {
   /** Yoksa araç boost uygulanmaz. */
   vehicleState?: VehicleState | null;
   dailyPriorityKey?: DailyPriorityKey;
+  /** Önceki günden türeyen hafif ağırlık sinyalleri (gün 2+). */
+  carryOverSignals?: CarryOverSignal[];
 };
 
 function buildContext(
@@ -272,6 +276,7 @@ export function generateDailyEventSet(
     containerState = null,
     vehicleState = null,
     dailyPriorityKey,
+    carryOverSignals = [],
   } = params;
 
   const catalog = cloneEventCards(events);
@@ -359,7 +364,11 @@ export function generateDailyEventSet(
         rhythmPlan,
         buildRhythmContext(),
       );
-      return Math.max(1, suppressed + rhythmBonus);
+      const carryBonus =
+        day > 1 && carryOverSignals.length > 0
+          ? getCarryOverWeightDeltaForEvent(event, carryOverSignals)
+          : 0;
+      return Math.max(1, suppressed + rhythmBonus + carryBonus);
     };
 
   const selectedIds = new Set<string>();

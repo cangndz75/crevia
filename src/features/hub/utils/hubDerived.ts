@@ -8,7 +8,7 @@ import {
   getHubNeighborhoodShortName,
   getRegionAvatarColor,
   getRegionMoodLabel,
-} from '@/features/hub/utils/hubPresentation';
+} from '@/features/hub/utils/hubRegionHelpers';
 import { colors } from '@/ui/theme/colors';
 import {
   eventRecurrenceRisk,

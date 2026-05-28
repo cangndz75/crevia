@@ -10,6 +10,8 @@ import type { EventCard } from '@/core/models/EventCard';
 import type { ContainerState } from '@/core/containers/containerTypes';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import type { GameState } from '@/core/models/GameState';
+import { buildCarryOverSignalsForDay } from '@/core/carryOver/carryOverEngine';
+import type { CarryOverEvaluationInput, CarryOverSignal } from '@/core/carryOver/carryOverTypes';
 import type { DailyPriorityKey } from '@/core/dailyPriority/dailyPriorityTypes';
 import {
   applyButterflyHookFollowUpToDailySet,
@@ -20,11 +22,15 @@ import {
   appendPilotEventContentMemory,
   enrichDailyEventSetWithEventContent,
 } from '@/core/events/eventVariationEngine';
+import { ensureAtLeastOneAffordableDecision } from '@/core/game/decisionAffordabilityFallback';
 
 export type EnsureDailyEventsForDayOptions = {
   containerState?: ContainerState | null;
   vehicleState?: VehicleState | null;
   dailyPriorityKey?: DailyPriorityKey;
+  /** Önceden hesaplanmış sinyaller; yoksa carryOverEvaluationInput ile üretilir. */
+  carryOverSignals?: CarryOverSignal[];
+  carryOverEvaluationInput?: CarryOverEvaluationInput;
 };
 
 export type EnsureDailyEventsForDayResult = {
@@ -72,14 +78,16 @@ function applyDailySetToGameState(
       dailyPriorityKey,
     });
   }
+  const budget = gameState.city.budget;
   const activeEvents = resolveEventCardsFromDailySet(
     dailyEventSet,
     workingCatalog,
     solvedIds,
-  );
+  ).map((event) => ensureAtLeastOneAffordableDecision(event, budget));
   const allCards = dailyEventSet.allEventIds
     .map((id) => workingCatalog.find((e) => e.id === id))
-    .filter((e): e is EventCard => e != null);
+    .filter((e): e is EventCard => e != null)
+    .map((event) => ensureAtLeastOneAffordableDecision(event, budget));
 
   const anchorStillActive = activeEvents.some(
     (e) => e.id === dailyEventSet.anchorEventId,
@@ -168,6 +176,12 @@ export function ensureDailyEventsForDay(
     pilot: { ...gameState.pilot, butterflyHookState: hookState },
   };
 
+  const carryOverSignals =
+    options?.carryOverSignals ??
+    (options?.carryOverEvaluationInput
+      ? buildCarryOverSignalsForDay(options.carryOverEvaluationInput)
+      : []);
+
   let dailyEventSet = generateDailyEventSet({
     gameState: gameStateForGen,
     day,
@@ -176,6 +190,7 @@ export function ensureDailyEventsForDay(
     containerState: options?.containerState ?? null,
     vehicleState: options?.vehicleState ?? null,
     dailyPriorityKey: options?.dailyPriorityKey,
+    carryOverSignals,
   });
 
   const butterflyApplied = applyButterflyHookFollowUpToDailySet({

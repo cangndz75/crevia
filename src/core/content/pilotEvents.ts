@@ -1199,6 +1199,28 @@ const pilotEventsList: EventCard[] = [
         },
         costs: { budget: 9500, staffHours: 6 },
       },
+      {
+        id: 'd7-low-cost-closeout',
+        title: 'Öncelikleri netleştirip düşük maliyetli kapanış planı yap',
+        description:
+          'Sadece en kritik baskıları kapatır; yan sorunlar raporda takip maddesi olarak kalır.',
+        style: 'balanced',
+        decisionStyle: 'planned',
+        contentStrategyLabel: 'Kaynak korur',
+        contentShortTradeoff:
+          'Bütçeyi korur, ancak yalnızca en kritik baskıları kapatır.',
+        contentRiskHint:
+          'Bazı yan sorunlar raporda takip maddesi olarak kalabilir.',
+        contentPriorityHint: 'Dolaylı katkı',
+        effects: {
+          publicSatisfaction: 2,
+          budget: 0,
+          morale: 1,
+          risk: -2,
+          xp: 8,
+        },
+        costs: { budget: 0, staffHours: 1 },
+      },
     ],
   }),
 ];
