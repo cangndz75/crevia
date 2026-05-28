@@ -1,40 +1,52 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
+import { useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
 import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
 import { getQuickActionIcon } from '@/features/hub/utils/hubAssets';
-import { useGameStore } from '@/store/useGameStore';
+import {
+  handleHubQuickAction,
+  type HubQuickActionId,
+} from '@/features/hub/utils/hubQuickActions';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
-const ACTIONS = [
+const ACTIONS: {
+  id: HubQuickActionId;
+  label: string;
+  bg: string;
+}[] = [
   {
-    id: 'team' as const,
-    label: 'Ekip Ata',
-    description: 'Hızlı müdahale',
+    id: 'team',
+    label: 'Ekip Yönet',
     bg: colors.primaryMuted,
   },
   {
-    id: 'route' as const,
-    label: 'Rota Oluştur',
-    description: 'Gecikmeyi azalt',
+    id: 'route',
+    label: 'Rota Planla',
     bg: colors.secondaryMuted,
   },
   {
-    id: 'maint' as const,
-    label: 'Bakım Başlat',
-    description: 'Arıza riskini düşür',
+    id: 'maint',
+    label: 'Bakım Kontrol',
     bg: colors.warningMuted,
   },
   {
-    id: 'announce' as const,
+    id: 'announce',
     label: 'Duyuru Yap',
-    description: 'Halkı bilgilendir',
     bg: colors.purpleMuted,
   },
 ];
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function ActionTile({
   action,
@@ -43,38 +55,47 @@ function ActionTile({
   action: (typeof ACTIONS)[number];
   onPress: () => void;
 }) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
-      style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
+      onPressIn={() => {
+        scale.value = withSpring(0.96, { damping: 16, stiffness: 320 });
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, { damping: 16, stiffness: 320 });
+      }}
+      style={[styles.tile, animStyle]}
       accessibilityRole="button"
-      accessibilityLabel={`${action.label}, ${action.description}`}>
-      <View style={styles.iconBadge}>
-        <View style={[styles.iconInner, { backgroundColor: action.bg }]}>
-          <HubAssetImage
-            source={getQuickActionIcon(action.id)}
-            containerStyle={styles.iconImage}
-            contentFit="contain"
-          />
-        </View>
+      accessibilityLabel={action.label}>
+      <View style={[styles.iconInner, { backgroundColor: action.bg }]}>
+        <HubAssetImage
+          source={getQuickActionIcon(action.id)}
+          containerStyle={styles.iconImage}
+          contentFit="contain"
+        />
       </View>
-      <View style={styles.bottomRow}>
-        <View style={styles.textCol}>
-          <Text style={styles.label} numberOfLines={1}>
-            {action.label}
-          </Text>
-          <Text style={styles.description} numberOfLines={1}>
-            {action.description}
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
+      <View style={styles.labelRow}>
+        <Text style={styles.label}>{action.label}</Text>
+        <Ionicons name="chevron-forward" size={12} color={colors.textSecondary} />
       </View>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
 export function HubQuickActions() {
-  const useQuickAction = useGameStore((s) => s.useQuickAction);
+  const router = useRouter();
+
+  const onActionPress = useCallback(
+    (actionId: HubQuickActionId) => {
+      handleHubQuickAction(actionId, router);
+    },
+    [router],
+  );
 
   return (
     <View style={styles.wrap}>
@@ -84,7 +105,7 @@ export function HubQuickActions() {
           <ActionTile
             key={a.id}
             action={a}
-            onPress={() => useQuickAction(a.id)}
+            onPress={() => onActionPress(a.id)}
           />
         ))}
       </View>
@@ -114,59 +135,38 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     paddingVertical: 10,
-    paddingHorizontal: 8,
-    gap: 6,
-    minHeight: 0,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    gap: 8,
+    minWidth: 0,
     ...shadows.soft,
   },
-  pressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.98 }],
-  },
-  iconBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   iconInner: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   iconImage: {
-    width: 18,
-    height: 18,
+    width: 20,
+    height: 20,
   },
-  bottomRow: {
+  labelRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  textCol: {
-    flex: 1,
-    gap: 3,
-    minWidth: 0,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    gap: 2,
+    width: '100%',
+    paddingHorizontal: 1,
   },
   label: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     color: colors.textPrimary,
-    letterSpacing: -0.15,
-    lineHeight: 15,
-  },
-  description: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: colors.textSecondary,
+    textAlign: 'center',
     lineHeight: 13,
+    flexShrink: 1,
   },
 });

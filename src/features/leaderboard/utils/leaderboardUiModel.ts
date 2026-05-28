@@ -1,23 +1,29 @@
+import type { ComponentProps } from 'react';
+
+import type { Ionicons } from '@expo/vector-icons';
 import type { LeaderboardCategory, LeaderboardScoreBreakdown } from '@/core/leaderboard/leaderboardTypes';
+
+export type LeaderboardIoniconName = ComponentProps<typeof Ionicons>['name'];
 
 export const LEADERBOARD_CATEGORY_OPTIONS: ReadonlyArray<{
   id: LeaderboardCategory;
   label: string;
+  icon: LeaderboardIoniconName;
 }> = [
-  { id: 'overall', label: 'Genel' },
-  { id: 'efficient_municipality', label: 'Verimli Belediye' },
-  { id: 'citizen_favorite', label: 'Halkın Favorisi' },
-  { id: 'crisis_master', label: 'Kriz Ustası' },
-  { id: 'personnel_friendly', label: 'Personel Dostu' },
+  { id: 'overall', label: 'Genel', icon: 'star' },
+  { id: 'efficient_municipality', label: 'Verimli Belediye', icon: 'leaf' },
+  { id: 'citizen_favorite', label: 'Halkın Favorisi', icon: 'heart' },
+  { id: 'crisis_master', label: 'Kriz Ustası', icon: 'shield' },
 ];
 
 export const LEADERBOARD_PERIOD_OPTIONS: ReadonlyArray<{
   id: 'pilot' | 'weekly' | 'season';
   label: string;
+  icon: LeaderboardIoniconName;
 }> = [
-  { id: 'pilot', label: 'Pilot' },
-  { id: 'weekly', label: 'Haftalık' },
-  { id: 'season', label: 'Sezon' },
+  { id: 'pilot', label: 'Pilot', icon: 'flag' },
+  { id: 'weekly', label: 'Haftalık', icon: 'calendar' },
+  { id: 'season', label: 'Sezon', icon: 'trophy' },
 ];
 
 export const BREAKDOWN_LABELS: Record<keyof LeaderboardScoreBreakdown, string> = {
@@ -32,6 +38,44 @@ export const BREAKDOWN_LABELS: Record<keyof LeaderboardScoreBreakdown, string> =
 
 export function formatLeaderboardScore(score: number): string {
   return Math.round(score).toLocaleString('tr-TR');
+}
+
+/** UI — "9.300 BPP" */
+export function formatLeaderboardScoreBpp(score: number): string {
+  return `${formatLeaderboardScore(score)} BPP`;
+}
+
+export type LeaderboardTrendDirection = 'up' | 'down' | 'flat';
+
+export function getEntryTrendDirection(entryId: string, rank: number): LeaderboardTrendDirection {
+  const roll = (entryId.length * 17 + rank * 31) % 10;
+  if (roll <= 1) return 'down';
+  if (roll <= 2) return 'flat';
+  return 'up';
+}
+
+export type LeaderboardGemTier = 'blue' | 'orange';
+
+export function getEntryGemTier(entryId: string): LeaderboardGemTier {
+  return entryId.length % 3 === 0 ? 'orange' : 'blue';
+}
+
+export function buildLeaderboardScreenStats(input: {
+  entryCount: number;
+  playerTitle?: string | null;
+}): {
+  totalParticipants: number;
+  weeklyRise: number;
+  playerTitle: string;
+} {
+  const baseParticipants = 1248;
+  const scaled = baseParticipants + Math.max(0, input.entryCount - 20) * 12;
+
+  return {
+    totalParticipants: scaled,
+    weeklyRise: 156,
+    playerTitle: input.playerTitle?.trim() || 'Stratejik Lider',
+  };
 }
 
 /** Pilot final rapor ekranı — birinci tekil yorum metinleri. */

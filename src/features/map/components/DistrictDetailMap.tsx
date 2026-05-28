@@ -14,12 +14,17 @@ import {
 } from '../data/mapAssets';
 import { pilotDistrictFromMapDistrict } from '../data/mapDistrictMapping';
 import type { ContainerState } from '@/core/containers/containerTypes';
+import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 
 import type { ActiveLayers, MapFilterId, MapPin, PilotAreaId } from '../types/map';
 import {
   buildContainerMapPins,
   containerMapPinToMapPin,
 } from '../utils/containerMapAdapter';
+import {
+  buildMapVehiclePins,
+  vehicleMapPinToMapPin,
+} from '../utils/vehicleMapAdapter';
 import { buildMapPins, shouldShowHeatmap, shouldShowRoutes } from '../utils/mapFromEvents';
 import { useMapDisplaySize } from './MapDisplaySizeContext';
 import { MapOverlaySvg } from './MapOverlaySvg';
@@ -37,6 +42,8 @@ export type DistrictDetailMapProps = {
   gameDay: number;
   events: EventCard[];
   containerState?: ContainerState;
+  vehicleState?: VehicleState;
+  hideVehicleSignals?: boolean;
   onPinPress?: (pinId: string) => void;
 };
 
@@ -51,6 +58,8 @@ export function DistrictDetailMap({
   gameDay,
   events,
   containerState,
+  vehicleState,
+  hideVehicleSignals = false,
   onPinPress,
 }: DistrictDetailMapProps) {
   const asset = getDistrictMapAsset(districtId);
@@ -85,18 +94,34 @@ export function DistrictDetailMap({
     }).map((pin) => containerMapPinToMapPin(pin, districtId));
   }, [containerState, districtId]);
 
+  const vehiclePins = useMemo(() => {
+    if (!vehicleState || hideVehicleSignals) return [];
+    return buildMapVehiclePins(vehicleState, {
+      neighborhoodId: districtId,
+      tutorialActive: hideVehicleSignals,
+    }).map((pin) => vehicleMapPinToMapPin(pin, districtId));
+  }, [districtId, hideVehicleSignals, vehicleState]);
+
   const poiPins = useMemo(() => {
     const base = getDistrictPoiPins(districtId);
-    if (containerPins.length === 0) {
-      return base;
-    }
-    return base.filter((pin) => pin.type !== 'container');
-  }, [containerPins.length, districtId]);
+    return base.filter((pin) => {
+      if (containerPins.length > 0 && pin.type === 'container') {
+        return false;
+      }
+      if (vehiclePins.length > 0 && pin.type === 'vehicle') {
+        return false;
+      }
+      return true;
+    });
+  }, [containerPins.length, districtId, vehiclePins.length]);
 
   const showContainerPins =
     selectedFilter === 'containers' ||
     activeLayers.waste ||
     containerPins.length > 0;
+
+  const showVehiclePins =
+    selectedFilter === 'vehicles' || vehiclePins.length > 0;
 
   const pins = useMemo(() => {
     const merged = [...poiPins];
@@ -106,11 +131,23 @@ export function DistrictDetailMap({
         if (!ids.has(pin.id)) merged.push(pin);
       }
     }
+    if (showVehiclePins) {
+      for (const pin of vehiclePins) {
+        if (!ids.has(pin.id)) merged.push(pin);
+      }
+    }
     for (const p of operationalPins) {
       if (!ids.has(p.id)) merged.push(p);
     }
     return merged;
-  }, [containerPins, operationalPins, poiPins, showContainerPins]);
+  }, [
+    containerPins,
+    operationalPins,
+    poiPins,
+    showContainerPins,
+    showVehiclePins,
+    vehiclePins,
+  ]);
 
   const showHeat = shouldShowHeatmap(selectedFilter, activeLayers) && isPilotDistrict;
   const showRoutes = shouldShowRoutes(selectedFilter, activeLayers) && isPilotDistrict;

@@ -22,6 +22,14 @@ const PIN_ICON: Record<string, string> = {
   opportunity: '★',
 };
 
+const VEHICLE_PIN_GLYPH: Record<string, string> = {
+  truck: '▣',
+  car: '◆',
+  wrench: '⚙',
+  shield: '◉',
+  pickup: '▷',
+};
+
 export function MapPin({
   pin,
   normalized = true,
@@ -32,20 +40,29 @@ export function MapPin({
 }: Props) {
   const cx = normalized ? pin.x : pin.x * mapWidth;
   const cy = normalized ? pin.y : pin.y * mapHeight;
+  const isVehicle = pin.type === 'vehicle';
   const isLarge =
-    pin.severity === 'critical' || pin.severity === 'high' || pin.type === 'crew';
+    !isVehicle &&
+    (pin.severity === 'critical' || pin.severity === 'high' || pin.type === 'crew');
   const r = normalized
     ? pin.type === 'crew'
       ? 0.022
-      : isLarge
-        ? 0.018
-        : 0.014
+      : isVehicle
+        ? 0.011
+        : isLarge
+          ? 0.018
+          : 0.014
     : pin.type === 'crew'
       ? 11
-      : isLarge
-        ? 9
-        : 7;
-  const icon = PIN_ICON[pin.type] ?? '•';
+      : isVehicle
+        ? 6
+        : isLarge
+          ? 9
+          : 7;
+  const icon =
+    isVehicle && pin.icon
+      ? (VEHICLE_PIN_GLYPH[pin.icon] ?? PIN_ICON.vehicle)
+      : (PIN_ICON[pin.type] ?? '•');
   const fontSize = normalized ? 0.02 : 7;
 
   return (
@@ -58,8 +75,11 @@ export function MapPin({
         cy={cy}
         r={r}
         fill={pin.color}
-        stroke="#FFFFFF"
-        strokeWidth={normalized ? 0.003 : selected ? 2.5 : 1.5}
+        stroke={isVehicle ? 'rgba(255,255,255,0.95)' : '#FFFFFF'}
+        strokeWidth={
+          normalized ? (isVehicle ? 0.0025 : 0.003) : selected ? 2.5 : isVehicle ? 1.25 : 1.5
+        }
+        opacity={isVehicle ? 0.96 : 1}
       />
       {pin.type === 'crew' ? (
         <SvgText

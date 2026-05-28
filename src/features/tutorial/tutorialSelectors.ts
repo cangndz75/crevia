@@ -157,5 +157,15 @@ export function applyDay1TutorialReportCopy(
     rewardTitle: 'Bugünün Öğrenimi',
     rewardDescription: copy.learningLine,
     containerSummaryLines: undefined,
+    vehicleSummaryLines: undefined,
+    socialSummaryLines: undefined,
+    dailyGoalResults: [
+      {
+        title: 'İlk gün hedefi',
+        status: 'completed',
+        resultText:
+          'İlk gün hedefi tamamlandı: karar verip günü raporladın.',
+      },
+    ],
   };
 }

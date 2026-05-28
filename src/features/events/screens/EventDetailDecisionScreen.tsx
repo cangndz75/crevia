@@ -13,27 +13,29 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  canCompletePilot,
-  PILOT_FINAL_EVENT_ID,
-} from '@/core/game/calculatePilotFinalResult';
-import {
   checkDecisionAffordability,
   type DecisionAffordabilityCheck,
 } from '@/core/economy/economyAffordability';
-import type { ApplyDecisionXpResult } from '@/core/xp/applyDecisionXp';
-import type { EventDecision } from '@/core/models/EventCard';
 import { AdvisorRecommendationBar } from '@/features/events/components/AdvisorRecommendationBar';
 import { EventContainerContextCard } from '@/features/events/components/EventContainerContextCard';
 import { EventDetailsAccordion } from '@/features/events/components/EventDetailsAccordion';
 import { EventHeader } from '@/features/events/components/EventHeader';
 import { EventInsightCard } from '@/features/events/components/EventInsightCard';
-import { EventDecisionResultPhase } from '@/features/events/components/EventDecisionResultPhase';
 import { EventStatusTimeline } from '@/features/events/components/EventStatusTimeline';
 import { FieldNoteCard } from '@/features/events/components/FieldNoteCard';
+import { NeighborhoodIdentityMiniCard } from '@/features/neighborhoods/components/NeighborhoodIdentityMiniCard';
 import { FieldResourcesCard } from '@/features/events/components/FieldResourcesCard';
 import { QuickDecisionActions } from '@/features/events/components/QuickDecisionActions';
+import { EventInspectPhase } from '@/features/events/components/event-workflow/EventInspectPhase';
+import { EventPlanPhase } from '@/features/events/components/event-workflow/EventPlanPhase';
+import { EventWorkflowStepper } from '@/features/events/components/event-workflow/EventWorkflowStepper';
 import { StickyActionButton } from '@/features/events/components/StickyActionButton';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
+import { PLAN_WORKFLOW_FOOTER_EXTRA } from '@/features/events/utils/eventWorkflowPlanPresentation';
+import {
+  EVENT_WORKFLOW_FOOTER_EXTRA,
+  type OperationWorkflowStepId,
+} from '@/features/events/utils/eventWorkflowPresentation';
 import { isContainerRelevantEvent } from '@/core/containers/containerDecisionEffects';
 import { selectEventContainerContext } from '@/core/containers/containerSelectors';
 import { mergeAdvisorWithContainerLine } from '@/core/containers/containerUiHelpers';
@@ -57,6 +59,7 @@ import {
   useTutorialHighlight,
 } from '@/features/tutorial/TutorialCoachOverlay';
 import { TutorialTarget } from '@/features/tutorial/TutorialTarget';
+import { selectIsDay1TutorialActive } from '@/features/tutorial/tutorialSelectors';
 import {
   useGameStore,
   selectContainerState,
@@ -71,14 +74,11 @@ type EventDetailDecisionScreenProps = {
   eventId: string;
 };
 
-type ScreenPhase = 'choose' | 'result';
-
 export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreenProps) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const bottomPadding =
-    eventDetail.ctaHeight + Math.max(insets.bottom, 12) + 34;
+  const [operationStep, setOperationStep] = useState<OperationWorkflowStepId>('inspect');
 
   const event = useGameStore((s) => s.gameState.events.find((e) => e.id === eventId));
   const applyDecisionAction = useGameStore((s) => s.applyDecision);
@@ -86,20 +86,11 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
   const personnelState = useGameStore(selectPersonnelState);
   const eventAdvisor = useGameStore((s) => s.gameState.eventAdvisor);
   const currentDay = useGameStore((s) => s.gameState.city.day);
+  const isDay1Tutorial = useGameStore(selectIsDay1TutorialActive);
   const dailyEventSet = useGameStore((s) => s.gameState.pilot.dailyEventSet);
   const containerState = useGameStore(selectContainerState);
 
-  const showPilotReportCta = useGameStore((s) => {
-    if (eventId !== PILOT_FINAL_EVENT_ID) return false;
-    return (
-      canCompletePilot(s.gameState) || s.gameState.pilot.status === 'completed'
-    );
-  });
-
-  const [phase, setPhase] = useState<ScreenPhase>('choose');
-  const [appliedDecision, setAppliedDecision] = useState<EventDecision | null>(null);
   const [applying, setApplying] = useState(false);
-  const [xpFeedback, setXpFeedback] = useState<ApplyDecisionXpResult | null>(null);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
 
   const quickActions = useMemo(
@@ -151,6 +142,26 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
     const gameStatus = dailyEventSet?.eventStatuses?.[eventId] ?? null;
     return resolveEventTimelineStatus(eventId, gameStatus);
   }, [dailyEventSet, eventId]);
+
+  const useOperationWorkflow = timelineStatus === 'review';
+  const showInspectPhase = useOperationWorkflow && operationStep === 'inspect';
+  const showPlanPhase = useOperationWorkflow && operationStep === 'plan';
+
+  const bottomPadding = useMemo(() => {
+    const safe = Math.max(insets.bottom, 12);
+    if (showInspectPhase) {
+      return (
+        eventDetail.ctaHeight +
+        EVENT_WORKFLOW_FOOTER_EXTRA +
+        safe +
+        24
+      );
+    }
+    if (showPlanPhase) {
+      return eventDetail.ctaHeight + PLAN_WORKFLOW_FOOTER_EXTRA + safe + 24;
+    }
+    return eventDetail.ctaHeight + safe + 34;
+  }, [insets.bottom, showInspectPhase, showPlanPhase]);
 
   const fieldNoteBody = useMemo(() => {
     if (!event) return '';
@@ -226,10 +237,6 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
     router.replace('/');
   }, [router]);
 
-  const goToPilotReport = useCallback(() => {
-    router.push('/events/pilot-final-report');
-  }, [router]);
-
   const showInsufficientSourceAlert = useCallback(
     (affordability: DecisionAffordabilityCheck) => {
       Alert.alert(
@@ -263,6 +270,12 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
             decision,
           });
           showInsufficientSourceAlert(guardAffordability);
+        } else if (xpResult.reason === 'already_resolved') {
+          Alert.alert(
+            'Olay çözüldü',
+            'Bu olay için karar zaten verilmiş.',
+            [{ text: 'Tamam', onPress: goToHub }],
+          );
         } else {
           Alert.alert(
             'Karar uygulanamadı',
@@ -272,9 +285,7 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
         }
         return;
       }
-      setXpFeedback(xpResult);
-      setAppliedDecision(decision);
-      setPhase('result');
+      router.push('/events/decision-result');
     } catch {
       Alert.alert(
         'Karar uygulanamadı',
@@ -292,6 +303,7 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
     event,
     eventId,
     goToHub,
+    router,
     effectiveSelectedId,
     showInsufficientSourceAlert,
   ]);
@@ -325,28 +337,49 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
     );
   }
 
-  if (phase === 'result' && appliedDecision) {
+  const priorityLabel = getRiskLevelLabel(event.riskLevel);
+
+  if (showInspectPhase) {
     return (
       <View style={styles.root}>
-        <EventDecisionResultPhase
-          decision={appliedDecision}
+        <EventHeader />
+        <EventInspectPhase
           event={event}
-          eventAdvisor={eventAdvisor}
-          xpFeedback={xpFeedback}
-          showPilotReportCta={showPilotReportCta}
           bottomPadding={bottomPadding}
-          onGoToHub={goToHub}
-          onGoToPilotReport={goToPilotReport}
+          onOpenPlanning={() => setOperationStep('plan')}
         />
         <TutorialCoachOverlay
-          screen="decision_result"
-          bottomOffset={Math.max(insets.bottom, 12) + 72}
+          screen="event_detail"
+          bottomOffset={
+            eventDetail.ctaHeight +
+            EVENT_WORKFLOW_FOOTER_EXTRA +
+            Math.max(insets.bottom, 12)
+          }
         />
       </View>
     );
   }
 
-  const priorityLabel = getRiskLevelLabel(event.riskLevel);
+  if (showPlanPhase) {
+    return (
+      <View style={styles.root}>
+        <EventHeader />
+        <EventPlanPhase
+          event={event}
+          bottomPadding={bottomPadding}
+          onConfirmPlan={() => setOperationStep('assign')}
+        />
+        <TutorialCoachOverlay
+          screen="event_detail"
+          bottomOffset={
+            eventDetail.ctaHeight +
+            PLAN_WORKFLOW_FOOTER_EXTRA +
+            Math.max(insets.bottom, 12)
+          }
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -355,6 +388,12 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scroll, { paddingBottom: bottomPadding }]}>
+        {useOperationWorkflow ? (
+          <View style={styles.workflowStepperWrap}>
+            <EventWorkflowStepper activeStep={operationStep} />
+          </View>
+        ) : null}
+
         <View style={styles.titleSection}>
           <View style={styles.titleLeft}>
             <Text
@@ -410,11 +449,13 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           </View>
         </View>
 
-        <TutorialTarget
-          targetKey="event_status_timeline"
-          highlighted={timelineHighlight}>
-          <EventStatusTimeline activeStatus={timelineStatus} />
-        </TutorialTarget>
+        {!useOperationWorkflow ? (
+          <TutorialTarget
+            targetKey="event_status_timeline"
+            highlighted={timelineHighlight}>
+            <EventStatusTimeline activeStatus={timelineStatus} />
+          </TutorialTarget>
+        ) : null}
 
         <View style={styles.sectionGap}>
           <TutorialTarget
@@ -425,6 +466,15 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
         </View>
 
         <FieldNoteCard body={fieldNoteBody} />
+
+        {event ? (
+          <View style={styles.sectionGap}>
+            <NeighborhoodIdentityMiniCard
+              neighborhoodId={event.neighborhoodId ?? event.district}
+              compact={isDay1Tutorial}
+            />
+          </View>
+        ) : null}
 
         {event ? (
           <EventContainerContextCard event={event} containerState={containerState} />
@@ -565,6 +615,9 @@ const styles = StyleSheet.create({
   },
   sectionGap: {
     marginTop: 2,
+  },
+  workflowStepperWrap: {
+    marginBottom: -4,
   },
   notFound: {
     flex: 1,

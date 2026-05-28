@@ -19,6 +19,7 @@ export default function EventsLayout() {
         name="main-operation-preview"
         options={{ headerShown: false }}
       />
+      <Stack.Screen name="decision-result" options={{ headerShown: false }} />
     </Stack>
   );
 }

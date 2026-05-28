@@ -7,6 +7,17 @@ import type { GameMetrics } from '@/core/models/GameMetrics';
 import { buildDailyContainerSummaryLines } from '@/core/containers/containerUiHelpers';
 import type { ContainerState } from '@/core/containers/containerTypes';
 import type { PersonnelDayReport } from '@/core/personnel/personnelTypes';
+import { buildDailyVehicleSummaryLines } from '@/core/vehicles/vehicleUiHelpers';
+import type { VehicleState } from '@/core/vehicles/vehicleTypes';
+import type { SocialPulseState } from '@/core/social/socialTypes';
+import { buildDailySocialSummaryLines } from '@/features/social/utils/socialReportModel';
+import { buildDailyGoalReportResults } from '@/core/dailyGoals/dailyGoalPresentation';
+import type { DailyGoalState } from '@/core/dailyGoals/dailyGoalTypes';
+import {
+  buildNeighborhoodIdentityReportLine,
+  normalizeNeighborhoodId,
+} from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
+import type { NeighborhoodReportStatus } from '@/core/neighborhoodIdentity/neighborhoodIdentityTypes';
 
 const LOW_SATISFACTION = 50;
 const LOW_MORALE = 50;
@@ -22,6 +33,14 @@ export type BuildDailyReportParams = {
   personnelReport?: PersonnelDayReport | null;
   /** Gün kapanışı sonrası konteyner durumu (varsa özet satırları üretilir). */
   containerState?: ContainerState;
+  /** Gün kapanışı sonrası araç filosu (varsa özet satırları üretilir). */
+  vehicleState?: VehicleState;
+  /** Gün kapanışı sonrası sosyal nabız (snapshot — canlı store kullanılmaz). */
+  socialPulseState?: SocialPulseState;
+  /** Gün kapanışı öncesi sosyal nabız — skor delta satırı için. */
+  socialPulseStateBefore?: SocialPulseState | null;
+  /** Gün kapanışı günlük hedef durumu — snapshot. */
+  dailyGoalState?: DailyGoalState | null;
 };
 
 function formatCurrency(amount: number): string {
@@ -63,6 +82,30 @@ function buildStats(
   ];
 
   return stats;
+}
+
+function reportStatusFromMetrics(metrics: GameMetrics): NeighborhoodReportStatus {
+  const risk = 'riskScore' in metrics ? Number(metrics.riskScore) : 50;
+  if (metrics.publicSatisfaction >= 60 && risk < 55) {
+    return 'good';
+  }
+  if (metrics.publicSatisfaction >= 45) {
+    return 'warning';
+  }
+  return 'critical';
+}
+
+function resolveFocalNeighborhoodId(
+  decisionsToday: DecisionRecord[],
+  activeEvents: EventCard[],
+): string | null {
+  const fromDecision = decisionsToday.find((d) => d.neighborhoodId)?.neighborhoodId;
+  if (fromDecision) {
+    return normalizeNeighborhoodId(fromDecision);
+  }
+  const fromEvent =
+    activeEvents[0]?.neighborhoodId ?? activeEvents[0]?.district ?? null;
+  return normalizeNeighborhoodId(fromEvent);
 }
 
 function buildRewardTitle(
@@ -214,6 +257,27 @@ export function buildDailyReport(params: BuildDailyReportParams): DailyReport {
     day,
   );
 
+  const vehicleSummaryLines = buildDailyVehicleSummaryLines(params.vehicleState);
+
+  const socialSummaryLines =
+    params.socialPulseState != null
+      ? buildDailySocialSummaryLines(params.socialPulseState, {
+          day,
+          previousSocialPulseState: params.socialPulseStateBefore,
+        })
+      : [];
+
+  const dailyGoalResults = buildDailyGoalReportResults(params.dailyGoalState);
+
+  const focalNeighborhoodId = resolveFocalNeighborhoodId(
+    decisionsToday,
+    activeEvents,
+  );
+  const neighborhoodIdentityLine = buildNeighborhoodIdentityReportLine({
+    neighborhoodId: focalNeighborhoodId,
+    status: reportStatusFromMetrics(metrics),
+  });
+
   return {
     day,
     title: `Gün ${day} Tamamlandı`,
@@ -221,6 +285,7 @@ export function buildDailyReport(params: BuildDailyReportParams): DailyReport {
     rewardTitle,
     rewardDescription,
     summaryLines,
+    neighborhoodIdentityLine: neighborhoodIdentityLine ?? undefined,
     warnings,
     highlights,
     personnelSummaryLines: personnelSummaryLines.slice(0, personnelSummaryMax),
@@ -228,6 +293,12 @@ export function buildDailyReport(params: BuildDailyReportParams): DailyReport {
       containerSummaryLines && containerSummaryLines.length > 0
         ? containerSummaryLines
         : undefined,
+    vehicleSummaryLines:
+      vehicleSummaryLines.length > 0 ? vehicleSummaryLines : undefined,
+    socialSummaryLines:
+      socialSummaryLines.length > 0 ? socialSummaryLines : undefined,
+    dailyGoalResults:
+      dailyGoalResults.length > 0 ? dailyGoalResults : undefined,
     createdAt: new Date().toISOString(),
   };
 }

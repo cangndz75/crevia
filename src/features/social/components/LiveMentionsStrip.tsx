@@ -1,12 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInRight } from 'react-native-reanimated';
 
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
-import type { LiveMention } from '../utils/socialUiModel';
+import type { LiveMention, LiveMentionCategory } from '../utils/socialUiModel';
 import { CATEGORY_LABELS } from '../utils/socialUiModel';
+import { SOCIAL_CARD_BORDER } from '../utils/socialLayout';
 
 type Props = {
   mentions: LiveMention[];
@@ -14,28 +16,24 @@ type Props = {
   onViewAll?: () => void;
 };
 
-const CATEGORY_COLORS: Record<LiveMention['category'], string> = {
-  complaint: colors.danger,
-  praise: colors.success,
-  opportunity: colors.primary,
-  crisis: colors.critical,
-};
+const CATEGORY_STYLES: Record<LiveMentionCategory, { fg: string; bg: string }> =
+  {
+    complaint: { fg: colors.danger, bg: colors.dangerMuted },
+    praise: { fg: colors.success, bg: colors.successMuted },
+    opportunity: { fg: colors.primary, bg: colors.primaryMuted },
+    crisis: { fg: colors.critical, bg: colors.criticalMuted },
+    rumor: { fg: colors.warning, bg: colors.warningMuted },
+    question: { fg: colors.primary, bg: colors.primaryMuted },
+    neutral: { fg: colors.textSecondary, bg: colors.backgroundAlt },
+  };
 
-const CATEGORY_BG: Record<LiveMention['category'], string> = {
-  complaint: colors.dangerMuted,
-  praise: colors.successMuted,
-  opportunity: colors.primaryMuted,
-  crisis: colors.criticalMuted,
-};
-
-function LiveMentionCard({ mention }: { mention: LiveMention }) {
-  const catColor = CATEGORY_COLORS[mention.category];
-  const catBg = CATEGORY_BG[mention.category];
+function MentionMiniCard({ mention }: { mention: LiveMention }) {
+  const cat = CATEGORY_STYLES[mention.category];
 
   return (
-    <View style={[styles.mentionCard, shadows.soft]}>
+    <View style={styles.mentionCard}>
       <View style={styles.mentionHeader}>
-        <View style={[styles.avatar, { borderColor: catColor }]}>
+        <View style={styles.avatar}>
           <Text style={styles.avatarText}>{mention.avatarInitials}</Text>
         </View>
         <View style={styles.mentionMeta}>
@@ -46,8 +44,8 @@ function LiveMentionCard({ mention }: { mention: LiveMention }) {
             {mention.neighborhood} · {mention.timeAgo}
           </Text>
         </View>
-        <View style={[styles.categoryBadge, { backgroundColor: catBg }]}>
-          <Text style={[styles.categoryText, { color: catColor }]}>
+        <View style={[styles.categoryBadge, { backgroundColor: cat.bg }]}>
+          <Text style={[styles.categoryText, { color: cat.fg }]} numberOfLines={1}>
             {CATEGORY_LABELS[mention.category]}
           </Text>
         </View>
@@ -57,19 +55,11 @@ function LiveMentionCard({ mention }: { mention: LiveMention }) {
       </Text>
       <View style={styles.mentionFooter}>
         <View style={styles.iconStat}>
-          <Ionicons
-            name="heart-outline"
-            size={13}
-            color={colors.textSecondary}
-          />
+          <Ionicons name="heart-outline" size={12} color={colors.textSecondary} />
           <Text style={styles.statText}>{mention.likes}</Text>
         </View>
         <View style={styles.iconStat}>
-          <Ionicons
-            name="chatbubble-outline"
-            size={13}
-            color={colors.textSecondary}
-          />
+          <Ionicons name="chatbubble-outline" size={12} color={colors.textSecondary} />
           <Text style={styles.statText}>{mention.comments}</Text>
         </View>
       </View>
@@ -80,81 +70,96 @@ function LiveMentionCard({ mention }: { mention: LiveMention }) {
 export function LiveMentionsStrip({
   mentions,
   activeMentionCount,
-  onViewAll,
 }: Props) {
+  const items = Array.isArray(mentions) ? mentions : [];
+  const safeCount =
+    typeof activeMentionCount === 'number' && Number.isFinite(activeMentionCount)
+      ? Math.max(0, Math.round(activeMentionCount))
+      : 0;
+
   return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <View style={styles.titleWithBadge}>
-          <Text style={styles.sectionTitle}>Canlı Mentionlar</Text>
-          <View style={styles.countBadge}>
-            <Text style={styles.countText}>
-              {activeMentionCount.toLocaleString('tr-TR')} aktif
-            </Text>
-          </View>
+    <Animated.View
+      entering={FadeInRight.delay(300).duration(400)}
+      style={[styles.card, shadows.soft]}>
+      <View style={styles.header}>
+        <View style={styles.headerIcon}>
+          <Ionicons name="chatbubbles-outline" size={14} color={colors.primary} />
         </View>
-        <Pressable onPress={onViewAll} hitSlop={8}>
-          <Text style={styles.viewAllLink}>Tümünü Gör &gt;</Text>
-        </Pressable>
+        <Text style={styles.sectionTitle}>Canlı Mentionlar</Text>
+      </View>
+
+      <View style={styles.countPill}>
+        <View style={styles.liveDot} />
+        <Text style={styles.countText}>{safeCount} aktif</Text>
       </View>
 
       <View style={styles.mentionsList}>
-        {mentions.map((m) => (
-          <LiveMentionCard key={m.id} mention={m} />
+        {items.map((m) => (
+          <MentionMiniCard key={m.id} mention={m} />
         ))}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  section: {
-    gap: 10,
-    paddingHorizontal: spacing.lg,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  titleWithBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  card: {
     flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: SOCIAL_CARD_BORDER,
+    padding: spacing.md,
+    gap: 8,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  headerIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    backgroundColor: colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '800',
     color: colors.textPrimary,
     letterSpacing: -0.2,
   },
-  countBadge: {
-    backgroundColor: colors.primaryMuted,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+  countPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    backgroundColor: colors.successMuted,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: radius.full,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.success,
   },
   countText: {
     fontSize: 10,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  viewAllLink: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
+    fontWeight: '800',
+    color: colors.success,
   },
   mentionsList: {
     gap: 8,
   },
   mentionCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 12,
-    gap: 8,
+    gap: 6,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(228,226,221,0.7)',
   },
   mentionHeader: {
     flexDirection: 'row',
@@ -162,16 +167,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: colors.backgroundAlt,
-    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   avatarText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
     color: colors.textPrimary,
   },
@@ -182,32 +187,34 @@ const styles = StyleSheet.create({
   },
   mentionName: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.textPrimary,
   },
   mentionSub: {
-    fontSize: 10,
-    fontWeight: '500',
+    fontSize: 9,
+    fontWeight: '600',
     color: colors.textSecondary,
   },
   categoryBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: radius.full,
+    flexShrink: 0,
   },
   categoryText: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '800',
   },
   mentionText: {
     fontSize: 12,
     fontWeight: '500',
     color: colors.textPrimary,
-    lineHeight: 17,
+    lineHeight: 16,
   },
   mentionFooter: {
     flexDirection: 'row',
-    gap: 14,
+    alignItems: 'center',
+    gap: 12,
   },
   iconStat: {
     flexDirection: 'row',
@@ -215,7 +222,7 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   statText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     color: colors.textSecondary,
   },

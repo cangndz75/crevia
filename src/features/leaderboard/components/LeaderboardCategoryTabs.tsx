@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
 import type { LeaderboardCategory } from '@/core/leaderboard/leaderboardTypes';
@@ -29,6 +30,11 @@ export function LeaderboardCategoryTabs({
             style={[styles.chip, active && styles.chipActive]}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}>
+            <Ionicons
+              name={option.icon}
+              size={14}
+              color={active ? colors.textInverse : colors.textSecondary}
+            />
             <Text style={[styles.chipText, active && styles.chipTextActive]}>
               {option.label}
             </Text>
@@ -46,15 +52,18 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     borderRadius: radius.full,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
   chipActive: {
-    backgroundColor: colors.primaryMuted,
+    backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   chipText: {
@@ -63,6 +72,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   chipTextActive: {
-    color: colors.primary,
+    color: colors.textInverse,
   },
 });

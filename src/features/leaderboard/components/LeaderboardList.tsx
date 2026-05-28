@@ -6,7 +6,7 @@ import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
 
 type LeaderboardListProps = {
-  topTen: LeaderboardEntry[];
+  listEntries: LeaderboardEntry[];
   entries: LeaderboardEntry[];
   currentEntry: LeaderboardEntry | null;
   rank: number | null;
@@ -19,7 +19,7 @@ function resolveRank(entries: LeaderboardEntry[], entryId: string): number {
 }
 
 export function LeaderboardList({
-  topTen,
+  listEntries,
   entries,
   currentEntry,
   rank,
@@ -27,13 +27,8 @@ export function LeaderboardList({
 }: LeaderboardListProps) {
   return (
     <View style={styles.wrap}>
-      <View style={styles.head}>
-        <Text style={styles.title}>Sıralama</Text>
-        <Text style={styles.caption}>İlk 10 · yerel mock liste</Text>
-      </View>
-
       <View style={styles.list}>
-        {topTen.map((entry) => (
+        {listEntries.map((entry) => (
           <LeaderboardRow
             key={entry.id}
             entry={entry}
@@ -55,24 +50,7 @@ export function LeaderboardList({
 const styles = StyleSheet.create({
   wrap: {
     marginHorizontal: spacing.lg,
-    gap: 10,
-  },
-  head: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    letterSpacing: -0.2,
-  },
-  caption: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textSecondary,
+    gap: 8,
   },
   list: {
     gap: 8,

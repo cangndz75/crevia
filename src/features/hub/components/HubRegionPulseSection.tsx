@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -10,25 +11,33 @@ import { getNeighborhoodThumb } from '@/features/hub/utils/hubAssets';
 import { useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
+import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
-function MiniPulseChart({ color, seed }: { color: string; seed: number }) {
-  const heights = useMemo(() => {
-    const base = [0.4, 0.7, 0.5, 0.9, 0.6];
-    return base.map((h, i) => h + ((seed + i) % 3) * 0.1);
-  }, [seed]);
+function PulseIndicator({
+  color,
+  level,
+}: {
+  color: string;
+  level: number;
+}) {
+  const bars = useMemo(() => {
+    const base = [0.35, 0.55, 0.75, 0.5, 0.9];
+    const bias = Math.min(1, Math.max(0.2, level / 5));
+    return base.map((h) => h * bias);
+  }, [level]);
 
   return (
     <View style={chartStyles.row}>
-      {heights.map((h, i) => (
+      {bars.map((h, i) => (
         <View
           key={i}
           style={[
             chartStyles.bar,
             {
-              height: 3 + h * 9,
+              height: 4 + h * 10,
               backgroundColor: color,
-              opacity: 0.35 + h * 0.3,
+              opacity: 0.28 + h * 0.55,
             },
           ]}
         />
@@ -41,16 +50,19 @@ const chartStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 2,
-    height: 14,
+    gap: 3,
+    height: 16,
+    marginTop: 2,
   },
   bar: {
-    width: 3,
+    flex: 1,
     borderRadius: 2,
+    maxWidth: 6,
   },
 });
 
 export function HubRegionPulseSection() {
+  const router = useRouter();
   const input = useHubDerivedInput();
   const neighborhoods = useGameStore((s) => s.neighborhoods);
   const regions = useMemo(
@@ -62,7 +74,11 @@ export function HubRegionPulseSection() {
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Bölge Nabzı</Text>
-        <Pressable style={styles.seeAllBtn} accessibilityLabel="Tüm Bölgeler">
+        <Pressable
+          style={styles.seeAllBtn}
+          onPress={() => router.push('/risks')}
+          accessibilityRole="button"
+          accessibilityLabel="Tüm Bölgeler">
           <Text style={styles.seeAllText}>Tüm Bölgeler</Text>
           <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
         </Pressable>
@@ -74,8 +90,8 @@ export function HubRegionPulseSection() {
         {regions.map((r, idx) => (
           <Animated.View
             key={r.id}
-            entering={FadeIn.delay(idx * 50).duration(250)}
-            style={styles.card}>
+            entering={FadeIn.delay(idx * 40).duration(240)}
+            style={[styles.card, shadows.soft]}>
             <View style={styles.thumbWrap}>
               <HubAssetImage
                 source={getNeighborhoodThumb(r.id)}
@@ -96,10 +112,10 @@ export function HubRegionPulseSection() {
                   {r.statusLabel}
                 </Text>
               </View>
-              <Text style={styles.detailLine} numberOfLines={1}>
-                {r.detailLine}
-              </Text>
-              <MiniPulseChart color={r.pulseColor} seed={idx * 3 + r.activeCount} />
+              <PulseIndicator
+                color={r.pulseColor}
+                level={Math.max(1, r.activeCount + 1)}
+              />
             </View>
           </Animated.View>
         ))}
@@ -139,7 +155,7 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   card: {
-    width: 120,
+    width: 118,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
@@ -148,7 +164,7 @@ const styles = StyleSheet.create({
   },
   thumbWrap: {
     width: '100%',
-    height: 56,
+    height: 52,
     position: 'relative',
     backgroundColor: colors.background,
   },
@@ -158,8 +174,8 @@ const styles = StyleSheet.create({
   },
   moodBadge: {
     position: 'absolute',
-    bottom: -8,
-    right: 6,
+    top: 4,
+    right: 4,
     width: 22,
     height: 22,
     borderRadius: 11,
@@ -168,14 +184,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: colors.border,
+    ...shadows.soft,
   },
   moodEmoji: {
-    fontSize: 12,
+    fontSize: 11,
   },
   cardBody: {
-    padding: 8,
-    paddingTop: 6,
-    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    gap: 2,
   },
   name: {
     fontSize: 13,
@@ -195,10 +212,5 @@ const styles = StyleSheet.create({
   status: {
     fontSize: 10,
     fontWeight: '700',
-  },
-  detailLine: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textSecondary,
   },
 });

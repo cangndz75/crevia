@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { LeaderboardPeriod } from '@/core/leaderboard/leaderboardTypes';
@@ -26,6 +27,11 @@ export function LeaderboardPeriodTabs({
             style={[styles.tab, active && styles.tabActive]}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}>
+            <Ionicons
+              name={option.icon}
+              size={14}
+              color={active ? colors.primary : colors.textSecondary}
+            />
             <Text style={[styles.tabText, active && styles.tabTextActive]}>
               {option.label}
             </Text>
@@ -40,7 +46,7 @@ const styles = StyleSheet.create({
   wrap: {
     flexDirection: 'row',
     marginHorizontal: spacing.lg,
-    padding: 3,
+    padding: 4,
     backgroundColor: colors.backgroundAlt,
     borderRadius: radius.lg,
     borderWidth: 1,
@@ -49,8 +55,11 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 9,
     borderRadius: radius.md,
   },
   tabActive: {
@@ -64,6 +73,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   tabTextActive: {
-    color: colors.textPrimary,
+    color: colors.primary,
+    fontWeight: '800',
   },
 });

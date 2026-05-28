@@ -19,8 +19,10 @@ export type NeighborhoodSocialRisk = {
   id: string;
   name: string;
   score: number;
-  riskLevel: 'high' | 'medium' | 'low';
+  riskLevel: 'critical' | 'high' | 'medium' | 'low';
   trend: number[];
+  /** Mahalle kimliği — kısa karakter etiketi. */
+  identityTagline?: string;
 };
 
 export type SocialDecisionAction = {
@@ -29,7 +31,17 @@ export type SocialDecisionAction = {
   subtitle: string;
   effectLabel: string;
   color: 'teal' | 'amber' | 'muted';
+  icon: SocialOutcomeIcon;
 };
+
+export type HotSocialTopicVisualTone =
+  | 'crisis'
+  | 'complaint'
+  | 'misinformation'
+  | 'gratitude'
+  | 'service'
+  | 'environment'
+  | 'question';
 
 export type HotSocialTopic = {
   id: string;
@@ -42,6 +54,13 @@ export type HotSocialTopic = {
   comments: string;
   riskChips: { label: string; value: string }[];
   actions: SocialDecisionAction[];
+  visualTone?: HotSocialTopicVisualTone;
+  /** activeTopics kaynağı topic id — quick action için */
+  topicId?: string;
+  neighborhoodId?: string;
+  topicType?: string;
+  severity?: string;
+  isMockFallback?: boolean;
 };
 
 export type SocialSideTopic = {
@@ -57,10 +76,19 @@ export type SocialSideTopic = {
 export type SocialOutcomeItem = {
   id: string;
   label: string;
-  description: string;
   delta: number;
+  timeAgo: string;
   icon: SocialOutcomeIcon;
 };
+
+export type LiveMentionCategory =
+  | 'complaint'
+  | 'praise'
+  | 'opportunity'
+  | 'crisis'
+  | 'rumor'
+  | 'question'
+  | 'neutral';
 
 export type LiveMention = {
   id: string;
@@ -68,7 +96,7 @@ export type LiveMention = {
   name: string;
   neighborhood: string;
   timeAgo: string;
-  category: 'complaint' | 'praise' | 'opportunity' | 'crisis';
+  category: LiveMentionCategory;
   text: string;
   likes: number;
   comments: number;
@@ -87,15 +115,19 @@ export type SocialPulseScreenData = {
 
 // ─── Category helpers ────────────────────────────────────────────────────────
 
-export const CATEGORY_LABELS: Record<LiveMention['category'], string> = {
+export const CATEGORY_LABELS: Record<LiveMentionCategory, string> = {
   complaint: 'Şikayet',
-  praise: 'Takdir',
+  praise: 'Teşekkür',
   opportunity: 'Fırsat',
   crisis: 'Kriz',
+  rumor: 'Söylenti',
+  question: 'Soru',
+  neutral: 'Gündem',
 };
 
 export const RISK_LABELS: Record<NeighborhoodSocialRisk['riskLevel'], string> =
   {
+    critical: 'Kritik',
     high: 'Yüksek Risk',
     medium: 'Orta Risk',
     low: 'Düşük Risk',
@@ -105,64 +137,57 @@ export const RISK_LABELS: Record<NeighborhoodSocialRisk['riskLevel'], string> =
 
 export const MOCK_SOCIAL_PULSE: SocialPulseScreenData = {
   summary: {
-    score: 68,
+    score: 64,
     maxScore: 100,
     statusLabel: 'Dengede',
     description: 'Topluluğun nabzı istikrarlı.',
-    trendDelta: 5,
+    trendDelta: 18,
     conversationVolume: '2.8K',
-    satisfactionPercent: 71,
-    weeklyTrend: [52, 55, 60, 58, 63, 66, 68],
+    satisfactionPercent: 64,
+    weeklyTrend: [44, 48, 52, 50, 56, 60, 64],
   },
 
   neighborhoods: [
     {
       id: 'merkez',
       name: 'Merkez',
-      score: 78,
-      riskLevel: 'low',
-      trend: [70, 72, 74, 76, 78],
+      score: 66,
+      riskLevel: 'high',
+      trend: [60, 62, 64, 65, 66],
     },
     {
       id: 'cumhuriyet',
       name: 'Cumhuriyet',
-      score: 58,
+      score: 62,
       riskLevel: 'medium',
-      trend: [62, 60, 58, 57, 58],
+      trend: [58, 59, 60, 61, 62],
     },
     {
       id: 'sanayi',
       name: 'Sanayi',
-      score: 52,
+      score: 59,
       riskLevel: 'medium',
-      trend: [56, 54, 53, 51, 52],
+      trend: [55, 56, 57, 58, 59],
     },
     {
-      id: 'istasyon',
-      name: 'İstasyon',
-      score: 41,
-      riskLevel: 'high',
-      trend: [50, 48, 45, 42, 41],
-    },
-    {
-      id: 'yesilvadi',
-      name: 'Yeşilvadi',
-      score: 33,
-      riskLevel: 'high',
-      trend: [44, 40, 38, 35, 33],
+      id: 'yildiztepe',
+      name: 'Yıldıztepe',
+      score: 32,
+      riskLevel: 'low',
+      trend: [30, 31, 31, 32, 32],
     },
   ],
 
   hotTopic: {
     id: 'hot-1',
-    badge: 'Kriz Alarmı',
-    remainingTime: '3 saat kaldı',
-    title: 'Merkez Mahallesi Su Tahliyesi Sorunu',
+    badge: 'Günün Sosyal Krizi',
+    remainingTime: '1 gün kaldı',
+    title: 'Merkez Mahallesi Kriz Baskısı',
     description:
-      'Yoğun yağış sonrası cadde ve sokaklarda su birikintileri oluştu. Kötü koku ve sivrisinek şikayetleri artıyor.',
-    neighborhood: 'Merkez Mahallesi',
+      'Krizle ilgili paylaşımlar hızlanıyor, kamuoyu baskısı artıyor.',
+    neighborhood: 'Merkez',
     interactions: '2.8K',
-    comments: '642',
+    comments: '642 yorum',
     riskChips: [
       { label: 'Risk', value: 'Yüksek' },
       { label: 'Yayılma', value: 'Hızlı' },
@@ -174,6 +199,7 @@ export const MOCK_SOCIAL_PULSE: SocialPulseScreenData = {
         subtitle: 'Halkı bilgilendir',
         effectLabel: '+Güven',
         color: 'teal',
+        icon: 'megaphone-outline',
       },
       {
         id: 'deploy',
@@ -181,6 +207,7 @@ export const MOCK_SOCIAL_PULSE: SocialPulseScreenData = {
         subtitle: 'Müdahale başlat',
         effectLabel: '+Çözüm, −Kaynak',
         color: 'amber',
+        icon: 'people-outline',
       },
       {
         id: 'silent',
@@ -188,6 +215,7 @@ export const MOCK_SOCIAL_PULSE: SocialPulseScreenData = {
         subtitle: 'Risk devam eder',
         effectLabel: '+Risk',
         color: 'muted',
+        icon: 'volume-mute-outline',
       },
     ],
   },
@@ -217,30 +245,30 @@ export const MOCK_SOCIAL_PULSE: SocialPulseScreenData = {
     {
       id: 'o1',
       label: 'Açıklama Yapıldı',
-      description: 'Halk bilgilendirildi',
       delta: 18,
+      timeAgo: '1 gün önce',
       icon: 'megaphone-outline',
     },
     {
       id: 'o2',
       label: 'Ekip Yönlendirildi',
-      description: 'Müdahale başlatıldı',
-      delta: 12,
+      delta: 22,
+      timeAgo: '3 gün önce',
       icon: 'people-outline',
     },
     {
       id: 'o3',
-      label: 'Sessiz Kalındı',
-      description: 'Risk yükseldi',
-      delta: -5,
-      icon: 'volume-mute-outline',
+      label: 'Krize Müdahale',
+      delta: 31,
+      timeAgo: '1 hafta önce',
+      icon: 'construct-outline',
     },
     {
       id: 'o4',
-      label: 'Düzenleme Yapıldı',
-      description: 'Süreç iyileşti',
-      delta: 20,
-      icon: 'construct-outline',
+      label: 'Sessiz Kalındı',
+      delta: -8,
+      timeAgo: '2 hafta önce',
+      icon: 'volume-mute-outline',
     },
   ],
 
@@ -280,8 +308,8 @@ export const MOCK_SOCIAL_PULSE: SocialPulseScreenData = {
     },
   ],
 
-  activeMentionCount: 1247,
+  activeMentionCount: 240,
 
   tipText:
-    'İpucu: Hızlı ve şeffaf iletişim, krizlerin etkisini azaltır ve halk güvenini artırır.',
+    'İpucu: Hızlı ve şeffaf iletişim, krizlerin etkisini azaltır.',
 };

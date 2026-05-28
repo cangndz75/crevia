@@ -4,11 +4,13 @@ import {
 } from '@/core/game/clearActiveEventsForGameState';
 import { ensureDailyEventsForDay } from '@/core/game/ensureDailyEventsForDay';
 import type { ContainerState } from '@/core/containers/containerTypes';
+import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import type { EventCard } from '@/core/models/EventCard';
 import type { GameState } from '@/core/models/GameState';
 
 export type RefreshPilotEventsFromGameStateOptions = {
   containerState?: ContainerState | null;
+  vehicleState?: VehicleState | null;
 };
 
 export type RefreshPilotEventsFromGameStateResult = {
@@ -37,6 +39,7 @@ export function refreshPilotEventsFromGameState(
 
   const ensured = ensureDailyEventsForDay(gameState, currentEventPool, undefined, {
     containerState: options?.containerState ?? null,
+    vehicleState: options?.vehicleState ?? null,
   });
 
   if (!ensured.ensured) {

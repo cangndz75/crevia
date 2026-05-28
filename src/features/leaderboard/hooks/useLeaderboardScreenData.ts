@@ -9,7 +9,14 @@ import {
   selectMockLeaderboard,
   type LeaderboardPersistSlice,
 } from '@/core/leaderboard/leaderboardSelectors';
+import { buildLeaderboardScreenStats } from '@/features/leaderboard/utils/leaderboardUiModel';
 import { useGameStore } from '@/store/useGameStore';
+
+export type LeaderboardScreenStats = {
+  totalParticipants: number;
+  weeklyRise: number;
+  playerTitle: string;
+};
 
 export type LeaderboardScreenData = {
   hasPlayerScore: boolean;
@@ -17,7 +24,9 @@ export type LeaderboardScreenData = {
   bestEntry: LeaderboardEntry | null;
   entries: LeaderboardEntry[];
   rank: number | null;
-  topTen: LeaderboardEntry[];
+  topThree: LeaderboardEntry[];
+  listEntries: LeaderboardEntry[];
+  stats: LeaderboardScreenStats;
   showSeparateCurrentRow: boolean;
 };
 
@@ -79,9 +88,15 @@ export function useLeaderboardScreenData(
     const rank = currentEntry
       ? selectLeaderboardRank(entries, currentEntry.id)
       : null;
-    const topTen = entries.slice(0, 10);
+    const topThree = entries.slice(0, 3);
+    const listEntries = entries.slice(3);
     const showSeparateCurrentRow =
-      currentEntry != null && rank != null && rank > 10;
+      currentEntry != null && rank != null && rank > 3;
+
+    const stats = buildLeaderboardScreenStats({
+      entryCount: entries.length,
+      playerTitle: currentEntry?.title ?? bestEntry?.title,
+    });
 
     return {
       hasPlayerScore,
@@ -89,7 +104,9 @@ export function useLeaderboardScreenData(
       bestEntry,
       entries,
       rank,
-      topTen,
+      topThree,
+      listEntries,
+      stats,
       showSeparateCurrentRow,
     };
   }, [storeSlice, category, period]);

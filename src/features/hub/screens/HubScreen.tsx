@@ -7,14 +7,15 @@ import { HubContainerSignalCard } from '@/features/hub/components/HubContainerSi
 import { HubCriticalEventCard } from '@/features/hub/components/HubCriticalEventCard';
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
 import { HubDailyGoalCard } from '@/features/hub/components/HubDailyGoalCard';
-import { HubMetricsGrid } from '@/features/hub/components/HubMetricsGrid';
+import { HubDailyGoalsCard } from '@/features/hub/components/HubDailyGoalsCard';
+import { HubMiniStatusStrip } from '@/features/hub/components/HubMiniStatusStrip';
 import { HubPersonnelStrip } from '@/features/hub/components/HubPersonnelStrip';
+import { HubVehicleFleetCard } from '@/features/hub/components/HubVehicleFleetCard';
 import { HubPilotReportBanner } from '@/features/hub/components/HubPilotReportBanner';
 import { HubLeaderboardShortcut } from '@/features/hub/components/HubLeaderboardShortcut';
 import { HubSocialPulseShortcut } from '@/features/hub/components/HubSocialPulseShortcut';
 import { HubQuickActions } from '@/features/hub/components/HubQuickActions';
 import { HubRegionPulseSection } from '@/features/hub/components/HubRegionPulseSection';
-import { HubStatusSummaryCard } from '@/features/hub/components/HubStatusSummaryCard';
 import { HubSocialSignalCard } from '@/features/tutorial/HubSocialSignalCard';
 import {
   TutorialCoachOverlay,
@@ -74,24 +75,29 @@ export function HubScreen() {
           styles.body,
           hubTutorialStep ? styles.bodyWithCoach : null,
         ]}>
-        <HubStatusSummaryCard />
         <TutorialTarget targetKey="hub_metrics" highlighted={metricsHighlight}>
-          <HubMetricsGrid />
+          <HubMiniStatusStrip />
         </TutorialTarget>
-        <HubContainerSignalCard
-          hidden={tutorialActive}
-          compact={containerSignalCompact}
-        />
-        <HubPersonnelStrip />
 
-        <View style={styles.lowerSection}>
-          <TutorialTarget
-            targetKey="critical_event_card"
-            highlighted={criticalHighlight}>
-            <HubCriticalEventCard />
-          </TutorialTarget>
-          <HubQuickActions />
-          <HubSocialPulseShortcut />
+        <HubDailyGoalsCard />
+
+        <TutorialTarget
+          targetKey="critical_event_card"
+          highlighted={criticalHighlight}>
+          <HubCriticalEventCard />
+        </TutorialTarget>
+
+        <HubQuickActions />
+        <HubRegionPulseSection />
+
+        <View style={styles.secondarySection}>
+          <HubContainerSignalCard
+            hidden={tutorialActive}
+            compact={containerSignalCompact}
+          />
+          <HubSocialPulseShortcut hidden={tutorialActive} />
+          <HubPersonnelStrip />
+          <HubVehicleFleetCard hidden={tutorialActive} />
           <HubLeaderboardShortcut />
         </View>
 
@@ -103,7 +109,6 @@ export function HubScreen() {
           </TutorialTarget>
         ) : null}
 
-        <HubRegionPulseSection />
         <HubDailyGoalCard onEndDay={handleEndDay} />
         <HubPilotReportBanner />
 
@@ -133,17 +138,18 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 0,
     gap: 0,
+    paddingTop: 0,
   },
   body: {
-    gap: 14,
+    gap: 12,
     paddingBottom: spacing.xxxl,
   },
   bodyWithCoach: {
     paddingBottom: spacing.xxxl + 150,
   },
-  lowerSection: {
-    gap: 14,
-    marginTop: 2,
+  secondarySection: {
+    gap: 12,
+    marginTop: 4,
   },
   moreEventsLink: {
     flexDirection: 'row',

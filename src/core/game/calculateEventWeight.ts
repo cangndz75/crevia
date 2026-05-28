@@ -1,9 +1,15 @@
 import { districtProfiles } from '@/core/content/districtProfiles';
 import { getContainerEventWeightForCandidate } from '@/core/containers/containerEventSignals';
 import type { ContainerState } from '@/core/containers/containerTypes';
+import {
+  getVehicleEventWeightForCandidate,
+  MAX_COMBINED_SIGNAL_BOOST,
+} from '@/core/vehicles/vehicleEventSignals';
+import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import { conditionsMatch } from '@/core/game/pilotConditions';
 import type { PilotEventSelectionContext } from '@/core/game/pilotConditions';
 import type { EventCard } from '@/core/models/EventCard';
+import { getNeighborhoodIdentityEventWeightBonus } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 import type { PilotEventType } from '@/core/models/PilotDayPlan';
 
 export type CalculateEventWeightParams = {
@@ -16,6 +22,9 @@ export type CalculateEventWeightParams = {
   districtMatch?: boolean;
   /** Opsiyonel konteyner sinyali — gün 1'de boost uygulanmaz. */
   containerState?: ContainerState | null;
+  /** Opsiyonel araç sinyali — gün 1 / tutorial'da boost uygulanmaz. */
+  vehicleState?: VehicleState | null;
+  tutorialActive?: boolean;
 };
 
 function metricBonus(
@@ -110,6 +119,8 @@ export function calculateEventWeight(
     recentEventIds,
     districtMatch,
     containerState,
+    vehicleState,
+    tutorialActive,
   } = params;
 
   let weight = (event.priority ?? 1) * 10;
@@ -130,8 +141,9 @@ export function calculateEventWeight(
   weight += districtBiasBonus(event, context);
   weight -= repeatPenalty(event.id, recentEventIds);
 
+  let signalBoost = 0;
   if (containerState) {
-    const containerBoost = getContainerEventWeightForCandidate({
+    signalBoost += getContainerEventWeightForCandidate({
       containerState,
       neighborhoodId: event.neighborhoodId,
       eventType: event.eventType,
@@ -139,10 +151,29 @@ export function calculateEventWeight(
       category: event.category,
       day: context.currentDay,
     });
-    if (containerBoost > 0) {
-      weight = weight * (1 + containerBoost);
-    }
   }
+  if (vehicleState) {
+    signalBoost += getVehicleEventWeightForCandidate({
+      vehicleState,
+      neighborhoodId: event.neighborhoodId,
+      eventType: event.eventType,
+      title: event.title,
+      category: event.category,
+      tags: event.filterTags,
+      day: context.currentDay,
+      tutorialActive: tutorialActive ?? context.currentDay <= 1,
+      activeDistrictId: context.selectedDistrictId,
+    });
+  }
+  if (signalBoost > 0) {
+    const clampedBoost = Math.min(signalBoost, MAX_COMBINED_SIGNAL_BOOST);
+    weight = weight * (1 + clampedBoost);
+  }
+
+  weight += getNeighborhoodIdentityEventWeightBonus(event, {
+    currentDay: context.currentDay,
+    tutorialActive: tutorialActive ?? context.currentDay <= 1,
+  });
 
   return Math.max(1, weight);
 }

@@ -1,6 +1,21 @@
 import type { LeaderboardEntry } from '@/core/leaderboard/leaderboardTypes';
+import {
+  getNeighborhoodDisplayName,
+  normalizeNeighborhoodId,
+} from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 
 import { formatLeaderboardScore } from './leaderboardUiModel';
+
+function formatNeighborhoodName(raw: string | undefined): string {
+  if (!raw?.trim()) {
+    return 'Pilot bekleniyor';
+  }
+  const normalized = normalizeNeighborhoodId(raw);
+  if (normalized) {
+    return getNeighborhoodDisplayName(normalized);
+  }
+  return raw;
+}
 
 export type LeaderboardPrestigeSummary = {
   bestScoreText: string;
@@ -49,7 +64,7 @@ export function buildLeaderboardPrestigeSummary(
       ? formatLeaderboardScore(bestEntry.score)
       : '—',
     highestTitle: bestEntry?.title ?? 'Henüz oluşmadı',
-    bestNeighborhoodName: bestEntry?.neighborhoodName ?? 'Pilot bekleniyor',
+    bestNeighborhoodName: formatNeighborhoodName(bestEntry?.neighborhoodName),
     completedPilotCount: completedRuns.length,
     lastScoreText: lastPilotScore
       ? formatLeaderboardScore(lastPilotScore.score)

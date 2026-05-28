@@ -1,29 +1,31 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, type Href } from 'expo-router';
-import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter, type Href } from "expo-router";
+import { useMemo } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { getTimeGreeting } from '@/core/utils/timeGreeting';
-import { getPilotDistrictHeroImage } from '@/features/hub/utils/hubAssets';
-import { useGameStatus } from '@/store/gameSelectors';
-import { HeaderAvatar } from '@/ui/components/game-header/HeaderAvatar';
-import { HeaderNotifyButton } from '@/ui/components/game-header/HeaderNotifyButton';
-import { HeaderXpBar } from '@/ui/components/game-header/HeaderXpBar';
-import { colors } from '@/ui/theme/colors';
-import { radius } from '@/ui/theme/radius';
-import { spacing } from '@/ui/theme/spacing';
+import { getTimeGreeting } from "@/core/utils/timeGreeting";
+import { getPilotDistrictHeroImage } from "@/features/hub/utils/hubAssets";
+import { useGameStatus } from "@/store/gameSelectors";
+import { HeaderAvatar } from "@/ui/components/game-header/HeaderAvatar";
+import { HeaderNotifyButton } from "@/ui/components/game-header/HeaderNotifyButton";
+import { colors } from "@/ui/theme/colors";
+import { radius } from "@/ui/theme/radius";
+import { spacing } from "@/ui/theme/spacing";
+
+const NOTIFY_DOT = "#FF9500";
+/** Sağ pill için üst sınır — greeting alanı korunur */
+const RESOURCE_PILL_MAX_WIDTH = 128;
 
 function buildPilotMetaLine(day: number, districtName: string): string {
-  const short = districtName.split(' ')[0] ?? districtName;
+  const short = districtName.split(" ")[0] ?? districtName;
   return `${day}. Gün · ${short}`;
 }
 
 /**
- * Ana Sayfa / Merkez — komuta merkezi hissi: selamlama, XP, bütçe, hafif şehir silüeti.
- * Yalnızca hub ekranında kullanılır.
+ * Merkez header — 2. referans: avatar + greeting | sağda tek kaynak/XP pill, zil üst sağda.
  */
 export function DashboardHeader() {
   const router = useRouter();
@@ -38,14 +40,17 @@ export function DashboardHeader() {
     () => getPilotDistrictHeroImage(status.selectedDistrictId),
     [status.selectedDistrictId],
   );
+  const hasNotify = status.notificationCount > 0;
+  const greetingLine = `${greeting.title} ${status.playerName} ${greeting.emoji}`;
 
   return (
     <View style={styles.outer}>
       <LinearGradient
-        colors={[colors.headerTealDark, colors.headerTeal, '#24A89E']}
+        colors={[colors.headerTealDark, colors.headerTeal, "#1E9A95"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.gradient, { paddingTop: insets.top + spacing.md }]}>
+        style={[styles.gradient, { paddingTop: insets.top + spacing.sm }]}
+      >
         <Image
           source={skylineSource}
           style={styles.skyline}
@@ -53,70 +58,79 @@ export function DashboardHeader() {
           contentPosition="bottom"
         />
 
-        <View style={styles.content}>
-          <Text style={styles.kicker}>KOMUTA MERKEZİ</Text>
+        <View style={[styles.notifyWrap, { top: insets.top + spacing.sm }]}>
+          <HeaderNotifyButton
+            count={hasNotify ? 1 : 0}
+            light
+            dotOnly
+            compact
+            dotColor={NOTIFY_DOT}
+          />
+        </View>
 
-          <View style={styles.topRow}>
+        <View style={styles.content}>
+          <View style={styles.mainRow}>
             <Pressable
-              onPress={() => router.push('/profile' as Href)}
+              onPress={() => router.push("/profile" as Href)}
               accessibilityRole="button"
-              accessibilityLabel="Profili aç">
+              accessibilityLabel="Profili aç"
+              style={styles.avatarPress}
+            >
               <HeaderAvatar
                 size={56}
                 level={status.level}
                 showLevelBadge
-                borderColor="rgba(255,255,255,0.85)"
+                borderColor="rgba(255,255,255,0.9)"
               />
             </Pressable>
 
             <View style={styles.greetCol}>
-              <Text style={styles.greeting}>
-                {greeting.title} {status.playerName} {greeting.emoji}
+              <Text
+                style={styles.greeting}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.88}
+              >
+                {greetingLine}
               </Text>
-              <Text style={styles.meta}>{metaLine}</Text>
+              <Text style={styles.meta} numberOfLines={1}>
+                {metaLine}
+              </Text>
               <View style={styles.levelPill}>
                 <Text style={styles.levelPillText}>Seviye {status.level}</Text>
               </View>
             </View>
 
-            <HeaderNotifyButton count={status.notificationCount} light />
-          </View>
-
-          <View style={styles.statsRow}>
-            <View style={styles.xpBlock}>
-              <View style={styles.xpLabels}>
-                <View style={styles.xpLabelRow}>
-                  <Ionicons name="star" size={12} color={colors.hubGold} />
-                  <Text style={styles.xpLabel}>XP</Text>
+            <View style={styles.resourcePill}>
+              <View style={styles.pillHalf}>
+                <Ionicons name="wallet" size={12} color={colors.hubGold} />
+                <View style={styles.pillTextCol}>
+                  <Text style={styles.pillValue} numberOfLines={1}>
+                    {status.sourceShort}
+                  </Text>
+                  <Text style={styles.pillLabel}>Kaynak</Text>
                 </View>
-                <Text style={styles.xpValue}>
-                  {status.xp.toLocaleString('tr-TR')}/
-                  {status.xpTarget.toLocaleString('tr-TR')}
-                </Text>
-                <Text style={styles.xpRemaining}>
-                  {status.xpToNextLevel.toLocaleString('tr-TR')} XP kaldı
-                </Text>
               </View>
-              <HeaderXpBar
-                progress={status.xpProgress}
-                trackColor={colors.xpTrack}
-                fillColor={colors.hubGold}
-                height={7}
-              />
-            </View>
-
-            <View style={styles.budgetChip}>
-              <View style={styles.budgetWalletIcon}>
-                <Ionicons name="wallet-outline" size={14} color={colors.hubGold} />
+              <View style={styles.pillDivider} />
+              <View style={styles.pillHalf}>
+                <Ionicons name="star" size={11} color={colors.hubGold} />
+                <View style={styles.pillTextCol}>
+                  <Text style={styles.pillValue} numberOfLines={1}>
+                    {status.xp}/{status.xpTarget}
+                  </Text>
+                  <Text style={styles.pillLabel}>XP</Text>
+                </View>
               </View>
-              <View style={styles.budgetContent}>
-                <Text style={styles.budgetChipLabel}>KAYNAK</Text>
-                <Text style={styles.budgetChipAmount}>{status.budgetFormatted}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.7)" />
             </View>
           </View>
         </View>
+
+        <LinearGradient
+          colors={["transparent", "rgba(252,249,242,0.5)", colors.hubCream]}
+          locations={[0, 0.6, 1]}
+          style={styles.bottomFade}
+          pointerEvents="none"
+        />
       </LinearGradient>
     </View>
   );
@@ -124,141 +138,115 @@ export function DashboardHeader() {
 
 const styles = StyleSheet.create({
   outer: {
-    overflow: 'hidden',
+    overflow: "hidden",
+    zIndex: 1,
   },
   gradient: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-    position: 'relative',
+    paddingBottom: 16,
+    position: "relative",
   },
   skyline: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.14,
+    opacity: 0.1,
+  },
+  bottomFade: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 20,
+  },
+  notifyWrap: {
+    position: "absolute",
+    right: spacing.lg,
+    zIndex: 3,
   },
   content: {
-    gap: 12,
     zIndex: 1,
+    paddingRight: 40,
   },
-  kicker: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: 'rgba(255,255,255,0.55)',
-    letterSpacing: 1.4,
+  mainRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
+  avatarPress: {
+    flexShrink: 0,
   },
   greetCol: {
     flex: 1,
-    gap: 4,
-    paddingTop: 2,
+    minWidth: 0,
+    gap: 3,
+    paddingRight: 4,
   },
   greeting: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: "800",
     color: colors.textInverse,
-    letterSpacing: -0.4,
+    letterSpacing: -0.35,
   },
   meta: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.78)',
+    fontSize: 11,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.8)",
   },
   levelPill: {
-    alignSelf: 'flex-start',
-    marginTop: 2,
-    backgroundColor: 'rgba(245,183,49,0.22)',
+    alignSelf: "flex-start",
+    marginTop: 1,
+    backgroundColor: "rgba(0,0,0,0.22)",
     borderWidth: 1,
-    borderColor: 'rgba(245,183,49,0.35)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderColor: "rgba(245,183,49,0.55)",
+    paddingHorizontal: 9,
+    paddingVertical: 3,
     borderRadius: radius.full,
   },
   levelPillText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#F5D78E',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: spacing.sm,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-    padding: spacing.sm,
-  },
-  xpBlock: {
-    flex: 1,
-    minWidth: 0,
-    gap: 5,
-  },
-  xpLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  xpLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  xpLabel: {
     fontSize: 10,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.75)',
-  },
-  xpValue: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.65)',
-  },
-  xpRemaining: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontWeight: "800",
     color: colors.hubGold,
   },
-  budgetChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-    borderRadius: radius.lg,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    minWidth: 110,
+  resourcePill: {
+    flexDirection: "row",
+    alignItems: "center",
     flexShrink: 0,
-  },
-  budgetWalletIcon: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(245,183,49,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: RESOURCE_PILL_MAX_WIDTH,
+    backgroundColor: "rgba(255,255,255,0.14)",
     borderWidth: 1,
-    borderColor: 'rgba(245,183,49,0.3)',
+    borderColor: "rgba(255,255,255,0.22)",
+    borderRadius: radius.lg,
+    paddingHorizontal: 7,
+    paddingVertical: 6,
+    gap: 4,
   },
-  budgetContent: {
+  pillHalf: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    minWidth: 0,
+  },
+  pillTextCol: {
     flex: 1,
     minWidth: 0,
-    gap: 1,
+    gap: 0,
   },
-  budgetChipLabel: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: 'rgba(255,255,255,0.6)',
-    letterSpacing: 0.6,
+  pillDivider: {
+    width: 1,
+    height: 22,
+    backgroundColor: "rgba(255,255,255,0.24)",
+    flexShrink: 0,
   },
-  budgetChipAmount: {
-    fontSize: 14,
-    fontWeight: '800',
+  pillValue: {
+    fontSize: 10,
+    fontWeight: "800",
     color: colors.textInverse,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
+  },
+  pillLabel: {
+    fontSize: 7,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.8)",
+    letterSpacing: 0.2,
   },
 });

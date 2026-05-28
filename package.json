@@ -49,7 +49,24 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "analyze:containers": "npx tsx scripts/analyze-container-balance.ts",
-    "analyze:container-events": "npx tsx scripts/analyze-container-event-signals.ts"
+    "analyze:container-events": "npx tsx scripts/analyze-container-event-signals.ts",
+    "verify:vehicles": "npx tsx src/core/vehicles/verifyVehicleScenario.ts",
+    "verify:vehicle-events": "npx tsx scripts/verify-vehicle-event-signals.ts",
+    "verify:vehicle-map": "npx tsx scripts/verify-vehicle-map-adapter.ts",
+    "analyze:vehicles": "npx tsx scripts/analyze-vehicle-balance.ts",
+    "analyze:vehicle-events": "npx tsx scripts/analyze-vehicle-event-signals.ts",
+    "verify:social": "npx tsx src/core/social/verifySocialScenario.ts",
+    "verify:containers": "npx tsx scripts/verify-container-scenario.ts",
+    "verify:container-events": "npx tsx scripts/verify-container-event-signals.ts",
+    "verify:personnel": "npx tsx scripts/verify-personnel-scenario.ts",
+    "verify:leaderboard": "npx tsx scripts/verify-leaderboard-scenario.ts",
+    "verify:pilot-systems": "npx tsx scripts/verify-pilot-systems-integration.ts",
+    "verify:decision-result": "npx tsx scripts/verify-decision-result.ts",
+    "verify:daily-goals": "npx tsx scripts/verify-daily-goals.ts",
+    "verify:neighborhood-identity": "npx tsx scripts/verify-neighborhood-identity.ts",
+    "analyze:social": "npx tsx scripts/analyze-social-balance.ts",
+    "analyze:social-decisions": "npx tsx scripts/analyze-social-decisions.ts",
+    "verify:all": "npm run typecheck && npm run verify:pilot-systems && npm run verify:social && npm run analyze:social && npm run analyze:social-decisions && npm run verify:vehicles && npm run verify:containers && npm run verify:container-events && npm run verify:personnel && npm run verify:leaderboard"
   },
   "private": true
 }

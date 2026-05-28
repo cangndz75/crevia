@@ -31,7 +31,7 @@ export const colors = {
   tabBar: '#FFFFFF',
   tabBarBorder: '#EBE8E0',
   tabActive: '#F5B731',
-  tabInactive: '#9A9A9E',
+  tabInactive: '#7A7A80',
   riskListBg: '#F0EEF6',
   critical: '#C43E38',
   criticalMuted: '#FCEAE8',
@@ -48,7 +48,7 @@ export const colors = {
   navBarBg: '#FFFFFF',
   navIndicator: 'rgba(245, 183, 49, 0.2)',
   navIconActive: '#D4A017',
-  navIconInactive: '#9A9A9E',
+  navIconInactive: '#7A7A80',
 } as const;
 
 export type ColorToken = keyof typeof colors;

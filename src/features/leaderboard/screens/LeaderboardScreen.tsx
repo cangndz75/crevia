@@ -8,10 +8,9 @@ import { LeaderboardCategoryTabs } from '@/features/leaderboard/components/Leade
 import { LeaderboardEmptyState } from '@/features/leaderboard/components/LeaderboardEmptyState';
 import { LeaderboardHeader } from '@/features/leaderboard/components/LeaderboardHeader';
 import { LeaderboardList } from '@/features/leaderboard/components/LeaderboardList';
-import { LeaderboardPenaltyCard } from '@/features/leaderboard/components/LeaderboardPenaltyCard';
 import { LeaderboardPeriodTabs } from '@/features/leaderboard/components/LeaderboardPeriodTabs';
-import { PlayerRankSummaryCard } from '@/features/leaderboard/components/PlayerRankSummaryCard';
-import { ScoreBreakdownCard } from '@/features/leaderboard/components/ScoreBreakdownCard';
+import { LeaderboardPodium } from '@/features/leaderboard/components/LeaderboardPodium';
+import { LeaderboardStatsRow } from '@/features/leaderboard/components/LeaderboardStatsRow';
 import { useLeaderboardScreenData } from '@/features/leaderboard/hooks/useLeaderboardScreenData';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
 import { colors } from '@/ui/theme/colors';
@@ -22,7 +21,7 @@ export function LeaderboardScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useAppTabBarHeight();
   const [category, setCategory] = useState<LeaderboardCategory>('overall');
-  const [period, setPeriod] = useState<LeaderboardPeriod>('pilot');
+  const [period, setPeriod] = useState<LeaderboardPeriod>('weekly');
 
   const data = useLeaderboardScreenData(category, period);
 
@@ -44,28 +43,25 @@ export function LeaderboardScreen() {
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
-        {data.hasPlayerScore && data.currentEntry ? (
-          <PlayerRankSummaryCard entry={data.currentEntry} rank={data.rank} />
-        ) : (
-          <LeaderboardEmptyState onGoHub={handleGoHub} />
-        )}
+        <LeaderboardPodium topThree={data.topThree} />
+
+        <View style={styles.statsGap}>
+          <LeaderboardStatsRow stats={data.stats} />
+        </View>
 
         <LeaderboardCategoryTabs value={category} onChange={setCategory} />
         <LeaderboardPeriodTabs value={period} onChange={setPeriod} />
 
         <LeaderboardList
-          topTen={data.topTen}
+          listEntries={data.listEntries}
           entries={data.entries}
           currentEntry={data.currentEntry}
           rank={data.rank}
           showSeparateCurrentRow={data.showSeparateCurrentRow}
         />
 
-        {data.currentEntry ? (
-          <>
-            <ScoreBreakdownCard breakdown={data.currentEntry.breakdown} />
-            <LeaderboardPenaltyCard penalties={data.currentEntry.penalties} />
-          </>
+        {!data.hasPlayerScore ? (
+          <LeaderboardEmptyState onGoHub={handleGoHub} />
         ) : null}
       </ScrollView>
     </View>
@@ -82,6 +78,9 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 14,
-    paddingTop: 4,
+    paddingTop: 0,
+  },
+  statsGap: {
+    marginTop: 6,
   },
 });

@@ -15,6 +15,7 @@ Olaylar / Operasyon ekranı için pastel oyun illüstrasyonları.
 | `opportunity/` | Park yenileme, ekip toparlanması |
 | `complaint/` | Esnaf / konteyner şikayetleri |
 | `scenes/` | Öncelikli olay kartı sahne arka planı |
+| `inspect/` | İnceleme adımı mahalle hero + bulgu sahnesi |
 | `ui/` | Mahalle mini-harita thumb |
 
 ## Kod eşlemesi

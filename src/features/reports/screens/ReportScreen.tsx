@@ -7,6 +7,9 @@ import type { DailyReport } from '@/core/models/DailyReport';
 import type { GameMetrics } from '@/core/models/GameMetrics';
 import { PilotReportSummaryCard } from '@/features/reports/components/PilotReportSummaryCard';
 import { ReportContainerSummary } from '@/features/reports/components/ReportContainerSummary';
+import { ReportVehicleSummary } from '@/features/reports/components/ReportVehicleSummary';
+import { ReportSocialSummary } from '@/features/reports/components/ReportSocialSummary';
+import { ReportDailyGoalsSummary } from '@/features/reports/components/ReportDailyGoalsSummary';
 import { ReportPersonnelSummary } from '@/features/reports/components/ReportPersonnelSummary';
 import { getPilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
 import { TutorialCoachOverlay } from '@/features/tutorial/TutorialCoachOverlay';
@@ -144,6 +147,7 @@ function ReportContent({
   onGoHub,
 }: ReportContentProps) {
   const summaryLines = report.summaryLines ?? [];
+  const identityLine = report.neighborhoodIdentityLine;
   const warnings = report.warnings ?? [];
   const highlights = report.highlights ?? [];
 
@@ -157,8 +161,14 @@ function ReportContent({
       ) : null}
 
       <LineList title="Özet" lines={summaryLines} />
+      {identityLine ? (
+        <Text style={typography.caption}>{identityLine}</Text>
+      ) : null}
+      <ReportDailyGoalsSummary results={report.dailyGoalResults} />
       <ReportPersonnelSummary lines={report.personnelSummaryLines ?? []} />
       <ReportContainerSummary lines={report.containerSummaryLines ?? []} />
+      <ReportVehicleSummary lines={report.vehicleSummaryLines ?? []} />
+      <ReportSocialSummary lines={report.socialSummaryLines ?? []} />
       <LineList title="Uyarılar" lines={warnings} tone="warning" />
       <LineList title="Öne Çıkanlar" lines={highlights} tone="highlight" />
 

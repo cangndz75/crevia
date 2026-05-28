@@ -10,6 +10,7 @@ import {
   selectContainerState,
   selectCurrentPilotDay,
   selectSelectedPilotDistrictId,
+  selectVehicleStateFromStore,
   useGameStore,
 } from '@/store/useGameStore';
 import { GameScreenShell } from '@/ui/components/GameScreenShell';
@@ -61,7 +62,8 @@ export function MapScreen() {
   const gameDay = useGameStore(selectCurrentPilotDay) ?? 1;
   const activeEvents = useGameStore(selectActiveEvents);
   const containerState = useGameStore(selectContainerState);
-  const hideContainerSignals = useGameStore(selectIsDay1TutorialActive);
+  const vehicleState = useGameStore(selectVehicleStateFromStore);
+  const hideMapFleetSignals = useGameStore(selectIsDay1TutorialActive);
 
   const pilotAreaId: PilotAreaId = pilotAreaFromDistrict(selectedDistrictId);
   const preset = useMemo(() => getPilotPreset(pilotAreaId), [pilotAreaId]);
@@ -218,7 +220,9 @@ export function MapScreen() {
         activeLayers={activeLayers}
         activeEvents={activeEvents}
         containerState={containerState}
-        hideContainerSignals={hideContainerSignals}
+        vehicleState={vehicleState}
+        hideContainerSignals={hideMapFleetSignals}
+        hideVehicleSignals={hideMapFleetSignals}
         onLayersPress={() => setLayerPanelOpen(true)}
         onDistrictSelect={handleDistrictSelect}
         onBackToOverview={handleBackToOverview}

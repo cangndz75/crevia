@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Circle, Ellipse, G, Path, Text as SvgText } from 'react-native-svg';
 
 import type { ContainerState } from '@/core/containers/containerTypes';
+import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 
 import type { EventCard } from '@/core/models/EventCard';
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
@@ -20,6 +21,11 @@ import {
   getContainerSignalTone,
   type NeighborhoodContainerMapSignal,
 } from '../utils/containerMapAdapter';
+import {
+  buildNeighborhoodVehicleBadges,
+  getVehicleSignalTone,
+  type NeighborhoodVehicleBadge,
+} from '../utils/vehicleMapAdapter';
 import {
   buildCityOverviewPins,
   shouldShowHeatmap,
@@ -40,7 +46,9 @@ export type CityOverviewMapProps = {
   gameDay: number;
   events: EventCard[];
   containerState?: ContainerState;
+  vehicleState?: VehicleState;
   hideContainerSignals?: boolean;
+  hideVehicleSignals?: boolean;
   onDistrictPress?: (districtId: MapDistrictId) => void;
   onPinPress?: (pinId: string) => void;
 };
@@ -55,7 +63,9 @@ export function CityOverviewMap({
   gameDay,
   events,
   containerState,
+  vehicleState,
   hideContainerSignals = false,
+  hideVehicleSignals = false,
   onDistrictPress,
   onPinPress,
 }: CityOverviewMapProps) {
@@ -92,6 +102,15 @@ export function CityOverviewMap({
     return buildNeighborhoodContainerMapSignals(containerState);
   }, [containerState, hideContainerSignals]);
 
+  const vehicleBadges = useMemo(() => {
+    if (!vehicleState || hideVehicleSignals) {
+      return [];
+    }
+    return buildNeighborhoodVehicleBadges(vehicleState, {
+      tutorialActive: hideVehicleSignals,
+    });
+  }, [hideVehicleSignals, vehicleState]);
+
   return (
     <ZoomableMapCanvas
       ref={mapRef}
@@ -104,6 +123,7 @@ export function CityOverviewMap({
         showHeat={showHeat}
         showRoutes={showRoutes}
         containerSignals={containerSignals}
+        vehicleBadges={vehicleBadges}
         onDistrictPress={onDistrictPress}
         onPinPress={onPinPress}
       />
@@ -115,6 +135,7 @@ type OverlayProps = {
   activeMapDistrict: MapDistrictId;
   pins: MapPin[];
   containerSignals: NeighborhoodContainerMapSignal[];
+  vehicleBadges: NeighborhoodVehicleBadge[];
   showHeat: boolean;
   showRoutes: boolean;
   onDistrictPress?: (districtId: MapDistrictId) => void;
@@ -125,6 +146,7 @@ function CityOverviewOverlay({
   activeMapDistrict,
   pins,
   containerSignals,
+  vehicleBadges,
   showHeat,
   showRoutes,
   onDistrictPress,
@@ -156,11 +178,15 @@ function CityOverviewOverlay({
         const signal = containerSignals.find(
           (entry) => entry.neighborhoodId === region.id,
         );
+        const vehicleBadge = vehicleBadges.find(
+          (entry) => entry.neighborhoodId === region.id,
+        );
         const showSignal =
           signal != null &&
           (signal.severity === 'high' ||
             signal.severity === 'critical' ||
             signal.severity === 'medium');
+        const showVehicleBadge = vehicleBadge != null;
 
         return (
           <G key={region.id}>
@@ -229,6 +255,35 @@ function CityOverviewOverlay({
                     !
                   </SvgText>
                 )}
+              </G>
+            ) : null}
+
+            {showVehicleBadge ? (
+              <G>
+                <Circle
+                  cx={region.label.x - 0.055}
+                  cy={region.label.y - 0.04}
+                  r={
+                    vehicleBadge.severity === 'critical' ||
+                    vehicleBadge.severity === 'danger'
+                      ? 0.012
+                      : 0.009
+                  }
+                  fill={getVehicleSignalTone(vehicleBadge.severity)}
+                  stroke="#FFFFFF"
+                  strokeWidth={0.002}
+                  opacity={vehicleBadge.severity === 'warning' ? 0.9 : 1}
+                />
+                <SvgText
+                  x={region.label.x - 0.055}
+                  y={region.label.y - 0.033}
+                  fontSize={0.011}
+                  fontWeight="800"
+                  fill="#FFFFFF"
+                  textAnchor="middle"
+                >
+                  {vehicleBadge.severity === 'critical' ? '!' : 'A'}
+                </SvgText>
               </G>
             ) : null}
           </G>

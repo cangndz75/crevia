@@ -1,133 +1,149 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInLeft } from 'react-native-reanimated';
 
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 import type { SocialOutcomeItem } from '../utils/socialUiModel';
+import { SOCIAL_CARD_BORDER } from '../utils/socialLayout';
 
 type Props = {
   outcomes: SocialOutcomeItem[];
   onViewAll?: () => void;
 };
 
-function OutcomeChip({ item }: { item: SocialOutcomeItem }) {
-  const positive = item.delta >= 0;
-  const chipBg = positive ? colors.successMuted : colors.dangerMuted;
-  const chipColor = positive ? colors.success : colors.danger;
-  const deltaText = positive ? `+${item.delta}` : `${item.delta}`;
+function OutcomeMiniItem({ item }: { item: SocialOutcomeItem }) {
+  const delta =
+    typeof item.delta === 'number' && Number.isFinite(item.delta)
+      ? Math.round(item.delta)
+      : 0;
+  const positive = delta > 0;
+  const deltaColor = positive ? colors.primary : colors.danger;
+  const deltaBg = positive ? colors.primaryMuted : colors.dangerMuted;
+  const deltaText = delta > 0 ? `+${delta} Nabız` : `${delta} Nabız`;
 
   return (
-    <View style={[styles.chip, shadows.soft]}>
-      <View style={styles.chipIcon}>
-        <Ionicons name={item.icon} size={16} color={colors.primary} />
+    <View style={styles.outcomeItem}>
+      <View style={styles.iconSquare}>
+        <Ionicons name={item.icon} size={14} color={colors.primary} />
       </View>
-      <View style={styles.chipContent}>
-        <Text style={styles.chipLabel} numberOfLines={1}>
+      <View style={styles.outcomeTextCol}>
+        <Text style={styles.outcomeLabel} numberOfLines={1}>
           {item.label}
         </Text>
-        <Text style={styles.chipDesc} numberOfLines={1}>
-          {item.description}
-        </Text>
-      </View>
-      <View style={[styles.deltaChip, { backgroundColor: chipBg }]}>
-        <Text style={[styles.deltaText, { color: chipColor }]}>
-          {deltaText} Nabız
-        </Text>
+        <View style={[styles.deltaPill, { backgroundColor: deltaBg }]}>
+          <Text style={[styles.deltaText, { color: deltaColor }]}>
+            {deltaText}
+          </Text>
+        </View>
+        <Text style={styles.timeText}>{item.timeAgo}</Text>
       </View>
     </View>
   );
 }
 
 export function SocialOutcomeHistory({ outcomes, onViewAll }: Props) {
+  const items = Array.isArray(outcomes) ? outcomes.slice(0, 3) : [];
+
   return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Sosyal Sonuç Geçmişi</Text>
-        <Pressable onPress={onViewAll} hitSlop={8}>
-          <Text style={styles.viewAllLink}>Tüm Geçmişi Gör &gt;</Text>
-        </Pressable>
+    <Animated.View
+      entering={FadeInLeft.delay(300).duration(400)}
+      style={[styles.card, shadows.soft]}>
+      <View style={styles.header}>
+        <View style={styles.headerIcon}>
+          <Ionicons name="time-outline" size={14} color={colors.primary} />
+        </View>
+        <Text style={styles.sectionTitle}>Sonuç Geçmişi</Text>
       </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}>
-        {outcomes.map((o) => (
-          <OutcomeChip key={o.id} item={o} />
+      <Pressable onPress={onViewAll} hitSlop={8}>
+        <Text style={styles.viewAllLink}>Tüm Geçmişi Gör</Text>
+      </Pressable>
+
+      <View style={styles.outcomesList}>
+        {items.map((o) => (
+          <OutcomeMiniItem key={o.id} item={o} />
         ))}
-      </ScrollView>
-    </View>
+      </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  section: {
-    gap: 10,
+  card: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: SOCIAL_CARD_BORDER,
+    padding: spacing.md,
+    gap: 8,
   },
-  sectionHeader: {
+  header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+    gap: 6,
+  },
+  headerIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    backgroundColor: colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '800',
     color: colors.textPrimary,
     letterSpacing: -0.2,
   },
   viewAllLink: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: colors.primary,
   },
-  scrollContent: {
-    paddingHorizontal: spacing.lg,
+  outcomesList: {
     gap: 8,
   },
-  chip: {
+  outcomeItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    minWidth: 200,
   },
-  chipIcon: {
+  iconSquare: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: 8,
     backgroundColor: colors.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
-  chipContent: {
+  outcomeTextCol: {
     flex: 1,
     minWidth: 0,
-    gap: 1,
+    gap: 2,
   },
-  chipLabel: {
-    fontSize: 12,
+  outcomeLabel: {
+    fontSize: 11,
     fontWeight: '700',
     color: colors.textPrimary,
   },
-  chipDesc: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
-  deltaChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+  deltaPill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: radius.full,
   },
   deltaText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
+  },
+  timeText: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
 });

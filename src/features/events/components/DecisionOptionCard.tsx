@@ -12,8 +12,13 @@ import {
 import type { DecisionAffordabilityCheck } from '@/core/economy/economyAffordability';
 import { formatSourceWithLabel } from '@/core/economy/economyFormatter';
 import { selectPersonnelImpactPreviewForDecision } from '@/core/personnel/personnelPresentation';
+import { selectVehicleImpactPreviewForDecision } from '@/core/vehicles/vehiclePresentation';
 import type { EventCard, EventDecision } from '@/core/models/EventCard';
-import { useGameStore, selectPersonnelState } from '@/store/useGameStore';
+import {
+  useGameStore,
+  selectPersonnelState,
+  selectVehicleStateFromStore,
+} from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
@@ -36,9 +41,52 @@ export function DecisionOptionCard({
   affordability,
 }: DecisionOptionCardProps) {
   const personnelState = useGameStore(selectPersonnelState);
+  const vehicleState = useGameStore(selectVehicleStateFromStore);
   const currentDay = useGameStore((s) => s.gameState.city.day);
   const neighborhoods = useGameStore(useShallow((s) => s.neighborhoods));
   const resources = useGameStore((s) => s.resources);
+
+  const vehiclePreview = useMemo(
+    () =>
+      selectVehicleImpactPreviewForDecision({
+        vehicleState,
+        event: {
+          id: event.id,
+          eventType: event.eventType,
+          title: event.title,
+          description: event.description,
+          category: event.category,
+          neighborhoodId: event.neighborhoodId,
+          districtIds: event.districtIds,
+          tags: event.filterTags,
+        },
+        decision: {
+          id: decision.id,
+          title: decision.title,
+          description: decision.description,
+          style: decision.style,
+          decisionStyle: decision.decisionStyle,
+          costs: decision.costs,
+        },
+        day: currentDay,
+      }),
+    [
+      currentDay,
+      decision.decisionStyle,
+      decision.description,
+      decision.id,
+      decision.style,
+      decision.title,
+      event.category,
+      event.description,
+      event.eventType,
+      event.filterTags,
+      event.id,
+      event.neighborhoodId,
+      event.title,
+      vehicleState,
+    ],
+  );
 
   const personnelPreview = useMemo(
     () =>
@@ -133,6 +181,30 @@ export function DecisionOptionCard({
           {personnelPreview.competencyText ? (
             <Text style={styles.personnelPreviewCompetency}>
               {personnelPreview.competencyText}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
+      {vehiclePreview.shouldShow ? (
+        <View
+          style={[
+            styles.vehiclePreview,
+            vehiclePreview.riskLevel === 'high' && styles.vehiclePreviewRisk,
+            vehiclePreview.riskLevel === 'medium' && styles.vehiclePreviewMedium,
+          ]}>
+          <Text style={styles.vehiclePreviewLabel}>Tahmini araç</Text>
+          <Text
+            style={[
+              styles.vehiclePreviewText,
+              !vehiclePreview.available && styles.vehiclePreviewUnavailable,
+            ]}
+            numberOfLines={2}>
+            {vehiclePreview.shortText}
+          </Text>
+          {vehiclePreview.riskText ? (
+            <Text style={styles.vehiclePreviewRiskText} numberOfLines={2}>
+              {vehiclePreview.riskText}
             </Text>
           ) : null}
         </View>
@@ -308,6 +380,46 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     fontWeight: '600',
     color: colors.secondary,
+  },
+  vehiclePreview: {
+    gap: 2,
+    paddingTop: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.xs,
+    borderRadius: radius.md,
+    backgroundColor: colors.backgroundAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  vehiclePreviewMedium: {
+    borderColor: colors.warningMuted,
+    backgroundColor: colors.warningMuted,
+  },
+  vehiclePreviewRisk: {
+    borderColor: colors.warningMuted,
+    backgroundColor: colors.warningMuted,
+  },
+  vehiclePreviewLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+  },
+  vehiclePreviewText: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  vehiclePreviewUnavailable: {
+    color: colors.warning,
+  },
+  vehiclePreviewRiskText: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '500',
+    color: colors.warning,
   },
   hint: {
     flexDirection: 'row',

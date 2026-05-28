@@ -3,6 +3,7 @@ import { useCallback, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { ContainerState } from '@/core/containers/containerTypes';
+import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import type { EventCard } from '@/core/models/EventCard';
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import { colors } from '@/ui/theme/colors';
@@ -17,6 +18,7 @@ import {
 } from '../data/mapDistrictMapping';
 import { getPilotPreset } from '../data/mapSelectors';
 import type { ActiveLayers, MapFilterId, MapViewMode, PilotAreaId } from '../types/map';
+import { getNeighborhoodMapCharacterLine } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 import { getMapDistrictLabel } from '../utils/mapDistrictLabels';
 import { CityOverviewMap } from './CityOverviewMap';
 import { DistrictDetailMap } from './DistrictDetailMap';
@@ -33,7 +35,9 @@ type Props = {
   activeLayers: ActiveLayers;
   activeEvents: EventCard[];
   containerState?: ContainerState;
+  vehicleState?: VehicleState;
   hideContainerSignals?: boolean;
+  hideVehicleSignals?: boolean;
   onLayersPress: () => void;
   onDistrictSelect: (districtId: MapDistrictId) => void;
   onBackToOverview: () => void;
@@ -50,7 +54,9 @@ export function CityMapCard({
   activeLayers,
   activeEvents,
   containerState,
+  vehicleState,
   hideContainerSignals = false,
+  hideVehicleSignals = false,
   onLayersPress,
   onDistrictSelect,
   onBackToOverview,
@@ -60,6 +66,7 @@ export function CityMapCard({
   const mapControlsRef = useRef<ZoomableMapControls>(null);
   const isDetail = viewMode === 'detail';
   const detailLabel = getMapDistrictLabel(detailDistrictId);
+  const detailCharacterLine = getNeighborhoodMapCharacterLine(detailDistrictId);
   const detailPilotArea = pilotAreaFromMapDistrict(detailDistrictId);
 
   const handleDistrictPress = useCallback(
@@ -88,14 +95,21 @@ export function CityMapCard({
         ) : (
           <Ionicons name="locate" size={12} color={preset.themeColor} />
         )}
-        <Text
-          style={[
-            styles.focusBadgeText,
-            { color: isDetail ? colors.textPrimary : preset.themeColor },
-          ]}
-        >
-          {focusLabel}
-        </Text>
+        <View style={styles.focusTextCol}>
+          <Text
+            style={[
+              styles.focusBadgeText,
+              { color: isDetail ? colors.textPrimary : preset.themeColor },
+            ]}
+          >
+            {focusLabel}
+          </Text>
+          {isDetail && detailCharacterLine ? (
+            <Text style={styles.characterLine} numberOfLines={1}>
+              {detailCharacterLine}
+            </Text>
+          ) : null}
+        </View>
         {activeEvents.length > 0 && (
           <View style={styles.eventBadge}>
             <Text style={styles.eventBadgeText}>
@@ -118,6 +132,8 @@ export function CityMapCard({
             gameDay={gameDay}
             events={activeEvents}
             containerState={containerState}
+            vehicleState={vehicleState}
+            hideVehicleSignals={hideVehicleSignals}
             onPinPress={onPinPress}
           />
         ) : (
@@ -131,7 +147,9 @@ export function CityMapCard({
             gameDay={gameDay}
             events={activeEvents}
             containerState={containerState}
+            vehicleState={vehicleState}
             hideContainerSignals={hideContainerSignals}
+            hideVehicleSignals={hideVehicleSignals}
             onDistrictPress={handleDistrictPress}
             onPinPress={onPinPress}
           />
@@ -203,10 +221,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.primary,
   },
+  focusTextCol: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0,
+  },
   focusBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    flex: 1,
+  },
+  characterLine: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
   eventBadge: {
     paddingHorizontal: 8,

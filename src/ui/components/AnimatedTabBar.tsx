@@ -131,12 +131,16 @@ export function AnimatedTabBar({
         };
 
         const isEventsTab = route.name === 'events';
+        const isHubTab = route.name === 'index';
 
         return (
           <Pressable
             key={route.key}
             onPress={onPress}
-            style={[styles.tab, focused && isEventsTab && styles.tabEventsActive]}
+            style={[
+              styles.tab,
+              focused && (isEventsTab || isHubTab) && styles.tabAccentActive,
+            ]}
             accessibilityRole="button"
             accessibilityState={{ selected: focused }}
             accessibilityLabel={config.label}>
@@ -144,20 +148,26 @@ export function AnimatedTabBar({
               focused={focused}
               icon={config.icon}
               iconFocused={config.iconFocused}
-              accent={isEventsTab}
+              accent={isEventsTab || isHubTab}
             />
             {focused && isEventsTab ? <View style={styles.activeDot} /> : null}
             {focused ? (
               <Text
                 style={[
                   styles.label,
-                  isEventsTab ? styles.labelEventsFocused : styles.labelFocused,
+                  isHubTab
+                    ? styles.labelHubFocused
+                    : isEventsTab
+                      ? styles.labelEventsFocused
+                      : styles.labelFocused,
                 ]}
                 numberOfLines={1}>
                 {config.label}
               </Text>
             ) : (
-              <Text style={styles.labelPlaceholder} />
+              <Text style={styles.labelInactive} numberOfLines={1}>
+                {config.label}
+              </Text>
             )}
           </Pressable>
         );
@@ -190,7 +200,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginHorizontal: 2,
   },
-  tabEventsActive: {
+  tabAccentActive: {
     backgroundColor: colors.navIndicator,
   },
   activeDot: {
@@ -209,11 +219,15 @@ const styles = StyleSheet.create({
   labelFocused: {
     color: colors.tabActive,
   },
+  labelHubFocused: {
+    color: colors.hubGoldDark,
+  },
   labelEventsFocused: {
     color: colors.hubGoldDark,
   },
-  labelPlaceholder: {
+  labelInactive: {
     fontSize: 10,
-    height: 12,
+    fontWeight: '600',
+    color: colors.navIconInactive,
   },
 });

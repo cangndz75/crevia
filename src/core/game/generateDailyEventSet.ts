@@ -18,6 +18,13 @@ import type { EventCard } from '@/core/models/EventCard';
 import type { GameState } from '@/core/models/GameState';
 import { enrichDailyEventSetWithDistrictEvents } from '@/core/districts/districtEventIntegration';
 import type { ContainerState } from '@/core/containers/containerTypes';
+import {
+  applyVehicleCandidateWeightSuppression,
+  createVehicleEventSignals,
+  enrichDailyEventSetWithVehicleSignals,
+} from '@/core/vehicles/vehicleEventSignals';
+import type { VehicleEventSignal } from '@/core/vehicles/vehicleEventSignals';
+import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 
 export type GenerateDailyEventSetParams = {
   gameState: GameState;
@@ -26,6 +33,8 @@ export type GenerateDailyEventSetParams = {
   events?: EventCard[];
   /** Yoksa konteyner boost uygulanmaz. */
   containerState?: ContainerState | null;
+  /** Yoksa araç boost uygulanmaz. */
+  vehicleState?: VehicleState | null;
 };
 
 function buildContext(
@@ -229,8 +238,17 @@ export function generateDailyEventSet(
     districtId,
     events = pilotEvents,
     containerState = null,
+    vehicleState = null,
   } = params;
 
+  const tutorialActive = day <= 1;
+  const vehicleSignals: VehicleEventSignal[] = vehicleState
+    ? createVehicleEventSignals(vehicleState, {
+        day,
+        activeDistrictId: districtId,
+        tutorialActive,
+      })
+    : [];
   const context = buildContext(gameState, day, districtId);
   const dayPlan = getCurrentPilotDayPlan({
     ...gameState.pilot,
@@ -246,6 +264,36 @@ export function generateDailyEventSet(
     ...gameState.pilot.completedEventIds,
     ...(gameState.solvedEvents?.map((e) => e.id) ?? []),
   ];
+
+  const weightBase = {
+    context,
+    theme,
+    recentEventIds,
+    containerState,
+    vehicleState,
+    tutorialActive,
+  };
+
+  const makePickWeight =
+    (
+      pool: EventCard[],
+      districtMatchFor?: (event: EventCard) => boolean | undefined,
+    ) =>
+    (event: EventCard) => {
+      const raw = calculateEventWeight({
+        event,
+        ...weightBase,
+        districtMatch: districtMatchFor?.(event),
+      });
+      return applyVehicleCandidateWeightSuppression(
+        raw,
+        event,
+        pool,
+        vehicleSignals,
+        day,
+        tutorialActive,
+      );
+    };
 
   const selectedIds = new Set<string>();
   const eventRoles: Record<string, GameEventRole> = {};
@@ -278,16 +326,9 @@ export function generateDailyEventSet(
     sidePool,
     counts.side,
     rng,
-    (event) =>
-      calculateEventWeight({
-        event,
-        context,
-        theme,
-        recentEventIds,
-        districtMatch:
-          eventMatchesDistrict(event, districtId) && !isSharedDistrictEvent(event),
-        containerState,
-      }),
+    makePickWeight(sidePool, (event) =>
+      eventMatchesDistrict(event, districtId) && !isSharedDistrictEvent(event),
+    ),
   );
 
   for (const event of sidePicked) {
@@ -298,19 +339,12 @@ export function generateDailyEventSet(
     widenDistrict: true,
   });
 
+  const quickPool = filterQuickCandidates(remainingPool);
   const quickPicked = pickWeightedUnique(
-    filterQuickCandidates(remainingPool),
+    quickPool,
     counts.quick,
     rng,
-    (event) =>
-      calculateEventWeight({
-        event,
-        context,
-        theme,
-        recentEventIds,
-        districtMatch: eventMatchesDistrict(event, districtId),
-        containerState,
-      }),
+    makePickWeight(quickPool, (event) => eventMatchesDistrict(event, districtId)),
   );
   for (const event of quickPicked) {
     assignRole(event.id, 'quick');
@@ -326,15 +360,9 @@ export function generateDailyEventSet(
     opportunityPool,
     counts.opportunity,
     rng,
-    (event) =>
-      calculateEventWeight({
-        event,
-        context,
-        theme,
-        recentEventIds,
-        districtMatch: eventMatchesDistrict(event, districtId),
-        containerState,
-      }),
+    makePickWeight(opportunityPool, (event) =>
+      eventMatchesDistrict(event, districtId),
+    ),
   );
   for (const event of opportunityPicked) {
     assignRole(event.id, 'opportunity');
@@ -389,13 +417,22 @@ export function generateDailyEventSet(
     eventStatuses,
   };
 
-  return enrichDailyEventSetWithDistrictEvents({
+  const withDistrict = enrichDailyEventSetWithDistrictEvents({
     gameState,
     day,
     districtId,
     dailyEventSet: baseDailyEventSet,
     randomFn: rng,
     containerState,
+    catalog: events,
+  });
+
+  return enrichDailyEventSetWithVehicleSignals({
+    dailyEventSet: withDistrict,
+    vehicleState,
+    day,
+    districtId,
+    tutorialActive,
     catalog: events,
   });
 }

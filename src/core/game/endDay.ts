@@ -9,6 +9,9 @@ import type { EventCard } from '@/core/models/EventCard';
 import type { GameResources } from '@/core/models/GameResources';
 import type { ContainerState } from '@/core/containers/containerTypes';
 import type { PersonnelDayReport } from '@/core/personnel/personnelTypes';
+import type { VehicleState } from '@/core/vehicles/vehicleTypes';
+import type { SocialPulseState } from '@/core/social/socialTypes';
+import type { DailyGoalState } from '@/core/dailyGoals/dailyGoalTypes';
 
 const UNRESOLVED_SATISFACTION_PENALTY = 2;
 const UNRESOLVED_MORALE_PENALTY = 1;
@@ -39,6 +42,14 @@ export type EndDayOptions = {
   personnelReport?: PersonnelDayReport | null;
   /** Gün kapanışı konteyner tick sonrası durum — rapor özetine yansır. */
   containerState?: ContainerState;
+  /** Gün kapanışı araç tick sonrası durum — rapor özetine yansır. */
+  vehicleState?: VehicleState;
+  /** Gün kapanışı sosyal tick sonrası durum — rapor snapshot'ı. */
+  socialPulseState?: SocialPulseState;
+  /** Gün kapanışı öncesi sosyal durum — rapor delta satırı için. */
+  socialPulseStateBefore?: SocialPulseState | null;
+  /** Gün sonu değerlendirilmiş günlük hedefler — rapor snapshot. */
+  dailyGoalState?: DailyGoalState | null;
 };
 
 function getMetrics(state: EndDayState) {
@@ -125,6 +136,10 @@ export function endDay(
     snapshots,
     personnelReport: options?.personnelReport ?? null,
     containerState: options?.containerState,
+    vehicleState: options?.vehicleState,
+    socialPulseState: options?.socialPulseState,
+    socialPulseStateBefore: options?.socialPulseStateBefore,
+    dailyGoalState: options?.dailyGoalState,
   });
 
   let nextState: EndDayState = applyUnresolvedEventPenalty({

@@ -7,7 +7,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
-import { createDailyGoalForDay } from '@/core/dailyGoals/dailyGoalEngine';
+import { selectPrimaryDailyGoal } from '@/core/dailyGoals/dailyGoalSelectors';
 import { useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
@@ -22,9 +22,7 @@ type HubDailyGoalCardProps = {
 
 export function HubDailyGoalCard({ onEndDay }: HubDailyGoalCardProps) {
   const currentDay = useGameStore((s) => s.gameState.city.day);
-  const goal = useGameStore(
-    (s) => s.currentDailyGoal ?? createDailyGoalForDay(currentDay),
-  );
+  const goal = useGameStore((s) => selectPrimaryDailyGoal(s.dailyGoalState));
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -32,15 +30,18 @@ export function HubDailyGoalCard({ onEndDay }: HubDailyGoalCardProps) {
     opacity: scale.value < 1 ? 0.94 : 1,
   }));
 
-  const progressRatio =
-    goal.target > 0 ? Math.min(1, goal.progress / goal.target) : 0;
+  if (!goal) {
+    return null;
+  }
+
+  const progressRatio = goal.progressPercent / 100;
 
   return (
     <View style={[styles.panel, shadows.card]}>
       <View style={styles.goalSection}>
         <View style={styles.trophyCircle}>
           <Ionicons
-            name={goal.completed ? 'checkmark-circle' : 'trophy'}
+            name={goal.isCompleted ? 'checkmark-circle' : 'trophy'}
             size={18}
             color={colors.hubGoldDark}
           />
@@ -58,14 +59,14 @@ export function HubDailyGoalCard({ onEndDay }: HubDailyGoalCardProps) {
               />
             </View>
             <Text style={styles.progressText}>
-              {goal.progress}/{goal.target} tamamlandı
+              %{goal.progressPercent} ilerleme
             </Text>
           </View>
         </View>
 
         <View style={styles.reward}>
           <Text style={styles.rewardLabel}>Ödül</Text>
-          <Text style={styles.xp}>+{goal.xpReward} XP</Text>
+          <Text style={styles.xp}>+{goal.rewardXp ?? 0} XP</Text>
         </View>
       </View>
 

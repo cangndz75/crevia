@@ -5,9 +5,11 @@ import type { Neighborhood } from '@/core/models/Neighborhood';
 import type { OpsPulseStatus } from '@/core/models/OperationsBrief';
 import type { GameResources } from '@/core/models/GameResources';
 import {
+  getHubNeighborhoodShortName,
   getRegionAvatarColor,
   getRegionMoodLabel,
 } from '@/features/hub/utils/hubPresentation';
+import { colors } from '@/ui/theme/colors';
 import {
   eventRecurrenceRisk,
   eventSeverity,
@@ -199,6 +201,49 @@ export type HubMetricCard = {
   muted: string;
 };
 
+export type HubStatusStripItem = {
+  id: 'satisfaction' | 'risk' | 'team' | 'activeEvents';
+  label: string;
+  value: string;
+  accent: string;
+};
+
+export function deriveHubStatusStrip(
+  input: HubDerivedInput,
+  resources: GameResources,
+): HubStatusStripItem[] {
+  const { metrics, activeEvents } = input;
+  const risk = deriveHubRiskScore(input);
+  const satisfaction = (metrics.publicSatisfaction / 10).toFixed(1);
+
+  return [
+    {
+      id: 'satisfaction',
+      label: 'Memnuniyet',
+      value: satisfaction,
+      accent: colors.success,
+    },
+    {
+      id: 'risk',
+      label: 'Risk',
+      value: risk.score.toFixed(1),
+      accent: colors.warning,
+    },
+    {
+      id: 'team',
+      label: 'Ekip',
+      value: `${resources.availableStaff}/30`,
+      accent: colors.purple,
+    },
+    {
+      id: 'activeEvents',
+      label: 'Aktif Olay',
+      value: String(activeEvents.length),
+      accent: colors.danger,
+    },
+  ];
+}
+
 export function deriveHubMetricCards(
   input: HubDerivedInput,
   resources: GameResources,
@@ -284,11 +329,27 @@ export type RegionPulseItem = {
   avatarColor: string;
 };
 
+/** Merkez nabzı kartlarında gösterilecek mahalle sırası (Crevia isimleri). */
+const HUB_PULSE_NEIGHBORHOOD_ORDER = [
+  'merkez',
+  'pazar',
+  'sanayi',
+  'yeni-konut',
+  'yesilpark',
+] as const;
+
 export function deriveRegionPulse(
   neighborhoods: Neighborhood[],
   activeEvents: EventCard[],
 ): RegionPulseItem[] {
-  return neighborhoods.slice(0, 3).map((n) => {
+  const byId = new Map(neighborhoods.map((n) => [n.id, n]));
+  const ordered = HUB_PULSE_NEIGHBORHOOD_ORDER.map((id) => byId.get(id)).filter(
+    (n): n is Neighborhood => n != null,
+  );
+  const list =
+    ordered.length > 0 ? ordered : neighborhoods.slice(0, 5);
+
+  return list.slice(0, 5).map((n) => {
     const activeCount = activeEvents.filter(
       (e) => e.neighborhoodId === n.id,
     ).length;
@@ -306,7 +367,7 @@ export function deriveRegionPulse(
         : n.trust < 48
           ? '#E05A52'
           : '#3BAF7A';
-    const shortName = n.name.split(' ')[0] ?? n.name;
+    const shortName = getHubNeighborhoodShortName(n.id, n.name);
     let detailLine: string;
     if (activeCount === 0) {
       if (n.trust < 48) detailLine = 'Güven zayıf';

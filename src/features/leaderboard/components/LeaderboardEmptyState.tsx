@@ -13,12 +13,11 @@ type LeaderboardEmptyStateProps = {
 export function LeaderboardEmptyState({ onGoHub }: LeaderboardEmptyStateProps) {
   return (
     <View style={[styles.card, shadows.soft]}>
-      <Text style={styles.eyebrow}>Belediye Performans Puanı</Text>
-      <Text style={styles.title}>Pilot bölgeyi tamamla, sıralamadaki yerini gör</Text>
+      <Text style={styles.eyebrow}>Kişisel sıralama</Text>
+      <Text style={styles.title}>Pilot bölgeyi tamamla, unvanını ve BPP skorunu gör</Text>
       <Text style={styles.body}>
-        Liderlik tablosu pilot koşusu tamamlandıktan sonra kişisel sıralamanı,
-        unvanını ve skor kırılımını gösterir. Şimdilik bölgesel mock sıralamayı
-        inceleyebilirsin.
+        Yukarıdaki sıralama bölgesel mock veridir. Pilot tamamlandığında kendi
+        satırın listede vurgulanır.
       </Text>
       <GameButton title="Merkeze Dön" onPress={onGoHub} style={styles.button} />
     </View>

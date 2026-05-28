@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StyleSheet, Text } from 'react-native';
 
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
@@ -11,17 +12,19 @@ type Props = {
 
 export function SocialTipBanner({ text }: Props) {
   return (
-    <View style={styles.banner}>
+    <LinearGradient
+      colors={['#FFF9EE', '#FFF4E0', '#FFEFD6']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.banner}>
       <Ionicons
-        name="bulb-outline"
-        size={15}
+        name="bulb"
+        size={16}
         color={colors.warning}
         style={styles.icon}
       />
-      <Text style={styles.text} numberOfLines={2}>
-        {text}
-      </Text>
-    </View>
+      <Text style={styles.text}>{text}</Text>
+    </LinearGradient>
   );
 }
 
@@ -29,21 +32,22 @@ const styles = StyleSheet.create({
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.warningMuted,
-    borderRadius: radius.lg,
+    gap: 10,
+    borderRadius: radius.xl,
     marginHorizontal: spacing.lg,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 11,
+    borderWidth: 1,
+    borderColor: 'rgba(232,155,46,0.18)',
   },
   icon: {
     flexShrink: 0,
   },
   text: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
-    color: colors.textSecondary,
-    lineHeight: 16,
+    color: '#6B5A3E',
+    lineHeight: 17,
   },
 });

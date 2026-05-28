@@ -54,21 +54,42 @@ export function getHeroStatusSummary(input: HubDerivedInput): string {
   return 'Operasyon hattı kontrol altında.';
 }
 
-export type RegionMoodLabel = 'Sakin' | 'Dengede' | 'Tepkili' | 'Yoğun';
+export type RegionMoodLabel = 'Sakin' | 'Dengede' | 'Dikkat' | 'Yoğun';
+
+/** Hub nabız kartlarında seed id → Crevia mahalle adı. */
+const HUB_NEIGHBORHOOD_SHORT_NAMES: Record<string, string> = {
+  merkez: 'Merkez',
+  pazar: 'Cumhuriyet',
+  cumhuriyet: 'Cumhuriyet',
+  sanayi: 'Sanayi',
+  'yeni-konut': 'İstasyon',
+  istasyon: 'İstasyon',
+  yesilpark: 'Yeşilvadi',
+  yesilvadi: 'Yeşilvadi',
+};
+
+export function getHubNeighborhoodShortName(
+  neighborhoodId: string,
+  fallbackName: string,
+): string {
+  return (
+    HUB_NEIGHBORHOOD_SHORT_NAMES[neighborhoodId] ??
+    fallbackName.split(' ')[0] ??
+    fallbackName
+  );
+}
 
 export function getRegionMoodLabel(
   mood: '😟' | '😠' | '🙂' | '😊',
   activeCount: number,
 ): RegionMoodLabel {
-  if (activeCount === 0) {
-    if (mood === '😠' || mood === '😟') return 'Tepkili';
-    if (mood === '😊') return 'Dengede';
-    return 'Sakin';
-  }
   if (activeCount >= 4) return 'Yoğun';
-  if (mood === '😠' || mood === '😟') return 'Tepkili';
-  if (mood === '😊') return 'Dengede';
-  return activeCount >= 2 ? 'Yoğun' : 'Dengede';
+  if (mood === '😠') return 'Dikkat';
+  if (mood === '😟') return activeCount > 0 ? 'Dikkat' : 'Dengede';
+  if (activeCount >= 2) return 'Dikkat';
+  if (activeCount === 0 && mood === '😊') return 'Sakin';
+  if (activeCount > 0) return 'Dengede';
+  return 'Sakin';
 }
 
 export function getRegionAvatarColor(shortName: string): string {

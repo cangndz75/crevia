@@ -3,8 +3,8 @@ import { createJSONStorage, type StateStorage } from 'zustand/middleware';
 
 import { createDefaultPilotState } from '@/core/game/createDefaultPilotState';
 import { INITIAL_DAILY_GOAL_RUNTIME } from '@/core/dailyGoals/dailyGoalIntegration';
-import { createDailyGoalForDay } from '@/core/dailyGoals/dailyGoalEngine';
-import type { DailyGoal } from '@/core/dailyGoals/types';
+import { createDailyGoalsForDay } from '@/core/dailyGoals/dailyGoalIntegration';
+import type { DailyGoal, DailyGoalState } from '@/core/dailyGoals/dailyGoalTypes';
 import {
   createEconomyStateFromLegacyBudget,
   createInitialEconomyState,
@@ -13,6 +13,10 @@ import type { EconomyState } from '@/core/economy/types';
 import { ensureTeamCompetencies } from '@/core/personnel/personnelCompetency';
 import { normalizePersistedContainerState } from '@/core/containers/containerSeed';
 import type { ContainerState } from '@/core/containers/containerTypes';
+import { normalizePersistedSocialPulseState } from '@/core/social/socialSeed';
+import type { SocialPulseState } from '@/core/social/socialTypes';
+import { normalizePersistedVehicleState } from '@/core/vehicles/vehicleSeed';
+import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import { createInitialPersonnelState } from '@/core/personnel/personnelSeed';
 import type { PersonnelState, PersonnelTeam } from '@/core/personnel/personnelTypes';
 import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
@@ -33,13 +37,16 @@ import type { GameStore } from './useGameStore';
 // Save version & storage key
 // ---------------------------------------------------------------------------
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 7;
+const SAVE_VERSION_6 = 6;
+const SAVE_VERSION_5 = 5;
 /** Anahtar değişmedi — v1 kayıtları aynı AsyncStorage girişinden okunur. */
 export const GAME_STORAGE_KEY = 'crevia-game-state-v1';
 
 const LEGACY_SAVE_VERSION = 1;
 const SAVE_VERSION_2 = 2;
 const SAVE_VERSION_3 = 3;
+const SAVE_VERSION_4 = 4;
 
 // ---------------------------------------------------------------------------
 // Persisted shape — only serialisable data, no actions / derived
@@ -56,12 +63,14 @@ export type PersistedGameState = Pick<
   | 'lastDailyReport'
   | 'lastClosedDay'
   | 'playerProgress'
-  | 'currentDailyGoal'
+  | 'dailyGoalState'
   | 'dailyGoalsByDay'
   | 'dailyGoalRuntime'
   | 'economyState'
   | 'personnelState'
   | 'containerState'
+  | 'vehicleState'
+  | 'socialPulseState'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -87,12 +96,14 @@ export function partialiseGameState(
     lastDailyReport: state.lastDailyReport,
     lastClosedDay: state.lastClosedDay,
     playerProgress: state.playerProgress,
-    currentDailyGoal: state.currentDailyGoal,
+    dailyGoalState: state.dailyGoalState,
     dailyGoalsByDay: state.dailyGoalsByDay,
     dailyGoalRuntime: state.dailyGoalRuntime,
     economyState: state.economyState,
     personnelState: state.personnelState,
     containerState: state.containerState,
+    vehicleState: state.vehicleState,
+    socialPulseState: state.socialPulseState,
     tutorialState: state.tutorialState,
     bestPilotScores: state.bestPilotScores,
     lastPilotScore: state.lastPilotScore,
@@ -181,14 +192,37 @@ function isValidDailyGoal(val: unknown): val is DailyGoal {
   if (!isRecord(val)) return false;
   if (typeof val.id !== 'string') return false;
   if (typeof val.day !== 'number') return false;
-  if (typeof val.type !== 'string') return false;
   if (typeof val.title !== 'string') return false;
-  if (typeof val.target !== 'number') return false;
-  if (typeof val.progress !== 'number') return false;
-  if (typeof val.completed !== 'boolean') return false;
-  if (typeof val.xpReward !== 'number') return false;
-  if (typeof val.xpClaimed !== 'boolean') return false;
+  if (typeof val.shortLabel !== 'string') return false;
+  if (typeof val.progressPercent !== 'number') return false;
+  if (typeof val.isCompleted !== 'boolean') return false;
+  if (typeof val.isFailed !== 'boolean') return false;
   return true;
+}
+
+function isValidDailyGoalState(val: unknown): val is DailyGoalState {
+  if (!isRecord(val)) return false;
+  if (typeof val.day !== 'number') return false;
+  if (!Array.isArray(val.goals)) return false;
+  if (typeof val.lastEvaluatedAt !== 'number') return false;
+  return val.goals.every(isValidDailyGoal);
+}
+
+function normalizeDailyGoalsByDay(
+  raw: unknown,
+): Record<number, DailyGoalState> {
+  if (!isRecord(raw)) {
+    return {};
+  }
+  const result: Record<number, DailyGoalState> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    const day = Number(key);
+    if (!Number.isFinite(day) || !isValidDailyGoalState(value)) {
+      continue;
+    }
+    result[day] = value;
+  }
+  return result;
 }
 
 function isValidPersonnelState(val: unknown): val is PersonnelState {
@@ -267,6 +301,9 @@ export function normalizePersistedSave(
     version !== LEGACY_SAVE_VERSION &&
     version !== SAVE_VERSION_2 &&
     version !== SAVE_VERSION_3 &&
+    version !== SAVE_VERSION_4 &&
+    version !== SAVE_VERSION_5 &&
+    version !== SAVE_VERSION_6 &&
     version !== SAVE_VERSION
   ) {
     return null;
@@ -284,6 +321,14 @@ export function normalizePersistedSave(
   const currentDay = gameState.city.day;
   const containerState: ContainerState = normalizePersistedContainerState(
     raw.containerState,
+    currentDay,
+  );
+  const vehicleState: VehicleState = normalizePersistedVehicleState(
+    raw.vehicleState,
+    currentDay,
+  );
+  const socialPulseState: SocialPulseState = normalizePersistedSocialPulseState(
+    raw.socialPulseState,
     currentDay,
   );
 
@@ -318,6 +363,8 @@ export function normalizePersistedSave(
     economyState,
     personnelState,
     containerState,
+    vehicleState,
+    socialPulseState,
     neighborhoods: raw.neighborhoods as PersistedGameState['neighborhoods'],
     resources: raw.resources as PersistedGameState['resources'],
     eventPool: raw.eventPool as PersistedGameState['eventPool'],
@@ -332,12 +379,31 @@ export function normalizePersistedSave(
     playerProgress: isValidPlayerProgress(raw.playerProgress)
       ? raw.playerProgress
       : createInitialPlayerProgress(),
-    currentDailyGoal: isValidDailyGoal(raw.currentDailyGoal)
-      ? raw.currentDailyGoal
-      : createDailyGoalForDay(gameState.city.day),
-    dailyGoalsByDay: isRecord(raw.dailyGoalsByDay)
-      ? (raw.dailyGoalsByDay as Record<number, DailyGoal>)
-      : {},
+    dailyGoalState: (() => {
+      const day = gameState.city.day;
+      const seed = {
+        day,
+        gameState,
+        neighborhoods: raw.neighborhoods as PersistedGameState['neighborhoods'],
+        containerState,
+        vehicleState,
+        personnelState,
+        socialPulseState,
+        isDay1Tutorial: day === 1,
+      };
+      if (isValidDailyGoalState(raw.dailyGoalState)) {
+        return raw.dailyGoalState;
+      }
+      if (isValidDailyGoal(raw.currentDailyGoal)) {
+        return {
+          day: raw.currentDailyGoal.day,
+          goals: [raw.currentDailyGoal],
+          lastEvaluatedAt: Date.now(),
+        };
+      }
+      return createDailyGoalsForDay(seed);
+    })(),
+    dailyGoalsByDay: normalizeDailyGoalsByDay(raw.dailyGoalsByDay),
     dailyGoalRuntime: isRecord(raw.dailyGoalRuntime)
       ? {
           staffFatiguePeak:
@@ -347,6 +413,10 @@ export function normalizePersistedSave(
           budgetExceededToday:
             typeof raw.dailyGoalRuntime.budgetExceededToday === 'boolean'
               ? raw.dailyGoalRuntime.budgetExceededToday
+              : false,
+          primaryCompletedHint:
+            typeof raw.dailyGoalRuntime.primaryCompletedHint === 'boolean'
+              ? raw.dailyGoalRuntime.primaryCompletedHint
               : false,
         }
       : { ...INITIAL_DAILY_GOAL_RUNTIME },

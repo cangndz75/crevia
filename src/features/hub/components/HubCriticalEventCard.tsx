@@ -13,6 +13,10 @@ import Animated, {
 import { formatSourceDelta } from '@/core/economy/economyFormatter';
 import type { EventPreviewEffects } from '@/core/models/EventCard';
 import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
+import {
+  getNeighborhoodIdentityChipLabel,
+  normalizeNeighborhoodId,
+} from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 import { deriveCrisisQueue } from '@/features/hub/utils/hubDerived';
 import { getEventHeroImage, hubAssets } from '@/features/hub/utils/hubAssets';
 import { getCriticalEventQuote } from '@/features/hub/utils/hubPresentation';
@@ -50,25 +54,26 @@ function EventIllustration({
 
 const illStyles = StyleSheet.create({
   wrap: {
-    width: 76,
+    width: 68,
     alignSelf: 'flex-start',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
     marginTop: 2,
+    flexShrink: 0,
   },
   glow: {
     position: 'absolute',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: colors.warningMuted,
-    opacity: 0.85,
+    opacity: 0.75,
   },
   frame: {
-    width: 70,
-    height: 70,
-    borderRadius: 16,
+    width: 62,
+    height: 62,
+    borderRadius: 14,
     overflow: 'hidden',
     backgroundColor: colors.surface,
     borderWidth: 1.5,
@@ -176,6 +181,11 @@ export function HubCriticalEventCard() {
     (effects.budget != null && effects.budget !== 0) ||
     effects.risk !== 0;
 
+  const neighborhoodChip =
+    normalizeNeighborhoodId(event.neighborhoodId ?? event.district) != null
+      ? getNeighborhoodIdentityChipLabel(event.neighborhoodId ?? event.district)
+      : null;
+
   return (
     <Animated.View
       entering={FadeInUp.delay(30).duration(320).springify().damping(20)}
@@ -206,8 +216,7 @@ export function HubCriticalEventCard() {
           <View style={styles.locRow}>
             <Ionicons name="location-outline" size={12} color={colors.hubGoldDark} />
             <Text style={styles.locText} numberOfLines={1}>
-              {event.district}
-              {event.neighborhoodId ? ` · ${event.neighborhoodId}` : ''}
+              {neighborhoodChip ?? event.district}
             </Text>
           </View>
 
@@ -224,37 +233,40 @@ export function HubCriticalEventCard() {
             </View>
           </View>
 
-          {hasImpacts && (
-            <View style={styles.impactsBlock}>
-              <Text style={styles.impactsLabel}>Çözülmezse</Text>
-              <View style={styles.impacts}>
-                {effects.publicSatisfaction !== 0 && (
-                  <ImpactChip
-                    label={`${effects.publicSatisfaction > 0 ? '+' : ''}${effects.publicSatisfaction} Memnuniyet`}
-                    tone={effects.publicSatisfaction > 0 ? 'positive' : 'negative'}
-                  />
-                )}
-                {effects.budget != null && effects.budget !== 0 && (
-                  <ImpactChip
-                    label={formatSourceDelta(effects.budget)}
-                    tone={effects.budget > 0 ? 'positive' : 'negative'}
-                  />
-                )}
-                {effects.risk !== 0 && (
-                  <ImpactChip
-                    label={`${effects.risk > 0 ? '+' : ''}${effects.risk} Risk`}
-                    tone="warning"
-                  />
-                )}
-              </View>
-            </View>
-          )}
         </View>
 
         <EventIllustration eventId={event.id} category={event.category} />
       </Pressable>
 
-      <View style={styles.ctaWrap}>
+      <View style={styles.footer}>
+        {hasImpacts ? (
+          <View style={styles.impactsBlock}>
+            <Text style={styles.impactsLabel}>Çözülmezse etkiler</Text>
+            <View style={styles.impacts}>
+              {effects.publicSatisfaction !== 0 && (
+                <ImpactChip
+                  label={`${effects.publicSatisfaction > 0 ? '+' : ''}${effects.publicSatisfaction} Memnuniyet`}
+                  tone={effects.publicSatisfaction > 0 ? 'positive' : 'negative'}
+                />
+              )}
+              {effects.budget != null && effects.budget !== 0 && (
+                <ImpactChip
+                  label={formatSourceDelta(effects.budget)}
+                  tone={effects.budget > 0 ? 'positive' : 'negative'}
+                />
+              )}
+              {effects.risk !== 0 && (
+                <ImpactChip
+                  label={`${effects.risk > 0 ? '+' : ''}${effects.risk} Risk`}
+                  tone="warning"
+                />
+              )}
+            </View>
+          </View>
+        ) : (
+          <View style={styles.impactsSpacer} />
+        )}
+
         <AnimatedPressable
           onPressIn={() => {
             ctaScale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
@@ -272,7 +284,7 @@ export function HubCriticalEventCard() {
             end={{ x: 1, y: 0 }}
             style={styles.ctaGradient}>
             <Text style={styles.ctaText}>Karar Ver</Text>
-            <Ionicons name="chevron-forward" size={17} color="#fff" />
+            <Ionicons name="chevron-forward" size={16} color="#fff" />
           </LinearGradient>
         </AnimatedPressable>
       </View>
@@ -313,7 +325,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingVertical: 8,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -350,10 +362,10 @@ const styles = StyleSheet.create({
   },
   body: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
-    gap: 12,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 10,
+    gap: 10,
     backgroundColor: '#FFFCF7',
   },
   leftCol: {
@@ -412,39 +424,46 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     lineHeight: 13,
   },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    paddingTop: 4,
+    backgroundColor: '#FFFCF7',
+  },
   impactsBlock: {
-    marginTop: 2,
-    gap: 0,
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  impactsSpacer: {
+    flex: 1,
   },
   impactsLabel: {
-    fontSize: 9,
-    fontWeight: '800',
+    fontSize: 10,
+    fontWeight: '600',
     color: colors.textSecondary,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    marginBottom: 6,
   },
   impacts: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-  },
-  ctaWrap: {
-    paddingHorizontal: 16,
-    paddingTop: 6,
-    paddingBottom: 16,
-    backgroundColor: '#FFFCF7',
+    gap: 5,
   },
   cta: {
     borderRadius: radius.full,
     overflow: 'hidden',
+    flexShrink: 0,
+    minWidth: 128,
   },
   ctaGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 14,
+    gap: 5,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   ctaText: {
     fontSize: 15,

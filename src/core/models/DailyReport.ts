@@ -11,11 +11,23 @@ export type DailyReport = {
   rewardTitle: string;
   rewardDescription?: string;
   summaryLines?: string[];
+  /** Günün odak mahallesi — kimlik tonu (snapshot). */
+  neighborhoodIdentityLine?: string;
   warnings?: string[];
   highlights?: string[];
   /** Gün sonu personel bloğu — genel özetten ayrı tutulur. */
   personnelSummaryLines?: string[];
   /** Gün sonu atık/konteyner operasyon özeti (en fazla 3 satır). */
   containerSummaryLines?: string[];
+  /** Gün sonu araç filosu özeti (en fazla 3 satır). */
+  vehicleSummaryLines?: string[];
+  /** Gün sonu sosyal nabız özeti (en fazla 2 satır). */
+  socialSummaryLines?: string[];
+  /** Gün sonu günlük hedef sonuçları — snapshot. */
+  dailyGoalResults?: Array<{
+    title: string;
+    status: 'completed' | 'failed' | 'at_risk' | 'active';
+    resultText: string;
+  }>;
   createdAt?: string;
 };

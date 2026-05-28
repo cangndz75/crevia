@@ -36,7 +36,7 @@ export function HeaderNotifyButton({
       ]}
       accessibilityLabel="Bildirimler">
       <Ionicons
-        name="notifications-outline"
+        name={light ? 'notifications' : 'notifications-outline'}
         size={iconSize}
         color={light ? colors.textInverse : colors.textPrimary}
       />
@@ -72,9 +72,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   btnLight: {
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderColor: 'rgba(255,255,255,0.28)',
   },
   badge: {
     position: 'absolute',

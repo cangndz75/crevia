@@ -50,15 +50,24 @@ import {
   syncPilotRunDay,
 } from '@/core/game/pilotRun';
 
-import { createDailyGoalForDay } from '@/core/dailyGoals/dailyGoalEngine';
 import {
   INITIAL_DAILY_GOAL_RUNTIME,
+  createDailyGoalsForDay,
+  ensureDailyGoalStateForStore,
+  evaluateDailyGoalsForStore,
   processDecisionDailyGoal,
   processDayEndDailyGoal,
   processQuickActionDailyGoal,
   type DailyGoalRuntime,
+  type DailyGoalStoreSlice,
 } from '@/core/dailyGoals/dailyGoalIntegration';
-import type { DailyGoal, DailyGoalClaimResult } from '@/core/dailyGoals/types';
+import {
+  buildDailyGoalReportResults,
+  buildDecisionGoalImpactLine,
+} from '@/core/dailyGoals/dailyGoalPresentation';
+import type { DailyGoalClaimResult } from '@/core/dailyGoals/types';
+import type { DailyGoalState } from '@/core/dailyGoals/dailyGoalTypes';
+import { selectIsDay1TutorialEligible } from '@/features/tutorial/tutorialSelectors';
 import type { ApplyDecisionXpResult } from '@/core/xp/applyDecisionXp';
 import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
 import type { PlayerProgress } from '@/core/xp/types';
@@ -92,12 +101,38 @@ import {
 } from '@/core/containers/containerIntegration';
 import { createInitialContainerState } from '@/core/containers/containerSeed';
 import type { ContainerState } from '@/core/containers/containerTypes';
+import {
+  processVehiclesAfterDecisionForStore,
+  processVehiclesEndOfDayForStore,
+} from '@/core/vehicles/vehicleIntegration';
+import { applyVehicleFleetAction } from '@/core/vehicles/vehicleManualActions';
+import { createInitialVehicleState } from '@/core/vehicles/vehicleSeed';
+import type { VehicleFleetActionType } from '@/core/vehicles/vehicleTypes';
+import {
+  processSocialPulseAfterDecisionForStore,
+  processSocialPulseEndOfDayForStore,
+} from '@/core/social/socialIntegration';
+import { applySocialQuickAction } from '@/core/social/socialQuickAction';
+import type {
+  ApplySocialQuickActionInput,
+  ApplySocialQuickActionResult,
+} from '@/core/social/socialTypes';
+import { createInitialSocialPulseState } from '@/core/social/socialSeed';
+import type { SocialPulseState } from '@/core/social/socialTypes';
+import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import { buildPilotLeaderboardPersistUpdate } from '@/core/leaderboard/leaderboardSelectors';
 import type { LeaderboardEntry } from '@/core/leaderboard/leaderboardTypes';
 import { createInitialPersonnelState } from '@/core/personnel/personnelSeed';
 import type { PersonnelState, RestActionType } from '@/core/personnel/personnelTypes';
+import type { DecisionResultSnapshot } from '@/features/events/types/decisionResultTypes';
+import {
+  buildDecisionResultCitySlice,
+  buildDecisionResultSnapshot,
+} from '@/features/events/utils/decisionResultModel';
 
-export type ApplyDecisionInsufficientReason = 'insufficient_source';
+export type ApplyDecisionInsufficientReason =
+  | 'insufficient_source'
+  | 'already_resolved';
 
 export type ApplyDecisionStoreResult = ApplyDecisionXpResult & {
   dailyGoalClaim: DailyGoalClaimResult | null;
@@ -107,9 +142,10 @@ export type ApplyDecisionStoreResult = ApplyDecisionXpResult & {
   reason?: ApplyDecisionInsufficientReason;
 };
 
-function buildInsufficientApplyDecisionResult(
+function buildBlockedApplyDecisionResult(
   playerProgress: PlayerProgress,
-  affordability: DecisionAffordabilityCheck,
+  reason: ApplyDecisionInsufficientReason,
+  affordability?: DecisionAffordabilityCheck,
 ): ApplyDecisionStoreResult {
   return {
     playerProgress,
@@ -121,13 +157,15 @@ function buildInsufficientApplyDecisionResult(
     unlockedAuthorities: [...playerProgress.unlockedAuthorities],
     dailyGoalClaim: null,
     success: false,
-    reason: 'insufficient_source',
-    economy: {
-      cost: affordability.cost,
-      currentSource: affordability.currentSource,
-      insufficientSource: true,
-      missingSource: affordability.missingSource,
-    },
+    reason,
+    economy: affordability
+      ? {
+          cost: affordability.cost,
+          currentSource: affordability.currentSource,
+          insufficientSource: true,
+          missingSource: affordability.missingSource,
+        }
+      : undefined,
   };
 }
 
@@ -166,17 +204,21 @@ type GameStoreState = {
   lastClosedDay: number | null;
   /** Son kararın net bütçe etkisi — persist edilmez, header'da gösterilir */
   lastBudgetDelta: number | null;
+  /** Son başarılı karar sonucu — persist edilmez, karar sonuç ekranında gösterilir */
+  lastDecisionResult: DecisionResultSnapshot | null;
   /**
    * Yeni XP / seviye modülü ilerlemesi.
    * gameState.player (mock header XP) ile ayrı tutulur — UI bu alanı henüz göstermiyor.
    */
   playerProgress: PlayerProgress;
-  currentDailyGoal: DailyGoal | null;
-  dailyGoalsByDay: Record<number, DailyGoal>;
+  dailyGoalState: DailyGoalState | null;
+  dailyGoalsByDay: Record<number, DailyGoalState>;
   dailyGoalRuntime: DailyGoalRuntime;
   economyState: EconomyState;
   personnelState: PersonnelState;
   containerState: ContainerState;
+  vehicleState: VehicleState;
+  socialPulseState: SocialPulseState;
   tutorialState: TutorialState;
   /** Pilot tamamlanınca kaydedilen yerel en iyi skorlar (leaderboard UI sonraki aşama). */
   bestPilotScores: LeaderboardEntry[];
@@ -188,6 +230,10 @@ type GameStoreState = {
 type GameStoreActions = {
   initializeDay1: () => void;
   applyDecision: (eventId: string, decisionId: string) => ApplyDecisionStoreResult;
+  setLastDecisionResult: (result: DecisionResultSnapshot | null) => void;
+  clearLastDecisionResult: () => void;
+  ensureDailyGoalsForDay: (day?: number) => void;
+  clearDailyGoals: () => void;
   useQuickAction: (actionId: string) => void;
   endCurrentDay: () => void;
   resetGame: () => void;
@@ -215,6 +261,13 @@ type GameStoreActions = {
     teamId: string,
     restType: RestActionType,
   ) => { success: boolean; message: string };
+  applyVehicleFleetActionFromHub: (
+    actionType: VehicleFleetActionType,
+    vehicleId: string,
+  ) => { success: boolean; message: string };
+  applySocialQuickAction: (
+    input: ApplySocialQuickActionInput,
+  ) => ApplySocialQuickActionResult;
   ensureDay1TutorialStarted: () => void;
   advanceTutorial: () => void;
   skipTutorial: () => void;
@@ -375,13 +428,16 @@ function applySeedBundle(
   | 'lastDailyReport'
   | 'lastClosedDay'
   | 'lastBudgetDelta'
+  | 'lastDecisionResult'
   | 'playerProgress'
-  | 'currentDailyGoal'
+  | 'dailyGoalState'
   | 'dailyGoalsByDay'
   | 'dailyGoalRuntime'
   | 'economyState'
   | 'personnelState'
   | 'containerState'
+  | 'vehicleState'
+  | 'socialPulseState'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -396,17 +452,59 @@ function applySeedBundle(
     lastDailyReport: null,
     lastClosedDay: null,
     lastBudgetDelta: null,
+    lastDecisionResult: null,
     playerProgress: createInitialPlayerProgress(),
-    currentDailyGoal: createDailyGoalForDay(bundle.gameState.city.day),
+    dailyGoalState: createDailyGoalsForDay({
+      day: bundle.gameState.city.day,
+      gameState: bundle.gameState,
+      neighborhoods: bundle.neighborhoods,
+      containerState: createInitialContainerState(bundle.gameState.city.day),
+      vehicleState: createInitialVehicleState(bundle.gameState.city.day),
+      personnelState: createInitialPersonnelState(),
+      socialPulseState: createInitialSocialPulseState(bundle.gameState.city.day),
+      isDay1Tutorial: true,
+    }),
     dailyGoalsByDay: {},
     dailyGoalRuntime: { ...INITIAL_DAILY_GOAL_RUNTIME },
     economyState: createInitialEconomyState(),
     personnelState: createInitialPersonnelState(),
     containerState: createInitialContainerState(bundle.gameState.city.day),
+    vehicleState: createInitialVehicleState(bundle.gameState.city.day),
+    socialPulseState: createInitialSocialPulseState(bundle.gameState.city.day),
     tutorialState: { ...INITIAL_TUTORIAL_STATE },
     bestPilotScores: [],
     lastPilotScore: undefined,
   };
+}
+
+function buildDailyGoalStoreSlice(
+  state: GameStoreState,
+  day?: number,
+): DailyGoalStoreSlice {
+  const resolvedDay = day ?? state.gameState.city.day;
+  return {
+    day: resolvedDay,
+    gameState: state.gameState,
+    neighborhoods: state.neighborhoods,
+    containerState: state.containerState,
+    vehicleState: state.vehicleState,
+    personnelState: state.personnelState,
+    socialPulseState: state.socialPulseState,
+    decisionHistory: state.decisionHistory,
+    dailyGoalRuntime: state.dailyGoalRuntime,
+    isDay1Tutorial: selectIsDay1TutorialEligible(state as GameStore),
+    lastClosedDay: state.lastClosedDay,
+  };
+}
+
+function bootstrapDailyGoalState(
+  state: GameStoreState,
+  day?: number,
+): DailyGoalState {
+  const slice = buildDailyGoalStoreSlice(state, day);
+  let goalState = ensureDailyGoalStateForStore(slice, state.dailyGoalState);
+  goalState = evaluateDailyGoalsForStore(goalState, slice, 'day_start');
+  return goalState;
 }
 
 function syncCityBudgetWithEconomy(
@@ -440,7 +538,34 @@ export const useGameStore = create<GameStore>()(
       bestPilotScores: [],
       lastPilotScore: undefined,
       lastBudgetDelta: null,
+      lastDecisionResult: null,
       _hasHydrated: false,
+
+      setLastDecisionResult: (result) => set({ lastDecisionResult: result }),
+      clearLastDecisionResult: () => set({ lastDecisionResult: null }),
+
+      ensureDailyGoalsForDay: (day) => {
+        const current = get();
+        const targetDay = day ?? current.gameState.city.day;
+        if (
+          current.dailyGoalState?.day === targetDay &&
+          current.dailyGoalState.goals.length > 0
+        ) {
+          return;
+        }
+        const goalState = bootstrapDailyGoalState(current, targetDay);
+        set({
+          dailyGoalState: goalState,
+          dailyGoalsByDay: {
+            ...current.dailyGoalsByDay,
+            [targetDay]: goalState,
+          },
+        });
+      },
+
+      clearDailyGoals: () => {
+        set({ dailyGoalState: null, dailyGoalsByDay: {} });
+      },
 
       _setHasHydrated: (v: boolean) => set({ _hasHydrated: v }),
 
@@ -535,6 +660,14 @@ export const useGameStore = create<GameStore>()(
 
       applyDecision: (eventId, decisionId) => {
         const current = get();
+
+        if (current.gameState.solvedEvents.some((e) => e.id === eventId)) {
+          return buildBlockedApplyDecisionResult(
+            current.playerProgress,
+            'already_resolved',
+          );
+        }
+
         const event =
           current.gameState.events.find((e) => e.id === eventId) ??
           current.eventPool.find((e) => e.id === eventId);
@@ -546,12 +679,19 @@ export const useGameStore = create<GameStore>()(
             decision,
           });
           if (!affordability.canAfford) {
-            return buildInsufficientApplyDecisionResult(
+            return buildBlockedApplyDecisionResult(
               current.playerProgress,
+              'insufficient_source',
               affordability,
             );
           }
         }
+
+        const gameStateBefore = buildDecisionResultCitySlice(current.gameState.city);
+        const personnelStateBefore = current.personnelState;
+        const containerStateBefore = current.containerState;
+        const vehicleStateBefore = current.vehicleState;
+        const socialPulseStateBefore = current.socialPulseState;
 
         const result = runApplyDecision({
           state: toEngineState(current),
@@ -640,7 +780,12 @@ export const useGameStore = create<GameStore>()(
         let personnelState = current.personnelState;
         let personnelRuntime = current.dailyGoalRuntime;
         let containerState = current.containerState;
+        let vehicleState = current.vehicleState;
+        let socialPulseState = current.socialPulseState;
         let personnelAssigned = false;
+        let personnelAssignment: ReturnType<
+          typeof processPersonnelAfterDecision
+        >['assignment'] = null;
 
         if (event && decision) {
           const personnelResult = processPersonnelAfterDecision(
@@ -655,7 +800,8 @@ export const useGameStore = create<GameStore>()(
             nextGameState.city.morale,
           );
           personnelState = personnelResult.personnelState;
-          personnelAssigned = personnelResult.assignment != null;
+          personnelAssignment = personnelResult.assignment;
+          personnelAssigned = personnelAssignment != null;
           personnelRuntime = {
             ...personnelRuntime,
             staffFatiguePeak: Math.max(
@@ -685,6 +831,51 @@ export const useGameStore = create<GameStore>()(
           });
           containerState = containerResult.state;
 
+          vehicleState = processVehiclesAfterDecisionForStore({
+            vehicleState,
+            event: {
+              id: event.id,
+              eventType: event.eventType,
+              title: event.title,
+              description: event.description,
+              category: event.category,
+              neighborhoodId: event.neighborhoodId,
+              districtIds: event.districtIds,
+              tags: event.filterTags,
+            },
+            decision: {
+              id: decision.id,
+              title: decision.title,
+              description: decision.description,
+              style: decision.style,
+              decisionStyle: decision.decisionStyle,
+              costs: decision.costs,
+            },
+            day: result.decisionRecord.day,
+          });
+
+          socialPulseState = processSocialPulseAfterDecisionForStore(
+            socialPulseState,
+            {
+              event: {
+                id: event.id,
+                title: event.title,
+                description: event.description,
+                category: event.category,
+                neighborhoodId: event.neighborhoodId,
+                districtIds: event.districtIds,
+                eventType: event.eventType,
+                tags: event.filterTags,
+              },
+              decision: {
+                id: decision.id,
+                title: decision.title,
+                description: decision.description,
+              },
+              day: result.decisionRecord.day,
+            },
+          );
+
           if (
             personnelResult.metricEffects &&
             Object.keys(personnelResult.metricEffects).length > 0
@@ -707,33 +898,71 @@ export const useGameStore = create<GameStore>()(
         }
 
         let playerProgress = result.xp.playerProgress;
-        let currentDailyGoal = current.currentDailyGoal;
-        let dailyGoalRuntime = current.dailyGoalRuntime;
+        let dailyGoalRuntime = personnelRuntime;
         let dailyGoalClaim: DailyGoalClaimResult | null = null;
+        let dailyGoalState = current.dailyGoalState;
+        const goalStateBefore = dailyGoalState;
 
         if (event && decision) {
+          const storeSlice = buildDailyGoalStoreSlice(
+            { ...current, gameState: nextGameState, personnelState, containerState, vehicleState, socialPulseState },
+            result.decisionRecord.day,
+          );
           const dailyResult = processDecisionDailyGoal({
             day: result.decisionRecord.day,
-            goal: currentDailyGoal,
+            goal: null,
             playerProgress,
             event,
             decision,
             appliedEffects: result.decisionRecord.appliedEffects,
             appliedCosts: result.decisionRecord.appliedCosts,
             runtime: dailyGoalRuntime,
+            storeSlice,
+            dailyGoalState,
           });
           playerProgress = dailyResult.playerProgress;
-          currentDailyGoal = dailyResult.goal;
+          dailyGoalState = dailyResult.dailyGoalState;
           dailyGoalRuntime = dailyResult.runtime;
           dailyGoalClaim = dailyResult.processResult.claim;
         }
 
         const dailyGoalsByDay = {
           ...current.dailyGoalsByDay,
-          ...(currentDailyGoal
-            ? { [currentDailyGoal.day]: currentDailyGoal }
-            : {}),
+          ...(dailyGoalState ? { [dailyGoalState.day]: dailyGoalState } : {}),
         };
+
+        let lastDecisionResult: DecisionResultSnapshot | null = null;
+        if (event && decision) {
+          const neighborhood =
+            current.neighborhoods.find((n) => n.id === event.neighborhoodId) ??
+            current.neighborhoods.find((n) => n.name === event.district);
+
+          lastDecisionResult = buildDecisionResultSnapshot({
+            day: result.decisionRecord.day,
+            event,
+            decision,
+            neighborhoodName: neighborhood?.name ?? event.district,
+            gameStateBefore,
+            gameStateAfter: buildDecisionResultCitySlice(nextGameState.city),
+            personnelStateBefore,
+            personnelStateAfter: personnelState,
+            containerStateBefore,
+            containerStateAfter: containerState,
+            vehicleStateBefore,
+            vehicleStateAfter: vehicleState,
+            socialPulseStateBefore,
+            socialPulseStateAfter: socialPulseState,
+            personnelAssignment,
+          });
+
+          const impactLine = buildDecisionGoalImpactLine(
+            dailyGoalState,
+            goalStateBefore,
+          );
+          if (impactLine) {
+            lastDecisionResult = { ...lastDecisionResult, dailyGoalImpact: impactLine };
+          }
+        }
 
         set({
           gameState: withSyncedPulse(nextGameState),
@@ -753,11 +982,14 @@ export const useGameStore = create<GameStore>()(
           lastBudgetDelta: budgetEffect !== 0 ? budgetEffect : null,
           economyState,
           playerProgress,
-          currentDailyGoal,
+          dailyGoalState,
           dailyGoalsByDay,
-          dailyGoalRuntime: personnelRuntime,
+          dailyGoalRuntime,
           personnelState,
           containerState,
+          vehicleState,
+          socialPulseState,
+          lastDecisionResult,
         });
 
         return {
@@ -832,25 +1064,69 @@ export const useGameStore = create<GameStore>()(
         return { success: true, message: restResult.message };
       },
 
-      useQuickAction: (actionId) => {
+      applyVehicleFleetActionFromHub: (actionType, vehicleId) => {
         const current = get();
         const day = current.gameState.city.day;
-        const quickResult = processQuickActionDailyGoal({
+        const result = applyVehicleFleetAction(current.vehicleState, {
+          type: actionType,
+          vehicleId,
           day,
-          goal: current.currentDailyGoal,
+        });
+        if (!result.applied) {
+          return { success: false, message: result.message };
+        }
+        set({ vehicleState: result.state });
+        return { success: true, message: result.message };
+      },
+
+      applySocialQuickAction: (input) => {
+        const current = get();
+        const day = input.day ?? current.gameState.city.day;
+        const result = applySocialQuickAction(current.socialPulseState, {
+          ...input,
+          day,
+        });
+        if (!result.success) {
+          return result;
+        }
+
+        const slice = buildDailyGoalStoreSlice({
+          ...current,
+          socialPulseState: result.state,
+        });
+        const quickGoal = processQuickActionDailyGoal({
+          slice,
+          dailyGoalState: current.dailyGoalState,
           playerProgress: current.playerProgress,
-          quickActionId: actionId,
         });
 
-        const dailyGoalsByDay = {
-          ...current.dailyGoalsByDay,
-          [quickResult.goal.day]: quickResult.goal,
-        };
+        set({
+          socialPulseState: result.state,
+          dailyGoalState: quickGoal.dailyGoalState,
+          dailyGoalsByDay: {
+            ...current.dailyGoalsByDay,
+            [quickGoal.dailyGoalState.day]: quickGoal.dailyGoalState,
+          },
+          playerProgress: quickGoal.playerProgress,
+        });
+        return result;
+      },
+
+      useQuickAction: (actionId) => {
+        const current = get();
+        const quickResult = processQuickActionDailyGoal({
+          slice: buildDailyGoalStoreSlice(current),
+          dailyGoalState: current.dailyGoalState,
+          playerProgress: current.playerProgress,
+        });
 
         set({
           playerProgress: quickResult.playerProgress,
-          currentDailyGoal: quickResult.goal,
-          dailyGoalsByDay,
+          dailyGoalState: quickResult.dailyGoalState,
+          dailyGoalsByDay: {
+            ...current.dailyGoalsByDay,
+            [quickResult.dailyGoalState.day]: quickResult.dailyGoalState,
+          },
         });
       },
 
@@ -896,15 +1172,50 @@ export const useGameStore = create<GameStore>()(
           day: closingDay,
         }).state;
 
+        const vehicleStateAfterNight = processVehiclesEndOfDayForStore(
+          current.vehicleState,
+          closingDay,
+        );
+
+        const socialPulseStateBeforeNight = current.socialPulseState;
+
+        const socialPulseStateAfterNight = processSocialPulseEndOfDayForStore(
+          current.socialPulseState,
+          closingDay,
+        );
+
         const result = endDay(toEngineState(current), {
           skipEventSelection: skipGenericEventSelection,
           personnelReport,
           containerState: containerStateAfterNight,
+          vehicleState: vehicleStateAfterNight,
+          socialPulseState: socialPulseStateAfterNight,
+          socialPulseStateBefore: socialPulseStateBeforeNight,
         });
 
         const personnelStateAfterNight = processPersonnelEndOfDay(
           current.personnelState,
           closingDay,
+        );
+
+        const dayEndSlice = buildDailyGoalStoreSlice(
+          {
+            ...current,
+            containerState: containerStateAfterNight,
+            vehicleState: vehicleStateAfterNight,
+            socialPulseState: socialPulseStateAfterNight,
+            personnelState: personnelStateAfterNight,
+          },
+          closingDay,
+        );
+        let closingGoalState = ensureDailyGoalStateForStore(
+          dayEndSlice,
+          current.dailyGoalState,
+        );
+        closingGoalState = evaluateDailyGoalsForStore(
+          closingGoalState,
+          dayEndSlice,
+          'end_of_day',
         );
 
         let nextGameState = withSyncedPulse(result.nextState);
@@ -928,18 +1239,24 @@ export const useGameStore = create<GameStore>()(
           }));
         }
 
-        let playerProgress = current.playerProgress;
-        const dayEndResult = processDayEndDailyGoal({
-          day: closingDay,
-          goal: current.currentDailyGoal,
-          playerProgress,
-          runtime: current.dailyGoalRuntime,
+        const dayEndGoalResult = processDayEndDailyGoal({
+          slice: dayEndSlice,
+          dailyGoalState: closingGoalState,
+          playerProgress: current.playerProgress,
         });
-        playerProgress = dayEndResult.playerProgress;
-        const closedDayGoal = dayEndResult.goal;
+        let playerProgress = dayEndGoalResult.playerProgress;
+        closingGoalState = dayEndGoalResult.dailyGoalState;
+
+        const dailyReport = {
+          ...result.dailyReport,
+          dailyGoalResults:
+            result.dailyReport.dailyGoalResults ??
+            buildDailyGoalReportResults(closingGoalState),
+        };
+
         const dailyGoalsByDay = {
           ...current.dailyGoalsByDay,
-          [closingDay]: closedDayGoal,
+          [closingDay]: closingGoalState,
         };
 
         if (nextGameState.pilot.status === 'active') {
@@ -949,7 +1266,10 @@ export const useGameStore = create<GameStore>()(
           const pilotRefresh = refreshPilotEventsFromGameState(
             advancedGameState,
             current.eventPool,
-            { containerState: containerStateAfterNight },
+            {
+              containerState: containerStateAfterNight,
+              vehicleState: vehicleStateAfterNight,
+            },
           );
           nextGameState = withSyncedPulse(pilotRefresh.gameState);
           nextEventPool = pilotRefresh.eventPool;
@@ -992,19 +1312,34 @@ export const useGameStore = create<GameStore>()(
           snapshots: limitSnapshots(
             result.nextState.snapshots ?? current.snapshots,
           ),
-          lastDailyReport: result.dailyReport,
+          lastDailyReport: dailyReport,
           lastClosedDay: closingDay,
           playerProgress,
           dailyGoalsByDay,
-          currentDailyGoal: createDailyGoalForDay(nextDay),
+          dailyGoalState: bootstrapDailyGoalState(
+            {
+              ...current,
+              gameState: withSyncedPulse({
+                ...nextGameState,
+                city: syncedMoraleCity,
+              }),
+              containerState: containerStateAfterNight,
+              vehicleState: vehicleStateAfterNight,
+              socialPulseState: socialPulseStateAfterNight,
+              personnelState: personnelStateAfterNight,
+            },
+            nextDay,
+          ),
           dailyGoalRuntime: { ...INITIAL_DAILY_GOAL_RUNTIME },
           personnelState: personnelStateAfterNight,
           containerState: containerStateAfterNight,
+          vehicleState: vehicleStateAfterNight,
+          socialPulseState: socialPulseStateAfterNight,
         });
       },
 
       setSelectedPilotDistrict: (districtId) => {
-        const { gameState, eventPool, containerState } = get();
+        const { gameState, eventPool, containerState, vehicleState } = get();
         const withDistrict = withPilot(gameState, (pilot) => ({
           ...pilot,
           selectedDistrictId: districtId,
@@ -1015,7 +1350,7 @@ export const useGameStore = create<GameStore>()(
         const pilotRefresh = refreshPilotEventsFromGameState(
           withDistrict,
           eventPool,
-          { containerState },
+          { containerState, vehicleState },
         );
         set({
           gameState: withSyncedPulse(pilotRefresh.gameState),
@@ -1024,7 +1359,8 @@ export const useGameStore = create<GameStore>()(
       },
 
       startPilotDistrict: (districtId) => {
-        const { gameState, snapshots, eventPool, containerState } = get();
+        const { gameState, snapshots, eventPool, containerState, vehicleState } =
+          get();
         const withPilotReset: GameState = {
           ...gameState,
           pilot: {
@@ -1044,7 +1380,7 @@ export const useGameStore = create<GameStore>()(
         const pilotRefresh = refreshPilotEventsFromGameState(
           nextGameState,
           eventPool,
-          { containerState },
+          { containerState, vehicleState },
         );
         const syncedGameState = withSyncedPulse(pilotRefresh.gameState);
         set({
@@ -1058,11 +1394,11 @@ export const useGameStore = create<GameStore>()(
       },
 
       refreshPilotEventsForCurrentDay: () => {
-        const { gameState, eventPool, containerState } = get();
+        const { gameState, eventPool, containerState, vehicleState } = get();
         const pilotRefresh = refreshPilotEventsFromGameState(
           gameState,
           eventPool,
-          { containerState },
+          { containerState, vehicleState },
         );
         if (!pilotRefresh.refreshed) {
           return;
@@ -1261,7 +1597,10 @@ export const useGameStore = create<GameStore>()(
         const pilotRefresh = refreshPilotEventsFromGameState(
           withPilotRun,
           saved.eventPool,
-          { containerState: saved.containerState },
+          {
+            containerState: saved.containerState,
+            vehicleState: saved.vehicleState,
+          },
         );
 
         return {
@@ -1275,22 +1614,40 @@ export const useGameStore = create<GameStore>()(
           lastDailyReport: saved.lastDailyReport,
           lastClosedDay: saved.lastClosedDay,
           playerProgress: saved.playerProgress,
-          currentDailyGoal: saved.currentDailyGoal,
-          dailyGoalsByDay: saved.dailyGoalsByDay,
+          dailyGoalState:
+            saved.dailyGoalState ??
+            bootstrapDailyGoalState({
+              ...currentState,
+              gameState: withSyncedPulse(pilotRefresh.gameState),
+              neighborhoods: saved.neighborhoods,
+              containerState: saved.containerState,
+              vehicleState: saved.vehicleState,
+              personnelState: saved.personnelState,
+              socialPulseState: saved.socialPulseState,
+              decisionHistory: saved.decisionHistory,
+              dailyGoalRuntime: saved.dailyGoalRuntime,
+            }),
+          dailyGoalsByDay: saved.dailyGoalsByDay ?? {},
           dailyGoalRuntime: saved.dailyGoalRuntime,
           economyState: saved.economyState,
           personnelState: saved.personnelState,
           containerState: saved.containerState,
+          vehicleState: saved.vehicleState,
+          socialPulseState: saved.socialPulseState,
           tutorialState: saved.tutorialState ?? { ...INITIAL_TUTORIAL_STATE },
           bestPilotScores: saved.bestPilotScores ?? [],
           lastPilotScore: saved.lastPilotScore,
           lastBudgetDelta: null,
+          lastDecisionResult: null,
           _hasHydrated: true,
         };
       },
 
       onRehydrateStorage: () => (state) => {
         state?._setHasHydrated(true);
+        if (state && (!state.dailyGoalState || state.dailyGoalState.goals.length === 0)) {
+          state.ensureDailyGoalsForDay();
+        }
       },
     },
   ),
@@ -1339,6 +1696,7 @@ export const selectXp = (s: GameStore) => s.gameState.player.xp;
 export const selectLevel = (s: GameStore) => s.gameState.player.level;
 export const selectLastDailyReport = (s: GameStore) => s.lastDailyReport;
 export const selectDecisionHistory = (s: GameStore) => s.decisionHistory;
+export const selectLastDecisionResult = (s: GameStore) => s.lastDecisionResult;
 export const selectSnapshots = (s: GameStore) => s.snapshots;
 export const selectGameState = (s: GameStore) => s.gameState;
 export const selectCity = (s: GameStore) => s.gameState.city;
@@ -1359,6 +1717,9 @@ export const selectDailyEventSet = (s: GameStore) =>
   s.gameState.pilot.dailyEventSet ?? null;
 export const selectPersonnelState = (s: GameStore) => s.personnelState;
 export const selectContainerState = (s: GameStore) => s.containerState;
+export const selectVehicleStateFromStore = (s: GameStore) => s.vehicleState;
+export const selectSocialPulseStateFromStore = (s: GameStore) =>
+  s.socialPulseState;
 
 export function getActiveEvent(eventId: string): EventCard | undefined {
   return useGameStore

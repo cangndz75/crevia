@@ -3,8 +3,6 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '@/ui/theme/colors';
-import { radius } from '@/ui/theme/radius';
-import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
 type LeaderboardHeaderProps = {
@@ -16,25 +14,23 @@ export function LeaderboardHeader({ onBack }: LeaderboardHeaderProps) {
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top + spacing.sm }]}>
-      <View style={[styles.card, shadows.soft]}>
-        <Pressable
-          onPress={onBack}
-          style={styles.backBtn}
-          accessibilityRole="button"
-          accessibilityLabel="Geri dön">
-          <Ionicons name="chevron-back" size={20} color={colors.primary} />
-        </Pressable>
+      <Pressable
+        onPress={onBack}
+        style={styles.backBtn}
+        accessibilityRole="button"
+        accessibilityLabel="Geri dön">
+        <Ionicons name="chevron-back" size={22} color={colors.textInverse} />
+      </Pressable>
 
-        <View style={styles.textCol}>
-          <Text style={styles.title}>Liderlik</Text>
-          <Text style={styles.subtitle}>
-            Pilot bölge performansına göre sıralama
-          </Text>
-        </View>
+      <View style={styles.textCol}>
+        <Text style={styles.title}>Liderlik</Text>
+        <Text style={styles.subtitle}>
+          Pilot bölge performansına göre sıralama
+        </Text>
+      </View>
 
-        <View style={styles.badge}>
-          <Ionicons name="ribbon-outline" size={16} color={colors.hubGoldDark} />
-        </View>
+      <View style={styles.trophyBadge}>
+        <Ionicons name="trophy" size={20} color={colors.hubGoldDark} />
       </View>
     </View>
   );
@@ -42,25 +38,18 @@ export function LeaderboardHeader({ onBack }: LeaderboardHeaderProps) {
 
 const styles = StyleSheet.create({
   wrap: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  card: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.hubCream,
   },
   backBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: colors.primaryMuted,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -70,10 +59,10 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   title: {
-    fontSize: 17,
+    fontSize: 20,
     fontWeight: '800',
     color: colors.textPrimary,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   subtitle: {
     fontSize: 11,
@@ -81,13 +70,13 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 14,
   },
-  badge: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+  trophyBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     backgroundColor: colors.hubGoldMuted,
     borderWidth: 1,
-    borderColor: 'rgba(212,160,23,0.25)',
+    borderColor: 'rgba(212,160,23,0.28)',
     alignItems: 'center',
     justifyContent: 'center',
   },

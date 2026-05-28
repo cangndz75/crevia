@@ -1,61 +1,132 @@
 import type { DecisionAppliedCosts, DecisionAppliedEffects } from '@/core/models/DecisionRecord';
-import type { EventCard, EventRiskLevel } from '@/core/models/EventCard';
+import type { EventCard } from '@/core/models/EventCard';
+import type { GameState } from '@/core/models/GameState';
+import type { Neighborhood } from '@/core/models/Neighborhood';
+import type { ContainerState } from '@/core/containers/containerTypes';
+import type { PersonnelState } from '@/core/personnel/personnelTypes';
+import type { SocialPulseState } from '@/core/social/socialTypes';
+import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import { buildDecisionXpResultFromApplied } from '@/core/xp/buildDecisionXpResult';
 import type { EventDecision } from '@/core/models/EventCard';
 import type { PlayerProgress } from '@/core/xp/types';
 
 import {
-  createDailyGoalForDay,
-  processDailyGoalEvent,
-  type ProcessDailyGoalResult,
+  claimAllCompletedGoalXp,
+  createDailyGoalsForDay,
+  ensureDailyGoalsForDay,
+  evaluateDailyGoals,
+  type CreateDailyGoalsInput,
+  type DailyGoalClaimResult,
+  type DailyGoalEvaluationInput,
 } from '@/core/dailyGoals/dailyGoalEngine';
-import type { DailyGoal, DailyGoalProgressEvent } from '@/core/dailyGoals/types';
+import type {
+  DailyGoalEvaluationTrigger,
+  DailyGoalState,
+} from '@/core/dailyGoals/dailyGoalTypes';
+import type { DecisionRecord } from '@/core/models/DecisionRecord';
 
 export type DailyGoalRuntime = {
   staffFatiguePeak: number;
   budgetExceededToday: boolean;
+  primaryCompletedHint?: boolean;
 };
 
 export const INITIAL_DAILY_GOAL_RUNTIME: DailyGoalRuntime = {
   staffFatiguePeak: 0,
   budgetExceededToday: false,
+  primaryCompletedHint: false,
 };
 
-export function ensureDailyGoalForDay(
-  day: number,
-  currentGoal: DailyGoal | null | undefined,
-): DailyGoal {
-  const safeDay = Math.max(1, Math.floor(day));
-  if (currentGoal?.day === safeDay) {
-    return currentGoal;
-  }
-  return createDailyGoalForDay(safeDay);
+export type DailyGoalStoreSlice = {
+  day: number;
+  gameState: GameState;
+  neighborhoods: Neighborhood[];
+  containerState: ContainerState;
+  vehicleState: VehicleState;
+  personnelState: PersonnelState;
+  socialPulseState: SocialPulseState;
+  decisionHistory: DecisionRecord[];
+  dailyGoalRuntime: DailyGoalRuntime;
+  isDay1Tutorial?: boolean;
+  lastClosedDay?: number | null;
+};
+
+function toCreateInput(slice: DailyGoalStoreSlice): CreateDailyGoalsInput {
+  return {
+    day: slice.day,
+    gameState: slice.gameState,
+    neighborhoods: slice.neighborhoods,
+    containerState: slice.containerState,
+    vehicleState: slice.vehicleState,
+    personnelState: slice.personnelState,
+    socialPulseState: slice.socialPulseState,
+    isDay1Tutorial: slice.isDay1Tutorial,
+  };
 }
 
-export function buildDecisionProgressEvent(
-  event: EventCard,
-  appliedEffects: DecisionAppliedEffects,
-  appliedCosts: DecisionAppliedCosts | undefined,
-  decision: EventDecision,
-): DailyGoalProgressEvent {
-  const decisionResult = buildDecisionXpResultFromApplied(
-    appliedEffects,
-    appliedCosts,
-    decision,
-  );
+function toEvaluationInput(
+  slice: DailyGoalStoreSlice,
+  trigger: DailyGoalEvaluationTrigger,
+): DailyGoalEvaluationInput {
+  return {
+    ...toCreateInput(slice),
+    decisionHistory: slice.decisionHistory,
+    dailyGoalRuntime: slice.dailyGoalRuntime,
+    trigger,
+    lastClosedDay: slice.lastClosedDay,
+  };
+}
+
+export function ensureDailyGoalStateForStore(
+  slice: DailyGoalStoreSlice,
+  existing: DailyGoalState | null | undefined,
+): DailyGoalState {
+  return ensureDailyGoalsForDay(toCreateInput(slice), existing);
+}
+
+export function evaluateDailyGoalsForStore(
+  state: DailyGoalState,
+  slice: DailyGoalStoreSlice,
+  trigger: DailyGoalEvaluationTrigger,
+): DailyGoalState {
+  return evaluateDailyGoals(state, toEvaluationInput(slice, trigger));
+}
+
+export function runDailyGoalPipeline(params: {
+  slice: DailyGoalStoreSlice;
+  dailyGoalState: DailyGoalState | null | undefined;
+  trigger: DailyGoalEvaluationTrigger;
+  playerProgress: PlayerProgress;
+  claimXp?: boolean;
+}): {
+  dailyGoalState: DailyGoalState;
+  playerProgress: PlayerProgress;
+  dailyGoalClaim: DailyGoalClaimResult | null;
+  dailyGoalsByDay: Record<number, DailyGoalState>;
+} {
+  let state = ensureDailyGoalStateForStore(params.slice, params.dailyGoalState);
+  state = evaluateDailyGoalsForStore(state, params.slice, params.trigger);
+
+  let playerProgress = params.playerProgress;
+  let dailyGoalClaim: DailyGoalClaimResult | null = null;
+
+  if (params.claimXp !== false) {
+    const claimResult = claimAllCompletedGoalXp(state.goals, playerProgress);
+    state = { ...state, goals: claimResult.goals };
+    playerProgress = claimResult.playerProgress;
+    dailyGoalClaim = claimResult.claims[0] ?? null;
+  }
+
+  const dailyGoalsByDay = {
+    ...(params.slice.day ? {} : {}),
+    [state.day]: state,
+  };
 
   return {
-    type: 'decision_applied',
-    decisionResult: {
-      satisfactionDelta: decisionResult.satisfactionDelta,
-      riskDelta: decisionResult.riskDelta,
-      budgetSpent: decisionResult.budgetSpent,
-      expectedBudget: decisionResult.expectedBudget,
-    },
-    event: {
-      severity: event.riskLevel,
-      riskLevel: event.riskLevel as EventRiskLevel,
-    },
+    dailyGoalState: state,
+    playerProgress,
+    dailyGoalClaim,
+    dailyGoalsByDay: { [state.day]: state },
   };
 }
 
@@ -82,25 +153,29 @@ export function updateDailyGoalRuntime(
   return {
     staffFatiguePeak: Math.max(runtime.staffFatiguePeak, staffFatigueDelta),
     budgetExceededToday: runtime.budgetExceededToday || budgetExceeded,
+    primaryCompletedHint: runtime.primaryCompletedHint,
   };
 }
 
+/** @deprecated Eski API — store applyDecision için. */
 export function processDecisionDailyGoal(params: {
   day: number;
-  goal: DailyGoal | null | undefined;
+  goal: import('@/core/dailyGoals/dailyGoalTypes').DailyGoal | null | undefined;
   playerProgress: PlayerProgress;
   event: EventCard;
   decision: EventDecision;
   appliedEffects: DecisionAppliedEffects;
   appliedCosts?: DecisionAppliedCosts;
   runtime: DailyGoalRuntime;
+  storeSlice: DailyGoalStoreSlice;
+  dailyGoalState: DailyGoalState | null | undefined;
 }): {
-  goal: DailyGoal;
+  goal: import('@/core/dailyGoals/dailyGoalTypes').DailyGoal;
   playerProgress: PlayerProgress;
   runtime: DailyGoalRuntime;
-  processResult: ProcessDailyGoalResult;
+  processResult: { goal: import('@/core/dailyGoals/dailyGoalTypes').DailyGoal; playerProgress: PlayerProgress; claim: DailyGoalClaimResult | null };
+  dailyGoalState: DailyGoalState;
 } {
-  const goal = ensureDailyGoalForDay(params.day, params.goal);
   const runtime = updateDailyGoalRuntime(
     params.runtime,
     params.appliedEffects,
@@ -108,62 +183,87 @@ export function processDecisionDailyGoal(params: {
     params.decision,
   );
 
-  const progressEvent = buildDecisionProgressEvent(
-    params.event,
-    params.appliedEffects,
-    params.appliedCosts,
-    params.decision,
-  );
-
-  const processResult = processDailyGoalEvent({
-    goal,
+  const pipeline = runDailyGoalPipeline({
+    slice: { ...params.storeSlice, day: params.day, dailyGoalRuntime: runtime },
+    dailyGoalState: params.dailyGoalState,
+    trigger: 'after_decision',
     playerProgress: params.playerProgress,
-    event: progressEvent,
   });
 
+  const primary =
+    pipeline.dailyGoalState.goals.find((g) => g.priority === 'primary') ??
+    pipeline.dailyGoalState.goals[0]!;
+
   return {
-    goal: processResult.goal,
-    playerProgress: processResult.playerProgress,
+    goal: primary,
+    playerProgress: pipeline.playerProgress,
     runtime,
-    processResult,
+    processResult: {
+      goal: primary,
+      playerProgress: pipeline.playerProgress,
+      claim: pipeline.dailyGoalClaim,
+    },
+    dailyGoalState: pipeline.dailyGoalState,
   };
 }
 
 export function processDayEndDailyGoal(params: {
-  day: number;
-  goal: DailyGoal | null | undefined;
+  slice: DailyGoalStoreSlice;
+  dailyGoalState: DailyGoalState | null | undefined;
   playerProgress: PlayerProgress;
-  runtime: DailyGoalRuntime;
-}): ProcessDailyGoalResult {
-  const goal = ensureDailyGoalForDay(params.day, params.goal);
-
-  return processDailyGoalEvent({
-    goal,
+}): {
+  dailyGoalState: DailyGoalState;
+  playerProgress: PlayerProgress;
+  claim: DailyGoalClaimResult | null;
+  goal: import('@/core/dailyGoals/dailyGoalTypes').DailyGoal;
+} {
+  const pipeline = runDailyGoalPipeline({
+    slice: params.slice,
+    dailyGoalState: params.dailyGoalState,
+    trigger: 'end_of_day',
     playerProgress: params.playerProgress,
-    event: {
-      type: 'day_ended',
-      daySummary: {
-        maxStaffFatigue: params.runtime.staffFatiguePeak,
-        budgetExceeded: params.runtime.budgetExceededToday,
-      },
-    },
   });
+
+  const primary =
+    pipeline.dailyGoalState.goals.find((g) => g.priority === 'primary') ??
+    pipeline.dailyGoalState.goals[0]!;
+
+  return {
+    dailyGoalState: pipeline.dailyGoalState,
+    playerProgress: pipeline.playerProgress,
+    claim: pipeline.dailyGoalClaim,
+    goal: primary,
+  };
 }
 
 export function processQuickActionDailyGoal(params: {
-  day: number;
-  goal: DailyGoal | null | undefined;
+  slice: DailyGoalStoreSlice;
+  dailyGoalState: DailyGoalState | null | undefined;
   playerProgress: PlayerProgress;
-  quickActionId: string;
-}): ProcessDailyGoalResult {
-  const goal = ensureDailyGoalForDay(params.day, params.goal);
-
-  return processDailyGoalEvent({
-    goal,
+  trigger?: 'after_decision' | 'after_social_quick_action';
+}): {
+  dailyGoalState: DailyGoalState;
+  playerProgress: PlayerProgress;
+  claim: DailyGoalClaimResult | null;
+  goal: import('@/core/dailyGoals/dailyGoalTypes').DailyGoal;
+} {
+  const pipeline = runDailyGoalPipeline({
+    slice: params.slice,
+    dailyGoalState: params.dailyGoalState,
+    trigger: params.trigger ?? 'after_social_quick_action',
     playerProgress: params.playerProgress,
-    event: {
-      type: 'quick_action_used',
-      quickActionId: params.quickActionId,
-    },
   });
+
+  const primary =
+    pipeline.dailyGoalState.goals.find((g) => g.priority === 'primary') ??
+    pipeline.dailyGoalState.goals[0]!;
+
+  return {
+    dailyGoalState: pipeline.dailyGoalState,
+    playerProgress: pipeline.playerProgress,
+    claim: pipeline.dailyGoalClaim,
+    goal: primary,
+  };
 }
+
+export { createDailyGoalsForDay, createDailyGoalForDay } from '@/core/dailyGoals/dailyGoalEngine';

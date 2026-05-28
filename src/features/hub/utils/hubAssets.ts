@@ -31,10 +31,13 @@ const pilotDistrictHero: Record<PilotDistrictId, ImageSource> = {
 
 const neighborhoodThumb: Record<string, ImageSource> = {
   merkez: require('@/assets/districts/central/district_central_overview_02.png'),
-  pazar: require('@/assets/districts/market/district_marketplace_overview_01.png'),
+  pazar: require('@/assets/districts/cumhuriyet/district_cumhuriyet_overview_01.png'),
+  cumhuriyet: require('@/assets/districts/cumhuriyet/district_cumhuriyet_overview_01.png'),
   yesilpark: require('@/assets/districts/status/district_safe_zone_01.png'),
+  yesilvadi: require('@/assets/districts/status/district_safe_zone_01.png'),
   sanayi: require('@/assets/districts/industrial_market/district_industrial_market_overview_01.png'),
   'yeni-konut': require('@/assets/districts/central/district_central_overview_03.png'),
+  istasyon: require('@/assets/districts/central/district_central_overview_03.png'),
 };
 
 export function getPilotDistrictHeroImage(

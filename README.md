@@ -41,6 +41,20 @@ This command will move the starter code to the **app-example** directory and cre
 - If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
 - Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
 
+## Quality gate
+
+PR öncesi ana sistem doğrulaması:
+
+```bash
+npm run verify:all
+```
+
+Kapsam: TypeScript, pilot entegrasyon (hub/rapor/persist akışı), sosyal nabız (verify + analyze), araç filosu, konteyner (senaryo + event sinyalleri), personel, liderlik.
+
+Tekil komutlar (`verify:social`, `verify:vehicles`, vb.) aynen kullanılabilir.
+
+Bilinen durum: `analyze:social-decisions` bazen 2 WARN tuning notu yazabilir; çıkış kodu 0 kalır. **FAIL** olursa kalite kapısı kırılır.
+
 ## Learn more
 
 To learn more about developing your project with Expo, look at the following resources:

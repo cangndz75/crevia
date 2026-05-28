@@ -66,17 +66,17 @@ const styles = StyleSheet.create({
   },
   levelBadge: {
     position: 'absolute',
-    bottom: -2,
-    right: -2,
+    bottom: -1,
+    right: -1,
     backgroundColor: colors.hubGold,
     borderWidth: 2,
-    borderColor: colors.hubCream,
+    borderColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 3,
   },
   levelText: {
     fontWeight: '800',
-    color: colors.textInverse,
+    color: '#1C1C1E',
   },
 });
