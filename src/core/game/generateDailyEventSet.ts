@@ -25,6 +25,14 @@ import {
 } from '@/core/vehicles/vehicleEventSignals';
 import type { VehicleEventSignal } from '@/core/vehicles/vehicleEventSignals';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
+import type { DailyPriorityKey } from '@/core/dailyPriority/dailyPriorityTypes';
+import {
+  buildEventVariationHistory,
+  enrichDailyEventSetWithEventContent,
+  filterEventPoolByContentVariety,
+  mapEventToContentCategory,
+} from '@/core/events/eventVariationEngine';
+import type { EventContentCategory } from '@/core/events/eventContentTypes';
 
 export type GenerateDailyEventSetParams = {
   gameState: GameState;
@@ -35,6 +43,7 @@ export type GenerateDailyEventSetParams = {
   containerState?: ContainerState | null;
   /** Yoksa araç boost uygulanmaz. */
   vehicleState?: VehicleState | null;
+  dailyPriorityKey?: DailyPriorityKey;
 };
 
 function buildContext(
@@ -239,7 +248,16 @@ export function generateDailyEventSet(
     events = pilotEvents,
     containerState = null,
     vehicleState = null,
+    dailyPriorityKey,
   } = params;
+
+  const catalog = cloneEventCards(events);
+  const contentHistory = buildEventVariationHistory(gameState, catalog);
+  const batchCategories: EventContentCategory[] = [];
+
+  const trackCategory = (event: EventCard) => {
+    batchCategories.push(mapEventToContentCategory(event));
+  };
 
   const tutorialActive = day <= 1;
   const vehicleSignals: VehicleEventSignal[] = vehicleState
@@ -310,18 +328,24 @@ export function generateDailyEventSet(
       ...gameState,
       pilot: { ...gameState.pilot, currentPilotDay: day },
     },
-    events,
+    events: catalog,
     maxEvents: 1,
   });
 
   const anchorEvent = anchorCandidates[0];
   const anchorEventId = anchorEvent?.id ?? '';
 
-  if (anchorEventId) {
+  if (anchorEvent) {
     assignRole(anchorEventId, 'anchor');
+    trackCategory(anchorEvent);
   }
 
-  const sidePool = listSideCandidates(events, context, day, selectedIds);
+  let sidePool = listSideCandidates(catalog, context, day, selectedIds);
+  sidePool = filterEventPoolByContentVariety(sidePool, {
+    history: contentHistory,
+    batchCategories,
+    day,
+  });
   const sidePicked = pickWeightedUnique(
     sidePool,
     counts.side,
@@ -333,10 +357,16 @@ export function generateDailyEventSet(
 
   for (const event of sidePicked) {
     assignRole(event.id, 'side');
+    trackCategory(event);
   }
 
-  const remainingPool = listDayCandidates(events, context, day, selectedIds, {
+  let remainingPool = listDayCandidates(catalog, context, day, selectedIds, {
     widenDistrict: true,
+  });
+  remainingPool = filterEventPoolByContentVariety(remainingPool, {
+    history: contentHistory,
+    batchCategories,
+    day,
   });
 
   const quickPool = filterQuickCandidates(remainingPool);
@@ -348,14 +378,20 @@ export function generateDailyEventSet(
   );
   for (const event of quickPicked) {
     assignRole(event.id, 'quick');
+    trackCategory(event);
   }
 
   const afterQuickExclude = new Set(selectedIds);
-  const opportunityPool = filterOpportunityCandidates(
-    listDayCandidates(events, context, day, afterQuickExclude, {
+  let opportunityPool = filterOpportunityCandidates(
+    listDayCandidates(catalog, context, day, afterQuickExclude, {
       widenDistrict: true,
     }),
   );
+  opportunityPool = filterEventPoolByContentVariety(opportunityPool, {
+    history: contentHistory,
+    batchCategories,
+    day,
+  });
   const opportunityPicked = pickWeightedUnique(
     opportunityPool,
     counts.opportunity,
@@ -366,6 +402,7 @@ export function generateDailyEventSet(
   );
   for (const event of opportunityPicked) {
     assignRole(event.id, 'opportunity');
+    trackCategory(event);
   }
 
   let butterflyEventIds: string[] = [];
@@ -373,7 +410,7 @@ export function generateDailyEventSet(
     butterflyEventIds = resolveButterflyFromConsequences(
       gameState,
       day,
-      events,
+      catalog,
       selectedIds,
     ).slice(0, counts.butterfly);
     for (const id of butterflyEventIds) {
@@ -424,16 +461,25 @@ export function generateDailyEventSet(
     dailyEventSet: baseDailyEventSet,
     randomFn: rng,
     containerState,
-    catalog: events,
+    catalog,
   });
 
-  return enrichDailyEventSetWithVehicleSignals({
+  const withVehicle = enrichDailyEventSetWithVehicleSignals({
     dailyEventSet: withDistrict,
     vehicleState,
     day,
     districtId,
     tutorialActive,
-    catalog: events,
+    catalog,
+  });
+
+  return enrichDailyEventSetWithEventContent({
+    dailyEventSet: withVehicle,
+    catalog,
+    gameState,
+    day,
+    districtId,
+    dailyPriorityKey,
   });
 }
 

@@ -7,10 +7,12 @@ import type { ContainerState } from '@/core/containers/containerTypes';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import type { EventCard } from '@/core/models/EventCard';
 import type { GameState } from '@/core/models/GameState';
+import type { DailyPriorityKey } from '@/core/dailyPriority/dailyPriorityTypes';
 
 export type RefreshPilotEventsFromGameStateOptions = {
   containerState?: ContainerState | null;
   vehicleState?: VehicleState | null;
+  dailyPriorityKey?: DailyPriorityKey;
 };
 
 export type RefreshPilotEventsFromGameStateResult = {
@@ -40,6 +42,7 @@ export function refreshPilotEventsFromGameState(
   const ensured = ensureDailyEventsForDay(gameState, currentEventPool, undefined, {
     containerState: options?.containerState ?? null,
     vehicleState: options?.vehicleState ?? null,
+    dailyPriorityKey: options?.dailyPriorityKey,
   });
 
   if (!ensured.ensured) {

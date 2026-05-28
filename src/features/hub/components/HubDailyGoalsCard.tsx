@@ -50,7 +50,8 @@ export function HubDailyGoalsCard() {
   const goals = selectDailyGoalsForHub(dailyGoalState);
   const primary = goals.find((g) => g.priority === 'primary');
   const secondaries = goals.filter((g) => g.priority === 'secondary');
-  const hint = buildDailyGoalHint(dailyGoalState?.goals ?? []);
+  const dailyPriorityKey = useGameStore((s) => s.dailyPriorityState?.selectedKey);
+  const hint = buildDailyGoalHint(dailyGoalState?.goals ?? [], dailyPriorityKey);
 
   if (goals.length === 0) {
     return null;

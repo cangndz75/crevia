@@ -10,10 +10,16 @@ import type { EventCard } from '@/core/models/EventCard';
 import type { ContainerState } from '@/core/containers/containerTypes';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import type { GameState } from '@/core/models/GameState';
+import type { DailyPriorityKey } from '@/core/dailyPriority/dailyPriorityTypes';
+import {
+  appendPilotEventContentMemory,
+  enrichDailyEventSetWithEventContent,
+} from '@/core/events/eventVariationEngine';
 
 export type EnsureDailyEventsForDayOptions = {
   containerState?: ContainerState | null;
   vehicleState?: VehicleState | null;
+  dailyPriorityKey?: DailyPriorityKey;
 };
 
 export type EnsureDailyEventsForDayResult = {
@@ -39,19 +45,35 @@ function applyDailySetToGameState(
   gameState: GameState,
   dailyEventSet: DailyEventSet,
   catalog: EventCard[],
+  dailyPriorityKey?: DailyPriorityKey,
 ): { gameState: GameState; eventPool: EventCard[] } {
   const solvedIds = getSolvedEventIds(gameState);
-  const activeEvents = resolveEventCardsFromDailySet(
-    dailyEventSet,
-    catalog,
-    solvedIds,
-  );
   const mergedCatalog = mergeEventCatalogs(
     catalog,
     dailyEventSet.supplementalEvents ?? [],
   );
+  const workingCatalog = cloneEventCards(mergedCatalog);
+  const needsEnrich = dailyEventSet.allEventIds.some((id) => {
+    const card = workingCatalog.find((e) => e.id === id);
+    return card != null && !card.contentProfileId && dailyEventSet.day > 1;
+  });
+  if (needsEnrich) {
+    enrichDailyEventSetWithEventContent({
+      dailyEventSet,
+      catalog: workingCatalog,
+      gameState,
+      day: dailyEventSet.day,
+      districtId: dailyEventSet.districtId,
+      dailyPriorityKey,
+    });
+  }
+  const activeEvents = resolveEventCardsFromDailySet(
+    dailyEventSet,
+    workingCatalog,
+    solvedIds,
+  );
   const allCards = dailyEventSet.allEventIds
-    .map((id) => mergedCatalog.find((e) => e.id === id))
+    .map((id) => workingCatalog.find((e) => e.id === id))
     .filter((e): e is EventCard => e != null);
 
   const anchorStillActive = activeEvents.some(
@@ -117,7 +139,12 @@ export function ensureDailyEventsForDay(
     existing.day === day &&
     existing.districtId === districtId
   ) {
-    const synced = applyDailySetToGameState(gameState, existing, catalog);
+    const synced = applyDailySetToGameState(
+      gameState,
+      existing,
+      catalog,
+      options?.dailyPriorityKey,
+    );
     return {
       ...synced,
       ensured: true,
@@ -125,21 +152,40 @@ export function ensureDailyEventsForDay(
     };
   }
 
+  const mergedCatalog = mergeEventCatalogs(catalog, currentEventPool);
+
   const dailyEventSet = generateDailyEventSet({
     gameState,
     day,
     districtId,
-    events: catalog,
+    events: mergedCatalog,
     containerState: options?.containerState ?? null,
     vehicleState: options?.vehicleState ?? null,
+    dailyPriorityKey: options?.dailyPriorityKey,
   });
 
   dailyEventSet.generatedAt = new Date().toISOString();
 
-  const applied = applyDailySetToGameState(gameState, dailyEventSet, catalog);
+  const applied = applyDailySetToGameState(
+    gameState,
+    dailyEventSet,
+    mergedCatalog,
+    options?.dailyPriorityKey,
+  );
+
+  const gameStateWithMemory = {
+    ...applied.gameState,
+    pilot: appendPilotEventContentMemory(
+      applied.gameState.pilot,
+      mergedCatalog,
+      dailyEventSet,
+    ),
+  };
 
   return {
     ...applied,
+    gameState: gameStateWithMemory,
+    eventPool: mergeEventCatalogs(mergedCatalog, applied.eventPool),
     ensured: true,
     dailyEventSet,
   };

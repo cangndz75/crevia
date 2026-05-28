@@ -23,6 +23,7 @@ import type {
   DailyGoalEvaluationTrigger,
   DailyGoalState,
 } from '@/core/dailyGoals/dailyGoalTypes';
+import type { DailyPriorityKey } from '@/core/dailyPriority/dailyPriorityTypes';
 import type { DecisionRecord } from '@/core/models/DecisionRecord';
 
 export type DailyGoalRuntime = {
@@ -49,6 +50,7 @@ export type DailyGoalStoreSlice = {
   dailyGoalRuntime: DailyGoalRuntime;
   isDay1Tutorial?: boolean;
   lastClosedDay?: number | null;
+  dailyPriorityKey?: DailyPriorityKey;
 };
 
 function toCreateInput(slice: DailyGoalStoreSlice): CreateDailyGoalsInput {
@@ -61,6 +63,7 @@ function toCreateInput(slice: DailyGoalStoreSlice): CreateDailyGoalsInput {
     personnelState: slice.personnelState,
     socialPulseState: slice.socialPulseState,
     isDay1Tutorial: slice.isDay1Tutorial,
+    dailyPriorityKey: slice.dailyPriorityKey,
   };
 }
 

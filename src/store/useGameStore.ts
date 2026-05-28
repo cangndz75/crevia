@@ -67,6 +67,21 @@ import {
 } from '@/core/dailyGoals/dailyGoalPresentation';
 import type { DailyGoalClaimResult } from '@/core/dailyGoals/types';
 import type { DailyGoalState } from '@/core/dailyGoals/dailyGoalTypes';
+import {
+  buildMetricSnapshot,
+  ensureDailyPriorityForDay,
+  evaluateDecisionImpactOnPriority,
+  evaluateSocialQuickActionOnPriority,
+  finalizeDailyPriority,
+  selectDailyPriority as selectDailyPriorityEngine,
+} from '@/core/dailyPriority/dailyPriorityEngine';
+import { buildDailyPriorityReportResult } from '@/core/dailyPriority/dailyPriorityPresentation';
+import type {
+  DailyPriorityByDay,
+  DailyPriorityKey,
+  DailyPriorityState,
+} from '@/core/dailyPriority/dailyPriorityTypes';
+import { normalizeNeighborhoodId } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 import { selectIsDay1TutorialEligible } from '@/features/tutorial/tutorialSelectors';
 import type { ApplyDecisionXpResult } from '@/core/xp/applyDecisionXp';
 import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
@@ -213,6 +228,8 @@ type GameStoreState = {
   playerProgress: PlayerProgress;
   dailyGoalState: DailyGoalState | null;
   dailyGoalsByDay: Record<number, DailyGoalState>;
+  dailyPriorityState: DailyPriorityState | null;
+  dailyPriorityByDay: DailyPriorityByDay;
   dailyGoalRuntime: DailyGoalRuntime;
   economyState: EconomyState;
   personnelState: PersonnelState;
@@ -234,6 +251,9 @@ type GameStoreActions = {
   clearLastDecisionResult: () => void;
   ensureDailyGoalsForDay: (day?: number) => void;
   clearDailyGoals: () => void;
+  ensureDailyPriorityForDay: (day?: number) => void;
+  selectDailyPriority: (priorityKey: DailyPriorityKey) => void;
+  clearDailyPriority: () => void;
   useQuickAction: (actionId: string) => void;
   endCurrentDay: () => void;
   resetGame: () => void;
@@ -432,6 +452,8 @@ function applySeedBundle(
   | 'playerProgress'
   | 'dailyGoalState'
   | 'dailyGoalsByDay'
+  | 'dailyPriorityState'
+  | 'dailyPriorityByDay'
   | 'dailyGoalRuntime'
   | 'economyState'
   | 'personnelState'
@@ -465,6 +487,19 @@ function applySeedBundle(
       isDay1Tutorial: true,
     }),
     dailyGoalsByDay: {},
+    dailyPriorityState: ensureDailyPriorityForDay({
+      day: bundle.gameState.city.day,
+      isDay1Tutorial: true,
+      featuredEvent: bundle.gameState.events[0],
+      metricSnapshot: buildMetricSnapshot({
+        gameState: bundle.gameState,
+        containerState: createInitialContainerState(bundle.gameState.city.day),
+        vehicleState: createInitialVehicleState(bundle.gameState.city.day),
+        personnelState: createInitialPersonnelState(),
+        socialPulseState: createInitialSocialPulseState(bundle.gameState.city.day),
+      }),
+    }),
+    dailyPriorityByDay: {},
     dailyGoalRuntime: { ...INITIAL_DAILY_GOAL_RUNTIME },
     economyState: createInitialEconomyState(),
     personnelState: createInitialPersonnelState(),
@@ -494,7 +529,37 @@ function buildDailyGoalStoreSlice(
     dailyGoalRuntime: state.dailyGoalRuntime,
     isDay1Tutorial: selectIsDay1TutorialEligible(state as GameStore),
     lastClosedDay: state.lastClosedDay,
+    dailyPriorityKey: state.dailyPriorityState?.selectedKey,
   };
+}
+
+function bootstrapDailyPriorityState(
+  state: GameStoreState,
+  day?: number,
+): DailyPriorityState {
+  const resolvedDay = day ?? state.gameState.city.day;
+  const featured =
+    state.gameState.events.find(
+      (e) => e.id === state.gameState.featuredEventId,
+    ) ?? state.gameState.events[0];
+  const existing =
+    state.dailyPriorityByDay[resolvedDay] ??
+    (state.dailyPriorityState?.day === resolvedDay
+      ? state.dailyPriorityState
+      : null);
+  return ensureDailyPriorityForDay({
+    day: resolvedDay,
+    existing,
+    isDay1Tutorial: selectIsDay1TutorialEligible(state as GameStore),
+    featuredEvent: featured,
+    metricSnapshot: buildMetricSnapshot({
+      gameState: state.gameState,
+      containerState: state.containerState,
+      vehicleState: state.vehicleState,
+      personnelState: state.personnelState,
+      socialPulseState: state.socialPulseState,
+    }),
+  });
 }
 
 function bootstrapDailyGoalState(
@@ -565,6 +630,77 @@ export const useGameStore = create<GameStore>()(
 
       clearDailyGoals: () => {
         set({ dailyGoalState: null, dailyGoalsByDay: {} });
+      },
+
+      ensureDailyPriorityForDay: (day) => {
+        const current = get();
+        const targetDay = day ?? current.gameState.city.day;
+        const priorityState = bootstrapDailyPriorityState(current, targetDay);
+        set({
+          dailyPriorityState: priorityState,
+          dailyPriorityByDay: {
+            ...current.dailyPriorityByDay,
+            [targetDay]: priorityState,
+          },
+        });
+      },
+
+      selectDailyPriority: (priorityKey) => {
+        const current = get();
+        const targetDay = current.gameState.city.day;
+        let priorityState = bootstrapDailyPriorityState(current, targetDay);
+        if (priorityState.selectedKey) {
+          return;
+        }
+        const snapshot = buildMetricSnapshot({
+          gameState: current.gameState,
+          containerState: current.containerState,
+          vehicleState: current.vehicleState,
+          personnelState: current.personnelState,
+          socialPulseState: current.socialPulseState,
+        });
+        priorityState = selectDailyPriorityEngine(
+          priorityState,
+          priorityKey,
+          snapshot,
+        );
+
+        const updates: Partial<GameStore> = {
+          dailyPriorityState: priorityState,
+          dailyPriorityByDay: {
+            ...current.dailyPriorityByDay,
+            [targetDay]: priorityState,
+          },
+        };
+
+        const goalsMissing =
+          !current.dailyGoalState?.goals.length ||
+          current.dailyGoalState.day !== targetDay;
+        if (goalsMissing && targetDay > 1) {
+          const slice = buildDailyGoalStoreSlice(current, targetDay);
+          const goalState = createDailyGoalsForDay({
+            day: slice.day,
+            gameState: slice.gameState,
+            neighborhoods: slice.neighborhoods,
+            containerState: slice.containerState,
+            vehicleState: slice.vehicleState,
+            personnelState: slice.personnelState,
+            socialPulseState: slice.socialPulseState,
+            isDay1Tutorial: slice.isDay1Tutorial,
+            dailyPriorityKey: priorityKey,
+          });
+          updates.dailyGoalState = goalState;
+          updates.dailyGoalsByDay = {
+            ...current.dailyGoalsByDay,
+            [targetDay]: goalState,
+          };
+        }
+
+        set(updates);
+      },
+
+      clearDailyPriority: () => {
+        set({ dailyPriorityState: null, dailyPriorityByDay: {} });
       },
 
       _setHasHydrated: (v: boolean) => set({ _hasHydrated: v }),
@@ -932,6 +1068,10 @@ export const useGameStore = create<GameStore>()(
         };
 
         let lastDecisionResult: DecisionResultSnapshot | null = null;
+        let dailyPriorityState = bootstrapDailyPriorityState(
+          current,
+          result.decisionRecord.day,
+        );
         if (event && decision) {
           const neighborhood =
             current.neighborhoods.find((n) => n.id === event.neighborhoodId) ??
@@ -962,6 +1102,22 @@ export const useGameStore = create<GameStore>()(
           if (impactLine) {
             lastDecisionResult = { ...lastDecisionResult, dailyGoalImpact: impactLine };
           }
+
+          const priorityEval = evaluateDecisionImpactOnPriority({
+            state: dailyPriorityState,
+            event,
+            decision,
+            metricChanges: lastDecisionResult.metricChanges,
+            subsystemOutcomes: lastDecisionResult.subsystemOutcomes,
+            neighborhoodId: event.neighborhoodId,
+          });
+          dailyPriorityState = priorityEval.state;
+          if (priorityEval.impact) {
+            lastDecisionResult = {
+              ...lastDecisionResult,
+              dailyPriorityImpact: priorityEval.impact,
+            };
+          }
         }
 
         set({
@@ -990,6 +1146,11 @@ export const useGameStore = create<GameStore>()(
           vehicleState,
           socialPulseState,
           lastDecisionResult,
+          dailyPriorityState,
+          dailyPriorityByDay: {
+            ...current.dailyPriorityByDay,
+            [result.decisionRecord.day]: dailyPriorityState,
+          },
         });
 
         return {
@@ -1100,6 +1261,14 @@ export const useGameStore = create<GameStore>()(
           playerProgress: current.playerProgress,
         });
 
+        let dailyPriorityState = bootstrapDailyPriorityState(current, day);
+        const pulseDelta =
+          result.state.globalPulseScore - current.socialPulseState.globalPulseScore;
+        dailyPriorityState = evaluateSocialQuickActionOnPriority(
+          dailyPriorityState,
+          pulseDelta,
+        );
+
         set({
           socialPulseState: result.state,
           dailyGoalState: quickGoal.dailyGoalState,
@@ -1108,6 +1277,11 @@ export const useGameStore = create<GameStore>()(
             [quickGoal.dailyGoalState.day]: quickGoal.dailyGoalState,
           },
           playerProgress: quickGoal.playerProgress,
+          dailyPriorityState,
+          dailyPriorityByDay: {
+            ...current.dailyPriorityByDay,
+            [day]: dailyPriorityState,
+          },
         });
         return result;
       },
@@ -1184,15 +1358,6 @@ export const useGameStore = create<GameStore>()(
           closingDay,
         );
 
-        const result = endDay(toEngineState(current), {
-          skipEventSelection: skipGenericEventSelection,
-          personnelReport,
-          containerState: containerStateAfterNight,
-          vehicleState: vehicleStateAfterNight,
-          socialPulseState: socialPulseStateAfterNight,
-          socialPulseStateBefore: socialPulseStateBeforeNight,
-        });
-
         const personnelStateAfterNight = processPersonnelEndOfDay(
           current.personnelState,
           closingDay,
@@ -1217,6 +1382,46 @@ export const useGameStore = create<GameStore>()(
           dayEndSlice,
           'end_of_day',
         );
+
+        let closingPriorityState = bootstrapDailyPriorityState(
+          {
+            ...current,
+            containerState: containerStateAfterNight,
+            vehicleState: vehicleStateAfterNight,
+            socialPulseState: socialPulseStateAfterNight,
+            personnelState: personnelStateAfterNight,
+          },
+          closingDay,
+        );
+        const focalNeighborhood =
+          normalizeNeighborhoodId(
+            current.decisionHistory.find((r) => r.day === closingDay)
+              ?.neighborhoodId,
+          ) ??
+          normalizeNeighborhoodId(current.gameState.events[0]?.neighborhoodId);
+        closingPriorityState = finalizeDailyPriority({
+          state: closingPriorityState,
+          gameState: current.gameState,
+          containerState: containerStateAfterNight,
+          vehicleState: vehicleStateAfterNight,
+          personnelState: personnelStateAfterNight,
+          socialPulseState: socialPulseStateAfterNight,
+          resolvedEventCount: current.decisionHistory.filter(
+            (r) => r.day === closingDay,
+          ).length,
+          focalNeighborhoodId: focalNeighborhood,
+        });
+
+        const result = endDay(toEngineState(current), {
+          skipEventSelection: skipGenericEventSelection,
+          personnelReport,
+          containerState: containerStateAfterNight,
+          vehicleState: vehicleStateAfterNight,
+          socialPulseState: socialPulseStateAfterNight,
+          socialPulseStateBefore: socialPulseStateBeforeNight,
+          dailyGoalState: closingGoalState,
+          dailyPriorityResult: buildDailyPriorityReportResult(closingPriorityState),
+        });
 
         let nextGameState = withSyncedPulse(result.nextState);
         let nextEventPool = current.eventPool;
@@ -1252,11 +1457,20 @@ export const useGameStore = create<GameStore>()(
           dailyGoalResults:
             result.dailyReport.dailyGoalResults ??
             buildDailyGoalReportResults(closingGoalState),
+          dailyPriorityResult:
+            result.dailyReport.dailyPriorityResult ??
+            buildDailyPriorityReportResult(closingPriorityState) ??
+            undefined,
         };
 
         const dailyGoalsByDay = {
           ...current.dailyGoalsByDay,
           [closingDay]: closingGoalState,
+        };
+
+        const dailyPriorityByDay = {
+          ...current.dailyPriorityByDay,
+          [closingDay]: closingPriorityState,
         };
 
         if (nextGameState.pilot.status === 'active') {
@@ -1269,6 +1483,7 @@ export const useGameStore = create<GameStore>()(
             {
               containerState: containerStateAfterNight,
               vehicleState: vehicleStateAfterNight,
+              dailyPriorityKey: current.dailyPriorityState?.selectedKey,
             },
           );
           nextGameState = withSyncedPulse(pilotRefresh.gameState);
@@ -1330,6 +1545,21 @@ export const useGameStore = create<GameStore>()(
             },
             nextDay,
           ),
+          dailyPriorityState: bootstrapDailyPriorityState(
+            {
+              ...current,
+              gameState: withSyncedPulse({
+                ...nextGameState,
+                city: syncedMoraleCity,
+              }),
+              containerState: containerStateAfterNight,
+              vehicleState: vehicleStateAfterNight,
+              socialPulseState: socialPulseStateAfterNight,
+              personnelState: personnelStateAfterNight,
+            },
+            nextDay,
+          ),
+          dailyPriorityByDay,
           dailyGoalRuntime: { ...INITIAL_DAILY_GOAL_RUNTIME },
           personnelState: personnelStateAfterNight,
           containerState: containerStateAfterNight,
@@ -1350,7 +1580,11 @@ export const useGameStore = create<GameStore>()(
         const pilotRefresh = refreshPilotEventsFromGameState(
           withDistrict,
           eventPool,
-          { containerState, vehicleState },
+          {
+            containerState,
+            vehicleState,
+            dailyPriorityKey: get().dailyPriorityState?.selectedKey,
+          },
         );
         set({
           gameState: withSyncedPulse(pilotRefresh.gameState),
@@ -1380,7 +1614,11 @@ export const useGameStore = create<GameStore>()(
         const pilotRefresh = refreshPilotEventsFromGameState(
           nextGameState,
           eventPool,
-          { containerState, vehicleState },
+          {
+            containerState,
+            vehicleState,
+            dailyPriorityKey: get().dailyPriorityState?.selectedKey,
+          },
         );
         const syncedGameState = withSyncedPulse(pilotRefresh.gameState);
         set({
@@ -1398,7 +1636,11 @@ export const useGameStore = create<GameStore>()(
         const pilotRefresh = refreshPilotEventsFromGameState(
           gameState,
           eventPool,
-          { containerState, vehicleState },
+          {
+            containerState,
+            vehicleState,
+            dailyPriorityKey: get().dailyPriorityState?.selectedKey,
+          },
         );
         if (!pilotRefresh.refreshed) {
           return;
@@ -1600,6 +1842,7 @@ export const useGameStore = create<GameStore>()(
           {
             containerState: saved.containerState,
             vehicleState: saved.vehicleState,
+            dailyPriorityKey: saved.dailyPriorityState?.selectedKey,
           },
         );
 
@@ -1628,6 +1871,19 @@ export const useGameStore = create<GameStore>()(
               dailyGoalRuntime: saved.dailyGoalRuntime,
             }),
           dailyGoalsByDay: saved.dailyGoalsByDay ?? {},
+          dailyPriorityState:
+            saved.dailyPriorityState ??
+            bootstrapDailyPriorityState({
+              ...currentState,
+              gameState: withSyncedPulse(pilotRefresh.gameState),
+              neighborhoods: saved.neighborhoods,
+              containerState: saved.containerState,
+              vehicleState: saved.vehicleState,
+              personnelState: saved.personnelState,
+              socialPulseState: saved.socialPulseState,
+              decisionHistory: saved.decisionHistory,
+            }),
+          dailyPriorityByDay: saved.dailyPriorityByDay ?? {},
           dailyGoalRuntime: saved.dailyGoalRuntime,
           economyState: saved.economyState,
           personnelState: saved.personnelState,
@@ -1647,6 +1903,9 @@ export const useGameStore = create<GameStore>()(
         state?._setHasHydrated(true);
         if (state && (!state.dailyGoalState || state.dailyGoalState.goals.length === 0)) {
           state.ensureDailyGoalsForDay();
+        }
+        if (state) {
+          state.ensureDailyPriorityForDay();
         }
       },
     },

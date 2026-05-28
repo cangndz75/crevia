@@ -13,6 +13,11 @@ import type { DecisionAffordabilityCheck } from '@/core/economy/economyAffordabi
 import { formatSourceWithLabel } from '@/core/economy/economyFormatter';
 import { selectPersonnelImpactPreviewForDecision } from '@/core/personnel/personnelPresentation';
 import { selectVehicleImpactPreviewForDecision } from '@/core/vehicles/vehiclePresentation';
+import {
+  buildDecisionPriorityHint,
+  getDecisionShortTradeoff,
+  getDecisionStrategyLabel,
+} from '@/core/events/eventContentPresentation';
 import type { EventCard, EventDecision } from '@/core/models/EventCard';
 import {
   useGameStore,
@@ -45,6 +50,7 @@ export function DecisionOptionCard({
   const currentDay = useGameStore((s) => s.gameState.city.day);
   const neighborhoods = useGameStore(useShallow((s) => s.neighborhoods));
   const resources = useGameStore((s) => s.resources);
+  const dailyPriorityKey = useGameStore((s) => s.dailyPriorityState?.selectedKey);
 
   const vehiclePreview = useMemo(
     () =>
@@ -129,6 +135,26 @@ export function DecisionOptionCard({
       </View>
 
       <Text style={styles.description}>{decision.description}</Text>
+
+      {getDecisionShortTradeoff(decision) ? (
+        <Text style={styles.tradeoff} numberOfLines={2}>
+          {getDecisionShortTradeoff(decision)}
+        </Text>
+      ) : null}
+
+      {getDecisionStrategyLabel(decision) ? (
+        <View style={styles.strategyChip}>
+          <Text style={styles.strategyChipText}>
+            {getDecisionStrategyLabel(decision)}
+          </Text>
+        </View>
+      ) : null}
+
+      {buildDecisionPriorityHint(decision, dailyPriorityKey) ? (
+        <Text style={styles.priorityHint} numberOfLines={1}>
+          {buildDecisionPriorityHint(decision, dailyPriorityKey)}
+        </Text>
+      ) : null}
 
       {effectPills.length > 0 ? (
         <View style={styles.pillSection}>
@@ -327,6 +353,30 @@ const styles = StyleSheet.create({
   description: {
     ...typography.caption,
     lineHeight: 20,
+  },
+  tradeoff: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    lineHeight: 17,
+  },
+  strategyChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.backgroundAlt,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.sm,
+  },
+  strategyChipText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.primary,
+    letterSpacing: 0.2,
+  },
+  priorityHint: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.secondary,
   },
   pillSection: {
     gap: spacing.xs,

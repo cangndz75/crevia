@@ -13,6 +13,15 @@ export type DailyReport = {
   summaryLines?: string[];
   /** Günün odak mahallesi — kimlik tonu (snapshot). */
   neighborhoodIdentityLine?: string;
+  /** Gün sonu günlük öncelik sonucu — snapshot. */
+  dailyPriorityResult?: {
+    key: string;
+    title: string;
+    status: 'fulfilled' | 'partial' | 'failed';
+    text: string;
+    carryOverText?: string;
+    score: number;
+  };
   warnings?: string[];
   highlights?: string[];
   /** Gün sonu personel bloğu — genel özetten ayrı tutulur. */

@@ -8,6 +8,8 @@ import {
   getNeighborhoodGoalBias,
   normalizeNeighborhoodId,
 } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
+import { getPriorityGoalWeight } from '@/core/dailyPriority/dailyPriorityEngine';
+import type { DailyPriorityKey } from '@/core/dailyPriority/dailyPriorityTypes';
 import type { ContainerState } from '@/core/containers/containerTypes';
 import type { DecisionRecord } from '@/core/models/DecisionRecord';
 import type { EventCard } from '@/core/models/EventCard';
@@ -45,6 +47,7 @@ export type CreateDailyGoalsInput = {
   personnelState: PersonnelState;
   socialPulseState: SocialPulseState;
   isDay1Tutorial?: boolean;
+  dailyPriorityKey?: DailyPriorityKey;
 };
 
 export type DailyGoalEvaluationInput = CreateDailyGoalsInput & {
@@ -481,12 +484,20 @@ function pickSecondaryGoals(
   });
 
   const neighborhoodId = normalizeNeighborhoodId(primary.relatedNeighborhoodId);
+  const priorityKey = input.dailyPriorityKey;
   const weightFor = (factory: () => DailyGoal) => {
     const draft = factory();
-    if (!neighborhoodId || !draft.metricKey) {
-      return 1;
+    let weight = 1;
+    if (neighborhoodId && draft.metricKey) {
+      weight += getNeighborhoodGoalBias(neighborhoodId, draft.metricKey);
     }
-    return 1 + getNeighborhoodGoalBias(neighborhoodId, draft.metricKey);
+    if (priorityKey && draft.metricKey) {
+      const priorityWeight = getPriorityGoalWeight(priorityKey, draft.metricKey);
+      if (priorityWeight > 1) {
+        weight *= priorityWeight;
+      }
+    }
+    return weight;
   };
 
   const firstFactory = pickWeightedDeterministic(filtered, seed, weightFor);

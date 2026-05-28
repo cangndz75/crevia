@@ -12,6 +12,7 @@ import type { PersonnelDayReport } from '@/core/personnel/personnelTypes';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import type { SocialPulseState } from '@/core/social/socialTypes';
 import type { DailyGoalState } from '@/core/dailyGoals/dailyGoalTypes';
+import type { DailyPriorityReportResult } from '@/core/dailyPriority/dailyPriorityTypes';
 
 const UNRESOLVED_SATISFACTION_PENALTY = 2;
 const UNRESOLVED_MORALE_PENALTY = 1;
@@ -50,6 +51,8 @@ export type EndDayOptions = {
   socialPulseStateBefore?: SocialPulseState | null;
   /** Gün sonu değerlendirilmiş günlük hedefler — rapor snapshot. */
   dailyGoalState?: DailyGoalState | null;
+  /** Gün sonu günlük öncelik sonucu — rapor snapshot. */
+  dailyPriorityResult?: DailyPriorityReportResult | null;
 };
 
 function getMetrics(state: EndDayState) {
@@ -140,6 +143,7 @@ export function endDay(
     socialPulseState: options?.socialPulseState,
     socialPulseStateBefore: options?.socialPulseStateBefore,
     dailyGoalState: options?.dailyGoalState,
+    dailyPriorityResult: options?.dailyPriorityResult,
   });
 
   let nextState: EndDayState = applyUnresolvedEventPenalty({

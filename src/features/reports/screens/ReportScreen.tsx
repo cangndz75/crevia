@@ -10,6 +10,8 @@ import { ReportContainerSummary } from '@/features/reports/components/ReportCont
 import { ReportVehicleSummary } from '@/features/reports/components/ReportVehicleSummary';
 import { ReportSocialSummary } from '@/features/reports/components/ReportSocialSummary';
 import { ReportDailyGoalsSummary } from '@/features/reports/components/ReportDailyGoalsSummary';
+import { ReportDailyPrioritySummary } from '@/features/reports/components/ReportDailyPrioritySummary';
+import { buildDay1TutorialPriorityLine } from '@/core/dailyPriority/dailyPriorityPresentation';
 import { ReportPersonnelSummary } from '@/features/reports/components/ReportPersonnelSummary';
 import { getPilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
 import { TutorialCoachOverlay } from '@/features/tutorial/TutorialCoachOverlay';
@@ -164,6 +166,12 @@ function ReportContent({
       {identityLine ? (
         <Text style={typography.caption}>{identityLine}</Text>
       ) : null}
+      <ReportDailyPrioritySummary
+        result={report.dailyPriorityResult}
+        day1Line={
+          report.day === 1 ? buildDay1TutorialPriorityLine() : undefined
+        }
+      />
       <ReportDailyGoalsSummary results={report.dailyGoalResults} />
       <ReportPersonnelSummary lines={report.personnelSummaryLines ?? []} />
       <ReportContainerSummary lines={report.containerSummaryLines ?? []} />

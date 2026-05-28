@@ -67,4 +67,10 @@ export type DecisionResultSnapshot = {
   riskLines: string[];
   nextSuggestion?: string;
   dailyGoalImpact?: string;
+  dailyPriorityImpact?: {
+    title: string;
+    text: string;
+    tone: 'supportive' | 'balanced' | 'risky' | 'neutral';
+    scoreDelta: number;
+  };
 };

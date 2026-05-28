@@ -8,6 +8,7 @@ import { HubCriticalEventCard } from '@/features/hub/components/HubCriticalEvent
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
 import { HubDailyGoalCard } from '@/features/hub/components/HubDailyGoalCard';
 import { HubDailyGoalsCard } from '@/features/hub/components/HubDailyGoalsCard';
+import { HubDailyPriorityCard } from '@/features/hub/components/HubDailyPriorityCard';
 import { HubMiniStatusStrip } from '@/features/hub/components/HubMiniStatusStrip';
 import { HubPersonnelStrip } from '@/features/hub/components/HubPersonnelStrip';
 import { HubVehicleFleetCard } from '@/features/hub/components/HubVehicleFleetCard';
@@ -79,6 +80,7 @@ export function HubScreen() {
           <HubMiniStatusStrip />
         </TutorialTarget>
 
+        <HubDailyPriorityCard />
         <HubDailyGoalsCard />
 
         <TutorialTarget

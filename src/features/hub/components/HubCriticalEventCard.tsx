@@ -14,6 +14,10 @@ import { formatSourceDelta } from '@/core/economy/economyFormatter';
 import type { EventPreviewEffects } from '@/core/models/EventCard';
 import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
 import {
+  buildEventCardPriorityChip,
+  buildEventCategoryChip,
+} from '@/core/events/eventContentPresentation';
+import {
   getNeighborhoodIdentityChipLabel,
   normalizeNeighborhoodId,
 } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
@@ -143,6 +147,7 @@ export function HubCriticalEventCard() {
   const activeEvents = useGameStore(selectActiveEvents);
   const featuredId = useGameStore((s) => s.gameState.featuredEventId);
   const advisorBody = useGameStore((s) => s.gameState.eventAdvisor.body);
+  const dailyPriorityKey = useGameStore((s) => s.dailyPriorityState?.selectedKey);
 
   const event = useMemo(() => {
     const featured = activeEvents.find((e) => e.id === featuredId);
@@ -181,10 +186,13 @@ export function HubCriticalEventCard() {
     (effects.budget != null && effects.budget !== 0) ||
     effects.risk !== 0;
 
+  const neighborhoodId = event.neighborhoodId ?? event.district;
   const neighborhoodChip =
-    normalizeNeighborhoodId(event.neighborhoodId ?? event.district) != null
-      ? getNeighborhoodIdentityChipLabel(event.neighborhoodId ?? event.district)
+    normalizeNeighborhoodId(neighborhoodId) != null
+      ? getNeighborhoodIdentityChipLabel(neighborhoodId)
       : null;
+  const categoryChip = buildEventCategoryChip(event);
+  const priorityChip = buildEventCardPriorityChip(event, dailyPriorityKey);
 
   return (
     <Animated.View
@@ -217,8 +225,14 @@ export function HubCriticalEventCard() {
             <Ionicons name="location-outline" size={12} color={colors.hubGoldDark} />
             <Text style={styles.locText} numberOfLines={1}>
               {neighborhoodChip ?? event.district}
+              {categoryChip ? ` · ${categoryChip}` : ''}
             </Text>
           </View>
+          {priorityChip ? (
+            <Text style={styles.priorityRelationText} numberOfLines={1}>
+              {priorityChip}
+            </Text>
+          ) : null}
 
           <View style={styles.quoteWrap}>
             <HubAssetImage
@@ -391,6 +405,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
     flex: 1,
+  },
+  priorityRelationText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.primary,
+    marginTop: 2,
   },
   quoteWrap: {
     flexDirection: 'row',

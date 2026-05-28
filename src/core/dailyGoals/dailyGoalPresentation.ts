@@ -9,6 +9,8 @@ import {
   getNeighborhoodPlayerHint,
   normalizeNeighborhoodId,
 } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
+import { enrichDailyGoalHintWithPriority } from '@/core/dailyPriority/dailyPriorityPresentation';
+import type { DailyPriorityKey } from '@/core/dailyPriority/dailyPriorityTypes';
 
 export type DailyGoalTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
@@ -59,7 +61,10 @@ export function formatGoalProgress(goal: DailyGoal): string {
   return `%${goal.progressPercent}`;
 }
 
-export function buildDailyGoalHint(goals: DailyGoal[]): string | null {
+export function buildDailyGoalHint(
+  goals: DailyGoal[],
+  dailyPriorityKey?: DailyPriorityKey,
+): string | null {
   const primary = goals.find((g) => g.priority === 'primary');
   if (!primary) return null;
 
@@ -83,9 +88,11 @@ export function buildDailyGoalHint(goals: DailyGoal[]): string | null {
     }
   }
 
-  return primary.description.length > 72
-    ? `${primary.description.slice(0, 69)}…`
-    : primary.description;
+  const base =
+    primary.description.length > 72
+      ? `${primary.description.slice(0, 69)}…`
+      : primary.description;
+  return enrichDailyGoalHintWithPriority(base, dailyPriorityKey);
 }
 
 export function buildDailyGoalReportResults(

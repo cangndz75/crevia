@@ -130,6 +130,18 @@ export function DecisionResultScreen() {
               </View>
             ) : null}
 
+            {result.dailyPriorityImpact ? (
+              <View style={styles.goalImpactCard}>
+                <Text style={styles.goalImpactLabel}>Günlük Öncelik Etkisi</Text>
+                <Text style={styles.goalImpactTitle}>
+                  {result.dailyPriorityImpact.title}
+                </Text>
+                <Text style={styles.goalImpactText}>
+                  {result.dailyPriorityImpact.text}
+                </Text>
+              </View>
+            ) : null}
+
             <Animated.View entering={FadeInUp.delay(120).duration(320)}>
               <DecisionImpactMetricRow metrics={result.metricChanges} />
             </Animated.View>
@@ -300,6 +312,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderWidth: 1,
     borderColor: 'rgba(11, 107, 97, 0.14)',
+  },
+  goalImpactLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  goalImpactTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: eventDetail.tealDark,
   },
   goalImpactText: {
     fontSize: 12,

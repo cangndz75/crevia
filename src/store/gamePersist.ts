@@ -30,6 +30,8 @@ import {
 } from '@/features/tutorial/tutorialTypes';
 
 import type { LeaderboardEntry } from '@/core/leaderboard/leaderboardTypes';
+import { createNotSelectedPriorityState } from '@/core/dailyPriority/dailyPriorityEngine';
+import type { DailyPriorityState } from '@/core/dailyPriority/dailyPriorityTypes';
 
 import type { GameStore } from './useGameStore';
 
@@ -37,7 +39,8 @@ import type { GameStore } from './useGameStore';
 // Save version & storage key
 // ---------------------------------------------------------------------------
 
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
+const SAVE_VERSION_7 = 7;
 const SAVE_VERSION_6 = 6;
 const SAVE_VERSION_5 = 5;
 /** Anahtar değişmedi — v1 kayıtları aynı AsyncStorage girişinden okunur. */
@@ -65,6 +68,8 @@ export type PersistedGameState = Pick<
   | 'playerProgress'
   | 'dailyGoalState'
   | 'dailyGoalsByDay'
+  | 'dailyPriorityState'
+  | 'dailyPriorityByDay'
   | 'dailyGoalRuntime'
   | 'economyState'
   | 'personnelState'
@@ -98,6 +103,8 @@ export function partialiseGameState(
     playerProgress: state.playerProgress,
     dailyGoalState: state.dailyGoalState,
     dailyGoalsByDay: state.dailyGoalsByDay,
+    dailyPriorityState: state.dailyPriorityState,
+    dailyPriorityByDay: state.dailyPriorityByDay,
     dailyGoalRuntime: state.dailyGoalRuntime,
     economyState: state.economyState,
     personnelState: state.personnelState,
@@ -208,6 +215,33 @@ function isValidDailyGoalState(val: unknown): val is DailyGoalState {
   return val.goals.every(isValidDailyGoal);
 }
 
+function isValidDailyPriorityState(val: unknown): val is DailyPriorityState {
+  if (!isRecord(val)) return false;
+  if (typeof val.day !== 'number') return false;
+  if (typeof val.status !== 'string') return false;
+  if (typeof val.score !== 'number') return false;
+  if (typeof val.progressPercent !== 'number') return false;
+  if (!Array.isArray(val.impactLog)) return false;
+  return true;
+}
+
+function normalizeDailyPriorityByDay(
+  raw: unknown,
+): Record<number, DailyPriorityState> {
+  if (!isRecord(raw)) {
+    return {};
+  }
+  const result: Record<number, DailyPriorityState> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    const day = Number(key);
+    if (!Number.isFinite(day) || !isValidDailyPriorityState(value)) {
+      continue;
+    }
+    result[day] = value;
+  }
+  return result;
+}
+
 function normalizeDailyGoalsByDay(
   raw: unknown,
 ): Record<number, DailyGoalState> {
@@ -304,6 +338,7 @@ export function normalizePersistedSave(
     version !== SAVE_VERSION_4 &&
     version !== SAVE_VERSION_5 &&
     version !== SAVE_VERSION_6 &&
+    version !== SAVE_VERSION_7 &&
     version !== SAVE_VERSION
   ) {
     return null;
@@ -404,6 +439,18 @@ export function normalizePersistedSave(
       return createDailyGoalsForDay(seed);
     })(),
     dailyGoalsByDay: normalizeDailyGoalsByDay(raw.dailyGoalsByDay),
+    dailyPriorityState: (() => {
+      const day = gameState.city.day;
+      if (isValidDailyPriorityState(raw.dailyPriorityState)) {
+        return raw.dailyPriorityState;
+      }
+      const byDay = normalizeDailyPriorityByDay(raw.dailyPriorityByDay);
+      if (byDay[day]) {
+        return byDay[day]!;
+      }
+      return createNotSelectedPriorityState(day);
+    })(),
+    dailyPriorityByDay: normalizeDailyPriorityByDay(raw.dailyPriorityByDay),
     dailyGoalRuntime: isRecord(raw.dailyGoalRuntime)
       ? {
           staffFatiguePeak:

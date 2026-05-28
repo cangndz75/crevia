@@ -18,6 +18,7 @@ import {
   normalizeNeighborhoodId,
 } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 import type { NeighborhoodReportStatus } from '@/core/neighborhoodIdentity/neighborhoodIdentityTypes';
+import type { DailyPriorityReportResult } from '@/core/dailyPriority/dailyPriorityTypes';
 
 const LOW_SATISFACTION = 50;
 const LOW_MORALE = 50;
@@ -41,6 +42,8 @@ export type BuildDailyReportParams = {
   socialPulseStateBefore?: SocialPulseState | null;
   /** Gün kapanışı günlük hedef durumu — snapshot. */
   dailyGoalState?: DailyGoalState | null;
+  /** Gün sonu günlük öncelik sonucu — snapshot. */
+  dailyPriorityResult?: DailyPriorityReportResult | null;
 };
 
 function formatCurrency(amount: number): string {
@@ -299,6 +302,7 @@ export function buildDailyReport(params: BuildDailyReportParams): DailyReport {
       socialSummaryLines.length > 0 ? socialSummaryLines : undefined,
     dailyGoalResults:
       dailyGoalResults.length > 0 ? dailyGoalResults : undefined,
+    dailyPriorityResult: params.dailyPriorityResult ?? undefined,
     createdAt: new Date().toISOString(),
   };
 }

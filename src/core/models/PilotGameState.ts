@@ -46,4 +46,7 @@ export type PilotGameState = {
   run: PilotRun | null;
   /** Günlük çoklu olay seti — aynı gün/bölge için deterministik. */
   dailyEventSet?: DailyEventSet;
+  /** Event içerik varyasyonu — son üretilen başlık/profil (persist opsiyonel). */
+  eventContentRecentTitles?: string[];
+  eventContentRecentProfileIds?: string[];
 };

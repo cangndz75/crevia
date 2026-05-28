@@ -66,6 +66,10 @@ export type EventDecision = {
   xpReward?: number;
   /** District engine — XP adapter districtBonusFlags için. */
   districtBonusFlags?: DistrictBonusFlags;
+  contentShortTradeoff?: string;
+  contentRiskHint?: string;
+  contentStrategyLabel?: string;
+  contentPriorityHint?: string;
 };
 
 export type EventPreviewEffects = {
@@ -125,4 +129,20 @@ export type EventCard = {
   districtBonusHints?: DistrictBonusFlags;
   xpDistrictType?: string;
   districtEventType?: string;
+  /** Event content variation — saha notu / vatandaş sesi. */
+  characterMessage?: string;
+  characterName?: string;
+  advisorNote?: string;
+  contentProfileId?: string;
+  contentCategory?: string;
+  contentFutureHookHint?: string;
 };
+
+export type EventDecisionContentHints = {
+  contentShortTradeoff?: string;
+  contentRiskHint?: string;
+  contentStrategyLabel?: string;
+  contentPriorityHint?: string;
+};
+
+export type EventDecisionWithContent = EventDecision & EventDecisionContentHints;
