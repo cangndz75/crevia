@@ -2,11 +2,9 @@ import type { ContainerState } from '@/core/containers/containerTypes';
 import type { EventCard } from '@/core/models/EventCard';
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
-import {
-  buildPostPilotScopeStatusLabel,
-  derivePostPilotScopeStatuses,
-  normalizePostPilotOperationState,
-} from '@/core/postPilot';
+import { derivePostPilotScopeStatuses } from '@/core/postPilot/postPilotOperationEngine';
+import { buildPostPilotScopeStatusLabel } from '@/core/postPilot/postPilotOperationPresentation';
+import { normalizePostPilotOperationState } from '@/core/postPilot/postPilotOperationSeed';
 import type {
   PostPilotPhase,
   ScopeActivationStatus,
@@ -62,6 +60,8 @@ export type MapOperationPanelModel = {
   riskLabel: string;
   riskTone: 'teal' | 'gold' | 'warn' | 'danger';
   activeEventCount: number;
+  /** Post-pilot gündem satırı (saha notundan ayrı). */
+  agendaSignalLine?: string;
   sahaNote?: string;
   metrics: MapOperationMetric[];
   ctaLabel: string;
@@ -211,7 +211,7 @@ export function buildMapOperationPanelModel(params: {
   vehicleState?: VehicleState;
   hideFleetSignals?: boolean;
   dayEventTitle?: string;
-  postPilotFieldSignal?: string;
+  postPilotMapContextLine?: string;
 }): MapOperationPanelModel {
   const preset = getPilotPreset(params.pilotAreaId);
   const isDetailView = params.viewMode === 'detail';
@@ -280,7 +280,14 @@ export function buildMapOperationPanelModel(params: {
     riskLabel: getRiskDensityLabel(preset.riskDensity),
     riskTone: resolveRiskTone(preset.riskDensity),
     activeEventCount,
-    sahaNote: params.postPilotFieldSignal ?? params.dayEventTitle,
+    agendaSignalLine:
+      params.postPilotMapContextLine && activeEventCount > 0
+        ? params.postPilotMapContextLine
+        : undefined,
+    sahaNote:
+      params.postPilotMapContextLine && activeEventCount > 0
+        ? undefined
+        : params.dayEventTitle,
     metrics: metrics.slice(0, 3),
     ctaLabel: isDetailView ? 'Şehir Haritasına Dön' : 'Detayı Gör',
     isDetailView,
@@ -296,6 +303,7 @@ export function collectMapUiPresentationStrings(
     ...stripItems.map((item) => `${item.label} ${item.statusLabel}`),
     panel.districtLabel,
     panel.riskLabel,
+    panel.agendaSignalLine ?? '',
     panel.sahaNote ?? '',
     ...panel.metrics.map((metric) => `${metric.label} ${metric.value}`),
     panel.ctaLabel,

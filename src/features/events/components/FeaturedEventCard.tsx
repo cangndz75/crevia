@@ -2,7 +2,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { POST_PILOT_EVENT_CARD_LAYOUT_GUARDS } from '@/core/postPilot/postPilotOperationUxPresentation';
 import { EventPreviewImpactRow } from '@/features/events/components/EventPreviewImpactRow';
+import { PostPilotEventContextChip } from '@/features/events/components/PostPilotEventContextChip';
 import { EventVisualBanner } from '@/features/events/components/EventVisualBanner';
 import { getRiskLevelColor } from '@/features/events/utils/eventPresentation';
 import {
@@ -43,14 +45,23 @@ export function FeaturedEventCard({ event }: FeaturedEventCardProps) {
       </View>
 
       <View style={styles.body}>
-        <Text style={styles.title}>{event.title}</Text>
+        <PostPilotEventContextChip event={event} />
+        <Text
+          style={styles.title}
+          numberOfLines={POST_PILOT_EVENT_CARD_LAYOUT_GUARDS.titleNumberOfLines}>
+          {event.title}
+        </Text>
         <View style={styles.riskRow}>
           <View style={[styles.riskDot, { backgroundColor: riskColor }]} />
           <Text style={[styles.riskLabel, { color: riskColor }]}>
             {getRiskLevelLabel(event.riskLevel)} Risk
           </Text>
         </View>
-        <Text style={styles.description}>{event.description}</Text>
+        <Text
+          style={styles.description}
+          numberOfLines={3}>
+          {event.description}
+        </Text>
 
         <View style={styles.metaRow}>
           <View style={styles.metaPill}>

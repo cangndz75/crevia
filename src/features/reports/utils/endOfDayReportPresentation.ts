@@ -1,4 +1,6 @@
 import { formatSourceWithLabel } from '@/core/economy/economyFormatter';
+import { buildPostPilotReportCopy } from '@/core/postPilot/postPilotOperationUxPresentation';
+import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 import type { DailyReport } from '@/core/models/DailyReport';
 import type { GameMetrics } from '@/core/models/GameMetrics';
 import type { DailyXpReport } from '@/core/xp/xpReport';
@@ -462,10 +464,14 @@ export function buildEndOfDayReportViewModel(params: {
     isDay7,
     successScore,
     statusTitle: postPilotLightDay
-      ? 'Post-pilot operasyon günü'
+      ? buildPostPilotReportCopy(
+          Math.max(POST_PILOT_FIRST_OPERATION_DAY, report.day),
+        ).statusTitle
       : buildEndOfDayStatusTitle(successScore),
     heroSubtitle: postPilotLightDay
-      ? 'Gündem etkisi bugünkü kararlarla şekillendi.'
+      ? buildPostPilotReportCopy(
+          Math.max(POST_PILOT_FIRST_OPERATION_DAY, report.day),
+        ).heroSubtitle
       : buildEndOfDayHeroSubtitle(successScore),
     impactMetrics: buildEndOfDayImpactMetrics(metrics),
     metricCards,

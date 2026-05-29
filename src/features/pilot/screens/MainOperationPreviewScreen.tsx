@@ -3,10 +3,11 @@ import { useEffect, useRef } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { buildPostPilotPreviewCtaLabel } from '@/core/postPilot';
 import {
-  buildPostPilotPreviewCopyLines,
-  buildPostPilotPreviewCtaLabel,
-} from '@/core/postPilot';
+  buildPostPilotPreviewFooterNote,
+  buildPostPilotPreviewScreenCopyLines,
+} from '@/core/postPilot/postPilotOperationUxPresentation';
 import { getPilotDistrictHeroImage } from '@/features/hub/utils/hubAssets';
 import { OperationPreviewAuthorityCard } from '@/features/pilot/components/operation-preview/OperationPreviewAuthorityCard';
 import { ProgressionBridgeCard } from '@/features/pilot/components/ProgressionBridgeCard';
@@ -75,7 +76,7 @@ export function MainOperationPreviewScreen() {
     router.replace('/');
   };
 
-  const copyLines = buildPostPilotPreviewCopyLines();
+  const copyLines = buildPostPilotPreviewScreenCopyLines();
 
   return (
     <View style={[styles.root, { paddingBottom: insets.bottom }]}>
@@ -134,7 +135,7 @@ export function MainOperationPreviewScreen() {
           }}
           onHub={() => router.replace('/')}
           onLeaderboard={() => router.push('/leaderboard')}
-          footerNote="Ana operasyon hafif hazırlık modunda başlar; günlük yük sonraki güncellemelerde artacak."
+          footerNote={buildPostPilotPreviewFooterNote()}
         />
       </ScrollView>
     </View>

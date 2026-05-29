@@ -8,6 +8,7 @@ import { getMapDistrictLabel } from '@/features/map/utils/mapDistrictLabels';
 import {
   MAX_POST_PILOT_ACTIVE_EVENTS,
   POST_PILOT_ANCHOR_COUNT,
+  POST_PILOT_EVENT_FORBIDDEN_WORDS,
   POST_PILOT_FIRST_OPERATION_DAY,
   POST_PILOT_SIDE_COUNT,
 } from './postPilotEventConstants';
@@ -310,18 +311,19 @@ export function countPostPilotCatalogEvents(
 
 export function postPilotEventTextContainsForbiddenWords(text: string): string[] {
   const haystack = text.toLowerCase();
-  return (
-    [
-      'kilitli',
-      'premium',
-      'satın al',
-      'paywall',
-      'yetkin yetersiz',
-      'level up',
-      ' xp',
-      'kilit',
-    ] as const
-  ).filter((word) => haystack.includes(word));
+  const hits: string[] = [];
+  for (const word of POST_PILOT_EVENT_FORBIDDEN_WORDS) {
+    if (word === 'xp') {
+      if (/\bxp\b/.test(haystack)) {
+        hits.push(word);
+      }
+      continue;
+    }
+    if (haystack.includes(word)) {
+      hits.push(word);
+    }
+  }
+  return hits;
 }
 
 export function collectPostPilotEventStrings(

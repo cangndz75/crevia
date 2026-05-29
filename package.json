@@ -84,6 +84,8 @@
     "verify:full-ux-flow": "npx tsx scripts/verify-full-ux-flow.ts",
     "verify:post-pilot-operation": "npx tsx scripts/verify-post-pilot-operation.ts",
     "verify:post-pilot-event-loop": "npx tsx scripts/verify-post-pilot-event-loop.ts",
+    "verify:post-pilot-loop-balance": "npx tsx scripts/verify-post-pilot-loop-balance.ts",
+    "verify:post-pilot-ux": "npx tsx scripts/verify-post-pilot-ux.ts",
     "analyze:post-pilot": "npx tsx scripts/analyze-post-pilot-loop.ts",
     "verify:event-content": "npx tsx scripts/verify-event-content.ts",
     "verify:pilot-rhythm": "npx tsx scripts/verify-pilot-rhythm.ts",

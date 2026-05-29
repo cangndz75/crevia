@@ -54,6 +54,15 @@ export function MapOperationBottomPanel({ model, onPressCta }: Props) {
         </View>
       </View>
 
+      {model.agendaSignalLine ? (
+        <View style={styles.agendaRow}>
+          <Ionicons name="pulse-outline" size={14} color={colors.primary} />
+          <Text style={styles.agendaText} numberOfLines={2}>
+            {model.agendaSignalLine}
+          </Text>
+        </View>
+      ) : null}
+
       {model.sahaNote ? (
         <View style={styles.noteRow}>
           <Ionicons name="document-text-outline" size={13} color={colors.primary} />
@@ -135,6 +144,25 @@ const styles = StyleSheet.create({
   riskText: {
     fontSize: 10,
     fontWeight: '800',
+  },
+  agendaRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 143, 138, 0.16)',
+  },
+  agendaText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
+    color: colors.primary,
   },
   noteRow: {
     flexDirection: 'row',

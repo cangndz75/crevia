@@ -2,14 +2,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
 import {
-  buildPostPilotAgendaLines,
-  buildPostPilotAgendaReadyLine,
-  derivePostPilotScopeStatuses,
-  normalizePostPilotOperationState,
+  buildPostPilotAgendaBannerModel,
   shouldShowPostPilotAgendaBanner,
 } from '@/core/postPilot';
 import { selectIsDay1TutorialActive } from '@/features/tutorial/tutorialSelectors';
@@ -35,47 +31,22 @@ export function PostPilotAgendaBanner() {
         return { visible: false as const };
       }
 
-      const normalized = normalizePostPilotOperationState(postPilotOperation, {
-        pilotStatus: pilot.status,
-        currentPilotDay: pilot.currentPilotDay,
+      const model = buildPostPilotAgendaBannerModel({
+        gameState: s.gameState,
+        postPilotOperation,
+        activeEvents: s.gameState.events,
+        featuredEventId: s.gameState.featuredEventId,
       });
 
-      const scopes = derivePostPilotScopeStatuses({
-        postPilotOperation: normalized,
-        pilotStatus: pilot.status,
-        authorityState: pilot.authorityState,
-      });
-
-      const lines = buildPostPilotAgendaLines(
-        normalized,
-        { pilotStatus: pilot.status, currentPilotDay: pilot.currentPilotDay },
-        pilot.authorityState,
-      );
-
-      const agendaReadyLine = buildPostPilotAgendaReadyLine(
-        normalized,
-        s.gameState.events.length,
-      );
-
-      return {
-        visible: true as const,
-        lines,
-        istasyonScope: scopes.istasyon,
-        agendaReadyLine,
-      };
+      return { visible: true as const, model };
     }),
   );
-
-  const scopeChipLabel = useMemo(() => {
-    if (!banner.visible) return '';
-    if (banner.istasyonScope === 'active') return 'Aktif';
-    if (banner.istasyonScope === 'agenda') return 'Gündemde';
-    return 'Önizleme';
-  }, [banner]);
 
   if (!banner.visible) {
     return null;
   }
+
+  const { model } = banner;
 
   return (
     <Animated.View
@@ -87,43 +58,63 @@ export function PostPilotAgendaBanner() {
         </View>
         <View style={styles.headCopy}>
           <Text style={styles.title} numberOfLines={1}>
-            {banner.lines.title}
+            {model.title}
           </Text>
           <Text style={styles.subtitle} numberOfLines={2}>
-            {banner.lines.subtitle}
+            {model.subtitle}
           </Text>
         </View>
       </View>
-
-      {banner.agendaReadyLine ? (
-        <Text style={styles.agendaReady} numberOfLines={1}>
-          {banner.agendaReadyLine}
-        </Text>
-      ) : null}
 
       <View style={styles.chipRow}>
-        <View style={styles.chip}>
-          <Text style={styles.chipText} numberOfLines={1}>
-            Hafif operasyon
-          </Text>
-        </View>
-        <View style={[styles.chip, styles.chipScope]}>
-          <Text style={styles.chipScopeText} numberOfLines={1}>
-            İstasyon · {scopeChipLabel}
-          </Text>
-        </View>
+        {model.chips.map((chip) => (
+          <View
+            key={chip.id}
+            style={[
+              styles.chip,
+              chip.tone === 'primary' && styles.chipPrimary,
+              chip.tone === 'accent' && styles.chipAccent,
+            ]}>
+            <Text
+              style={[
+                styles.chipText,
+                chip.tone === 'primary' && styles.chipTextPrimary,
+                chip.tone === 'accent' && styles.chipTextAccent,
+              ]}
+              numberOfLines={1}>
+              {chip.label}
+            </Text>
+          </View>
+        ))}
       </View>
 
-      <Pressable
-        onPress={() => router.push('/risks')}
-        style={styles.mapLink}
-        accessibilityRole="button"
-        accessibilityLabel="Haritayı incele">
-        <Text style={styles.mapLinkText} numberOfLines={1}>
-          Haritayı İncele
-        </Text>
-        <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-      </Pressable>
+      <View style={styles.ctaRow}>
+        {model.primaryCta ? (
+          <Pressable
+            onPress={() => router.push(model.primaryCta!.href as '/')}
+            style={({ pressed }) => [styles.primaryCta, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel={model.primaryCta.accessibilityLabel}>
+            <Text style={styles.primaryCtaText} numberOfLines={1}>
+              {model.primaryCta.label}
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color="#fff" />
+          </Pressable>
+        ) : null}
+
+        {model.showMapLink ? (
+          <Pressable
+            onPress={() => router.push(model.secondaryCta.href as '/')}
+            style={styles.mapLink}
+            accessibilityRole="button"
+            accessibilityLabel={model.secondaryCta.accessibilityLabel}>
+            <Text style={styles.mapLinkText} numberOfLines={1}>
+              {model.secondaryCta.label}
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+          </Pressable>
+        ) : null}
+      </View>
     </Animated.View>
   );
 }
@@ -169,12 +160,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: colors.textSecondary,
   },
-  agendaReady: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.primary,
-    letterSpacing: 0.1,
-  },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -188,27 +173,60 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     maxWidth: '48%',
+    flexShrink: 1,
+    minWidth: 0,
   },
-  chipScope: {
+  chipPrimary: {
     backgroundColor: colors.primaryMuted,
     borderColor: 'rgba(26, 143, 138, 0.2)',
+  },
+  chipAccent: {
+    backgroundColor: 'rgba(26, 143, 138, 0.08)',
+    borderColor: 'rgba(26, 143, 138, 0.18)',
   },
   chipText: {
     fontSize: 10,
     fontWeight: '800',
     color: colors.textSecondary,
   },
-  chipScopeText: {
-    fontSize: 10,
-    fontWeight: '800',
+  chipTextPrimary: {
     color: colors.primary,
+  },
+  chipTextAccent: {
+    color: colors.primary,
+  },
+  ctaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  primaryCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.full,
+    backgroundColor: colors.primary,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  primaryCtaText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  pressed: {
+    opacity: 0.92,
   },
   mapLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     gap: 2,
-    paddingVertical: 2,
+    paddingVertical: 4,
+    flexShrink: 1,
+    minWidth: 0,
   },
   mapLinkText: {
     fontSize: 12,

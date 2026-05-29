@@ -11,7 +11,9 @@ import {
   formatUrgencyLabel,
   getRiskLevelLabel,
 } from '@/core/content/mockGameData';
+import { POST_PILOT_EVENT_CARD_LAYOUT_GUARDS } from '@/core/postPilot/postPilotOperationUxPresentation';
 import { EventCard } from '@/core/models/EventCard';
+import { PostPilotEventContextChip } from '@/features/events/components/PostPilotEventContextChip';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
@@ -44,8 +46,11 @@ export function ActiveEventCompactCard({ event }: ActiveEventCompactCardProps) {
         </View>
       </View>
       <View style={styles.body}>
+        <PostPilotEventContextChip event={event} />
         <View style={styles.top}>
-          <Text style={typography.subtitle} numberOfLines={1}>
+          <Text
+            style={typography.subtitle}
+            numberOfLines={POST_PILOT_EVENT_CARD_LAYOUT_GUARDS.titleNumberOfLines}>
             {event.title}
           </Text>
           <View style={styles.time}>
@@ -55,7 +60,9 @@ export function ActiveEventCompactCard({ event }: ActiveEventCompactCardProps) {
             </Text>
           </View>
         </View>
-        <Text style={styles.sub} numberOfLines={1}>
+        <Text
+          style={styles.sub}
+          numberOfLines={POST_PILOT_EVENT_CARD_LAYOUT_GUARDS.subtitleNumberOfLines}>
           {event.district} · {getRiskLevelLabel(event.riskLevel)} Risk
         </Text>
       </View>

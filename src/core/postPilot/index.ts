@@ -65,3 +65,48 @@ export {
   resolvePostPilotEventScope,
   resolvePostPilotOperationDay,
 } from './postPilotEventEngine';
+
+export type {
+  PostPilotLoopAuditHealth,
+  PostPilotLoopAuditResult,
+  RunPostPilotLoopAuditOptions,
+} from './postPilotLoopAudit';
+
+export {
+  buildPostPilotLightGameState,
+  postPilotLightEventsProtectedFromClearGuard,
+  runPostPilotLoopAudit,
+  simulateStartLightMainOperation,
+} from './postPilotLoopAudit';
+
+export type { VerifyPostPilotLoopBalanceOutcome } from './verifyPostPilotLoopBalanceScenario';
+export { verifyPostPilotLoopBalanceScenario } from './verifyPostPilotLoopBalanceScenario';
+
+export type {
+  PostPilotAgendaBannerChip,
+  PostPilotAgendaBannerCta,
+  PostPilotAgendaBannerModel,
+  PostPilotReportCopy,
+  BuildPostPilotAgendaBannerInput,
+} from './postPilotOperationUxPresentation';
+
+export {
+  POST_PILOT_EVENT_CONTEXT_TAG,
+  POST_PILOT_EVENT_CARD_LAYOUT_GUARDS,
+  POST_PILOT_GENERATED_EVENT_ID_PREFIX,
+  POST_PILOT_UX_FORBIDDEN_WORDS,
+  buildPostPilotAgendaBannerModel,
+  buildPostPilotEventContextLabel,
+  buildPostPilotEventContextLabelForGameState,
+  buildPostPilotMapContextLine,
+  buildPostPilotMapContextLineForGameState,
+  buildPostPilotPreviewFooterNote,
+  buildPostPilotPreviewScreenCopyLines,
+  buildPostPilotReportCopy,
+  collectPostPilotUxPresentationStrings,
+  isPostPilotGeneratedEvent,
+  postPilotUxContainsForbiddenWords,
+} from './postPilotOperationUxPresentation';
+
+export type { VerifyPostPilotUxOutcome } from './verifyPostPilotUxScenario';
+export { verifyPostPilotUxScenario } from './verifyPostPilotUxScenario';

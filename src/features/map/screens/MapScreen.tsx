@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import { DEFAULT_PILOT_DISTRICT_ID } from '@/core/models/DistrictProfile';
-import { isPostPilotLightEventLoopEligible } from '@/core/postPilot';
+import { buildPostPilotMapContextLineForGameState } from '@/core/postPilot/postPilotOperationUxPresentation';
 import { selectIsDay1TutorialActive } from '@/features/tutorial/tutorialSelectors';
 import {
   selectActiveEvents,
@@ -178,11 +178,9 @@ export function MapScreen() {
     ],
   );
 
-  const postPilotFieldSignal = useMemo(() => {
-    const gameState = useGameStore.getState().gameState;
-    if (!isPostPilotLightEventLoopEligible(gameState)) {
-      return undefined;
-    }
+  const gameStateForMap = useGameStore((s) => s.gameState);
+
+  const postPilotMapContextLine = useMemo(() => {
     const districtEvents = activeEvents.filter((event) => {
       const neighborhoodId = event.neighborhoodId?.toLowerCase() ?? '';
       return (
@@ -193,8 +191,8 @@ export function MapScreen() {
     if (districtEvents.length === 0) {
       return undefined;
     }
-    return 'Gündem olayı · Aktif saha sinyali';
-  }, [activeEvents, focusDistrictId]);
+    return buildPostPilotMapContextLineForGameState(gameStateForMap, districtEvents);
+  }, [activeEvents, focusDistrictId, gameStateForMap]);
 
   const operationPanel = useMemo(
     () =>
@@ -209,7 +207,7 @@ export function MapScreen() {
         vehicleState,
         hideFleetSignals: hideMapFleetSignals,
         dayEventTitle: dayEvent.mainEventTitle,
-        postPilotFieldSignal,
+        postPilotMapContextLine: postPilotMapContextLine ?? undefined,
       }),
     [
       activeEvents,
@@ -220,7 +218,8 @@ export function MapScreen() {
       hideMapFleetSignals,
       mapViewMode,
       pilotAreaId,
-      postPilotFieldSignal,
+      postPilotMapContextLine,
+      gameStateForMap,
       selectedDistrictId,
       vehicleState,
     ],

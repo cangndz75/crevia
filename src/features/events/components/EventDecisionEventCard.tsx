@@ -4,6 +4,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { EventPreviewImpactRow } from '@/features/events/components/EventPreviewImpactRow';
 import { EventVisualBanner } from '@/features/events/components/EventVisualBanner';
 import { getRiskLevelColor } from '@/features/events/utils/eventPresentation';
+import { POST_PILOT_EVENT_CARD_LAYOUT_GUARDS } from '@/core/postPilot/postPilotOperationUxPresentation';
+import { PostPilotEventContextChip } from '@/features/events/components/PostPilotEventContextChip';
 import { getEventContextTags } from '@/features/events/utils/eventDecisionPresentation';
 import {
   formatUrgencyLabel,
@@ -44,6 +46,7 @@ export function EventDecisionEventCard({ event, day }: EventDecisionEventCardPro
       <View style={[styles.topStripe, { backgroundColor: riskColor }]} />
 
       <View style={styles.hero}>
+        <PostPilotEventContextChip event={event} />
         <View style={styles.badges}>
           <View style={[styles.badge, { backgroundColor: getRiskLevelMutedBg(event.riskLevel) }]}>
             <View style={[styles.dot, { backgroundColor: riskColor }]} />
@@ -69,7 +72,11 @@ export function EventDecisionEventCard({ event, day }: EventDecisionEventCardPro
           </View>
         </View>
 
-        <Text style={styles.title}>{event.title}</Text>
+        <Text
+          style={styles.title}
+          numberOfLines={POST_PILOT_EVENT_CARD_LAYOUT_GUARDS.titleNumberOfLines}>
+          {event.title}
+        </Text>
 
         <View style={styles.metaBlock}>
           <View style={styles.metaLine}>

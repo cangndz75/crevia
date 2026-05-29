@@ -25,6 +25,7 @@ import {
 } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 import { eventSeverity } from '@/core/utils/eventPriority';
 import { EventLifecycleBadge } from '@/features/events/components/EventLifecycleBadge';
+import { PostPilotEventContextChip } from '@/features/events/components/PostPilotEventContextChip';
 import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
 import { getEventHeroImage, hubAssets } from '@/features/hub/utils/hubAssets';
 import { selectIsDay1TutorialActive } from '@/features/tutorial/tutorialSelectors';
@@ -184,6 +185,7 @@ export function HubCriticalEventCard() {
         style={({ pressed }) => [styles.body, getPressFeedbackStyle({ pressed })]}
         accessibilityRole="button">
         <View style={styles.contentCol}>
+          <PostPilotEventContextChip event={event} />
           <View style={styles.chipRow}>
             <View style={styles.neighborhoodChip}>
               <Text style={styles.chipText} numberOfLines={1}>
