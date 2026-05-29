@@ -39,8 +39,9 @@ export function MapFilterTabs({ selected, onSelect }: Props) {
             <Text
               style={[
                 styles.chipText,
-                active && { color: filter.activeColor, fontWeight: '700' },
+                active && { color: filter.activeColor, fontWeight: '800' },
               ]}
+              numberOfLines={1}
             >
               {filter.label}
             </Text>
@@ -59,17 +60,19 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: radius.full,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
+    minWidth: 0,
   },
   chipText: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
     color: colors.textSecondary,
+    flexShrink: 1,
   },
 });

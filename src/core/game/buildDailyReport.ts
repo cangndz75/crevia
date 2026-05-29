@@ -334,7 +334,7 @@ export function buildDailyReport(params: BuildDailyReportParams): DailyReport {
     authorityDailyGain: params.authorityDailyGain ?? undefined,
     authoritySummaryLines:
       params.authoritySummaryLines && params.authoritySummaryLines.length > 0
-        ? params.authoritySummaryLines.slice(0, 3)
+        ? params.authoritySummaryLines.slice(0, 2)
         : undefined,
     createdAt: new Date().toISOString(),
   };

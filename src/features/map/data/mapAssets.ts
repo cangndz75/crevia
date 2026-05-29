@@ -1,27 +1,19 @@
 import { Image } from 'react-native';
 
+import {
+  DEFAULT_MAP_DISTRICT_ID,
+  MAP_DISTRICT_IDS,
+  type MapDistrictId,
+} from './mapDistrictConstants';
+
+export type { MapDistrictId };
+export { DEFAULT_MAP_DISTRICT_ID, MAP_DISTRICT_IDS };
+
 export type MapImageAsset = {
   src: number;
   width: number;
   height: number;
 };
-
-export type MapDistrictId =
-  | 'cumhuriyet'
-  | 'merkez'
-  | 'sanayi'
-  | 'istasyon'
-  | 'yesilvadi';
-
-export const MAP_DISTRICT_IDS: MapDistrictId[] = [
-  'cumhuriyet',
-  'merkez',
-  'sanayi',
-  'istasyon',
-  'yesilvadi',
-];
-
-export const DEFAULT_MAP_DISTRICT_ID: MapDistrictId = 'cumhuriyet';
 
 /** Şehir genel görünümü — hafif zoom, mahalle seçimi */
 const CITY_OVERVIEW_SRC = require('@/assets/ui/crevia_base_map.webp');

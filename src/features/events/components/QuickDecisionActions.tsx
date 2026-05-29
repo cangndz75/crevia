@@ -14,9 +14,10 @@ type QuickDecisionActionsProps = {
   onSelect: (decisionId: string) => void;
   affordabilityByDecisionId?: Record<string, DecisionAffordabilityCheck>;
   variant?: 'quick' | 'compact';
+  sectionTitle?: string;
 };
 
-const QUICK_CARD_WIDTH = 152;
+const QUICK_CARD_WIDTH = 148;
 
 export function QuickDecisionActions({
   event,
@@ -25,6 +26,7 @@ export function QuickDecisionActions({
   onSelect,
   affordabilityByDecisionId,
   variant = 'quick',
+  sectionTitle = 'Kaynak seçimi',
 }: QuickDecisionActionsProps) {
   const items = buildQuickDecisionCardItems(
     event,
@@ -34,7 +36,9 @@ export function QuickDecisionActions({
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>HIZLI İŞLEMLER</Text>
+      <Text style={styles.sectionTitle} numberOfLines={1}>
+        {sectionTitle}
+      </Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -63,10 +67,10 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     paddingHorizontal: eventDetail.screenPadding,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
-    letterSpacing: 0.8,
-    color: eventDetail.textMuted,
+    letterSpacing: 0.4,
+    color: eventDetail.tealDark,
   },
   row: {
     paddingHorizontal: eventDetail.screenPadding,

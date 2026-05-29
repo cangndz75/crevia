@@ -1,5 +1,7 @@
 import { Circle, G, Text as SvgText } from 'react-native-svg';
 
+import { colors } from '@/ui/theme/colors';
+
 import type { MapPin as MapPinModel } from '../types/map';
 
 type Props = {
@@ -46,38 +48,56 @@ export function MapPin({
     (pin.severity === 'critical' || pin.severity === 'high' || pin.type === 'crew');
   const r = normalized
     ? pin.type === 'crew'
-      ? 0.022
+      ? 0.02
       : isVehicle
-        ? 0.011
+        ? 0.01
         : isLarge
-          ? 0.018
-          : 0.014
+          ? 0.016
+          : 0.012
     : pin.type === 'crew'
-      ? 11
+      ? 10
       : isVehicle
-        ? 6
+        ? 5
         : isLarge
-          ? 9
-          : 7;
+          ? 8
+          : 6;
   const icon =
     isVehicle && pin.icon
       ? (VEHICLE_PIN_GLYPH[pin.icon] ?? PIN_ICON.vehicle)
       : (PIN_ICON[pin.type] ?? '•');
   const fontSize = normalized ? 0.02 : 7;
 
+  const glowColor = selected ? colors.primary : pin.color;
+
   return (
     <G onPress={() => onPress?.(pin.id)}>
       {(pin.severity === 'critical' || selected) && (
-        <Circle cx={cx} cy={cy} r={r + (normalized ? 0.01 : 5)} fill={pin.color} opacity={0.2} />
+        <Circle
+          cx={cx}
+          cy={cy}
+          r={r + (normalized ? (selected ? 0.012 : 0.008) : selected ? 6 : 4)}
+          fill={glowColor}
+          opacity={selected ? 0.28 : 0.2}
+        />
       )}
       <Circle
         cx={cx}
         cy={cy}
         r={r}
         fill={pin.color}
-        stroke={isVehicle ? 'rgba(255,255,255,0.95)' : '#FFFFFF'}
+        stroke={selected ? colors.primary : isVehicle ? 'rgba(255,255,255,0.95)' : '#FFFFFF'}
         strokeWidth={
-          normalized ? (isVehicle ? 0.0025 : 0.003) : selected ? 2.5 : isVehicle ? 1.25 : 1.5
+          normalized
+            ? selected
+              ? 0.004
+              : isVehicle
+                ? 0.0025
+                : 0.003
+            : selected
+              ? 2.5
+              : isVehicle
+                ? 1.25
+                : 1.5
         }
         opacity={isVehicle ? 0.96 : 1}
       />

@@ -1,14 +1,16 @@
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { StyleSheet, View } from 'react-native';
 
 import type { DailyReport } from '@/core/models/DailyReport';
 import type { GameMetrics } from '@/core/models/GameMetrics';
 import type { DailyXpReport } from '@/core/xp/xpReport';
 import { EndOfDayReportHero } from '@/features/reports/components/end-of-day/EndOfDayReportHero';
-import { EndOfDayReportMetricGrid } from '@/features/reports/components/end-of-day/EndOfDayReportMetricGrid';
+import { EndOfDayReportImpactStrip } from '@/features/reports/components/end-of-day/EndOfDayReportImpactStrip';
+import { EndOfDayReportMetaProgressSection } from '@/features/reports/components/end-of-day/EndOfDayReportMetaProgressSection';
+import { EndOfDayReportSystemSummaries } from '@/features/reports/components/end-of-day/EndOfDayReportSystemSummaries';
 import { EndOfDayReportTomorrowNotes } from '@/features/reports/components/end-of-day/EndOfDayReportTomorrowNotes';
 import { EndOfDayReportXpCard } from '@/features/reports/components/end-of-day/EndOfDayReportXpCard';
 import { PilotReportSummaryCard } from '@/features/reports/components/PilotReportSummaryCard';
-import { ReportBadgeSummary } from '@/features/reports/components/ReportBadgeSummary';
 import { ReportPilotCompletionCard } from '@/features/reports/components/ReportPilotCompletionCard';
 import type { PilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
 import { buildEndOfDayReportViewModel } from '@/features/reports/utils/endOfDayReportPresentation';
@@ -24,6 +26,9 @@ type Props = {
   pilotReportContext: PilotReportContext | null;
   pilotCompletionSummary: ReturnType<typeof useReportPilotCompletionSummary>;
 };
+
+const enter = (delay: number) =>
+  FadeInUp.delay(delay).duration(260).springify().damping(24);
 
 export function EndOfDayReportView({
   report,
@@ -42,48 +47,68 @@ export function EndOfDayReportView({
     day1GoalsLine,
   });
 
+  const sectionGap = model.isDay7 ? spacing.sm : spacing.md;
+
   return (
-    <>
-      <Animated.View entering={FadeInUp.duration(300).springify().damping(22)}>
+    <View style={[styles.stack, model.isDay7 && styles.stackDay7]}>
+      <Animated.View entering={enter(0)}>
         <EndOfDayReportHero
+          day={model.day}
+          statusTitle={model.statusTitle}
           successScore={model.successScore}
           subtitle={model.heroSubtitle}
         />
       </Animated.View>
 
-      <Animated.View entering={FadeInUp.delay(80).duration(280)}>
-        <EndOfDayReportMetricGrid cards={model.metricCards} />
+      <Animated.View entering={enter(60)}>
+        <EndOfDayReportImpactStrip metrics={model.impactMetrics} />
       </Animated.View>
 
-      <Animated.View entering={FadeInUp.delay(140).duration(280)}>
-        <EndOfDayReportXpCard
-          totalXp={model.xpTotal}
-          subtitle={model.xpSubtitle}
-          breakdown={model.xpBreakdown}
+      <Animated.View entering={enter(120)}>
+        <EndOfDayReportMetaProgressSection
+          authorityLines={report.authoritySummaryLines ?? []}
+          badgeEvaluation={report.badgeEvaluation}
+          compact={model.isDay1}
         />
       </Animated.View>
 
-      <Animated.View entering={FadeInUp.delay(200).duration(280)}>
-        <EndOfDayReportTomorrowNotes notes={model.tomorrowNotes} />
-      </Animated.View>
+      {model.showSystemSummaries ? (
+        <Animated.View entering={enter(180)}>
+          <EndOfDayReportSystemSummaries
+            sections={model.systemSections}
+            compact={model.isDay7}
+          />
+        </Animated.View>
+      ) : null}
 
-      <Animated.View entering={FadeInUp.delay(230).duration(280)}>
-        <ReportBadgeSummary
-          evaluation={report.badgeEvaluation}
-          compact={report.day === 1}
-        />
-      </Animated.View>
+      {model.showTomorrowNotes && model.tomorrowNotes.length > 0 ? (
+        <Animated.View entering={enter(220)}>
+          <EndOfDayReportTomorrowNotes notes={model.tomorrowNotes} compact={model.isDay7} />
+        </Animated.View>
+      ) : null}
+
+      {model.showXpCard ? (
+        <Animated.View entering={enter(260)}>
+          <EndOfDayReportXpCard
+            totalXp={model.xpTotal}
+            subtitle={model.xpSubtitle}
+            breakdown={model.xpBreakdown}
+          />
+        </Animated.View>
+      ) : null}
 
       {pilotReportContext ? (
-        <Animated.View entering={FadeInUp.delay(260).duration(280)}>
+        <Animated.View entering={enter(300)}>
           <PilotReportSummaryCard context={pilotReportContext} />
         </Animated.View>
       ) : null}
 
       {pilotCompletionSummary ? (
-        <ReportPilotCompletionCard summary={pilotCompletionSummary} />
+        <Animated.View entering={enter(340)} style={{ marginTop: sectionGap }}>
+          <ReportPilotCompletionCard summary={pilotCompletionSummary} compact />
+        </Animated.View>
       ) : null}
-    </>
+    </View>
   );
 }
 
@@ -92,3 +117,12 @@ export const endOfDayReportViewStyles = {
     gap: spacing.md,
   },
 };
+
+const styles = StyleSheet.create({
+  stack: {
+    gap: spacing.md,
+  },
+  stackDay7: {
+    gap: spacing.sm,
+  },
+});

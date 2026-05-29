@@ -163,6 +163,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    minWidth: 0,
   },
   iconWrap: {
     width: 28,
@@ -177,6 +178,8 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
     ...typography.label,
     fontSize: 13,
     color: colors.textPrimary,

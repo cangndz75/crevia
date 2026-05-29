@@ -3,32 +3,33 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
-import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
 type Props = {
   notes: string[];
+  compact?: boolean;
 };
 
-export function EndOfDayReportTomorrowNotes({ notes }: Props) {
+export function EndOfDayReportTomorrowNotes({ notes, compact = false }: Props) {
   if (notes.length === 0) return null;
 
   return (
-    <View style={[styles.card, shadows.card]}>
+    <View style={[styles.card, compact && styles.cardCompact]}>
       <View style={styles.header}>
         <View style={styles.iconWrap}>
-          <Ionicons name="clipboard-outline" size={20} color={colors.primary} />
+          <Ionicons name="clipboard-outline" size={18} color={colors.primary} />
         </View>
-        <Text style={styles.title}>Yarına Etki Eden Notlar</Text>
-        <View style={styles.illustration}>
-          <Ionicons name="create-outline" size={28} color={colors.primaryMuted} />
-        </View>
+        <Text style={styles.title} numberOfLines={1}>
+          Yarına Etki Eden Notlar
+        </Text>
       </View>
       <View style={styles.list}>
         {notes.map((note, index) => (
           <View key={`${index}-${note.slice(0, 12)}`} style={styles.row}>
             <View style={styles.bullet} />
-            <Text style={styles.line}>{note}</Text>
+            <Text style={styles.line} numberOfLines={compact ? 2 : 3}>
+              {note}
+            </Text>
           </View>
         ))}
       </View>
@@ -39,41 +40,39 @@ export function EndOfDayReportTomorrowNotes({ notes }: Props) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.md,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  cardCompact: {
+    padding: spacing.sm,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    minWidth: 0,
   },
   iconWrap: {
-    width: 38,
-    height: 38,
+    width: 32,
+    height: 32,
     borderRadius: radius.sm,
     backgroundColor: colors.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   title: {
     flex: 1,
-    fontSize: 15,
+    minWidth: 0,
+    fontSize: 13,
     fontWeight: '800',
     color: colors.textPrimary,
   },
-  illustration: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.md,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   list: {
-    gap: spacing.sm,
+    gap: 6,
   },
   row: {
     flexDirection: 'row',
@@ -85,12 +84,14 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: colors.primary,
-    marginTop: 7,
+    marginTop: 6,
+    flexShrink: 0,
   },
   line: {
     flex: 1,
-    fontSize: 13,
-    lineHeight: 20,
+    minWidth: 0,
+    fontSize: 12,
+    lineHeight: 18,
     color: colors.textPrimary,
     fontWeight: '500',
   },

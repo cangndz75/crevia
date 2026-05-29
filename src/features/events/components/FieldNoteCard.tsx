@@ -6,42 +6,45 @@ import { shadows } from '@/ui/theme/shadows';
 
 type FieldNoteCardProps = {
   body: string;
+  compact?: boolean;
 };
 
-export function FieldNoteCard({ body }: FieldNoteCardProps) {
+export function FieldNoteCard({ body, compact = false }: FieldNoteCardProps) {
+  const noteBody =
+    body.trim() ||
+    'Saha notu henüz gelmedi. Operasyon devam ederken kısa geri bildirim burada görünür.';
+
   return (
-    <View style={[styles.card, shadows.soft]}>
+    <View style={[styles.card, shadows.soft, compact && styles.cardCompact]}>
       <View style={styles.header}>
         <View style={styles.iconWrap}>
-          <Ionicons name="chatbubble-ellipses" size={16} color={eventDetail.teal} />
+          <Ionicons name="document-text-outline" size={15} color={eventDetail.teal} />
         </View>
-        <Text style={styles.title}>SAHA NOTU</Text>
+        <Text style={styles.title} numberOfLines={1}>
+          Saha notu
+        </Text>
       </View>
 
-      <Text style={styles.body} numberOfLines={3}>
-        {body}
+      <Text style={styles.body} numberOfLines={compact ? 2 : 3}>
+        {noteBody}
       </Text>
 
-      <View style={styles.metaRow}>
-        <View style={styles.metaItem}>
-          <Ionicons name="camera-outline" size={14} color={eventDetail.teal} />
-          <Text style={styles.metaText} numberOfLines={1}>
-            Fotoğraf Var
-          </Text>
+      {!compact ? (
+        <View style={styles.metaRow}>
+          <View style={styles.metaItem}>
+            <Ionicons name="camera-outline" size={14} color={eventDetail.teal} />
+            <Text style={styles.metaText} numberOfLines={1}>
+              Fotoğraf Var
+            </Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Ionicons name="shield-checkmark-outline" size={14} color={eventDetail.teal} />
+            <Text style={styles.metaText} numberOfLines={1}>
+              Konum Güveni %90
+            </Text>
+          </View>
         </View>
-        <View style={styles.metaItem}>
-          <Ionicons name="shield-checkmark-outline" size={14} color={eventDetail.teal} />
-          <Text style={styles.metaText} numberOfLines={1}>
-            Konum Güveni %90
-          </Text>
-        </View>
-        <View style={styles.metaItem}>
-          <Ionicons name="people-outline" size={14} color={eventDetail.teal} />
-          <Text style={styles.metaText} numberOfLines={1}>
-            Mahalle Etkisi Orta
-          </Text>
-        </View>
-      </View>
+      ) : null}
     </View>
   );
 }
@@ -55,6 +58,10 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: 'rgba(6, 63, 59, 0.06)',
+  },
+  cardCompact: {
+    marginTop: 0,
+    padding: 12,
   },
   header: {
     flexDirection: 'row',
@@ -73,8 +80,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 12,
     fontWeight: '800',
-    letterSpacing: 0.8,
+    letterSpacing: 0.3,
     color: eventDetail.tealDark,
+    flex: 1,
+    minWidth: 0,
   },
   body: {
     fontSize: 14,

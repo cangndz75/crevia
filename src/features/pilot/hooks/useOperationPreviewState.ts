@@ -1,10 +1,9 @@
 import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
-import {
-  buildOperationPreviewAuthoritySummary,
-} from '@/core/authority/authorityPresentation';
+import { buildOperationPreviewAuthoritySummary } from '@/core/authority/authorityPresentation';
 import { normalizeAuthorityState } from '@/core/authority/authoritySeed';
+import { buildProgressionBridgeSummary } from '@/core/progression';
 import {
   buildPilotCompletionSummary,
   type PilotCompletionSummary,
@@ -275,6 +274,14 @@ export function useOperationPreviewState(
       pilot.currentPilotDay,
     );
 
+    const progressionBridgeSummary = buildProgressionBridgeSummary({
+      authorityState: pilot.authorityState,
+      badgeState: pilot.badgeState,
+      currentDay: pilot.currentPilotDay,
+      lastPilotScore,
+      selectedDistrictId: districtId,
+    });
+
     const hasRealData = Boolean(run && (run.eventHistory.length > 0 || isCompleted));
 
     return {
@@ -295,6 +302,7 @@ export function useOperationPreviewState(
       districtName: run?.selectedDistrictName ?? profile?.shortName,
       completionSummary,
       authoritySummary,
+      progressionBridgeSummary,
       heroPersonalizedText: completionSummary.isCompleted
         ? completionSummary.nextChapterText
         : undefined,

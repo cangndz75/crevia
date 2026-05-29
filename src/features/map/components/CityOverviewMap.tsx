@@ -49,6 +49,7 @@ export type CityOverviewMapProps = {
   vehicleState?: VehicleState;
   hideContainerSignals?: boolean;
   hideVehicleSignals?: boolean;
+  selectedPinId?: string | null;
   onDistrictPress?: (districtId: MapDistrictId) => void;
   onPinPress?: (pinId: string) => void;
 };
@@ -66,6 +67,7 @@ export function CityOverviewMap({
   vehicleState,
   hideContainerSignals = false,
   hideVehicleSignals = false,
+  selectedPinId = null,
   onDistrictPress,
   onPinPress,
 }: CityOverviewMapProps) {
@@ -124,6 +126,7 @@ export function CityOverviewMap({
         showRoutes={showRoutes}
         containerSignals={containerSignals}
         vehicleBadges={vehicleBadges}
+        selectedPinId={selectedPinId}
         onDistrictPress={onDistrictPress}
         onPinPress={onPinPress}
       />
@@ -136,6 +139,7 @@ type OverlayProps = {
   pins: MapPin[];
   containerSignals: NeighborhoodContainerMapSignal[];
   vehicleBadges: NeighborhoodVehicleBadge[];
+  selectedPinId?: string | null;
   showHeat: boolean;
   showRoutes: boolean;
   onDistrictPress?: (districtId: MapDistrictId) => void;
@@ -147,6 +151,7 @@ function CityOverviewOverlay({
   pins,
   containerSignals,
   vehicleBadges,
+  selectedPinId = null,
   showHeat,
   showRoutes,
   onDistrictPress,
@@ -297,6 +302,7 @@ function CityOverviewOverlay({
             pin={pin}
             mapWidth={mapWidth}
             mapHeight={mapHeight}
+            selected={pin.id === selectedPinId}
             onPress={onPinPress}
           />
         ))}

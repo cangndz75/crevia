@@ -3,19 +3,23 @@ import type { AuthorityDailyGainSnapshot } from '@/core/authority/authorityTypes
 import type { ContainerState } from '@/core/containers/containerTypes';
 import type { DailyGoalState } from '@/core/dailyGoals/dailyGoalTypes';
 import type { ButterflyHookState } from '@/core/events/butterflyHookTypes';
+import type { HubQuickActionState } from '@/core/hubQuickActions/hubQuickActionTypes';
 import type { DecisionRecord } from '@/core/models/DecisionRecord';
 import type { DailyEventSet } from '@/core/models/DailyEventSet';
 import type { EventCard } from '@/core/models/EventCard';
 import type { GameMetrics } from '@/core/models/GameMetrics';
+import type { PersonnelState } from '@/core/personnel/personnelTypes';
 import type { SocialPulseState } from '@/core/social/socialTypes';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 
+import { deriveBadgeEvaluationRuleFlags } from './badgeEvaluationRules';
 import type { EvaluateDailyBadgesInput } from './badgeTypes';
 
 export type BuildDailyBadgeEvaluationInputParams = {
   day: number;
   decisionHistory: DecisionRecord[];
   activeEvents: EventCard[];
+  eventPool?: EventCard[];
   dailyEventSet?: DailyEventSet | null;
   dailyGoalState?: DailyGoalState | null;
   metricsBefore?: GameMetrics | null;
@@ -25,6 +29,8 @@ export type BuildDailyBadgeEvaluationInputParams = {
   butterflyHookState?: ButterflyHookState | null;
   containerState?: ContainerState | null;
   vehicleState?: VehicleState | null;
+  personnelState?: PersonnelState | null;
+  hubQuickActionState?: HubQuickActionState | null;
   authorityDailyGain?: AuthorityDailyGainSnapshot | null;
 };
 
@@ -44,36 +50,20 @@ export function buildDailyBadgeEvaluationInput(
     butterflyHookState: params.butterflyHookState,
   });
 
-  const decisionsToday = params.decisionHistory.filter(
-    (record) => record.day === params.day,
-  ).length;
-
-  const authorityNetGain = params.authorityDailyGain?.netGain ?? 0;
-  const positiveOperationDay =
-    authorityNetGain > 0 ||
-    (decisionsToday > 0 && !authorityInput.criticalEventUnresolved);
-
-  const containerRiskControlled =
-    params.containerState != null
-      ? Object.values(params.containerState.aggregates).reduce(
-          (sum, status) => sum + status.criticalContainerCount,
-          0,
-        ) === 0
-      : true;
-
-  const vehicleDayPositive =
-    decisionsToday > 0 &&
-    (params.vehicleState?.aggregates?.broken ?? 0) === 0;
-
-  return {
-    positiveOperationDay,
-    socialPulseBalanced: authorityInput.socialPulseBalanced,
-    budgetNotSeriouslyDamaged: authorityInput.budgetNotSeriouslyDamaged,
-    personnelMoraleMaintained: authorityInput.personnelMoraleMaintained,
-    criticalRiskClosedWithoutGrowth:
-      authorityInput.criticalRiskClosedWithoutGrowth,
-    butterflyFollowUpWellManaged: authorityInput.butterflyFollowUpWellManaged,
-    vehicleDayPositive,
-    containerRiskControlled,
-  };
+  return deriveBadgeEvaluationRuleFlags({
+    day: params.day,
+    decisionHistory: params.decisionHistory,
+    activeEvents: params.activeEvents,
+    eventPool: params.eventPool,
+    metricsBefore: params.metricsBefore,
+    metricsAfter: params.metricsAfter,
+    socialPulseStateAfter: params.socialPulseStateAfter,
+    butterflyHookState: params.butterflyHookState,
+    containerState: params.containerState,
+    vehicleState: params.vehicleState,
+    personnelState: params.personnelState,
+    hubQuickActionState: params.hubQuickActionState,
+    authorityInput,
+    authorityNetGain: params.authorityDailyGain?.netGain ?? 0,
+  });
 }

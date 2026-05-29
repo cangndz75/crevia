@@ -44,6 +44,7 @@ export type DistrictDetailMapProps = {
   containerState?: ContainerState;
   vehicleState?: VehicleState;
   hideVehicleSignals?: boolean;
+  selectedPinId?: string | null;
   onPinPress?: (pinId: string) => void;
 };
 
@@ -60,6 +61,7 @@ export function DistrictDetailMap({
   containerState,
   vehicleState,
   hideVehicleSignals = false,
+  selectedPinId = null,
   onPinPress,
 }: DistrictDetailMapProps) {
   const asset = getDistrictMapAsset(districtId);
@@ -163,6 +165,7 @@ export function DistrictDetailMap({
         pins={pins}
         showHeat={showHeat}
         showRoutes={showRoutes}
+        selectedPinId={selectedPinId}
         onPinPress={onPinPress}
       />
     </ZoomableMapCanvas>
@@ -174,6 +177,7 @@ type OverlayProps = {
   pins: MapPin[];
   showHeat: boolean;
   showRoutes: boolean;
+  selectedPinId?: string | null;
   onPinPress?: (pinId: string) => void;
 };
 
@@ -182,6 +186,7 @@ function DistrictDetailOverlay({
   pins,
   showHeat,
   showRoutes,
+  selectedPinId = null,
   onPinPress,
 }: OverlayProps) {
   const { width: mapWidth, height: mapHeight } = useMapDisplaySize();
@@ -232,6 +237,7 @@ function DistrictDetailOverlay({
             pin={pin}
             mapWidth={mapWidth}
             mapHeight={mapHeight}
+            selected={pin.id === selectedPinId}
             onPress={onPinPress}
           />
         ))}

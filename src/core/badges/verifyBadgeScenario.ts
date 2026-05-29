@@ -9,6 +9,10 @@ import {
   processDailyBadgeEvaluation,
   processPilotCompletionBadgeEvaluation,
 } from './badgeEngine';
+import { createInitialContainerState } from '@/core/containers/containerSeed';
+import { createInitialVehicleState } from '@/core/vehicles/vehicleSeed';
+import { deriveBadgeEvaluationRuleFlags } from './badgeEvaluationRules';
+import { evaluateAveragePilotBadgeCount } from './badgeBalanceSimulation';
 import {
   buildBadgeEvaluationSnapshot,
   buildBadgeSummaryLines,
@@ -36,6 +40,7 @@ function assert(
 function positiveDailyInput(day: number) {
   return {
     day,
+    dailyOperationCompleted: true,
     positiveOperationDay: true,
     socialPulseBalanced: true,
     budgetNotSeriouslyDamaged: true,
@@ -422,6 +427,176 @@ export function verifyBadgeScenario(): VerifyBadgeOutcome {
       streakWorking.earnedBadgeIds.includes('steady_operator'),
       'steady_operator 3 günlük streak ile kazanılır',
       'Streak rozet hatalı',
+    ) && ok;
+
+  const passiveSafeFlags = deriveBadgeEvaluationRuleFlags({
+    day: 3,
+    decisionHistory: [
+      {
+        id: 'd1',
+        day: 3,
+        eventId: 'event_comm',
+        eventTitle: 'Bilgilendirme',
+        decisionId: 'communicate',
+        decisionLabel: 'Halka bilgi ver',
+        appliedEffects: { publicSatisfaction: 2, budget: -500, staffMorale: 1 },
+        createdAt: new Date().toISOString(),
+      },
+    ],
+    activeEvents: [
+      {
+        id: 'event_comm',
+        title: 'Bilgilendirme',
+        category: 'communication',
+        riskLevel: 'low',
+        district: 'merkez',
+        description: 'standart bilgilendirme',
+        contextTag: 'test',
+        urgencyHours: 4,
+        decisions: [],
+        previewEffects: { publicSatisfaction: 0, risk: 0, xp: 0 },
+      } as never,
+    ],
+    metricsAfter: {
+      publicSatisfaction: 55,
+      staffMorale: 58,
+      budget: 80_000,
+    },
+    socialPulseStateAfter: { globalPulseScore: 55 } as never,
+    containerState: createInitialContainerState(3),
+    vehicleState: createInitialVehicleState(3),
+    authorityInput: {
+      day: 3,
+      mainEventResolved: true,
+      dailyGoalsCompletedCount: 1,
+      socialPulseBalanced: true,
+      budgetNotSeriouslyDamaged: true,
+      personnelMoraleMaintained: true,
+      criticalEventUnresolved: false,
+      budgetSeverelyDropped: false,
+      personnelMoraleSeverelyDropped: false,
+      socialCrisisGrew: false,
+    },
+    authorityNetGain: 12,
+  });
+  ok =
+    assert(
+      checks,
+      passiveSafeFlags.vehicleDayPositive === false &&
+        passiveSafeFlags.containerRiskControlled === false,
+      'passive safe day route_mind/container_watch progress artırmaz',
+      'Passive safe route/container hatalı',
+    ) && ok;
+
+  const mediumCrisisFlags = deriveBadgeEvaluationRuleFlags({
+    day: 2,
+    decisionHistory: [
+      {
+        id: 'd2',
+        day: 2,
+        eventId: 'event_medium',
+        eventTitle: 'Rutin olay',
+        decisionId: 'balanced',
+        decisionLabel: 'Dengeli müdahale',
+        appliedEffects: { publicSatisfaction: 3, budget: -1000, staffMorale: 1, risk: -2 },
+        createdAt: new Date().toISOString(),
+      },
+    ],
+    activeEvents: [],
+    eventPool: [
+      {
+        id: 'event_medium',
+        title: 'Rutin olay',
+        category: 'operations',
+        riskLevel: 'medium',
+        district: 'merkez',
+        description: 'normal operasyon',
+        contextTag: 'test',
+        urgencyHours: 4,
+        decisions: [],
+        previewEffects: { publicSatisfaction: 0, risk: 0, xp: 0 },
+      } as never,
+    ],
+    metricsAfter: {
+      publicSatisfaction: 55,
+      staffMorale: 58,
+      budget: 80_000,
+    },
+    authorityInput: {
+      day: 2,
+      mainEventResolved: true,
+      dailyGoalsCompletedCount: 1,
+    },
+  });
+  ok =
+    assert(
+      checks,
+      mediumCrisisFlags.criticalRiskClosedWithoutGrowth === false,
+      'normal non-critical event crisis_cooler kazandırmaz',
+      'Medium event crisis_cooler hatalı',
+    ) && ok;
+
+  const butterflySeedFlags = deriveBadgeEvaluationRuleFlags({
+    day: 4,
+    decisionHistory: [],
+    activeEvents: [],
+    metricsAfter: {
+      publicSatisfaction: 55,
+      staffMorale: 58,
+      budget: 80_000,
+    },
+    butterflyHookState: {
+      hooks: [
+        {
+          id: 'seed-hook',
+          source: 'event_content',
+          kind: 'risk_signal',
+          status: 'resolved',
+          createdDay: 4,
+          dueDay: 6,
+          expiresDay: 7,
+          severity: 'low',
+          title: 'Butterfly seed',
+          description: 'seed',
+          triggerTag: 'seed',
+          createdAt: Date.now(),
+        },
+      ],
+      lastProcessedDay: 4,
+    },
+    authorityInput: { day: 4, mainEventResolved: true },
+  });
+  ok =
+    assert(
+      checks,
+      butterflySeedFlags.butterflyFollowUpWellManaged === false,
+      'butterfly seed tek başına butterfly_handler kazandırmaz',
+      'Butterfly seed handler hatalı',
+    ) && ok;
+
+  ok =
+    assert(
+      checks,
+      !promotedEval.badgeState.earnedBadgeIds.includes('authority_candidate'),
+      'promoted_operator yalnızca promoted evaluation ile kazanılır',
+      'Promoted/candidate çakışması hatalı',
+    ) && ok;
+
+  ok =
+    assert(
+      checks,
+      !candidateEval.badgeState.earnedBadgeIds.includes('promoted_operator'),
+      'authority_candidate yalnızca promotion_candidate ile kazanılır',
+      'Candidate/promoted çakışması hatalı',
+    ) && ok;
+
+  const averagePilotBadgeCount = evaluateAveragePilotBadgeCount();
+  ok =
+    assert(
+      checks,
+      averagePilotBadgeCount >= 4 && averagePilotBadgeCount <= 8,
+      `average_pilot simülasyonu 4-8 rozet bandında (${averagePilotBadgeCount})`,
+      `average_pilot rozet sayısı band dışı: ${averagePilotBadgeCount}`,
     ) && ok;
 
   return { ok, checks };

@@ -14,52 +14,56 @@ type Props = {
 };
 
 export function EndOfDayReportXpCard({ totalXp, subtitle, breakdown }: Props) {
-  const hasXp = totalXp > 0;
+  const hasPoints = totalXp > 0;
 
   return (
-    <View style={[styles.card, shadows.card]}>
+    <View style={[styles.card, shadows.soft]}>
       <View style={styles.top}>
         <View style={styles.copy}>
           <View style={styles.iconCircle}>
-            <Ionicons name="star" size={16} color={colors.hubGoldDark} />
+            <Ionicons name="star" size={14} color={colors.hubGoldDark} />
           </View>
-          <Text style={styles.heading}>Bugünkü XP</Text>
-          {hasXp ? (
+          <Text style={styles.heading} numberOfLines={1}>
+            Operasyon Puanı
+          </Text>
+          {hasPoints ? (
             <>
-              <Text style={styles.total}>+{totalXp.toLocaleString('tr-TR')} XP</Text>
-              <Text style={styles.subtitle}>{subtitle}</Text>
+              <Text style={styles.total} numberOfLines={1}>
+                +{totalXp.toLocaleString('tr-TR')} puan
+              </Text>
+              <Text style={styles.subtitle} numberOfLines={2}>
+                {subtitle}
+              </Text>
             </>
           ) : (
-            <Text style={styles.empty}>Bugün XP kazanılmadı</Text>
+            <Text style={styles.empty} numberOfLines={1}>
+              Bugün puan kazanılmadı
+            </Text>
           )}
         </View>
         <View style={styles.trophy}>
-          <Ionicons name="ribbon" size={36} color={colors.hubGold} />
-          <Text style={styles.trophyXp}>XP</Text>
+          <Ionicons name="ribbon" size={28} color={colors.hubGold} />
         </View>
       </View>
 
       {breakdown.length > 0 ? (
-        <>
-          <View style={styles.divider} />
-          <View style={styles.breakdown}>
-            {breakdown.map((item) => (
-              <View key={item.label} style={styles.breakdownItem}>
-                <Ionicons
-                  name={item.icon as keyof typeof Ionicons.glyphMap}
-                  size={14}
-                  color={colors.textSecondary}
-                />
-                <Text style={styles.breakdownLabel} numberOfLines={1}>
-                  {item.label}
-                </Text>
-                <Text style={styles.breakdownAmount}>
-                  +{item.amount.toLocaleString('tr-TR')} XP
-                </Text>
-              </View>
-            ))}
-          </View>
-        </>
+        <View style={styles.breakdown}>
+          {breakdown.map((item) => (
+            <View key={item.label} style={styles.breakdownItem}>
+              <Ionicons
+                name={item.icon as keyof typeof Ionicons.glyphMap}
+                size={12}
+                color={colors.textSecondary}
+              />
+              <Text style={styles.breakdownLabel} numberOfLines={1}>
+                {item.label}
+              </Text>
+              <Text style={styles.breakdownAmount} numberOfLines={1}>
+                +{item.amount.toLocaleString('tr-TR')}
+              </Text>
+            </View>
+          ))}
+        </View>
       ) : null}
     </View>
   );
@@ -68,93 +72,89 @@ export function EndOfDayReportXpCard({ totalXp, subtitle, breakdown }: Props) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.md,
+    padding: spacing.md,
+    gap: spacing.sm,
   },
   top: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   copy: {
     flex: 1,
-    gap: 4,
+    minWidth: 0,
+    gap: 2,
   },
   iconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: colors.warningMuted,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 2,
   },
   heading: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
     color: colors.textSecondary,
   },
   total: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '800',
-    color: '#F39C12',
+    color: colors.hubGoldDark,
     letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 11,
+    lineHeight: 16,
     color: colors.textSecondary,
     fontWeight: '500',
   },
   empty: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textSecondary,
-    marginTop: spacing.xs,
+    marginTop: 2,
   },
   trophy: {
-    width: 72,
-    height: 72,
-    borderRadius: radius.lg,
+    width: 52,
+    height: 52,
+    borderRadius: radius.md,
     backgroundColor: colors.hubGoldMuted,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.hubGoldTrack,
-  },
-  trophyXp: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.hubGoldDark,
-    marginTop: -4,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
+    flexShrink: 0,
   },
   breakdown: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
   },
   breakdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     width: '48%',
-    minWidth: 140,
+    minWidth: 0,
   },
   breakdownLabel: {
     flex: 1,
-    fontSize: 11,
+    minWidth: 0,
+    fontSize: 10,
     fontWeight: '600',
     color: colors.textPrimary,
   },
   breakdownAmount: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '800',
     color: colors.primary,
   },
 });

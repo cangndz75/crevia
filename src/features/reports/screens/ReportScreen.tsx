@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { buildDay1TutorialPriorityLine } from '@/core/dailyPriority/dailyPriorityPresentation';
+import { MAIN_OPERATION_PREVIEW_ROUTE } from '@/core/pilotCompletion';
 import { buildDailyXpReport } from '@/core/xp/xpReport';
 import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
 import { EndOfDayReportView } from '@/features/reports/components/end-of-day/EndOfDayReportView';
@@ -103,6 +104,19 @@ export function ReportScreen() {
       ? 'İlk gün hedeflerini tanı; yarın tam takip başlar.'
       : undefined;
 
+  const continueTitle =
+    displayReport.day === 7 && pilotCompletionSummary
+      ? 'Ana Operasyona Göz At'
+      : 'Operasyon Merkezine Dön';
+
+  const onContinue = () => {
+    if (displayReport.day === 7 && pilotCompletionSummary) {
+      router.push(MAIN_OPERATION_PREVIEW_ROUTE);
+      return;
+    }
+    onGoHub();
+  };
+
   return (
     <GameScreenShell screenTitle="Raporlar" contentStyle={styles.content}>
       <View style={styles.stack}>
@@ -118,8 +132,8 @@ export function ReportScreen() {
       </View>
 
       <GameButton
-        title="Operasyon Merkezine Dön"
-        onPress={onGoHub}
+        title={continueTitle}
+        onPress={onContinue}
         style={styles.primaryAction}
       />
       <TutorialCoachOverlay screen="daily_report" />
@@ -145,6 +159,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   primaryAction: {
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
+    backgroundColor: colors.headerTealDark,
   },
 });

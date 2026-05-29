@@ -1718,6 +1718,7 @@ export const useGameStore = create<GameStore>()(
           day: closingDay,
           decisionHistory: current.decisionHistory,
           activeEvents: current.gameState.events,
+          eventPool: current.eventPool,
           dailyEventSet: current.gameState.pilot.dailyEventSet,
           dailyGoalState: closingGoalState,
           metricsBefore,
@@ -1727,6 +1728,8 @@ export const useGameStore = create<GameStore>()(
           butterflyHookState: closingHookState,
           containerState: containerStateAfterNight,
           vehicleState: vehicleStateAfterNight,
+          personnelState: personnelStateAfterNight,
+          hubQuickActionState: current.hubQuickActionState,
           authorityDailyGain,
         });
         const badgeEvaluationResult = processDailyBadgeEvaluation({

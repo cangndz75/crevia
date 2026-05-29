@@ -11,12 +11,14 @@ import { spacing } from '@/ui/theme/spacing';
 const HERO_GRADIENT = ['#00665C', '#0A7A6E', '#1A8F8A'] as const;
 
 type Props = {
+  day: number;
+  statusTitle: string;
   successScore: number;
   subtitle: string;
 };
 
-function SuccessRing({ score, size = 88 }: { score: number; size?: number }) {
-  const strokeWidth = 7;
+function SuccessRing({ score, size = 80 }: { score: number; size?: number }) {
+  const strokeWidth = 6;
   const r = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * r;
   const offset = circumference * (1 - Math.min(100, Math.max(0, score)) / 100);
@@ -45,53 +47,49 @@ function SuccessRing({ score, size = 88 }: { score: number; size?: number }) {
           rotation={-90}
           origin={`${size / 2}, ${size / 2}`}
         />
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke="#7FD4A8"
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeDasharray={`${circumference * 0.35} ${circumference}`}
-          strokeDashoffset={offset * 0.6}
-          strokeLinecap="round"
-          rotation={-90}
-          origin={`${size / 2}, ${size / 2}`}
-          opacity={0.85}
-        />
       </Svg>
       <View style={ringStyles.center}>
         <Text style={ringStyles.score}>{score}</Text>
-        <Text style={ringStyles.label}>Başarı</Text>
+        <Text style={ringStyles.label}>Skor</Text>
       </View>
     </View>
   );
 }
 
-export function EndOfDayReportHero({ successScore, subtitle }: Props) {
+export function EndOfDayReportHero({
+  day,
+  statusTitle,
+  successScore,
+  subtitle,
+}: Props) {
   return (
     <LinearGradient
       colors={[...HERO_GRADIENT]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[styles.card, shadows.card]}>
-      <View style={styles.sparkles} pointerEvents="none">
-        <Ionicons name="sparkles" size={18} color="rgba(255,255,255,0.35)" />
-        <Ionicons
-          name="star"
-          size={12}
-          color="rgba(255,255,255,0.25)"
-          style={styles.sparkleSmall}
-        />
+      <View style={styles.topRow}>
+        <View style={styles.dayPill}>
+          <Text style={styles.dayPillText} numberOfLines={1}>
+            Gün {day}
+          </Text>
+        </View>
+        <View style={styles.statusPill}>
+          <Ionicons name="sparkles" size={12} color={colors.hubGoldDark} />
+          <Text style={styles.statusPillText} numberOfLines={1}>
+            {statusTitle}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.body}>
         <View style={styles.copy}>
-          <View style={styles.badge}>
-            <Ionicons name="shield" size={20} color={colors.hubGoldDark} />
-          </View>
-          <Text style={styles.title}>Gün Sonu Değerlendirmesi</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
+          <Text style={styles.title} numberOfLines={2}>
+            Gün Sonu Değerlendirmesi
+          </Text>
+          <Text style={styles.subtitle} numberOfLines={3}>
+            {subtitle}
+          </Text>
         </View>
         <SuccessRing score={successScore} />
       </View>
@@ -103,6 +101,7 @@ const ringStyles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   center: {
     position: 'absolute',
@@ -110,13 +109,13 @@ const ringStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   score: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
     color: colors.textInverse,
     letterSpacing: -0.5,
   },
   label: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: 'rgba(255,255,255,0.88)',
     marginTop: -2,
@@ -128,17 +127,44 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     padding: spacing.lg,
     overflow: 'hidden',
+    gap: spacing.md,
   },
-  sparkles: {
-    position: 'absolute',
-    top: spacing.md,
-    right: spacing.md,
+  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
-  sparkleSmall: {
-    marginTop: -8,
+  dayPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  dayPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.textInverse,
+    letterSpacing: 0.2,
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    backgroundColor: colors.hubGoldMuted,
+    maxWidth: '58%',
+    flexShrink: 1,
+  },
+  statusPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.hubGoldDark,
+    flexShrink: 1,
   },
   body: {
     flexDirection: 'row',
@@ -147,28 +173,19 @@ const styles = StyleSheet.create({
   },
   copy: {
     flex: 1,
-    gap: spacing.sm,
-    paddingRight: spacing.xs,
-  },
-  badge: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.hubGoldMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: [{ rotate: '15deg' }],
+    minWidth: 0,
+    gap: spacing.xs,
   },
   title: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '800',
     color: colors.textInverse,
-    lineHeight: 26,
+    lineHeight: 24,
   },
   subtitle: {
     fontSize: 13,
     lineHeight: 19,
-    color: 'rgba(255,255,255,0.88)',
+    color: 'rgba(255,255,255,0.9)',
     fontWeight: '500',
   },
 });

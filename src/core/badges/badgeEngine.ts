@@ -83,7 +83,12 @@ export function evaluateDailyBadges(
 ): BadgeEvaluationResult {
   const { day, badgeState } = input;
   const updates: BadgeProgressUpdate[] = [
-    updateOneShotProgress(badgeState, 'first_step', true, day),
+    updateOneShotProgress(
+      badgeState,
+      'first_step',
+      input.dailyOperationCompleted === true,
+      day,
+    ),
     updateStreakProgress(
       badgeState,
       'steady_operator',

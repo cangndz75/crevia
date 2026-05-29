@@ -1,4 +1,5 @@
 import type { GameStore } from '@/store/useGameStore';
+import { buildDay1AuthoritySummaryLines } from '@/core/authority/authorityPresentation';
 
 import {
   DAY1_TUTORIAL_STEPS,
@@ -160,6 +161,9 @@ export function applyDay1TutorialReportCopy(
     vehicleSummaryLines: undefined,
     socialSummaryLines: undefined,
     quickActionSummaryLines: undefined,
+    badgeEvaluation: undefined,
+    badgeSummaryLines: undefined,
+    authoritySummaryLines: buildDay1AuthoritySummaryLines(),
     dailyGoalResults: [
       {
         title: 'İlk gün hedefi',

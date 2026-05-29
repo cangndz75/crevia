@@ -88,6 +88,8 @@ export type BadgeEvaluationSnapshot = {
 export type EvaluateDailyBadgesInput = {
   day: number;
   badgeState: BadgeState;
+  /** İlk günlük operasyon tamamlandı — first_step için. */
+  dailyOperationCompleted?: boolean;
   positiveOperationDay?: boolean;
   socialPulseBalanced?: boolean;
   budgetNotSeriouslyDamaged?: boolean;

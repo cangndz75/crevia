@@ -33,14 +33,22 @@ import { EventDecisionList } from '@/features/events/components/EventDecisionLis
 import { QuickDecisionActions } from '@/features/events/components/QuickDecisionActions';
 import { EventInspectPhase } from '@/features/events/components/event-workflow/EventInspectPhase';
 import { EventPlanPhase } from '@/features/events/components/event-workflow/EventPlanPhase';
+import { EventDispatchPhase } from '@/features/events/components/event-workflow/dispatch/EventDispatchPhase';
+import { EventFieldPhase } from '@/features/events/components/event-workflow/field/EventFieldPhase';
 import { EventWorkflowStepper } from '@/features/events/components/event-workflow/EventWorkflowStepper';
 import { StickyActionButton } from '@/features/events/components/StickyActionButton';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import { PLAN_WORKFLOW_FOOTER_EXTRA } from '@/features/events/utils/eventWorkflowPlanPresentation';
 import {
+  DISPATCH_WORKFLOW_FOOTER_EXTRA,
+  FIELD_WORKFLOW_FOOTER_EXTRA,
+} from '@/features/events/utils/eventWorkflowDispatchFieldPresentation';
+import {
   EVENT_WORKFLOW_FOOTER_EXTRA,
   type OperationWorkflowStepId,
 } from '@/features/events/utils/eventWorkflowPresentation';
+import { selectPersonnelImpactPreviewForDecision } from '@/core/personnel/personnelPresentation';
+import { selectVehicleImpactPreviewForDecision } from '@/core/vehicles/vehiclePresentation';
 import { isContainerRelevantEvent } from '@/core/containers/containerDecisionEffects';
 import { selectEventContainerContext } from '@/core/containers/containerSelectors';
 import { mergeAdvisorWithContainerLine } from '@/core/containers/containerUiHelpers';
@@ -79,6 +87,7 @@ import {
   useGameStore,
   selectContainerState,
   selectPersonnelState,
+  selectVehicleStateFromStore,
 } from '@/store/useGameStore';
 import { GameButton } from '@/ui/components/GameButton';
 import { colors } from '@/ui/theme/colors';
@@ -108,7 +117,25 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
   const isDay1Tutorial = useGameStore(selectIsDay1TutorialActive);
   const dailyEventSet = useGameStore((s) => s.gameState.pilot.dailyEventSet);
   const containerState = useGameStore(selectContainerState);
+  const vehicleState = useGameStore(selectVehicleStateFromStore);
   const dailyPriorityKey = useGameStore((s) => s.dailyPriorityState?.selectedKey);
+  const fieldDuty = useGameStore((s) => {
+    const day = s.gameState.city.day;
+    const hub = s.hubQuickActionState;
+    return hub.day === day ? hub.fieldDuty : undefined;
+  });
+  const routePreparation = useGameStore((s) => {
+    const day = s.gameState.city.day;
+    const hub = s.hubQuickActionState;
+    return hub.day === day ? hub.routePreparation : undefined;
+  });
+  const neighborhoodPatrol = useGameStore((s) => {
+    const day = s.gameState.city.day;
+    const hub = s.hubQuickActionState;
+    return hub.day === day ? hub.neighborhoodPatrol : undefined;
+  });
+  const neighborhoods = useGameStore((s) => s.neighborhoods);
+  const resources = useGameStore((s) => s.resources);
 
   const [applying, setApplying] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
@@ -175,6 +202,69 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
     );
   }, [economyState, event]);
 
+  const selectedDecisionAffordability = effectiveSelectedId
+    ? decisionAffordability[effectiveSelectedId]
+    : undefined;
+  const selectedPreviewInsufficient =
+    selectedDecisionAffordability != null &&
+    selectedDecisionAffordability.cost > 0 &&
+    !selectedDecisionAffordability.canAfford;
+
+  const fieldPersonnelPreview = useMemo(() => {
+    if (!event || !selectedDecision || selectedPreviewInsufficient) return null;
+    return selectPersonnelImpactPreviewForDecision(
+      event,
+      selectedDecision,
+      personnelState,
+      currentDay,
+      { neighborhoods, resources, fieldDuty, neighborhoodPatrol },
+    );
+  }, [
+    currentDay,
+    event,
+    fieldDuty,
+    neighborhoodPatrol,
+    neighborhoods,
+    personnelState,
+    resources,
+    selectedDecision,
+    selectedPreviewInsufficient,
+  ]);
+
+  const fieldVehiclePreview = useMemo(() => {
+    if (!event || !selectedDecision || selectedPreviewInsufficient) return null;
+    return selectVehicleImpactPreviewForDecision({
+      vehicleState,
+      event: {
+        id: event.id,
+        eventType: event.eventType,
+        title: event.title,
+        description: event.description,
+        category: event.category,
+        neighborhoodId: event.neighborhoodId,
+        districtIds: event.districtIds,
+        tags: event.filterTags,
+      },
+      decision: {
+        id: selectedDecision.id,
+        title: selectedDecision.title,
+        description: selectedDecision.description,
+        style: selectedDecision.style,
+        decisionStyle: selectedDecision.decisionStyle,
+        costs: selectedDecision.costs,
+      },
+      day: currentDay,
+      routePreparation,
+    });
+  }, [
+    currentDay,
+    event,
+    routePreparation,
+    selectedDecision,
+    selectedPreviewInsufficient,
+    vehicleState,
+  ]);
+
   const timelineStatus = useMemo(() => {
     const gameStatus = dailyEventSet?.eventStatuses?.[eventId] ?? null;
     return resolveEventTimelineStatus(eventId, gameStatus);
@@ -183,6 +273,8 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
   const useOperationWorkflow = timelineStatus === 'review';
   const showInspectPhase = useOperationWorkflow && operationStep === 'inspect';
   const showPlanPhase = useOperationWorkflow && operationStep === 'plan';
+  const showDispatchPhase = useOperationWorkflow && operationStep === 'assign';
+  const showFieldPhase = useOperationWorkflow && operationStep === 'field';
 
   const bottomPadding = useMemo(() => {
     const safe = Math.max(insets.bottom, 12);
@@ -197,8 +289,20 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
     if (showPlanPhase) {
       return eventDetail.ctaHeight + PLAN_WORKFLOW_FOOTER_EXTRA + safe + 24;
     }
+    if (showDispatchPhase) {
+      return eventDetail.ctaHeight + DISPATCH_WORKFLOW_FOOTER_EXTRA + safe + 24;
+    }
+    if (showFieldPhase) {
+      return eventDetail.ctaHeight + FIELD_WORKFLOW_FOOTER_EXTRA + safe + 24;
+    }
     return eventDetail.ctaHeight + safe + 34;
-  }, [insets.bottom, showInspectPhase, showPlanPhase]);
+  }, [
+    insets.bottom,
+    showDispatchPhase,
+    showFieldPhase,
+    showInspectPhase,
+    showPlanPhase,
+  ]);
 
   const fieldNoteBody = useMemo(() => {
     if (!event) return '';
@@ -374,13 +478,32 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
 
   const handleApplyPress = useCallback(() => {
     if (!effectiveSelectedId) {
-      Alert.alert('Karar seç', 'Devam etmek için bir hızlı işlem seç.', [
+      Alert.alert('Karar seç', 'Devam etmek için bir kaynak seç.', [
         { text: 'Tamam' },
       ]);
       return;
     }
     applySelectedDecision();
   }, [applySelectedDecision, effectiveSelectedId]);
+
+  const handleDispatchPress = useCallback(() => {
+    if (!effectiveSelectedId) {
+      Alert.alert('Kaynak seç', 'Sahaya yönlendirmek için bir karar seç.', [
+        { text: 'Tamam' },
+      ]);
+      return;
+    }
+    const affordability = decisionAffordability[effectiveSelectedId];
+    if (affordability && !affordability.canAfford) {
+      showInsufficientSourceAlert(affordability);
+      return;
+    }
+    setOperationStep('field');
+  }, [
+    decisionAffordability,
+    effectiveSelectedId,
+    showInsufficientSourceAlert,
+  ]);
 
   if (!event) {
     return (
@@ -475,6 +598,65 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           bottomOffset={
             eventDetail.ctaHeight +
             PLAN_WORKFLOW_FOOTER_EXTRA +
+            Math.max(insets.bottom, 12)
+          }
+        />
+      </View>
+    );
+  }
+
+  if (showDispatchPhase) {
+    return (
+      <View style={styles.root}>
+        <EventHeader />
+        <EventDispatchPhase
+          event={event}
+          bottomPadding={bottomPadding}
+          quickActions={quickActions}
+          fieldResources={fieldResources}
+          selectedDecisionId={effectiveSelectedId}
+          selectedDecisionTitle={selectedDecision?.title}
+          onSelectDecision={setSelectedDecisionId}
+          affordabilityByDecisionId={decisionAffordability}
+          onDispatch={handleDispatchPress}
+          dispatchDisabled={!effectiveSelectedId}
+          decisionCardHint={decisionCardHint}
+          onDismissHint={(id) => dismissHint(id)}
+          resourcesHighlighted={resourcesHighlight}
+          decisionsHighlighted={decisionsHighlight}
+        />
+        <TutorialCoachOverlay
+          screen="event_detail"
+          bottomOffset={
+            eventDetail.ctaHeight +
+            DISPATCH_WORKFLOW_FOOTER_EXTRA +
+            Math.max(insets.bottom, 12)
+          }
+        />
+      </View>
+    );
+  }
+
+  if (showFieldPhase) {
+    return (
+      <View style={styles.root}>
+        <EventHeader />
+        <EventFieldPhase
+          event={event}
+          decision={selectedDecision}
+          fieldNote={fieldNoteBody}
+          bottomPadding={bottomPadding}
+          personnelPreview={fieldPersonnelPreview}
+          vehiclePreview={fieldVehiclePreview}
+          onComplete={handleApplyPress}
+          completeDisabled={!effectiveSelectedId || applying}
+          applying={applying}
+        />
+        <TutorialCoachOverlay
+          screen="event_detail"
+          bottomOffset={
+            eventDetail.ctaHeight +
+            FIELD_WORKFLOW_FOOTER_EXTRA +
             Math.max(insets.bottom, 12)
           }
         />

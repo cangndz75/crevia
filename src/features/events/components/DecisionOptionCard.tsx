@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
   },
   cardQuick: {
-    maxHeight: 156,
+    maxHeight: 148,
     overflow: 'hidden',
   },
   cardSelected: {
@@ -449,6 +449,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.xs,
+    minWidth: 0,
   },
   title: {
     flex: 1,
@@ -498,11 +499,11 @@ const styles = StyleSheet.create({
   authorityPreviewRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 6,
+    gap: 5,
     borderRadius: radius.sm,
     borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
     marginTop: 1,
   },
   authorityPreviewActive: {
@@ -519,6 +520,8 @@ const styles = StyleSheet.create({
   },
   authorityPreviewTextWrap: {
     flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
     gap: 1,
   },
   authorityPreviewTitle: {

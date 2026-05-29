@@ -12,7 +12,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   {
     id: 'steady_operator',
     title: 'İstikrarlı Operatör',
-    description: '3 günü üst üste pozitif operasyon sonucu ile kapat.',
+    description: '3 gün üst üste belirgin pozitif operasyon sonucu ile kapat.',
     category: 'consistency',
     rarity: 'uncommon',
     target: 3,
@@ -20,7 +20,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   {
     id: 'public_listener',
     title: 'Halkın Sesi',
-    description: 'Sosyal nabzı dengede tutan 3 günlük sonuç üret.',
+    description: 'Sosyal nabzı dengede tutan 3 anlamlı gün sonu üret.',
     category: 'publicTrust',
     rarity: 'uncommon',
     target: 3,
@@ -44,7 +44,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   {
     id: 'crisis_cooler',
     title: 'Kriz Soğutucu',
-    description: 'Kritik bir olayı büyümeden kapat.',
+    description: 'Kritik veya yüksek riskli bir olayı büyümeden kapat.',
     category: 'crisis',
     rarity: 'rare',
     target: 1,
@@ -52,7 +52,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   {
     id: 'route_mind',
     title: 'Rota Aklı',
-    description: 'Araç veya rota etkisi olumlu olan 3 karar günü tamamla.',
+    description: 'Rota/araç kararıyla olumlu etki üreten 3 gün tamamla.',
     category: 'operations',
     rarity: 'uncommon',
     target: 3,
@@ -60,7 +60,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   {
     id: 'container_watch',
     title: 'Konteyner Nöbetçisi',
-    description: 'Konteyner riskini kontrol altında tutan 3 günlük sonuç üret.',
+    description: 'Konteyner müdahalesiyle riski kontrol altında tutan 3 gün tamamla.',
     category: 'operations',
     rarity: 'uncommon',
     target: 3,

@@ -1,8 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { GameCard } from '@/ui/components/GameCard';
 import { colors } from '@/ui/theme/colors';
+import { radius } from '@/ui/theme/radius';
 import { spacing } from '@/ui/theme/spacing';
 import { typography } from '@/ui/theme/typography';
 
@@ -19,48 +19,87 @@ export function ReportAuthoritySummary({
     return null;
   }
 
-  const visibleLines = compact ? lines.slice(0, 2) : lines.slice(0, 3);
+  const visibleLines = lines.slice(0, 2);
 
   return (
-    <GameCard padding="lg" style={styles.card}>
+    <View style={[styles.card, compact && styles.cardCompact]}>
       <View style={styles.header}>
-        <Ionicons name="ribbon-outline" size={18} color={colors.secondary} />
-        <Text style={typography.label}>Yetki Güveni</Text>
+        <View style={styles.iconWrap}>
+          <Ionicons name="ribbon-outline" size={16} color={colors.secondary} />
+        </View>
+        <View style={styles.headerCopy}>
+          <Text style={styles.title} numberOfLines={1}>
+            Yetki Güveni
+          </Text>
+          {!compact ? (
+            <Text style={styles.hint} numberOfLines={1}>
+              Resmi unvan günlük değişmez
+            </Text>
+          ) : null}
+        </View>
       </View>
-      {!compact ? (
-        <Text style={styles.hint}>Resmi unvan günlük değişmez</Text>
-      ) : null}
       <View style={styles.lines}>
         {visibleLines.map((line, index) => (
-          <Text key={`authority-${index}`} style={styles.line}>
-            • {line}
+          <Text key={`authority-${index}`} style={styles.line} numberOfLines={2}>
+            {line}
           </Text>
         ))}
       </View>
-    </GameCard>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(91,143,212,0.22)',
+    borderLeftWidth: 3,
+    borderLeftColor: colors.secondary,
+    padding: spacing.md,
     gap: spacing.sm,
+  },
+  cardCompact: {
+    padding: spacing.sm,
+    gap: 6,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    minWidth: 0,
+  },
+  iconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.secondaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  headerCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
+  },
+  title: {
+    ...typography.label,
+    fontSize: 13,
+    color: colors.textPrimary,
   },
   hint: {
     ...typography.caption,
     color: colors.textSecondary,
   },
   lines: {
-    gap: spacing.sm,
-    marginTop: spacing.xs,
+    gap: 4,
   },
   line: {
-    ...typography.body,
-    lineHeight: 21,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
     color: colors.textPrimary,
   },
 });

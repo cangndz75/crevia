@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCallback, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { ContainerState } from '@/core/containers/containerTypes';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
@@ -38,6 +38,7 @@ type Props = {
   vehicleState?: VehicleState;
   hideContainerSignals?: boolean;
   hideVehicleSignals?: boolean;
+  selectedPinId?: string | null;
   onLayersPress: () => void;
   onDistrictSelect: (districtId: MapDistrictId) => void;
   onBackToOverview: () => void;
@@ -57,6 +58,7 @@ export function CityMapCard({
   vehicleState,
   hideContainerSignals = false,
   hideVehicleSignals = false,
+  selectedPinId = null,
   onLayersPress,
   onDistrictSelect,
   onBackToOverview,
@@ -134,6 +136,7 @@ export function CityMapCard({
             containerState={containerState}
             vehicleState={vehicleState}
             hideVehicleSignals={hideVehicleSignals}
+            selectedPinId={selectedPinId}
             onPinPress={onPinPress}
           />
         ) : (
@@ -150,6 +153,7 @@ export function CityMapCard({
             vehicleState={vehicleState}
             hideContainerSignals={hideContainerSignals}
             hideVehicleSignals={hideVehicleSignals}
+            selectedPinId={selectedPinId}
             onDistrictPress={handleDistrictPress}
             onPinPress={onPinPress}
           />
@@ -189,6 +193,11 @@ export function CityMapCard({
     </View>
   );
 }
+
+const MAP_HEIGHT = Math.min(
+  380,
+  Math.max(260, Math.round(Dimensions.get('window').height * 0.34)),
+);
 
 const styles = StyleSheet.create({
   card: {
@@ -247,7 +256,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   mapArea: {
-    height: 300,
+    height: MAP_HEIGHT,
     position: 'relative',
     overflow: 'hidden',
     backgroundColor: '#E8E4DA',

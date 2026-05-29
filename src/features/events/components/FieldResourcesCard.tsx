@@ -9,6 +9,7 @@ import { shadows } from '@/ui/theme/shadows';
 type FieldResourcesCardProps = {
   rows: FieldResourceRow[];
   onViewAll?: () => void;
+  compact?: boolean;
 };
 
 function loadColor(tone: FieldResourceRow['loadTone']): string {
@@ -52,12 +53,12 @@ function LoadIndicator({ percent, tone }: { percent: number; tone: FieldResource
   );
 }
 
-export function FieldResourcesCard({ rows, onViewAll }: FieldResourcesCardProps) {
+export function FieldResourcesCard({ rows, onViewAll, compact = false }: FieldResourcesCardProps) {
   return (
     <View style={[styles.outer, shadows.card]}>
       <LinearGradient
         colors={[eventDetail.tealDark, '#0A5A54', eventDetail.teal]}
-        style={styles.gradient}>
+        style={[styles.gradient, compact && styles.gradientCompact]}>
         <View style={styles.decor}>
           <View style={[styles.decorBar, { height: 48 }]} />
           <View style={[styles.decorBar, { height: 32 }]} />
@@ -65,18 +66,22 @@ export function FieldResourcesCard({ rows, onViewAll }: FieldResourcesCardProps)
         </View>
 
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>SAHA KAYNAKLARI: AKTİF</Text>
-          <Pressable onPress={onViewAll} hitSlop={8}>
-            <Text style={styles.viewAll}>Tümünü Gör →</Text>
-          </Pressable>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {compact ? 'Saha kaynakları' : 'SAHA KAYNAKLARI: AKTİF'}
+          </Text>
+          {!compact && onViewAll ? (
+            <Pressable onPress={onViewAll} hitSlop={8}>
+              <Text style={styles.viewAll}>Tümünü Gör →</Text>
+            </Pressable>
+          ) : null}
         </View>
 
         {rows.map((row, index) => (
           <View key={row.id}>
             {index > 0 ? <View style={styles.separator} /> : null}
-            <Pressable style={styles.row}>
-              <View style={styles.iconBox}>
-                <Ionicons name={rowIcon(row.icon)} size={18} color="#FFFFFF" />
+            <Pressable style={[styles.row, compact && styles.rowCompact]}>
+              <View style={[styles.iconBox, compact && styles.iconBoxCompact]}>
+                <Ionicons name={rowIcon(row.icon)} size={compact ? 16 : 18} color="#FFFFFF" />
               </View>
               <View style={styles.mid}>
                 <Text style={styles.name} numberOfLines={1}>
@@ -138,6 +143,10 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingTop: 14,
   },
+  gradientCompact: {
+    padding: 12,
+    paddingTop: 10,
+  },
   decor: {
     position: 'absolute',
     right: 12,
@@ -181,6 +190,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  rowCompact: {
+    gap: 8,
+  },
   iconBox: {
     width: 40,
     height: 40,
@@ -188,6 +200,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.14)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconBoxCompact: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
   },
   mid: {
     flex: 1,

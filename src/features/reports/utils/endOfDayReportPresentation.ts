@@ -1,3 +1,4 @@
+import { formatSourceWithLabel } from '@/core/economy/economyFormatter';
 import type { DailyReport } from '@/core/models/DailyReport';
 import type { GameMetrics } from '@/core/models/GameMetrics';
 import type { DailyXpReport } from '@/core/xp/xpReport';
@@ -26,6 +27,20 @@ export type EndOfDayMetricCardModel = {
   showChevron?: boolean;
 };
 
+export type EndOfDayImpactMetric = {
+  key: string;
+  label: string;
+  value: string;
+  tone: 'teal' | 'mint' | 'gold' | 'warn';
+};
+
+export type EndOfDaySystemSummarySection = {
+  key: string;
+  title: string;
+  icon: string;
+  lines: string[];
+};
+
 export type EndOfDayXpBreakdownItem = {
   icon: string;
   label: string;
@@ -33,10 +48,19 @@ export type EndOfDayXpBreakdownItem = {
 };
 
 export type EndOfDayReportViewModel = {
+  day: number;
+  isDay1: boolean;
+  isDay7: boolean;
   successScore: number;
+  statusTitle: string;
   heroSubtitle: string;
+  impactMetrics: EndOfDayImpactMetric[];
   metricCards: EndOfDayMetricCardModel[];
+  systemSections: EndOfDaySystemSummarySection[];
   tomorrowNotes: string[];
+  showXpCard: boolean;
+  showSystemSummaries: boolean;
+  showTomorrowNotes: boolean;
   xpTotal: number;
   xpSubtitle: string;
   xpBreakdown: EndOfDayXpBreakdownItem[];
@@ -52,6 +76,17 @@ const XP_ICON_BY_CATEGORY: Record<XpCategory | 'other', string> = {
   tutorial: 'school',
   other: 'star',
 };
+
+export const REPORT_UI_BANNED_WORDS = [
+  'xp',
+  'level up',
+  'rank up',
+  'kilitli',
+  'premium',
+  'satın al',
+  'yetkin yetersiz',
+  'paywall',
+] as const;
 
 function clampPercent(value: number): number {
   return Math.round(Math.min(100, Math.max(0, value)));
@@ -79,9 +114,16 @@ export function computeEndOfDaySuccessScore(
   return clampPercent(raw);
 }
 
+export function buildEndOfDayStatusTitle(successScore: number): string {
+  if (successScore >= 82) return 'Güçlü Gün';
+  if (successScore >= 65) return 'Dengeli Gün';
+  if (successScore >= 45) return 'Zorlu Gün';
+  return 'Baskılı Gün';
+}
+
 export function buildEndOfDayHeroSubtitle(successScore: number): string {
   if (successScore >= 82) {
-    return 'Bugün sahada harika bir iş çıkardın! Ekip uyumu ve kaynak verimliliğin yüksek.';
+    return 'Bugün sahada güçlü bir sonuç çıkardın. Ekip uyumu ve kaynak verimliliğin yüksek.';
   }
   if (successScore >= 65) {
     return 'Bugün dengeli bir operasyon yürüttün. Birkaç kritik noktaya dikkat et.';
@@ -90,6 +132,68 @@ export function buildEndOfDayHeroSubtitle(successScore: number): string {
     return 'Gün zorlu geçti; yarın öncelikleri netleştirerek toparlayabilirsin.';
   }
   return 'Saha baskısı yüksekti. Yarın kaynak ve ekip dengesine öncelik ver.';
+}
+
+export function buildEndOfDayImpactMetrics(
+  metrics: GameMetrics,
+): EndOfDayImpactMetric[] {
+  const budgetTone: EndOfDayImpactMetric['tone'] =
+    metrics.budget < 50_000 ? 'warn' : 'gold';
+
+  return [
+    {
+      key: 'public',
+      label: 'Halk',
+      value: `%${metrics.publicSatisfaction}`,
+      tone: 'teal',
+    },
+    {
+      key: 'team',
+      label: 'Ekip',
+      value: `%${metrics.staffMorale}`,
+      tone: 'mint',
+    },
+    {
+      key: 'budget',
+      label: 'Kaynak',
+      value: formatSourceWithLabel(metrics.budget),
+      tone: budgetTone,
+    },
+  ];
+}
+
+export function buildEndOfDaySystemSummarySections(
+  report: DailyReport,
+  maxLinesPerSection = 2,
+): EndOfDaySystemSummarySection[] {
+  const sections: EndOfDaySystemSummarySection[] = [
+    {
+      key: 'container',
+      title: 'Atık',
+      icon: 'trash-outline',
+      lines: (report.containerSummaryLines ?? []).slice(0, maxLinesPerSection),
+    },
+    {
+      key: 'vehicle',
+      title: 'Araç',
+      icon: 'car-outline',
+      lines: (report.vehicleSummaryLines ?? []).slice(0, maxLinesPerSection),
+    },
+    {
+      key: 'personnel',
+      title: 'Personel',
+      icon: 'people-outline',
+      lines: (report.personnelSummaryLines ?? []).slice(0, maxLinesPerSection),
+    },
+    {
+      key: 'social',
+      title: 'Sosyal',
+      icon: 'chatbubbles-outline',
+      lines: (report.socialSummaryLines ?? []).slice(0, maxLinesPerSection),
+    },
+  ];
+
+  return sections.filter((section) => section.lines.length > 0);
 }
 
 function extractBusiestTeamFooter(personnelLines: string[]): string | null {
@@ -240,11 +344,13 @@ function buildRisksCard(warnings: string[]): EndOfDayMetricCardModel {
   };
 }
 
-export function buildEndOfDayTomorrowNotes(report: DailyReport): string[] {
+export function buildEndOfDayTomorrowNotes(
+  report: DailyReport,
+  maxNotes = 3,
+): string[] {
   const candidates: string[] = [
     ...(report.carryOverSummaryLines ?? []),
     ...(report.butterflySummaryLines ?? []),
-    ...(report.containerSummaryLines ?? []),
     ...(report.quickActionSummaryLines ?? []),
     ...(report.highlights ?? []),
     ...(report.summaryLines ?? []),
@@ -258,20 +364,22 @@ export function buildEndOfDayTomorrowNotes(report: DailyReport): string[] {
     const trimmed = line.trim();
     if (!trimmed || unique.includes(trimmed)) continue;
     unique.push(trimmed);
-    if (unique.length >= 4) break;
+    if (unique.length >= maxNotes) break;
   }
 
   if (unique.length === 0) {
-    return [
-      'Gün özeti kayda geçti; yarın operasyon merkezinden devam edebilirsin.',
-    ];
+    return report.day === 1
+      ? []
+      : [
+          'Gün özeti kayda geçti; yarın operasyon merkezinden devam edebilirsin.',
+        ];
   }
 
   return unique;
 }
 
 function buildXpBreakdown(dailyXpReport: DailyXpReport): EndOfDayXpBreakdownItem[] {
-  return dailyXpReport.categories.slice(0, 4).map((group) => {
+  return dailyXpReport.categories.slice(0, 3).map((group) => {
     const category = group.category;
     const icon =
       category !== 'other' && category in XP_ICON_BY_CATEGORY
@@ -285,6 +393,32 @@ function buildXpBreakdown(dailyXpReport: DailyXpReport): EndOfDayXpBreakdownItem
   });
 }
 
+export function collectReportPresentationStrings(
+  model: EndOfDayReportViewModel,
+  report: DailyReport,
+): string[] {
+  return [
+    model.statusTitle,
+    model.heroSubtitle,
+    model.xpSubtitle,
+    ...model.impactMetrics.map((metric) => `${metric.label} ${metric.value}`),
+    ...(report.authoritySummaryLines ?? []),
+    ...(report.badgeSummaryLines ?? []),
+    ...model.tomorrowNotes,
+    ...model.systemSections.flatMap((section) => section.lines),
+  ].filter(Boolean);
+}
+
+export function reportPresentationContainsBannedWords(text: string): string[] {
+  const haystack = text.toLowerCase();
+  return REPORT_UI_BANNED_WORDS.filter((word) => {
+    if (word === 'xp') {
+      return /\bxp\b/.test(haystack);
+    }
+    return haystack.includes(word);
+  });
+}
+
 export function buildEndOfDayReportViewModel(params: {
   report: DailyReport;
   metrics: GameMetrics;
@@ -294,12 +428,13 @@ export function buildEndOfDayReportViewModel(params: {
 }): EndOfDayReportViewModel {
   const { report, metrics, dailyXpReport, day1PriorityLine, day1GoalsLine } =
     params;
+  const isDay1 = report.day === 1;
+  const isDay7 = report.day === 7;
   const successScore = computeEndOfDaySuccessScore(report, metrics);
   const personnelLines = report.personnelSummaryLines ?? [];
   const warnings = report.warnings ?? [];
 
   const metricCards: EndOfDayMetricCardModel[] = [];
-
   const priorityCard = buildPriorityCard(
     report,
     day1PriorityLine,
@@ -307,20 +442,29 @@ export function buildEndOfDayReportViewModel(params: {
   );
   if (priorityCard) metricCards.push(priorityCard);
 
-  const goalsCard = buildGoalsCard(
-    report.dailyGoalResults,
-    day1GoalsLine,
-  );
+  const goalsCard = buildGoalsCard(report.dailyGoalResults, day1GoalsLine);
   if (goalsCard) metricCards.push(goalsCard);
 
   metricCards.push(buildPersonnelCard(metrics, personnelLines));
   metricCards.push(buildRisksCard(warnings));
 
   return {
+    day: report.day,
+    isDay1,
+    isDay7,
     successScore,
+    statusTitle: buildEndOfDayStatusTitle(successScore),
     heroSubtitle: buildEndOfDayHeroSubtitle(successScore),
+    impactMetrics: buildEndOfDayImpactMetrics(metrics),
     metricCards,
-    tomorrowNotes: buildEndOfDayTomorrowNotes(report),
+    systemSections: buildEndOfDaySystemSummarySections(report, 2),
+    tomorrowNotes: buildEndOfDayTomorrowNotes(
+      report,
+      isDay7 ? 2 : isDay1 ? 1 : 3,
+    ),
+    showXpCard: !isDay1 && dailyXpReport.totalXp > 0,
+    showSystemSummaries: !isDay1,
+    showTomorrowNotes: !isDay1 || (day1GoalsLine?.length ?? 0) > 0,
     xpTotal: dailyXpReport.totalXp,
     xpSubtitle: 'Bugünkü kararların ilerlemene işlendi.',
     xpBreakdown: buildXpBreakdown(dailyXpReport),
