@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { PROFILE_UI_COPY } from '@/features/profile/utils/profileScreenPresentation';
 import type { LeaderboardPrestigeSummary } from '@/features/leaderboard/utils/leaderboardProfileModel';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
@@ -10,6 +11,7 @@ import { spacing } from '@/ui/theme/spacing';
 type ProfilePrestigeCardProps = {
   summary: LeaderboardPrestigeSummary;
   onOpenLeaderboard: () => void;
+  compact?: boolean;
 };
 
 type MiniStatProps = {
@@ -36,11 +38,52 @@ function MiniStat({ label, value, hint, accent = false }: MiniStatProps) {
 export function ProfilePrestigeCard({
   summary,
   onOpenLeaderboard,
+  compact = false,
 }: ProfilePrestigeCardProps) {
   const lastLine =
     summary.lastScoreText && summary.lastTitle
       ? `${summary.lastScoreText} · ${summary.lastTitle}`
-      : 'Pilot tamamlandığında burada görünecek.';
+      : 'İlk pilot sonucun burada görünecek.';
+
+  if (compact) {
+    return (
+      <View style={[styles.card, styles.cardCompact, shadows.soft]}>
+        <View style={styles.compactTop}>
+          <View style={styles.head}>
+            <View style={styles.iconWrap}>
+              <Ionicons name="stats-chart-outline" size={15} color={colors.hubGoldDark} />
+            </View>
+            <View style={styles.compactHeadCopy}>
+              <Text style={styles.title} numberOfLines={1}>
+                {PROFILE_UI_COPY.prestigeTitle}
+              </Text>
+              <Text style={styles.compactScore} numberOfLines={1}>
+                {summary.hasAnyScore
+                  ? `En iyi skor ${summary.bestScoreText}`
+                  : 'Henüz pilot skoru yok'}
+              </Text>
+            </View>
+          </View>
+          <Pressable
+            onPress={onOpenLeaderboard}
+            style={({ pressed }) => [styles.ctaCompact, pressed && styles.ctaPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Liderliği aç">
+            <Text style={styles.ctaText} numberOfLines={1}>
+              Liderlik
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+          </Pressable>
+        </View>
+        <Text style={styles.compactMeta} numberOfLines={2}>
+          {summary.highestTitle} · {summary.bestNeighborhoodName}
+        </Text>
+        <Text style={styles.lastValue} numberOfLines={1}>
+          {lastLine}
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.card, shadows.soft]}>
@@ -48,14 +91,16 @@ export function ProfilePrestigeCard({
         <View style={styles.iconWrap}>
           <Ionicons name="ribbon-outline" size={16} color={colors.hubGoldDark} />
         </View>
-        <Text style={styles.title}>Yönetici Prestiji</Text>
+        <Text style={styles.title} numberOfLines={1}>
+          {PROFILE_UI_COPY.prestigeTitle}
+        </Text>
       </View>
 
       <View style={styles.grid}>
         <MiniStat
           label="En İyi Pilot Skoru"
           value={summary.bestScoreText}
-          hint="En iyi Belediye Performans Puanı"
+          hint="Belediye performans puanı"
           accent={summary.hasAnyScore}
         />
         <MiniStat label="En Yüksek Unvan" value={summary.highestTitle} />
@@ -68,7 +113,9 @@ export function ProfilePrestigeCard({
       </View>
 
       <View style={styles.lastRow}>
-        <Text style={styles.lastLabel}>Son Pilot Sonucu</Text>
+        <Text style={styles.lastLabel} numberOfLines={1}>
+          Son Pilot Sonucu
+        </Text>
         <Text style={styles.lastValue} numberOfLines={2}>
           {lastLine}
         </Text>
@@ -79,7 +126,9 @@ export function ProfilePrestigeCard({
         style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
         accessibilityRole="button"
         accessibilityLabel="Liderliği aç">
-        <Text style={styles.ctaText}>Liderliği Aç</Text>
+        <Text style={styles.ctaText} numberOfLines={1}>
+          Liderliği Aç
+        </Text>
         <Ionicons name="chevron-forward" size={16} color={colors.primary} />
       </Pressable>
     </View>
@@ -94,6 +143,45 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.md,
     gap: 12,
+  },
+  cardCompact: {
+    padding: spacing.sm,
+    gap: 8,
+  },
+  compactTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    minWidth: 0,
+  },
+  compactHeadCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  compactScore: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  compactMeta: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    lineHeight: 15,
+  },
+  ctaCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: 'rgba(26,143,138,0.2)',
+    flexShrink: 0,
   },
   head: {
     flexDirection: 'row',

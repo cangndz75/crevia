@@ -40,6 +40,17 @@ export function MapOperationBottomPanel({ model, onPressCta }: Props) {
               {model.characterLine}
             </Text>
           ) : null}
+          {model.identityRiskChips && model.identityRiskChips.length > 0 ? (
+            <View style={styles.riskChipRow}>
+              {model.identityRiskChips.map((chip) => (
+                <View key={chip.id} style={styles.riskChip}>
+                  <Text style={styles.riskChipText} numberOfLines={1}>
+                    {chip.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </View>
         <View
           style={[
@@ -130,6 +141,28 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  riskChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginTop: 2,
+  },
+  riskChip: {
+    maxWidth: '48%',
+    flexShrink: 1,
+    minWidth: 0,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+    backgroundColor: colors.backgroundAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  riskChipText: {
+    fontSize: 9,
+    fontWeight: '700',
     color: colors.textSecondary,
   },
   riskPill: {

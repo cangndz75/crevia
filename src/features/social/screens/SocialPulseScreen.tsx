@@ -4,8 +4,12 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { normalizePostPilotOperationState } from '@/core/postPilot/postPilotOperationSeed';
 import type { SocialQuickActionType } from '@/core/social/socialTypes';
+import { selectIsDay1TutorialEligible } from '@/features/tutorial/tutorialSelectors';
 import {
+  selectLastDecisionResult,
+  selectPostPilotOperation,
   selectSocialPulseStateFromStore,
   useGameStore,
 } from '@/store/useGameStore';
@@ -16,12 +20,15 @@ import { spacing } from '@/ui/theme/spacing';
 import { HotSocialTopicCard } from '../components/HotSocialTopicCard';
 import { NeighborhoodSocialRiskStrip } from '../components/NeighborhoodSocialRiskStrip';
 import { SocialActionButton } from '../components/SocialActionButton';
-import { SocialLiveMentionsCard } from '../components/SocialLiveMentionsCard';
+import { SocialDecisionEchoCard } from '../components/SocialDecisionEchoCard';
+import { SocialMentionInlineList } from '../components/SocialMentionInlineList';
 import { SocialNavHeader } from '../components/SocialNavHeader';
 import { SocialOutcomeHistoryCard } from '../components/SocialOutcomeHistoryCard';
-import { SocialPulseSummaryCard } from '../components/SocialPulseSummaryCard';
+import { SocialPostPilotContextChip } from '../components/SocialPostPilotContextChip';
+import { SocialPulseHeaderCard } from '../components/SocialPulseHeaderCard';
+import { SocialTipBanner } from '../components/SocialTipBanner';
 import { buildSocialPulseUiBundle } from '../utils/socialUiMappers';
-import { MOCK_SOCIAL_PULSE } from '../utils/socialUiModel';
+import { buildSocialPulseScreenViewModel } from '../utils/socialPulsePresentation';
 
 const QUICK_ACTION_BY_BUTTON: Record<string, SocialQuickActionType> = {
   explain: 'communicate',
@@ -36,22 +43,43 @@ export function SocialPulseScreen() {
   const insets = useSafeAreaInsets();
   const socialPulseState = useGameStore(selectSocialPulseStateFromStore);
   const currentDay = useGameStore((s) => s.gameState.city.day);
+  const pilotStatus = useGameStore((s) => s.gameState.pilot.status);
+  const postPilotOperation = useGameStore(selectPostPilotOperation);
+  const lastDecisionResult = useGameStore(selectLastDecisionResult);
+  const isDay1Compact = useGameStore(selectIsDay1TutorialEligible);
   const applySocialQuickAction = useGameStore((s) => s.applySocialQuickAction);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
-  const {
-    summary,
-    neighborhoods,
-    outcomes,
-    mentions,
-    activeMentionCount,
-    hotTopic,
-  } = useMemo(
+  const postPilotPhase = useMemo(() => {
+    const normalized = normalizePostPilotOperationState(postPilotOperation, {
+      pilotStatus,
+      currentPilotDay: currentDay,
+    });
+    return normalized?.phase ?? null;
+  }, [currentDay, pilotStatus, postPilotOperation]);
+
+  const viewModel = useMemo(
+    () =>
+      buildSocialPulseScreenViewModel({
+        socialPulseState,
+        currentDay,
+        postPilotPhase,
+        lastDecisionResult,
+        isDay1Compact,
+      }),
+    [
+      currentDay,
+      isDay1Compact,
+      lastDecisionResult,
+      postPilotPhase,
+      socialPulseState,
+    ],
+  );
+
+  const outcomeBundle = useMemo(
     () => buildSocialPulseUiBundle(socialPulseState, currentDay),
     [socialPulseState, currentDay],
   );
-
-  const mockActions = MOCK_SOCIAL_PULSE.hotTopic.actions;
 
   useEffect(() => {
     if (!actionFeedback) {
@@ -69,13 +97,20 @@ export function SocialPulseScreen() {
       }
 
       const result = applySocialQuickAction({
-        topicId: hotTopic.isMockFallback ? undefined : hotTopic.topicId,
+        topicId: viewModel.hotTopic.isMockFallback
+          ? undefined
+          : viewModel.hotTopic.topicId,
         action: quickAction,
         day: currentDay,
       });
       setActionFeedback(result.message);
     },
-    [applySocialQuickAction, currentDay, hotTopic.isMockFallback, hotTopic.topicId],
+    [
+      applySocialQuickAction,
+      currentDay,
+      viewModel.hotTopic.isMockFallback,
+      viewModel.hotTopic.topicId,
+    ],
   );
 
   return (
@@ -89,45 +124,57 @@ export function SocialPulseScreen() {
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
-        <SocialPulseSummaryCard data={summary} />
+        <SocialPulseHeaderCard model={viewModel.header} />
 
-        <NeighborhoodSocialRiskStrip neighborhoods={neighborhoods} />
+        {viewModel.postPilotContextLine ? (
+          <SocialPostPilotContextChip line={viewModel.postPilotContextLine} />
+        ) : null}
 
-        <View style={styles.crisisSection}>
-          <HotSocialTopicCard topic={hotTopic} />
+        <NeighborhoodSocialRiskStrip neighborhoods={viewModel.neighborhoods} />
+
+        <View style={styles.hotSection}>
+          <HotSocialTopicCard topic={viewModel.hotTopic} />
 
           {actionFeedback ? (
             <View style={styles.feedbackBanner}>
-              <Text style={styles.feedbackText} numberOfLines={3}>
+              <Text style={styles.feedbackText} numberOfLines={2}>
                 {actionFeedback}
               </Text>
             </View>
           ) : null}
 
-          <Animated.View
-            entering={FadeInUp.delay(400).duration(400)}
-            style={styles.actionsStack}>
-            {mockActions.slice(0, 2).map((action) => (
-              <SocialActionButton
-                key={action.id}
-                action={action}
-                onPress={handleAction}
-              />
-            ))}
-          </Animated.View>
+          {viewModel.hotTopic.actions.length > 0 ? (
+            <Animated.View entering={FadeInUp.delay(220).duration(320)} style={styles.actionsStack}>
+              {viewModel.hotTopic.actions.map((action) => (
+                <SocialActionButton
+                  key={action.id}
+                  action={action}
+                  onPress={handleAction}
+                />
+              ))}
+            </Animated.View>
+          ) : null}
         </View>
 
-        <View style={styles.exploreSection}>
-          <SocialOutcomeHistoryCard
-            outcomes={outcomes}
-            onPress={() => router.push('/social/outcome-history' as Href)}
-          />
-          <SocialLiveMentionsCard
-            mentions={mentions}
-            activeMentionCount={activeMentionCount}
-            onPress={() => router.push('/social/mentions' as Href)}
-          />
-        </View>
+        <SocialMentionInlineList
+          model={viewModel.mentions}
+          onViewAll={() => router.push('/social/mentions' as Href)}
+        />
+
+        {viewModel.decisionEcho ? (
+          <SocialDecisionEchoCard model={viewModel.decisionEcho} />
+        ) : null}
+
+        {viewModel.showOutcomeHistory ? (
+          <View style={styles.exploreSection}>
+            <SocialOutcomeHistoryCard
+              outcomes={outcomeBundle.outcomes}
+              onPress={() => router.push('/social/outcome-history' as Href)}
+            />
+          </View>
+        ) : null}
+
+        <SocialTipBanner text={viewModel.tipLine} />
       </ScrollView>
     </View>
   );
@@ -142,33 +189,33 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   body: {
-    gap: 16,
+    gap: 14,
     paddingTop: spacing.sm,
   },
-  crisisSection: {
-    gap: 12,
+  hotSection: {
+    gap: 10,
     paddingHorizontal: spacing.lg,
   },
   feedbackBanner: {
-    alignSelf: 'stretch',
     backgroundColor: colors.primaryMuted,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: 'rgba(26,143,138,0.2)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    minWidth: 0,
   },
   feedbackText: {
     fontSize: 12,
     fontWeight: '700',
     color: colors.primary,
     lineHeight: 17,
+    flexShrink: 1,
   },
   actionsStack: {
-    gap: 10,
+    gap: 8,
   },
   exploreSection: {
-    gap: 12,
     paddingHorizontal: spacing.lg,
   },
 });

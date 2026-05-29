@@ -6,146 +6,66 @@ import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
-import type { HotSocialTopic } from '../utils/socialUiModel';
+
+import type { HotSocialTopicPresentation } from '../utils/socialPulsePresentation';
 import { SOCIAL_CARD_BORDER } from '../utils/socialLayout';
 
 type Props = {
-  topic: HotSocialTopic;
+  topic: HotSocialTopicPresentation;
 };
 
-function SirenIllustration() {
-  return (
-    <View style={sirenStyles.wrap}>
-      <View style={sirenStyles.glow} />
-      <View style={sirenStyles.base}>
-        <View style={sirenStyles.sirenTop}>
-          <Ionicons name="warning" size={28} color="#FF4444" />
-        </View>
-        <View style={sirenStyles.sirenBody} />
-      </View>
-      <View style={[sirenStyles.wave, sirenStyles.wave1]} />
-      <View style={[sirenStyles.wave, sirenStyles.wave2]} />
-    </View>
-  );
-}
-
-const sirenStyles = StyleSheet.create({
-  wrap: {
-    width: 72,
-    height: 72,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  glow: {
-    position: 'absolute',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255,68,68,0.08)',
-  },
-  base: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sirenTop: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.dangerMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,68,68,0.25)',
-  },
-  sirenBody: {
-    width: 20,
-    height: 6,
-    backgroundColor: 'rgba(255,68,68,0.2)',
-    borderBottomLeftRadius: 4,
-    borderBottomRightRadius: 4,
-    marginTop: -2,
-  },
-  wave: {
-    position: 'absolute',
-    borderRadius: 999,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,68,68,0.15)',
-  },
-  wave1: {
-    width: 54,
-    height: 54,
-  },
-  wave2: {
-    width: 68,
-    height: 68,
-  },
-});
+const TONE_PILL = {
+  calm: { bg: colors.primaryMuted, text: colors.primary },
+  watching: { bg: colors.warningMuted, text: colors.warning },
+  warning: { bg: 'rgba(255, 140, 120, 0.14)', text: '#C75A4A' },
+  critical: { bg: colors.dangerMuted, text: colors.danger },
+} as const;
 
 export function HotSocialTopicCard({ topic }: Props) {
+  const pill = TONE_PILL[topic.tone];
+
   return (
     <Animated.View
-      entering={FadeInUp.delay(200).duration(500)}
-      style={[styles.card, shadows.card]}>
-      <View style={styles.content}>
-        <View style={styles.topRow}>
-          <View style={styles.topTextCol}>
-            <View style={styles.badgeRow}>
-              <View style={styles.crisisBadge}>
-                <Ionicons name="warning" size={11} color={colors.danger} />
-                <Text style={styles.crisisBadgeText} numberOfLines={1}>
-                  {topic.badge}
-                </Text>
-              </View>
-              <View style={styles.timerBadge}>
-                <Ionicons name="time-outline" size={11} color={colors.warning} />
-                <Text style={styles.timerText} numberOfLines={1}>
-                  {topic.remainingTime}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={styles.title}>{topic.title}</Text>
-            <Text style={styles.description}>{topic.description}</Text>
-          </View>
-
-          <SirenIllustration />
+      entering={FadeInUp.delay(160).duration(380)}
+      style={[styles.card, shadows.soft]}>
+      <View style={styles.headerRow}>
+        <Text style={styles.eyebrow} numberOfLines={1}>
+          Gündemde
+        </Text>
+        <View style={[styles.tonePill, { backgroundColor: pill.bg }]}>
+          <Text style={[styles.toneText, { color: pill.text }]} numberOfLines={1}>
+            {topic.tonePillLabel}
+          </Text>
         </View>
+      </View>
 
-        <View style={styles.metaRow}>
-          <View style={styles.metaItem}>
-            <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
-            <Text style={styles.metaText} numberOfLines={1}>
-              {topic.neighborhood}
-            </Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="people-outline" size={12} color={colors.textSecondary} />
-            <Text style={styles.metaText} numberOfLines={1}>
-              {topic.interactions}
-            </Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="chatbubble-outline" size={12} color={colors.textSecondary} />
-            <Text style={styles.metaText} numberOfLines={1}>
-              {topic.comments}
-            </Text>
-          </View>
+      <Text style={styles.title} numberOfLines={2}>
+        {topic.title}
+      </Text>
+
+      {topic.contextLine ? (
+        <Text style={styles.contextLine} numberOfLines={1}>
+          {topic.contextLine}
+        </Text>
+      ) : null}
+
+      <View style={styles.metaRow}>
+        <View style={styles.metaItem}>
+          <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
+          <Text style={styles.metaText} numberOfLines={1}>
+            {topic.districtLabel}
+          </Text>
         </View>
-
-        <View style={styles.chipRow}>
-          {topic.riskChips.map((chip) => (
-            <View key={chip.label} style={styles.riskChip}>
-              <Ionicons
-                name={chip.label === 'Risk' ? 'alert-circle' : 'trending-up'}
-                size={10}
-                color={colors.danger}
-              />
-              <Text style={styles.riskChipText} numberOfLines={1}>
-                {chip.label}: {chip.value}
-              </Text>
-            </View>
-          ))}
+        <View style={styles.metaItem}>
+          <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
+          <Text style={styles.metaText} numberOfLines={1}>
+            {topic.remainingTime}
+          </Text>
+        </View>
+        <View style={[styles.badge, { backgroundColor: pill.bg }]}>
+          <Text style={[styles.badgeText, { color: pill.text }]} numberOfLines={1}>
+            {topic.badge}
+          </Text>
         </View>
       </View>
     </Animated.View>
@@ -155,103 +75,83 @@ export function HotSocialTopicCard({ topic }: Props) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.xxl,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: SOCIAL_CARD_BORDER,
-    overflow: 'hidden',
-  },
-  content: {
-    padding: spacing.lg,
-    gap: 12,
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    padding: spacing.md,
     gap: 8,
-  },
-  topTextCol: {
-    flex: 1,
     minWidth: 0,
-    gap: 8,
   },
-  badgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  crisisBadge: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: radius.full,
-    backgroundColor: colors.dangerMuted,
+    justifyContent: 'space-between',
+    gap: 8,
+    minWidth: 0,
   },
-  crisisBadgeText: {
+  eyebrow: {
+    flex: 1,
     fontSize: 10,
     fontWeight: '800',
-    color: colors.danger,
+    color: colors.textSecondary,
+    letterSpacing: 0.35,
+    textTransform: 'uppercase',
   },
-  timerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.warningMuted,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+  tonePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: radius.full,
+    flexShrink: 0,
+    maxWidth: '52%',
   },
-  timerText: {
+  toneText: {
     fontSize: 10,
     fontWeight: '800',
-    color: colors.warning,
   },
   title: {
-    fontSize: 17,
-    fontWeight: '900',
+    fontSize: 16,
+    fontWeight: '800',
     color: colors.textPrimary,
-    letterSpacing: -0.35,
-    lineHeight: 22,
+    letterSpacing: -0.25,
+    lineHeight: 21,
   },
-  description: {
-    fontSize: 13,
-    fontWeight: '500',
+  contextLine: {
+    fontSize: 11,
+    fontWeight: '600',
     color: colors.textSecondary,
-    lineHeight: 19,
+    lineHeight: 15,
+    flexShrink: 1,
+    minWidth: 0,
   },
   metaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    alignItems: 'center',
+    gap: 8,
+    minWidth: 0,
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    maxWidth: '48%',
+    flexShrink: 1,
+    minWidth: 0,
   },
   metaText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     color: colors.textSecondary,
+    flexShrink: 1,
   },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  riskChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: radius.full,
-    backgroundColor: colors.dangerMuted,
+    flexShrink: 0,
   },
-  riskChipText: {
-    fontSize: 10,
+  badgeText: {
+    fontSize: 9,
     fontWeight: '800',
-    color: colors.danger,
   },
 });

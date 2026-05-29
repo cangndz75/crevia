@@ -1,86 +1,54 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { LeaderboardEntry } from '@/core/leaderboard/leaderboardTypes';
-import { LeaderboardAvatar } from '@/features/leaderboard/components/LeaderboardAvatar';
-import {
-  formatLeaderboardScoreBpp,
-  getEntryGemTier,
-  getEntryTrendDirection,
-} from '@/features/leaderboard/utils/leaderboardUiModel';
+import { LeaderboardDynamicAvatar } from '@/features/leaderboard/components/LeaderboardDynamicAvatar';
+import type { LeaderboardRowModel } from '@/features/leaderboard/utils/leaderboardPresentation';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
-import { spacing } from '@/ui/theme/spacing';
 
 type LeaderboardRowProps = {
-  entry: LeaderboardEntry;
-  rank: number;
+  model: LeaderboardRowModel;
   compact?: boolean;
 };
 
-const GEM_COLORS = {
-  blue: colors.secondary,
-  orange: colors.warning,
-} as const;
-
-export function LeaderboardRow({ entry, rank, compact = false }: LeaderboardRowProps) {
-  const trend = getEntryTrendDirection(entry.id, rank);
-  const gemTier = getEntryGemTier(entry.id);
-  const gemColor = GEM_COLORS[gemTier];
-
+export function LeaderboardRow({ model, compact = false }: LeaderboardRowProps) {
   return (
     <View
       style={[
         styles.row,
         shadows.soft,
-        entry.isCurrentPlayer && styles.rowCurrent,
+        model.isCurrentPlayer && styles.rowCurrent,
         compact && styles.rowCompact,
       ]}>
-      <Text style={[styles.rankNum, entry.isCurrentPlayer && styles.rankNumCurrent]}>
-        {rank}
+      <Text
+        style={[styles.rankNum, model.isCurrentPlayer && styles.rankNumCurrent]}
+        numberOfLines={1}>
+        {model.rankLabel}
       </Text>
 
-      <LeaderboardAvatar
-        entryKey={entry.id}
-        size={compact ? 40 : 44}
-        borderColor={entry.isCurrentPlayer ? colors.primary : colors.border}
-        borderWidth={2}
+      <LeaderboardDynamicAvatar
+        avatar={model.avatar}
+        size={compact ? 38 : 42}
+        highlighted={model.isCurrentPlayer}
       />
 
       <View style={styles.mainCol}>
         <Text
-          style={[styles.name, entry.isCurrentPlayer && styles.nameCurrent]}
+          style={[styles.name, model.isCurrentPlayer && styles.nameCurrent]}
           numberOfLines={1}>
-          {entry.playerName}
-          {entry.isCurrentPlayer ? ' (Sen)' : ''}
+          {model.displayName}
+          {model.isCurrentPlayer ? ' · Sen' : ''}
         </Text>
-        <Text style={styles.title} numberOfLines={1}>
-          {entry.title}
+        <Text style={styles.subtitle} numberOfLines={1}>
+          {model.subtitle}
         </Text>
-        <View style={styles.locationRow}>
-          <Ionicons name="location-outline" size={11} color={colors.textSecondary} />
-          <Text style={styles.location} numberOfLines={1}>
-            {entry.neighborhoodName}
-          </Text>
-        </View>
       </View>
 
-      <View style={styles.trailingCol}>
-        <View style={styles.badgeRow}>
-          <Ionicons name="diamond" size={14} color={gemColor} />
-          {trend === 'up' ? (
-            <Ionicons name="trending-up" size={14} color={colors.success} />
-          ) : trend === 'down' ? (
-            <Ionicons name="trending-down" size={14} color={colors.danger} />
-          ) : (
-            <Ionicons name="remove" size={14} color={colors.textSecondary} />
-          )}
-        </View>
-        <Text style={[styles.score, entry.isCurrentPlayer && styles.scoreCurrent]}>
-          {formatLeaderboardScoreBpp(entry.score)}
-        </Text>
-      </View>
+      <Text
+        style={[styles.score, model.isCurrentPlayer && styles.scoreCurrent]}
+        numberOfLines={1}>
+        {model.scoreLabel}
+      </Text>
     </View>
   );
 }
@@ -90,26 +58,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    minWidth: 0,
   },
   rowCurrent: {
     borderColor: colors.primary,
     backgroundColor: colors.primaryMuted,
   },
   rowCompact: {
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
   rankNum: {
-    width: 22,
-    fontSize: 15,
+    width: 24,
+    fontSize: 13,
     fontWeight: '800',
     color: colors.textSecondary,
     textAlign: 'center',
+    flexShrink: 0,
   },
   rankNumCurrent: {
     color: colors.primary,
@@ -120,46 +90,27 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   name: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
     color: colors.textPrimary,
-    letterSpacing: -0.2,
+    letterSpacing: -0.15,
   },
   nameCurrent: {
     color: colors.primary,
   },
-  title: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    marginTop: 1,
-  },
-  location: {
+  subtitle: {
     fontSize: 10,
     fontWeight: '600',
     color: colors.textSecondary,
-    flex: 1,
-  },
-  trailingCol: {
-    alignItems: 'flex-end',
-    gap: 4,
-    minWidth: 88,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
   },
   score: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     color: colors.textPrimary,
-    letterSpacing: -0.15,
+    maxWidth: '32%',
+    flexShrink: 1,
+    minWidth: 0,
+    textAlign: 'right',
   },
   scoreCurrent: {
     color: colors.primary,

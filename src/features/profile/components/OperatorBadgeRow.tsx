@@ -1,54 +1,70 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { PROFILE_UI_COPY } from '@/features/profile/utils/profileScreenPresentation';
 import type { ProfileBadge } from '@/features/profile/utils/profileModel';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
-import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
 type OperatorBadgeRowProps = {
   badges: ProfileBadge[];
+  compact?: boolean;
 };
 
-function BadgeMedal({ badge }: { badge: ProfileBadge }) {
+function BadgeMedal({
+  badge,
+  compact,
+}: {
+  badge: ProfileBadge;
+  compact: boolean;
+}) {
+  const pending = badge.locked;
+
   return (
     <View
       style={[
         styles.medal,
-        badge.locked ? styles.medalLocked : styles.medalActive,
-        shadows.soft,
+        compact && styles.medalCompact,
+        pending ? styles.medalPending : styles.medalActive,
       ]}>
       <View
         style={[
           styles.medalIcon,
-          badge.locked ? styles.medalIconLocked : styles.medalIconActive,
+          compact && styles.medalIconCompact,
+          pending ? styles.medalIconPending : styles.medalIconActive,
         ]}>
         <Ionicons
-          name={badge.locked ? 'lock-closed' : badge.icon}
-          size={16}
-          color={badge.locked ? colors.textSecondary : colors.hubGoldDark}
+          name={pending ? 'time-outline' : badge.icon}
+          size={compact ? 13 : 15}
+          color={pending ? colors.textSecondary : colors.hubGoldDark}
         />
       </View>
       <Text
-        style={[styles.medalLabel, badge.locked && styles.medalLabelLocked]}
-        numberOfLines={1}>
-        {badge.label}
+        style={[styles.medalLabel, pending && styles.medalLabelPending]}
+        numberOfLines={compact ? 1 : 2}>
+        {pending ? PROFILE_UI_COPY.queued : badge.label}
       </Text>
     </View>
   );
 }
 
-export function OperatorBadgeRow({ badges }: OperatorBadgeRowProps) {
+export function OperatorBadgeRow({ badges, compact = false }: OperatorBadgeRowProps) {
+  if (badges.length === 0) {
+    return null;
+  }
+
   return (
-    <View style={[styles.strip, shadows.card]}>
-      <Text style={styles.stripTitle}>Operatör Kartı</Text>
+    <View style={[styles.strip, compact && styles.stripCompact]}>
+      <Text style={styles.stripTitle} numberOfLines={1}>
+        {PROFILE_UI_COPY.featuredBadges}
+      </Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scroll}>
         {badges.map((badge) => (
-          <BadgeMedal key={badge.id} badge={badge} />
+          <BadgeMedal key={badge.id} badge={badge} compact={compact} />
         ))}
       </ScrollView>
     </View>
@@ -58,18 +74,21 @@ export function OperatorBadgeRow({ badges }: OperatorBadgeRowProps) {
 const styles = StyleSheet.create({
   strip: {
     backgroundColor: colors.surface,
-    borderRadius: 18,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(26, 143, 138, 0.1)',
     paddingVertical: spacing.sm,
     paddingLeft: spacing.md,
-    gap: spacing.sm,
+    gap: spacing.xs,
+  },
+  stripCompact: {
+    paddingVertical: 8,
   },
   stripTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
     color: colors.textSecondary,
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   scroll: {
@@ -77,45 +96,56 @@ const styles = StyleSheet.create({
     paddingRight: spacing.md,
   },
   medal: {
-    width: 76,
+    width: 72,
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    borderRadius: radius.lg,
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 5,
+    borderRadius: radius.md,
     borderWidth: 1,
+    minWidth: 0,
+  },
+  medalCompact: {
+    width: 64,
+    paddingVertical: 5,
   },
   medalActive: {
     backgroundColor: colors.hubGoldMuted,
-    borderColor: 'rgba(212,160,23,0.35)',
+    borderColor: 'rgba(212,160,23,0.28)',
   },
-  medalLocked: {
+  medalPending: {
     backgroundColor: colors.backgroundAlt,
     borderColor: colors.border,
-    opacity: 0.85,
   },
   medalIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  medalIconActive: {
-    backgroundColor: 'rgba(245,183,49,0.35)',
-    borderWidth: 1,
-    borderColor: 'rgba(212,160,23,0.4)',
+  medalIconCompact: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
   },
-  medalIconLocked: {
-    backgroundColor: colors.backgroundAlt,
+  medalIconActive: {
+    backgroundColor: 'rgba(245,183,49,0.28)',
+    borderWidth: 1,
+    borderColor: 'rgba(212,160,23,0.35)',
+  },
+  medalIconPending: {
+    backgroundColor: colors.surface,
   },
   medalLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
     color: colors.hubGoldDark,
     textAlign: 'center',
+    minWidth: 0,
+    flexShrink: 1,
   },
-  medalLabelLocked: {
+  medalLabelPending: {
     color: colors.textSecondary,
     fontWeight: '700',
   },

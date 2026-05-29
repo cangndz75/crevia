@@ -8,6 +8,7 @@ import {
   formatGoalProgress,
   getDailyGoalIcon,
 } from '@/core/dailyGoals/dailyGoalPresentation';
+import { formatHubTaskRewardLabel } from '@/features/hub/utils/hubScreenPresentation';
 import { selectPrimaryDailyGoal } from '@/core/dailyGoals/dailyGoalSelectors';
 import { useHubDerivedInput } from '@/features/hub/hooks/useHubDerivedInput';
 import { deriveHubStatusStrip } from '@/features/hub/utils/hubDerived';
@@ -138,7 +139,13 @@ const pillStyles = StyleSheet.create({
   },
 });
 
-export function HubTaskTrackingHero() {
+type HubTaskTrackingHeroProps = {
+  variant?: 'default' | 'compact' | 'focus';
+};
+
+export function HubTaskTrackingHero({ variant = 'default' }: HubTaskTrackingHeroProps) {
+  const isCompact = variant === 'compact';
+  const isFocus = variant === 'focus';
   const input = useHubDerivedInput();
   const resources = useGameStore((s) => s.resources);
   const goal = useGameStore((s) => selectPrimaryDailyGoal(s.dailyGoalState));
@@ -148,12 +155,19 @@ export function HubTaskTrackingHero() {
     return items.filter((item) => item.id === 'risk' || item.id === 'activeEvents');
   }, [input, resources]);
 
+  const rewardLabel = formatHubTaskRewardLabel(goal?.rewardXp);
+
   if (!goal) {
     return (
       <Animated.View
         entering={FadeIn.duration(240)}
-        style={[styles.row, styles.rowFallback, shadows.card]}>
-        <View style={styles.statusColFull}>
+        style={[
+          styles.row,
+          styles.rowFallback,
+          isCompact && styles.rowCompact,
+          shadows.card,
+        ]}>
+        <View style={[styles.statusColFull, isCompact && styles.statusColFullCompact]}>
           {statusItems.map((item) => (
             <StatusPill
               key={item.id}
@@ -173,29 +187,43 @@ export function HubTaskTrackingHero() {
   return (
     <Animated.View
       entering={FadeIn.duration(240)}
-      style={[styles.row, shadows.card]}>
-      <View style={styles.goalCard}>
+      style={[
+        styles.row,
+        isCompact && styles.rowCompact,
+        isFocus && styles.rowFocus,
+        shadows.card,
+      ]}>
+      <View style={[styles.goalCard, isCompact && styles.goalCardCompact]}>
         <View style={styles.goalHeader}>
-          <View style={styles.trophyWrap}>
-            <Ionicons name={iconName} size={16} color={colors.hubGoldDark} />
+          <View style={[styles.trophyWrap, isCompact && styles.trophyWrapCompact]}>
+            <Ionicons
+              name={iconName}
+              size={isCompact ? 14 : 16}
+              color={colors.hubGoldDark}
+            />
           </View>
-          <Text style={styles.sectionLabel}>GÖREV TAKİBİ</Text>
+          <Text style={styles.sectionLabel} numberOfLines={1}>
+            {isFocus ? 'Bugünkü odak' : 'Günlük hedef'}
+          </Text>
         </View>
 
         <View style={styles.goalBody}>
           <View style={styles.goalTextCol}>
-            <Text style={styles.goalTitle} numberOfLines={2}>
+            <Text
+              style={[styles.goalTitle, isCompact && styles.goalTitleCompact]}
+              numberOfLines={2}>
               {goal.title}
             </Text>
-            <Text style={styles.goalDesc} numberOfLines={2}>
-              {goal.description}
-            </Text>
+            {!isCompact ? (
+              <Text style={styles.goalDesc} numberOfLines={2}>
+                {goal.description}
+              </Text>
+            ) : null}
             <View style={styles.rewardRow}>
-              {(goal.rewardXp ?? 0) > 0 ? (
+              {rewardLabel ? (
                 <View style={styles.rewardBadge}>
-                  <Ionicons name="star" size={10} color={colors.hubGoldDark} />
                   <Text style={styles.rewardText} numberOfLines={1}>
-                    +{goal.rewardXp} ilerleme
+                    {rewardLabel}
                   </Text>
                 </View>
               ) : null}
@@ -204,21 +232,27 @@ export function HubTaskTrackingHero() {
               </Text>
             </View>
           </View>
-          <ProgressRing percent={goal.progressPercent} />
+          <ProgressRing
+            percent={goal.progressPercent}
+            size={isCompact ? 44 : 52}
+            strokeWidth={isCompact ? 4 : 5}
+          />
         </View>
       </View>
 
-      <View style={styles.statusCol}>
-        {statusItems.map((item) => (
-          <StatusPill
-            key={item.id}
-            icon={item.id === 'risk' ? 'warning' : 'alert-circle'}
-            iconBg={item.accent}
-            value={item.value}
-            label={item.label}
-          />
-        ))}
-      </View>
+      {!isCompact && !isFocus ? (
+        <View style={styles.statusCol}>
+          {statusItems.map((item) => (
+            <StatusPill
+              key={item.id}
+              icon={item.id === 'risk' ? 'warning' : 'alert-circle'}
+              iconBg={item.accent}
+              value={item.value}
+              label={item.label}
+            />
+          ))}
+        </View>
+      ) : null}
     </Animated.View>
   );
 }
@@ -228,8 +262,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     zIndex: 2,
+  },
+  rowCompact: {
+    marginTop: spacing.xs,
+  },
+  rowFocus: {
+    marginTop: spacing.sm,
+  },
+  rowFallback: {
+    marginTop: spacing.sm,
+    zIndex: 2,
+    marginHorizontal: spacing.lg,
   },
   goalCard: {
     flex: 1,
@@ -240,6 +285,11 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 8,
     minWidth: 0,
+  },
+  goalCardCompact: {
+    padding: 10,
+    gap: 6,
+    borderRadius: radius.lg,
   },
   goalHeader: {
     flexDirection: 'row',
@@ -255,6 +305,11 @@ const styles = StyleSheet.create({
     borderColor: colors.hubGold,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  trophyWrapCompact: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
   },
   sectionLabel: {
     fontSize: 10,
@@ -278,6 +333,10 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     letterSpacing: -0.2,
     lineHeight: 18,
+  },
+  goalTitleCompact: {
+    fontSize: 13,
+    lineHeight: 17,
   },
   goalDesc: {
     fontSize: 11,
@@ -320,14 +379,13 @@ const styles = StyleSheet.create({
     gap: 6,
     justifyContent: 'center',
   },
-  rowFallback: {
-    marginTop: spacing.md,
-    zIndex: 2,
-    marginHorizontal: spacing.lg,
-  },
   statusColFull: {
     flex: 1,
     flexDirection: 'row',
     gap: 8,
+    minWidth: 0,
+  },
+  statusColFullCompact: {
+    flexDirection: 'column',
   },
 });

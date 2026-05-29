@@ -4,3 +4,6 @@ export * from '@/core/districts/districtEventRules';
 export * from '@/core/districts/districtEventEngine';
 export * from '@/core/districts/pilotDistrictBridge';
 export * from '@/core/districts/districtEventIntegration';
+export * from '@/core/districts/districtIdentityTypes';
+export * from '@/core/districts/districtIdentityConstants';
+export * from '@/core/districts/districtIdentityPresentation';

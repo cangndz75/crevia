@@ -11,7 +11,6 @@ import {
 import { buildLeaderboardPrestigeSummary } from '@/features/leaderboard/utils/leaderboardProfileModel';
 import { ProfileAuthorityCard } from '@/features/profile/components/ProfileAuthorityCard';
 import { ProfileBadgeShowcaseCard } from '@/features/profile/components/ProfileBadgeShowcaseCard';
-import { OperationSummaryCard } from '@/features/profile/components/OperationSummaryCard';
 import { OperatorBadgeRow } from '@/features/profile/components/OperatorBadgeRow';
 import { ProfileHeroCard } from '@/features/profile/components/ProfileHeroCard';
 import { ProfileMenuSection } from '@/features/profile/components/ProfileMenuSection';
@@ -21,14 +20,13 @@ import { ProfileXpCard } from '@/features/profile/components/ProfileXpCard';
 import {
   buildProfileBadges,
   buildProfileViewModel,
-  buildTodayStatusLines,
 } from '@/features/profile/utils/profileModel';
 import { buildProfileAuthoritySummaryFromPilot } from '@/features/profile/utils/profileAuthorityModel';
 import { buildProfileBadgeShowcaseSummary } from '@/features/profile/utils/profileBadgeModel';
+import { buildProfileScreenLayoutModel } from '@/features/profile/utils/profileScreenPresentation';
 import { useGameStatus } from '@/store/gameSelectors';
 import { useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
-import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
 const HERO_GRADIENT = [colors.headerTealDark, '#1A7F7B', '#2BB5A8'] as const;
@@ -51,8 +49,7 @@ export function ProfileScreen() {
     () => buildProfileViewModel(status, player),
     [status, player],
   );
-  const badges = useMemo(() => buildProfileBadges(model), [model]);
-  const todayLines = useMemo(() => buildTodayStatusLines(model), [model]);
+  const operatorBadges = useMemo(() => buildProfileBadges(model), [model]);
   const authoritySummary = useMemo(
     () =>
       buildProfileAuthoritySummaryFromPilot(
@@ -68,6 +65,17 @@ export function ProfileScreen() {
         pilot.currentPilotDay,
       ),
     [pilot.badgeState, pilot.currentPilotDay],
+  );
+
+  const layout = useMemo(
+    () =>
+      buildProfileScreenLayoutModel({
+        model,
+        authoritySummary,
+        badgeSummary: badgeShowcaseSummary,
+        prestigeSummary,
+      }),
+    [model, authoritySummary, badgeShowcaseSummary, prestigeSummary],
   );
 
   return (
@@ -86,51 +94,52 @@ export function ProfileScreen() {
           end={{ x: 1, y: 1 }}
           style={styles.hero}>
           <View style={styles.heroOrbRight} />
-          <View style={styles.heroOrbLeft} />
-
           <View style={styles.heroInner}>
             <ProfileNavHeader
               onBack={() => router.back()}
               notificationCount={model.notificationCount}
             />
 
-            <Animated.View entering={FadeInDown.duration(360).delay(30)}>
-              <ProfileHeroCard model={model} />
-            </Animated.View>
-
-            <Animated.View entering={FadeInDown.duration(400).delay(90)}>
-              <ProfileXpCard model={model} />
+            <Animated.View entering={FadeInDown.duration(320).delay(20)}>
+              <ProfileHeroCard
+                model={model}
+                careerLine={layout.heroCareerLine}
+                rankChip={authoritySummary.rankLabel}
+              />
             </Animated.View>
           </View>
         </LinearGradient>
 
         <View style={styles.body}>
-          <Animated.View
-            entering={FadeIn.duration(300).delay(120)}
-            style={[styles.floatingPanel, shadows.card]}>
-            <OperationSummaryCard model={model} statusLines={todayLines} />
-          </Animated.View>
-
-          <Animated.View entering={FadeIn.duration(300).delay(130)}>
+          <Animated.View entering={FadeIn.duration(280).delay(80)}>
             <ProfileAuthorityCard summary={authoritySummary} />
           </Animated.View>
 
-          <Animated.View entering={FadeIn.duration(300).delay(135)}>
+          <Animated.View entering={FadeIn.duration(280).delay(100)}>
             <ProfileBadgeShowcaseCard summary={badgeShowcaseSummary} />
           </Animated.View>
 
-          <Animated.View entering={FadeIn.duration(300).delay(140)}>
+          <Animated.View entering={FadeIn.duration(280).delay(120)}>
             <ProfilePrestigeCard
               summary={prestigeSummary}
+              compact={layout.prestigeCompact}
               onOpenLeaderboard={() => router.push('/leaderboard' as Href)}
             />
           </Animated.View>
 
-          <Animated.View entering={FadeIn.duration(300).delay(160)}>
-            <OperatorBadgeRow badges={badges} />
-          </Animated.View>
+          {layout.showOperatorBadgeRow ? (
+            <Animated.View entering={FadeIn.duration(280).delay(140)}>
+              <OperatorBadgeRow badges={operatorBadges} compact />
+            </Animated.View>
+          ) : null}
 
-          <Animated.View entering={FadeIn.duration(300).delay(200)}>
+          {layout.showXpProgress ? (
+            <Animated.View entering={FadeIn.duration(280).delay(160)}>
+              <ProfileXpCard model={model} compact />
+            </Animated.View>
+          ) : null}
+
+          <Animated.View entering={FadeIn.duration(280).delay(180)}>
             <ProfileMenuSection />
           </Animated.View>
         </View>
@@ -153,25 +162,16 @@ const styles = StyleSheet.create({
   hero: {
     position: 'relative',
     overflow: 'hidden',
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.md,
   },
   heroOrbRight: {
     position: 'absolute',
-    top: -24,
-    right: -40,
-    width: 130,
-    height: 130,
-    borderRadius: 65,
-    backgroundColor: 'rgba(255,255,255,0.09)',
-  },
-  heroOrbLeft: {
-    position: 'absolute',
-    bottom: 48,
-    left: -56,
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(245,183,49,0.14)',
+    top: -20,
+    right: -36,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   heroInner: {
     paddingHorizontal: spacing.lg,
@@ -179,11 +179,8 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   body: {
-    marginTop: -10,
+    marginTop: -6,
     paddingHorizontal: spacing.lg,
-    gap: spacing.md,
-  },
-  floatingPanel: {
-    borderRadius: 22,
+    gap: 10,
   },
 });

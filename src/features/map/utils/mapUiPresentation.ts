@@ -9,7 +9,13 @@ import type {
   PostPilotPhase,
   ScopeActivationStatus,
 } from '@/core/postPilot/postPilotOperationTypes';
-import { getNeighborhoodMapCharacterLine } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
+import {
+  buildDistrictMapPanelLines,
+  buildDistrictRiskChips,
+  resolveDistrictAccentColor,
+  resolveDistrictIconKey,
+} from '@/core/districts/districtIdentityPresentation';
+import type { DistrictRiskChip } from '@/core/districts/districtIdentityTypes';
 import { colors } from '@/ui/theme/colors';
 
 import { CITY_DISTRICT_REGIONS } from '../data/cityOverviewGeometry';
@@ -43,6 +49,7 @@ export type MapNeighborhoodStripItem = {
   status: MapNeighborhoodStripStatus;
   statusLabel: string;
   accentColor: string;
+  identityIconKey?: string;
 };
 
 export type MapOperationMetric = {
@@ -57,6 +64,7 @@ export type MapOperationPanelModel = {
   districtId: MapDistrictId;
   districtLabel: string;
   characterLine?: string;
+  identityRiskChips?: DistrictRiskChip[];
   riskLabel: string;
   riskTone: 'teal' | 'gold' | 'warn' | 'danger';
   activeEventCount: number;
@@ -175,7 +183,12 @@ export function buildMapNeighborhoodStripItems(params: {
       label: getMapDistrictLabel(districtId),
       status,
       statusLabel: postPilotLabel ?? STATUS_LABELS[status],
-      accentColor: region.color,
+      accentColor:
+        status === 'preview'
+          ? region.color
+          : resolveDistrictAccentColor(districtId),
+      identityIconKey:
+        status === 'preview' ? undefined : resolveDistrictIconKey(districtId),
     };
   });
 }
@@ -216,7 +229,10 @@ export function buildMapOperationPanelModel(params: {
   const preset = getPilotPreset(params.pilotAreaId);
   const isDetailView = params.viewMode === 'detail';
   const districtLabel = getMapDistrictLabel(params.focusDistrictId);
-  const characterLine = getNeighborhoodMapCharacterLine(params.focusDistrictId);
+  const panelLines = buildDistrictMapPanelLines(params.focusDistrictId);
+  const characterLine =
+    panelLines.length > 0 ? panelLines.join('\n') : undefined;
+  const identityRiskChips = buildDistrictRiskChips(params.focusDistrictId, 3);
   const activeEventCount = countEventsForDistrict(
     params.activeEvents,
     params.focusDistrictId,
@@ -277,6 +293,7 @@ export function buildMapOperationPanelModel(params: {
     districtId: params.focusDistrictId,
     districtLabel,
     characterLine: characterLine ?? undefined,
+    identityRiskChips,
     riskLabel: getRiskDensityLabel(preset.riskDensity),
     riskTone: resolveRiskTone(preset.riskDensity),
     activeEventCount,
@@ -302,6 +319,8 @@ export function collectMapUiPresentationStrings(
     'Operasyon Haritası',
     ...stripItems.map((item) => `${item.label} ${item.statusLabel}`),
     panel.districtLabel,
+    panel.characterLine ?? '',
+    ...(panel.identityRiskChips?.map((chip) => chip.label) ?? []),
     panel.riskLabel,
     panel.agendaSignalLine ?? '',
     panel.sahaNote ?? '',

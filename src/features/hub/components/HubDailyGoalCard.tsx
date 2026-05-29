@@ -148,8 +148,12 @@ function EndDayButton({
               <Ionicons name="flag" size={15} color="#FFFFFF" />
             </View>
             <View style={styles.endDayTextCol}>
-              <Text style={styles.endDayTitle}>Günü Bitir</Text>
-              <Text style={styles.endDayHint}>Günün raporunu gör</Text>
+              <Text style={styles.endDayTitle} numberOfLines={1}>
+                Günü Tamamla
+              </Text>
+              <Text style={styles.endDayHint} numberOfLines={1}>
+                Raporu Gör
+              </Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={19} color="rgba(255,255,255,0.95)" />

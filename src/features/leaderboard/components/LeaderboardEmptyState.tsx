@@ -7,19 +7,25 @@ import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
 type LeaderboardEmptyStateProps = {
+  message: string;
+  ctaLabel: string;
   onGoHub: () => void;
 };
 
-export function LeaderboardEmptyState({ onGoHub }: LeaderboardEmptyStateProps) {
+export function LeaderboardEmptyState({
+  message,
+  ctaLabel,
+  onGoHub,
+}: LeaderboardEmptyStateProps) {
   return (
     <View style={[styles.card, shadows.soft]}>
-      <Text style={styles.eyebrow}>Kişisel sıralama</Text>
-      <Text style={styles.title}>Pilot bölgeyi tamamla, unvanını ve BPP skorunu gör</Text>
-      <Text style={styles.body}>
-        Yukarıdaki sıralama bölgesel mock veridir. Pilot tamamlandığında kendi
-        satırın listede vurgulanır.
+      <Text style={styles.eyebrow} numberOfLines={1}>
+        Pilot Prestiji
       </Text>
-      <GameButton title="Merkeze Dön" onPress={onGoHub} style={styles.button} />
+      <Text style={styles.title} numberOfLines={2}>
+        {message}
+      </Text>
+      <GameButton title={ctaLabel} onPress={onGoHub} style={styles.button} />
     </View>
   );
 }
@@ -32,29 +38,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
-    gap: 8,
+    gap: 10,
+    minWidth: 0,
   },
   eyebrow: {
     fontSize: 10,
     fontWeight: '800',
     color: colors.primary,
-    letterSpacing: 0.4,
+    letterSpacing: 0.35,
     textTransform: 'uppercase',
   },
   title: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    letterSpacing: -0.2,
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textSecondary,
     lineHeight: 20,
   },
-  body: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textSecondary,
-    lineHeight: 17,
-  },
   button: {
-    marginTop: 4,
+    marginTop: 2,
   },
 });

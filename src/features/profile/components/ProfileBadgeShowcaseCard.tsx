@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { BadgeRarity } from '@/core/badges/badgeTypes';
+import { PROFILE_UI_COPY } from '@/features/profile/utils/profileScreenPresentation';
 import type {
   ProfileBadgeIconKey,
   ProfileBadgeShowcaseItem,
@@ -80,7 +81,7 @@ function BadgeTile({ item }: { item: ProfileBadgeShowcaseItem }) {
       ]}>
       <View style={[styles.tileIcon, { backgroundColor: style.iconBg }]}>
         <Ionicons
-          name={item.earned ? item.iconKey : 'lock-closed'}
+          name={item.earned ? item.iconKey : 'ellipse-outline'}
           size={14}
           color={style.iconColor}
         />
@@ -94,7 +95,7 @@ function BadgeTile({ item }: { item: ProfileBadgeShowcaseItem }) {
         </Text>
       ) : !item.earned ? (
         <Text style={styles.tileLocked} numberOfLines={1}>
-          Sırada
+          {PROFILE_UI_COPY.queued}
         </Text>
       ) : null}
     </View>
@@ -109,9 +110,11 @@ export function ProfileBadgeShowcaseCard({ summary }: ProfileBadgeShowcaseCardPr
           <Ionicons name="medal-outline" size={16} color={colors.hubGoldDark} />
         </View>
         <View style={styles.headText}>
-          <Text style={styles.cardTitle}>Rozetler</Text>
-          <Text style={styles.subtitle} numberOfLines={2}>
-            Kariyer boyunca kazandığın operasyon başarıları
+          <Text style={styles.cardTitle} numberOfLines={1}>
+            {PROFILE_UI_COPY.badgesTitle}
+          </Text>
+          <Text style={styles.subtitle} numberOfLines={1}>
+            Operasyon kariyerinde kazandığın başarılar
           </Text>
         </View>
       </View>
@@ -125,7 +128,9 @@ export function ProfileBadgeShowcaseCard({ summary }: ProfileBadgeShowcaseCardPr
 
       {summary.latestBadge ? (
         <View style={styles.latestBlock}>
-          <Text style={styles.latestLabel}>Son Kazanım</Text>
+          <Text style={styles.latestLabel} numberOfLines={1}>
+            {PROFILE_UI_COPY.latestEarned}
+          </Text>
           <Text style={styles.latestTitle} numberOfLines={1}>
             {summary.latestBadge.title}
           </Text>
@@ -242,9 +247,10 @@ const styles = StyleSheet.create({
     width: '50%',
     paddingHorizontal: TILE_GAP / 2,
     paddingBottom: TILE_GAP,
+    minWidth: 0,
   },
   tile: {
-    minHeight: 78,
+    minHeight: 72,
     borderRadius: radius.md,
     borderWidth: 1,
     paddingVertical: 8,

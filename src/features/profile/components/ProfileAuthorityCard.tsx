@@ -1,6 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
+import {
+  getIconToneStyle,
+  resolveIoniconForRegistryKey,
+} from '@/core/presentation/creviaIconPresentation';
+import { PROFILE_UI_COPY } from '@/features/profile/utils/profileScreenPresentation';
 import type { ProfileAuthoritySummary } from '@/features/profile/utils/profileAuthorityModel';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
@@ -27,6 +32,18 @@ function MiniStat({ label, value }: MiniStatProps) {
   );
 }
 
+function evaluationIconRegistryKey(
+  tone: ProfileAuthoritySummary['evaluationTone'],
+): string {
+  if (tone === 'positive') {
+    return 'promotion_candidate';
+  }
+  if (tone === 'warning') {
+    return 'authority_watching';
+  }
+  return 'authority_stable';
+}
+
 function evaluationToneColor(tone: ProfileAuthoritySummary['evaluationTone']): string {
   switch (tone) {
     case 'positive':
@@ -40,19 +57,39 @@ function evaluationToneColor(tone: ProfileAuthoritySummary['evaluationTone']): s
 
 export function ProfileAuthorityCard({ summary }: ProfileAuthorityCardProps) {
   const evaluationColor = evaluationToneColor(summary.evaluationTone);
+  const authorityIconKey = evaluationIconRegistryKey(summary.evaluationTone);
+  const authorityIconTone = getIconToneStyle(
+    summary.evaluationTone === 'positive'
+      ? 'amber'
+      : summary.evaluationTone === 'warning'
+        ? 'amber'
+        : 'teal',
+  );
 
   return (
     <View style={[styles.card, shadows.soft]}>
       <View style={styles.head}>
-        <View style={styles.iconWrap}>
-          <Ionicons name="shield-checkmark-outline" size={16} color={colors.secondary} />
+        <View
+          style={[
+            styles.iconWrap,
+            { backgroundColor: authorityIconTone.backgroundColor },
+          ]}>
+          <Ionicons
+            name={resolveIoniconForRegistryKey(authorityIconKey)}
+            size={16}
+            color={authorityIconTone.color}
+          />
         </View>
-        <Text style={styles.cardTitle}>Yetki Durumu</Text>
+        <Text style={styles.cardTitle} numberOfLines={1}>
+          {PROFILE_UI_COPY.authorityTitle}
+        </Text>
       </View>
 
       <View style={styles.mainBlock}>
-        <Text style={styles.sectionLabel}>Resmi Görev</Text>
-        <Text style={styles.rankLabel} numberOfLines={2} adjustsFontSizeToFit>
+        <Text style={styles.sectionLabel} numberOfLines={1}>
+          {PROFILE_UI_COPY.officialDuty}
+        </Text>
+        <Text style={styles.rankLabel} numberOfLines={2}>
           {summary.rankLabel}
         </Text>
         <Text style={styles.progressSubtitle} numberOfLines={2}>
@@ -62,12 +99,16 @@ export function ProfileAuthorityCard({ summary }: ProfileAuthorityCardProps) {
 
       <View style={styles.progressRow}>
         <View style={styles.progressMeta}>
-          <Text style={styles.progressMetaLabel}>Sonraki Görev</Text>
+          <Text style={styles.progressMetaLabel} numberOfLines={1}>
+            {PROFILE_UI_COPY.nextEvaluation}
+          </Text>
           <Text style={styles.progressMetaValue} numberOfLines={1}>
             {summary.nextRankLabel}
           </Text>
         </View>
-        <Text style={styles.progressPercent}>%{summary.progressPercent}</Text>
+        <Text style={styles.progressPercent} numberOfLines={1}>
+          %{summary.progressPercent}
+        </Text>
       </View>
 
       <View style={styles.progressTrack}>
@@ -81,16 +122,19 @@ export function ProfileAuthorityCard({ summary }: ProfileAuthorityCardProps) {
 
       <View style={styles.grid}>
         <MiniStat
-          label="Yetki Güveni"
+          label={PROFILE_UI_COPY.authorityTrust}
           value={summary.authorityTrustLabel.replace('Yetki Güveni ', '')}
         />
-        <MiniStat label="Güçlü Alan" value={summary.strongestDomainLabel} />
-        <MiniStat label="Açılan İzin" value={summary.unlockedPermissionCountLabel} />
-        <MiniStat label="Kalan Güven" value={summary.remainingTrustLabel} />
+        <MiniStat
+          label={PROFILE_UI_COPY.remainingTrust}
+          value={summary.remainingTrustLabel}
+        />
       </View>
 
       <View style={styles.evaluationRow}>
-        <Text style={styles.evaluationLabel}>Üst Yönetim Değerlendirmesi</Text>
+        <Text style={styles.evaluationLabel} numberOfLines={1}>
+          {PROFILE_UI_COPY.upperManagementEvaluation}
+        </Text>
         <View style={styles.evaluationBadge}>
           <Ionicons
             name="document-text-outline"
@@ -113,9 +157,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-    gap: 12,
+    borderColor: 'rgba(26, 143, 138, 0.12)',
+    padding: spacing.sm,
+    gap: 10,
   },
   head: {
     flexDirection: 'row',
@@ -149,11 +193,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   rankLabel: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: '900',
     color: colors.textPrimary,
-    letterSpacing: -0.4,
-    lineHeight: 24,
+    letterSpacing: -0.35,
+    lineHeight: 21,
   },
   progressSubtitle: {
     fontSize: 12,
@@ -190,7 +234,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   progressTrack: {
-    height: 4,
+    height: 3,
     borderRadius: 2,
     backgroundColor: colors.border,
     overflow: 'hidden',
@@ -208,14 +252,14 @@ const styles = StyleSheet.create({
   stat: {
     width: '48%',
     flexGrow: 1,
-    minWidth: '46%',
+    minWidth: 0,
     backgroundColor: colors.backgroundAlt,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    gap: 3,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    gap: 2,
   },
   statLabel: {
     fontSize: 9,
@@ -225,11 +269,13 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   statValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
     color: colors.textPrimary,
     letterSpacing: -0.15,
-    lineHeight: 18,
+    lineHeight: 16,
+    flexShrink: 1,
+    minWidth: 0,
   },
   evaluationRow: {
     paddingTop: 4,

@@ -1,5 +1,6 @@
 import type { LeaderboardEntry } from '@/core/leaderboard/leaderboardTypes';
 
+import { buildLeaderboardAvatarModel } from './leaderboardPresentation';
 import type { PodiumSlotKey, PodiumUser } from './leaderboardPodiumTypes';
 
 function emptyPodiumUser(slot: PodiumSlotKey): PodiumUser {
@@ -24,13 +25,14 @@ export function mapLeaderboardEntriesToPodiumUsers(
     if (!entry) {
       return emptyPodiumUser(slot);
     }
+    const avatar = buildLeaderboardAvatarModel(entry);
     return {
       id: entry.id,
       name: entry.playerName,
       title: entry.title,
       score: entry.score,
       districtName: entry.neighborhoodName,
-      avatarUrl: null,
+      avatarUrl: avatar.imageUrl ?? null,
     };
   };
 

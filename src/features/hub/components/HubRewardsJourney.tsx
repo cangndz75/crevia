@@ -17,7 +17,11 @@ type Milestone = {
   icon: keyof typeof Ionicons.glyphMap;
 };
 
-export function HubRewardsJourney() {
+type HubRewardsJourneyProps = {
+  compact?: boolean;
+};
+
+export function HubRewardsJourney({ compact = false }: HubRewardsJourneyProps) {
   const currentDay = useGameStore((s) => s.gameState.city.day);
   const streak = Math.max(1, currentDay);
 
@@ -51,7 +55,7 @@ export function HubRewardsJourney() {
         colors={['#0B3D3A', '#0F4A47', '#157A76']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.banner, shadows.card]}>
+        style={[styles.banner, compact && styles.bannerCompact, shadows.card]}>
         <View style={styles.topRow}>
           <View style={styles.streakBadge}>
             <View style={styles.flameCircle}>
@@ -103,9 +107,11 @@ export function HubRewardsJourney() {
           ))}
         </View>
 
-        <Text style={styles.footer}>
-          Devam et, daha büyük ödüller seni bekliyor!
-        </Text>
+        {!compact ? (
+          <Text style={styles.footer} numberOfLines={1}>
+            Devam et, daha büyük ödüller seni bekliyor!
+          </Text>
+        ) : null}
       </LinearGradient>
     </Animated.View>
   );
@@ -120,6 +126,11 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 12,
     overflow: 'hidden',
+  },
+  bannerCompact: {
+    padding: 10,
+    gap: 8,
+    borderRadius: radius.lg,
   },
   topRow: {
     flexDirection: 'row',

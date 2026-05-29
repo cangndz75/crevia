@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { EvidenceMetricsRow } from '@/features/events/components/event-workflow/EvidenceMetricsRow';
 import { EventWorkflowFooter } from '@/features/events/components/event-workflow/EventWorkflowFooter';
@@ -8,6 +8,7 @@ import { EventWorkflowStepper } from '@/features/events/components/event-workflo
 import { MainFindingsCard } from '@/features/events/components/event-workflow/MainFindingsCard';
 import { SignalSummaryCard } from '@/features/events/components/event-workflow/SignalSummaryCard';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
+import { buildEventResultDistrictContextLine } from '@/features/events/utils/eventResultPresentation';
 import type { EventCard } from '@/core/models/EventCard';
 import {
   getInspectFindingsScene,
@@ -44,6 +45,10 @@ export function EventInspectPhase({
     [event],
   );
   const findingsScene = useMemo(() => getInspectFindingsScene(), []);
+  const districtContextLine = useMemo(
+    () => buildEventResultDistrictContextLine(event),
+    [event],
+  );
 
   const handleDetailsPress = () => {
     Alert.alert(
@@ -65,6 +70,12 @@ export function EventInspectPhase({
           remainingLabel={heroChips.remaining}
           heroImage={heroImage}
         />
+
+        {districtContextLine ? (
+          <Text style={styles.districtContext} numberOfLines={1}>
+            {districtContextLine}
+          </Text>
+        ) : null}
 
         <View style={styles.stepperGap}>
           <EventWorkflowStepper activeStep="inspect" />
@@ -109,5 +120,13 @@ const styles = StyleSheet.create({
   },
   metricsGap: {
     marginTop: -2,
+  },
+  districtContext: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: eventDetail.textMuted,
+    lineHeight: 15,
+    flexShrink: 1,
+    minWidth: 0,
   },
 });

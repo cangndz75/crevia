@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { PROFILE_UI_COPY } from '@/features/profile/utils/profileScreenPresentation';
 import type { ProfileViewModel } from '@/features/profile/utils/profileModel';
 import { HeaderAvatar } from '@/ui/components/game-header/HeaderAvatar';
 import { colors } from '@/ui/theme/colors';
@@ -9,18 +10,21 @@ import { spacing } from '@/ui/theme/spacing';
 
 type ProfileHeroCardProps = {
   model: ProfileViewModel;
+  careerLine: string;
+  rankChip: string;
 };
 
-export function ProfileHeroCard({ model }: ProfileHeroCardProps) {
+export function ProfileHeroCard({
+  model,
+  careerLine,
+  rankChip,
+}: ProfileHeroCardProps) {
   return (
     <View style={styles.panel}>
-      <View style={styles.topAccent} />
-
       <View style={styles.identityRow}>
         <View style={styles.avatarStack}>
-          <View style={styles.ringGlow} />
           <View style={styles.ringOuter}>
-            <HeaderAvatar size={92} borderColor="rgba(255,255,255,0.95)" />
+            <HeaderAvatar size={72} borderColor="rgba(255,255,255,0.95)" />
           </View>
           <View style={styles.levelOrb}>
             <Text style={styles.levelOrbText}>{model.level}</Text>
@@ -28,26 +32,40 @@ export function ProfileHeroCard({ model }: ProfileHeroCardProps) {
         </View>
 
         <View style={styles.identityCol}>
-          <Text style={styles.kicker}>AKTİF OPERATÖR</Text>
+          <Text style={styles.kicker} numberOfLines={1}>
+            {PROFILE_UI_COPY.heroKicker}
+          </Text>
           <Text style={styles.name} numberOfLines={1}>
             {model.playerName}
           </Text>
+          <View style={styles.rankChip}>
+            <Text style={styles.rankChipText} numberOfLines={1}>
+              {rankChip}
+            </Text>
+          </View>
           <Text style={styles.role} numberOfLines={2}>
             {model.role}
           </Text>
         </View>
       </View>
 
+      <View style={styles.careerLine}>
+        <Ionicons name="sparkles-outline" size={12} color={colors.hubGold} />
+        <Text style={styles.careerLineText} numberOfLines={2}>
+          {careerLine}
+        </Text>
+      </View>
+
       <View style={styles.metaBar}>
         <View style={styles.metaItem}>
-          <Ionicons name="business-outline" size={12} color={colors.hubGold} />
+          <Ionicons name="business-outline" size={11} color={colors.hubGold} />
           <Text style={styles.metaText} numberOfLines={1}>
             {model.unit}
           </Text>
         </View>
         <View style={styles.metaDot} />
         <View style={[styles.metaItem, styles.metaItemFlex]}>
-          <Ionicons name="location" size={12} color="rgba(255,255,255,0.9)" />
+          <Ionicons name="location" size={11} color="rgba(255,255,255,0.9)" />
           <Text style={styles.metaText} numberOfLines={1}>
             {model.region}
           </Text>
@@ -60,47 +78,32 @@ export function ProfileHeroCard({ model }: ProfileHeroCardProps) {
 const styles = StyleSheet.create({
   panel: {
     marginTop: spacing.sm,
-    borderRadius: 22,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-    backgroundColor: 'rgba(0,0,0,0.14)',
+    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(0,0,0,0.12)',
     overflow: 'hidden',
-    padding: spacing.md,
-    gap: spacing.md,
-  },
-  topAccent: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    backgroundColor: colors.hubGold,
-    opacity: 0.85,
+    padding: spacing.sm,
+    gap: spacing.sm,
   },
   identityRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   avatarStack: {
-    width: 100,
-    height: 100,
+    width: 78,
+    height: 78,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  ringGlow: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(245,183,49,0.2)',
+    flexShrink: 0,
   },
   ringOuter: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    borderWidth: 2.5,
-    borderColor: 'rgba(245,183,49,0.7)',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 2,
+    borderColor: 'rgba(245,183,49,0.65)',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.1)',
@@ -108,76 +111,111 @@ const styles = StyleSheet.create({
   levelOrb: {
     position: 'absolute',
     bottom: 0,
-    right: 2,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    right: 0,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: colors.hubGold,
-    borderWidth: 2.5,
+    borderWidth: 2,
     borderColor: colors.headerTealDark,
     alignItems: 'center',
     justifyContent: 'center',
   },
   levelOrbText: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '900',
     color: colors.textInverse,
   },
   identityCol: {
     flex: 1,
     minWidth: 0,
-    gap: 4,
+    gap: 3,
   },
   kicker: {
     fontSize: 9,
     fontWeight: '800',
     color: 'rgba(245,183,49,0.95)',
-    letterSpacing: 1.3,
+    letterSpacing: 0.8,
   },
   name: {
-    fontSize: 26,
+    fontSize: 20,
     fontWeight: '900',
     color: colors.textInverse,
-    letterSpacing: -0.6,
-    lineHeight: 30,
+    letterSpacing: -0.4,
+    lineHeight: 24,
+  },
+  rankChip: {
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  rankChipText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: 'rgba(255,255,255,0.95)',
   },
   role: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.82)',
-    lineHeight: 16,
+    color: 'rgba(255,255,255,0.8)',
+    lineHeight: 15,
+  },
+  careerLine: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 4,
+    minWidth: 0,
+  },
+  careerLineText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.88)',
+    lineHeight: 15,
   },
   metaBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: radius.lg,
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(255,255,255,0.12)',
     paddingHorizontal: spacing.sm,
-    paddingVertical: 8,
+    paddingVertical: 6,
+    minWidth: 0,
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
     maxWidth: '46%',
+    flexShrink: 1,
+    minWidth: 0,
   },
   metaItemFlex: {
     flex: 1,
     maxWidth: undefined,
   },
   metaDot: {
-    width: 4,
-    height: 4,
+    width: 3,
+    height: 3,
     borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.35)',
+    flexShrink: 0,
   },
   metaText: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.92)',
+    color: 'rgba(255,255,255,0.9)',
+    minWidth: 0,
   },
 });

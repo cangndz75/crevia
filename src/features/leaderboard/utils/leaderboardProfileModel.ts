@@ -27,7 +27,7 @@ export type LeaderboardPrestigeSummary = {
   hasAnyScore: boolean;
 };
 
-function dedupePilotScores(entries: LeaderboardEntry[]): LeaderboardEntry[] {
+export function dedupePilotScores(entries: LeaderboardEntry[]): LeaderboardEntry[] {
   const seen = new Set<string>();
   const unique: LeaderboardEntry[] = [];
 

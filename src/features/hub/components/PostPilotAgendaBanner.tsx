@@ -8,6 +8,10 @@ import {
   buildPostPilotAgendaBannerModel,
   shouldShowPostPilotAgendaBanner,
 } from '@/core/postPilot';
+import {
+  getIconToneStyle,
+  resolveIoniconForRegistryKey,
+} from '@/core/presentation/creviaIconPresentation';
 import { selectIsDay1TutorialActive } from '@/features/tutorial/tutorialSelectors';
 import { selectPostPilotOperation, useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
@@ -15,7 +19,11 @@ import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
-export function PostPilotAgendaBanner() {
+type PostPilotAgendaBannerProps = {
+  compact?: boolean;
+};
+
+export function PostPilotAgendaBanner({ compact = false }: PostPilotAgendaBannerProps) {
   const router = useRouter();
   const tutorialActive = useGameStore(selectIsDay1TutorialActive);
 
@@ -47,14 +55,23 @@ export function PostPilotAgendaBanner() {
   }
 
   const { model } = banner;
+  const agendaIconTone = getIconToneStyle('teal');
 
   return (
     <Animated.View
       entering={FadeInUp.delay(60).duration(280).springify().damping(22)}
-      style={[styles.card, shadows.soft]}>
+      style={[styles.card, compact && styles.cardCompact, shadows.soft]}>
       <View style={styles.headRow}>
-        <View style={styles.iconWrap}>
-          <Ionicons name="compass-outline" size={16} color={colors.primary} />
+        <View
+          style={[
+            styles.iconWrap,
+            { backgroundColor: agendaIconTone.backgroundColor },
+          ]}>
+          <Ionicons
+            name={resolveIoniconForRegistryKey('post_pilot_agenda')}
+            size={16}
+            color={agendaIconTone.color}
+          />
         </View>
         <View style={styles.headCopy}>
           <Text style={styles.title} numberOfLines={1}>
@@ -128,6 +145,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(26, 143, 138, 0.14)',
     padding: spacing.md,
     gap: spacing.sm,
+  },
+  cardCompact: {
+    padding: spacing.sm,
+    gap: spacing.xs,
+    borderRadius: radius.md,
   },
   headRow: {
     flexDirection: 'row',

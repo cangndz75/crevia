@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { PROFILE_UI_COPY } from '@/features/profile/utils/profileScreenPresentation';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
@@ -57,7 +58,9 @@ export function ProfileMenuSection() {
   return (
     <View style={styles.wrap}>
       <View style={styles.sectionHead}>
-        <Text style={styles.sectionTitle}>Kilitli Modüller</Text>
+        <Text style={styles.sectionTitle} numberOfLines={1}>
+          {PROFILE_UI_COPY.menuSection}
+        </Text>
         <View style={styles.sectionPill}>
           <Text style={styles.sectionPillText}>4</Text>
         </View>

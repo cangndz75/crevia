@@ -1,5 +1,9 @@
 import { BADGE_DEFINITIONS, BADGE_BY_ID } from '@/core/badges/badgeConstants';
 import {
+  getIconForBadgeCategory,
+  resolveIoniconForRegistryKey,
+} from '@/core/presentation/creviaIconPresentation';
+import {
   buildBadgeCategoryLabel,
   buildBadgeDescription,
   buildBadgeTitle,
@@ -58,17 +62,6 @@ const PROFILE_RARITY_LABELS: Record<BadgeRarity, string> = {
   epic: 'Destansı',
 };
 
-const CATEGORY_ICON: Record<BadgeCategory, ProfileBadgeIconKey> = {
-  operations: 'navigate',
-  publicTrust: 'heart',
-  resources: 'wallet',
-  personnel: 'people',
-  crisis: 'shield',
-  authority: 'ribbon',
-  consistency: 'checkmark-circle',
-  pilot: 'flag',
-};
-
 function isBadgeId(val: unknown): val is BadgeId {
   return typeof val === 'string' && val in BADGE_BY_ID;
 }
@@ -78,7 +71,8 @@ function buildProfileBadgeRarityLabel(rarity: BadgeRarity): string {
 }
 
 function resolveIconKey(category: BadgeCategory): ProfileBadgeIconKey {
-  return CATEGORY_ICON[category] ?? 'navigate';
+  const definition = getIconForBadgeCategory(category);
+  return resolveIoniconForRegistryKey(definition.key) as ProfileBadgeIconKey;
 }
 
 function resolveProgressLabel(
@@ -187,7 +181,7 @@ export function buildProfileBadgeShowcaseSummary(
   );
 
   const totalCount = BADGE_DEFINITIONS.length;
-  const earnedCount = badgeState.earnedBadgeIds.length;
+  const earnedCount = new Set(badgeState.earnedBadgeIds).size;
   const completionPercent =
     totalCount > 0 ? Math.round((earnedCount / totalCount) * 100) : 0;
 
@@ -199,7 +193,7 @@ export function buildProfileBadgeShowcaseSummary(
   return {
     earnedCount,
     totalCount,
-    earnedCountLabel: `${earnedCount} / ${totalCount} rozet`,
+    earnedCountLabel: `${earnedCount} / ${totalCount} kazanıldı`,
     completionPercent,
     latestBadge: resolveLatestBadge(badgeState),
     showcaseItems,

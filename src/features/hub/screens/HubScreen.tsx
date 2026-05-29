@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
@@ -13,6 +14,8 @@ import { HubTodayFlowStrip } from '@/features/hub/components/HubTodayFlowStrip';
 import { HubDailyPriorityCard } from '@/features/hub/components/HubDailyPriorityCard';
 import { HubPersonnelStrip } from '@/features/hub/components/HubPersonnelStrip';
 import { HubPilotReportBanner } from '@/features/hub/components/HubPilotReportBanner';
+import { HubOperationContextStrip } from '@/features/hub/components/HubOperationContextStrip';
+import { HubPilotOperationPreviewStrip } from '@/features/hub/components/HubPilotOperationPreviewStrip';
 import { PostPilotAgendaBanner } from '@/features/hub/components/PostPilotAgendaBanner';
 import { HubQuickActionsPanel } from '@/features/hub/components/HubQuickActionsPanel';
 import { HubRegionPulseSection } from '@/features/hub/components/HubRegionPulseSection';
@@ -29,24 +32,32 @@ import { OnboardingCoachBubble } from '@/features/onboarding/components/Onboardi
 import { OnboardingFocusHint } from '@/features/onboarding/components/OnboardingFocusHint';
 import { useOnboardingHint } from '@/features/onboarding/hooks/useOnboardingHint';
 import { useOnboardingHubVisibility } from '@/features/onboarding/hooks/useOnboardingHubVisibility';
+import { buildHubScreenLayoutModel } from '@/features/hub/utils/hubScreenPresentation';
 import {
   selectActiveTutorialStepForScreen,
   selectIsDay1TutorialActive,
   selectShouldShowTutorialSocialCard,
 } from '@/features/tutorial/tutorialSelectors';
-import { selectActiveEvents, useGameStore } from '@/store/useGameStore';
+import {
+  selectActiveEvents,
+  selectPostPilotOperation,
+  useGameStore,
+} from '@/store/useGameStore';
 import { GameScreenShell } from '@/ui/components/GameScreenShell';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
 
 /**
- * Merkez ekranı — mockup sırası:
- * Görev Takibi → Kritik Olay → Ödüller → Hızlı Aksiyonlar → Sosyal/Filo → Personel → Bölge → Gün Bitir
+ * Merkez ekranı — günlük operasyon merkezi hiyerarşisi:
+ * Bağlam şeridi → Ana odak → Yetki → Hızlı aksiyonlar → Destek şeritleri → Gün bitir
  */
 export function HubScreen() {
   const router = useRouter();
   const endCurrentDay = useGameStore((s) => s.endCurrentDay);
-  const eventCount = useGameStore(selectActiveEvents).length;
+  const gameState = useGameStore((s) => s.gameState);
+  const postPilotOperation = useGameStore(selectPostPilotOperation);
+  const activeEvents = useGameStore(selectActiveEvents);
+  const eventCount = activeEvents.length;
   const showSocialCard = useGameStore(selectShouldShowTutorialSocialCard);
   const hubTutorialStep = useGameStore((s) =>
     selectActiveTutorialStepForScreen(s, 'hub'),
@@ -54,6 +65,25 @@ export function HubScreen() {
   const tutorialActive = useGameStore(selectIsDay1TutorialActive);
   const hubVisibility = useOnboardingHubVisibility();
   const isDay1Layout = hubVisibility.showDailyPriorityCompact;
+
+  const hubLayout = useMemo(
+    () =>
+      buildHubScreenLayoutModel({
+        gameState,
+        tutorialActive,
+        isDay1Layout,
+        activeEventCount: eventCount,
+        postPilotOperation,
+      }),
+    [
+      gameState,
+      tutorialActive,
+      isDay1Layout,
+      eventCount,
+      postPilotOperation,
+    ],
+  );
+
   const { coachHint, dismissHint } = useOnboardingHint('hub');
   const { focusHint: criticalEventHint } = useOnboardingHint(
     'hub',
@@ -115,24 +145,13 @@ export function HubScreen() {
     </View>
   ) : null;
 
-  return (
-    <GameScreenShell
-      headerVariant="dashboard"
-      backgroundColor={colors.hubCream}
-      contentStyle={styles.content}>
-      <View
-        style={[
-          styles.body,
-          hubTutorialStep ? styles.bodyWithCoach : null,
-        ]}>
-        <TutorialTarget targetKey="hub_metrics" highlighted={metricsHighlight}>
-          <HubTaskTrackingHero />
-        </TutorialTarget>
+  const focusBlock = !isDay1Layout ? (
+    <View style={styles.focusZone}>
+      {hubLayout.showPostPilotAgendaInFocus ? (
+        <PostPilotAgendaBanner compact />
+      ) : null}
 
-        <HubAuthorityProgressChip />
-
-        <PostPilotAgendaBanner />
-
+      {hubLayout.showCriticalEventInFocus ? (
         <View style={styles.criticalWrap}>
           {showInlineFocusHints && criticalEventHint ? (
             <View style={styles.hintPad}>
@@ -148,8 +167,47 @@ export function HubScreen() {
             <HubCriticalEventCard />
           </TutorialTarget>
         </View>
+      ) : null}
 
-        <HubRewardsJourney />
+      {hubLayout.showTaskTrackingAsFocus ? (
+        <TutorialTarget targetKey="hub_metrics" highlighted={metricsHighlight}>
+          <HubTaskTrackingHero variant="focus" />
+        </TutorialTarget>
+      ) : null}
+
+      {hubLayout.showPilotPreviewStrip ? <HubPilotOperationPreviewStrip /> : null}
+    </View>
+  ) : null;
+
+  return (
+    <GameScreenShell
+      headerVariant="dashboard"
+      backgroundColor={colors.hubCream}
+      contentStyle={styles.content}>
+      <View
+        style={[
+          styles.body,
+          hubTutorialStep ? styles.bodyWithCoach : null,
+        ]}>
+        <HubOperationContextStrip layout={hubLayout} />
+
+        {isDay1Layout ? (
+          <TutorialTarget targetKey="hub_metrics" highlighted={metricsHighlight}>
+            <HubTaskTrackingHero variant="compact" />
+          </TutorialTarget>
+        ) : (
+          focusBlock
+        )}
+
+        {hubLayout.showAuthorityChip ? <HubAuthorityProgressChip /> : null}
+
+        {hubLayout.showCompactTaskTracking ? (
+          <TutorialTarget targetKey="hub_metrics" highlighted={metricsHighlight}>
+            <HubTaskTrackingHero variant="compact" />
+          </TutorialTarget>
+        ) : null}
+
+        {hubLayout.showRewardsJourney ? <HubRewardsJourney compact /> : null}
 
         {day1FocusStack}
 
@@ -192,14 +250,18 @@ export function HubScreen() {
         <HubRegionPulseSection />
 
         <HubDailyGoalCard onEndDay={handleEndDay} endDayOnly />
-        <HubPilotReportBanner />
+        {hubLayout.showPilotReportBanner ? (
+          <HubPilotReportBanner compact={hubLayout.pilotReportBannerCompact} />
+        ) : null}
 
-        {eventCount > 1 && (
+        {hubLayout.moreEventsCount > 0 ? (
           <Pressable
             onPress={() => router.push('/events')}
-            style={styles.moreEventsLink}>
-            <Text style={styles.moreEventsText}>
-              +{eventCount - 1} bekleyen olay daha
+            style={styles.moreEventsLink}
+            accessibilityRole="button"
+            accessibilityLabel="Operasyona devam et">
+            <Text style={styles.moreEventsText} numberOfLines={1}>
+              Operasyona Devam · +{hubLayout.moreEventsCount} olay
             </Text>
             <Ionicons
               name="chevron-forward"
@@ -207,7 +269,7 @@ export function HubScreen() {
               color={colors.hubGoldDark}
             />
           </Pressable>
-        )}
+        ) : null}
 
         <HubDevTools />
       </View>
@@ -229,21 +291,24 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   body: {
-    gap: 14,
+    gap: 10,
     paddingBottom: spacing.xxxl,
   },
   bodyWithCoach: {
     paddingBottom: spacing.xxxl + 120,
+  },
+  focusZone: {
+    gap: 10,
   },
   priorityWrap: {
     gap: 8,
     paddingHorizontal: spacing.lg,
   },
   day1Focus: {
-    gap: 16,
+    gap: 12,
   },
   criticalWrap: {
-    marginTop: -2,
+    marginTop: 0,
   },
   hintPad: {
     paddingHorizontal: spacing.lg,
@@ -256,10 +321,12 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     minHeight: 44,
+    minWidth: 0,
   },
   moreEventsText: {
     fontSize: 13,
     fontWeight: '700',
     color: colors.hubGoldDark,
+    flexShrink: 1,
   },
 });

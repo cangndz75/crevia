@@ -1,17 +1,19 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DecisionImpactMetricRow } from '@/features/events/components/DecisionImpactMetricRow';
+import { PostPilotEventContextChip } from '@/features/events/components/PostPilotEventContextChip';
 import { DecisionResultActionBar } from '@/features/events/components/DecisionResultActionBar';
 import { DecisionResultHeader } from '@/features/events/components/DecisionResultHeader';
-import { DecisionSubsystemOutcomeCard } from '@/features/events/components/DecisionSubsystemOutcomeCard';
+import { EventResultFieldNoteCard } from '@/features/events/components/EventResultFieldNoteCard';
+import { EventResultHeroCard } from '@/features/events/components/EventResultHeroCard';
+import { EventResultImpactMetricsRow } from '@/features/events/components/EventResultImpactMetricsRow';
+import { EventResultMetaFeedbackStrip } from '@/features/events/components/EventResultMetaFeedbackStrip';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
-import type { DecisionResultSummaryTone } from '@/features/events/types/decisionResultTypes';
 import { createEmptyDecisionResultFallback } from '@/features/events/utils/decisionResultModel';
+import { buildEventResultViewModel } from '@/features/events/utils/eventResultPresentation';
 import {
   selectLastDailyReport,
   selectLastDecisionResult,
@@ -21,33 +23,45 @@ import { OnboardingCoachBubble } from '@/features/onboarding/components/Onboardi
 import { useOnboardingHint } from '@/features/onboarding/hooks/useOnboardingHint';
 import { TutorialCoachOverlay } from '@/features/tutorial/TutorialCoachOverlay';
 import { selectActiveTutorialStepForScreen } from '@/features/tutorial/tutorialSelectors';
+import type { EventCard, SolvedEvent } from '@/core/models/EventCard';
+import type { DecisionResultSnapshot } from '@/features/events/types/decisionResultTypes';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
 
-const RESULT_TONE_LABELS: Record<DecisionResultSummaryTone, string> = {
-  positive: 'Olumlu Sonuç',
-  mixed: 'Dengeli Sonuç',
-  negative: 'Riskli Sonuç',
-  neutral: 'Nötr Sonuç',
-};
+function resolveEventForResult(
+  snapshot: DecisionResultSnapshot,
+  events: EventCard[],
+  solvedEvents: SolvedEvent[],
+): EventCard | null {
+  if (!snapshot.eventId) {
+    return null;
+  }
 
-const HERO_GRADIENTS: Record<
-  DecisionResultSummaryTone,
-  readonly [string, string, string]
-> = {
-  positive: ['#FFFFFF', '#EEF9F3', '#DDF4E8'],
-  mixed: ['#FFFFFF', '#FFF8EC', '#FDF4E6'],
-  negative: ['#FFFFFF', '#FFF5F4', '#FDEEED'],
-  neutral: ['#FFFFFF', '#F5F4F1', '#EBF2FA'],
-};
+  const active = events.find((event) => event.id === snapshot.eventId);
+  if (active) {
+    return active;
+  }
 
-const CHIP_COLORS: Record<DecisionResultSummaryTone, { bg: string; text: string }> =
-  {
-    positive: { bg: colors.successMuted, text: colors.success },
-    mixed: { bg: colors.warningMuted, text: colors.warning },
-    negative: { bg: colors.dangerMuted, text: colors.danger },
-    neutral: { bg: colors.secondaryMuted, text: colors.secondary },
+  const solved = solvedEvents.find((event) => event.id === snapshot.eventId);
+  if (!solved) {
+    return null;
+  }
+
+  return {
+    id: solved.id,
+    title: solved.title,
+    category: snapshot.eventType ?? 'operations',
+    riskLevel: 'medium',
+    district: snapshot.neighborhoodName ?? 'Merkez',
+    neighborhoodId: snapshot.neighborhoodId,
+    description: snapshot.summaryText,
+    contextTag: '',
+    urgencyHours: 4,
+    day: snapshot.day,
+    decisions: [],
+    previewEffects: { publicSatisfaction: 0, risk: 0, xp: 0 },
   };
+}
 
 export function DecisionResultScreen() {
   const router = useRouter();
@@ -55,38 +69,49 @@ export function DecisionResultScreen() {
   const snapshot = useGameStore(selectLastDecisionResult);
   const lastDailyReport = useGameStore(selectLastDailyReport);
   const currentDay = useGameStore((s) => s.gameState.city.day);
+  const activeEvents = useGameStore((s) => s.gameState.events);
+  const solvedEvents = useGameStore((s) => s.gameState.solvedEvents);
 
   const result = snapshot ?? createEmptyDecisionResultFallback();
   const isMissing = snapshot == null;
+
+  const relatedEvent = useMemo(
+    () => resolveEventForResult(result, activeEvents, solvedEvents),
+    [activeEvents, result, solvedEvents],
+  );
+
+  const preferEndDay =
+    !isMissing &&
+    lastDailyReport != null &&
+    lastDailyReport.day === currentDay &&
+    activeEvents.length === 0;
+
+  const viewModel = useMemo(
+    () =>
+      buildEventResultViewModel(result, {
+        event: relatedEvent,
+        preferEndDayCta: preferEndDay,
+        isFallback: isMissing,
+      }),
+    [isMissing, preferEndDay, relatedEvent, result],
+  );
 
   const goHub = useCallback(() => {
     router.replace('/');
   }, [router]);
 
-  const secondary = useMemo(() => {
-    if (isMissing) return null;
+  const goReports = useCallback(() => {
+    router.push('/reports' as Href);
+  }, [router]);
 
-    if (lastDailyReport && lastDailyReport.day === currentDay) {
-      return { label: 'Raporu Gör', route: '/reports' as const };
+  const handlePrimaryCta = useCallback(() => {
+    if (preferEndDay) {
+      goReports();
+      return;
     }
+    goHub();
+  }, [goHub, goReports, preferEndDay]);
 
-    const hasSocial = result.subsystemOutcomes.some((o) => o.key === 'social');
-    if (hasSocial) {
-      return { label: 'Sosyal Nabız', route: '/social' as const };
-    }
-
-    const hasContainerOrVehicle = result.subsystemOutcomes.some(
-      (o) => o.key === 'container' || o.key === 'vehicle',
-    );
-    if (hasContainerOrVehicle) {
-      return { label: 'Haritayı Aç', route: '/risks' as const };
-    }
-
-    return null;
-  }, [currentDay, isMissing, lastDailyReport, result.subsystemOutcomes]);
-
-  const chipColors = CHIP_COLORS[result.resultTone];
-  const heroGradient = HERO_GRADIENTS[result.resultTone];
   const legacyTutorialStep = useGameStore((s) =>
     selectActiveTutorialStepForScreen(s, 'decision_result'),
   );
@@ -107,56 +132,42 @@ export function DecisionResultScreen() {
         {isMissing ? (
           <View style={styles.missingBox}>
             <Text style={styles.missingTitle}>{result.summaryTitle}</Text>
-            <Text style={styles.missingBody}>{result.summaryText}</Text>
+            <Text style={styles.missingBody} numberOfLines={2}>
+              {result.summaryText}
+            </Text>
           </View>
         ) : (
           <>
-            <Animated.View
-              entering={FadeInUp.duration(320).springify().damping(22)}>
-              <LinearGradient
-                colors={[...heroGradient]}
-                style={styles.heroCard}>
-                <View style={[styles.statusChip, { backgroundColor: chipColors.bg }]}>
-                  <Text style={[styles.statusChipText, { color: chipColors.text }]}>
-                    {RESULT_TONE_LABELS[result.resultTone]}
-                  </Text>
-                </View>
-                <Text style={styles.summaryTitle}>{result.summaryTitle}</Text>
-                <Text style={styles.summaryText}>{result.summaryText}</Text>
-                <Text style={styles.eventTitle} numberOfLines={2}>
-                  {result.eventTitle}
+            {viewModel.showPostPilotContext && relatedEvent ? (
+              <Animated.View entering={FadeIn.duration(220)}>
+                <PostPilotEventContextChip event={relatedEvent} />
+              </Animated.View>
+            ) : null}
+
+            <Animated.View entering={FadeInUp.duration(300).springify().damping(22)}>
+              <EventResultHeroCard model={viewModel.hero} />
+              {viewModel.districtContextLine ? (
+                <Text style={styles.districtContext} numberOfLines={1}>
+                  {viewModel.districtContextLine}
                 </Text>
-                <Text style={styles.decisionLine} numberOfLines={2}>
-                  Seçilen karar: {result.decisionTitle}
-                </Text>
-              </LinearGradient>
+              ) : null}
             </Animated.View>
 
-            {result.dailyGoalImpact ? (
-              <Animated.View
-                entering={FadeInUp.delay(80).duration(260)}
-                style={styles.goalImpactCard}>
-                <Text style={styles.goalImpactText}>{result.dailyGoalImpact}</Text>
-              </Animated.View>
-            ) : null}
+            <Animated.View entering={FadeInUp.delay(80).duration(280)}>
+              <EventResultImpactMetricsRow metrics={viewModel.metrics} />
+            </Animated.View>
 
-            {result.dailyPriorityImpact ? (
-              <Animated.View
-                entering={FadeInUp.delay(100).duration(260)}
-                style={styles.goalImpactCard}>
-                <Text style={styles.goalImpactLabel}>Günlük Öncelik Etkisi</Text>
-                <Text style={styles.goalImpactTitle}>
-                  {result.dailyPriorityImpact.title}
-                </Text>
-                <Text style={styles.goalImpactText}>
-                  {result.dailyPriorityImpact.text}
-                </Text>
-              </Animated.View>
-            ) : null}
+            <Animated.View entering={FadeInUp.delay(120).duration(280)}>
+              <EventResultFieldNoteCard note={viewModel.fieldNote} />
+            </Animated.View>
+
+            <Animated.View entering={FadeInUp.delay(150).duration(260)}>
+              <EventResultMetaFeedbackStrip lines={viewModel.metaLines} />
+            </Animated.View>
 
             {result.butterflyHint ? (
               <Animated.View
-                entering={FadeInUp.delay(110).duration(260)}
+                entering={FadeInUp.delay(180).duration(260)}
                 style={[
                   styles.butterflyHintCard,
                   result.butterflyHint.tone === 'warning'
@@ -165,68 +176,12 @@ export function DecisionResultScreen() {
                       ? styles.butterflyHintOpportunity
                       : styles.butterflyHintInfo,
                 ]}>
-                <Text style={styles.butterflyHintTitle}>
+                <Text style={styles.butterflyHintTitle} numberOfLines={1}>
                   {result.butterflyHint.title}
                 </Text>
-                <Text style={styles.butterflyHintText}>
+                <Text style={styles.butterflyHintText} numberOfLines={2}>
                   {result.butterflyHint.text}
                 </Text>
-                {result.butterflyHint.dueText ? (
-                  <Text style={styles.butterflyHintDue}>
-                    {result.butterflyHint.dueText}
-                  </Text>
-                ) : null}
-              </Animated.View>
-            ) : null}
-
-            <Animated.View entering={FadeInUp.delay(140).duration(300)}>
-              <DecisionImpactMetricRow metrics={result.metricChanges} />
-            </Animated.View>
-
-            {result.subsystemOutcomes.length > 0 ? (
-              <Animated.View
-                entering={FadeInUp.delay(220).duration(300)}
-                style={styles.outcomeGrid}>
-                {result.subsystemOutcomes.map((outcome) => (
-                  <DecisionSubsystemOutcomeCard
-                    key={outcome.key}
-                    outcome={outcome}
-                  />
-                ))}
-              </Animated.View>
-            ) : null}
-
-            {result.highlightLines.length > 0 ? (
-              <Animated.View
-                entering={FadeInUp.delay(280).duration(260)}
-                style={styles.linesCard}>
-                <Text style={styles.linesTitle}>Kazançlar</Text>
-                {result.highlightLines.map((line) => (
-                  <Text key={line} style={styles.lineGood}>
-                    • {line}
-                  </Text>
-                ))}
-              </Animated.View>
-            ) : null}
-
-            {result.riskLines.length > 0 ? (
-              <Animated.View
-                entering={FadeInUp.delay(300).duration(260)}
-                style={styles.linesCard}>
-                <Text style={styles.linesTitle}>Dikkat Edilecekler</Text>
-                {result.riskLines.map((line) => (
-                  <Text key={line} style={styles.lineRisk}>
-                    • {line}
-                  </Text>
-                ))}
-              </Animated.View>
-            ) : null}
-
-            {result.nextSuggestion ? (
-              <Animated.View
-                entering={FadeInUp.delay(320).duration(260)}
-                style={styles.suggestionCard}>
-                <Text style={styles.suggestionText}>{result.nextSuggestion}</Text>
               </Animated.View>
             ) : null}
           </>
@@ -234,11 +189,9 @@ export function DecisionResultScreen() {
       </ScrollView>
 
       <DecisionResultActionBar
+        primaryLabel={viewModel.nextStep.primaryCtaLabel}
+        onPrimaryPress={handlePrimaryCta}
         onGoHub={goHub}
-        secondaryLabel={secondary?.label}
-        onSecondaryPress={
-          secondary ? () => router.push(secondary.route as Href) : undefined
-        }
       />
       <TutorialCoachOverlay
         screen="decision_result"
@@ -264,159 +217,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: eventDetail.screenPadding,
     paddingTop: 4,
     paddingBottom: spacing.xl,
-    gap: 14,
-  },
-  heroCard: {
-    borderRadius: eventDetail.cardRadius,
-    padding: 18,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(6, 63, 59, 0.08)',
-    shadowColor: '#063F3B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  statusChip: {
-    alignSelf: 'flex-start',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  statusChipText: {
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  summaryTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: eventDetail.textDark,
-    letterSpacing: -0.3,
-  },
-  summaryText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: eventDetail.textDark,
-    lineHeight: 20,
-  },
-  eventTitle: {
-    marginTop: 4,
-    fontSize: 12,
-    fontWeight: '700',
-    color: eventDetail.textMuted,
-  },
-  decisionLine: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: eventDetail.teal,
-  },
-  outcomeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  linesCard: {
-    backgroundColor: eventDetail.card,
-    borderRadius: eventDetail.smallRadius,
-    padding: 12,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(6, 63, 59, 0.06)',
-  },
-  linesTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: eventDetail.textDark,
-    marginBottom: 2,
-  },
-  lineGood: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.success,
-    lineHeight: 17,
-  },
-  lineRisk: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.danger,
-    lineHeight: 17,
-  },
-  suggestionCard: {
-    backgroundColor: eventDetail.mintSoft,
-    borderRadius: eventDetail.smallRadius,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(11, 107, 97, 0.12)',
-  },
-  suggestionText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: eventDetail.tealDark,
-    lineHeight: 18,
-  },
-  goalImpactCard: {
-    backgroundColor: eventDetail.mintSoft,
-    borderRadius: eventDetail.smallRadius,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(11, 107, 97, 0.14)',
-  },
-  goalImpactLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  goalImpactTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: eventDetail.tealDark,
-  },
-  goalImpactText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: eventDetail.tealDark,
-    lineHeight: 17,
-  },
-  butterflyHintCard: {
-    borderRadius: eventDetail.smallRadius,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    gap: 4,
-  },
-  butterflyHintInfo: {
-    backgroundColor: colors.secondaryMuted,
-    borderColor: 'rgba(59, 130, 246, 0.2)',
-  },
-  butterflyHintWarning: {
-    backgroundColor: colors.warningMuted,
-    borderColor: 'rgba(234, 179, 8, 0.25)',
-  },
-  butterflyHintOpportunity: {
-    backgroundColor: colors.successMuted,
-    borderColor: 'rgba(34, 197, 94, 0.2)',
-  },
-  butterflyHintTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.35,
-  },
-  butterflyHintText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: eventDetail.textDark,
-    lineHeight: 17,
-  },
-  butterflyHintDue: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textSecondary,
+    gap: 12,
   },
   missingBox: {
     backgroundColor: eventDetail.card,
@@ -435,5 +236,47 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: eventDetail.textMuted,
     lineHeight: 20,
+  },
+  districtContext: {
+    marginTop: 6,
+    fontSize: 11,
+    fontWeight: '600',
+    color: eventDetail.textMuted,
+    lineHeight: 15,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  butterflyHintCard: {
+    borderRadius: eventDetail.smallRadius,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    gap: 4,
+    minWidth: 0,
+  },
+  butterflyHintInfo: {
+    backgroundColor: colors.secondaryMuted,
+    borderColor: 'rgba(59, 130, 246, 0.2)',
+  },
+  butterflyHintWarning: {
+    backgroundColor: colors.warningMuted,
+    borderColor: 'rgba(234, 179, 8, 0.25)',
+  },
+  butterflyHintOpportunity: {
+    backgroundColor: colors.successMuted,
+    borderColor: 'rgba(34, 197, 94, 0.2)',
+  },
+  butterflyHintTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.textSecondary,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  butterflyHintText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: eventDetail.textDark,
+    lineHeight: 17,
   },
 });

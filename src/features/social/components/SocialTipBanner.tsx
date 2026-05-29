@@ -23,7 +23,9 @@ export function SocialTipBanner({ text }: Props) {
         color={colors.warning}
         style={styles.icon}
       />
-      <Text style={styles.text}>{text}</Text>
+      <Text style={styles.text} numberOfLines={2}>
+        {text}
+      </Text>
     </LinearGradient>
   );
 }
@@ -33,10 +35,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     marginHorizontal: spacing.lg,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    minWidth: 0,
     borderWidth: 1,
     borderColor: 'rgba(232,155,46,0.18)',
   },
@@ -45,7 +48,9 @@ const styles = StyleSheet.create({
   },
   text: {
     flex: 1,
-    fontSize: 12,
+    minWidth: 0,
+    flexShrink: 1,
+    fontSize: 11,
     fontWeight: '600',
     color: '#6B5A3E',
     lineHeight: 17,

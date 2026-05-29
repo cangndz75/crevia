@@ -1,9 +1,12 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
+
+import { resolveIoniconForRegistryKey } from '@/core/presentation/creviaIconPresentation';
 
 import type { MapDistrictId } from '../data/mapAssets';
 import type { MapNeighborhoodStripItem } from '../utils/mapUiPresentation';
@@ -20,6 +23,15 @@ const STATUS_COLORS = {
   approaching: colors.hubGoldDark,
   preview: colors.textSecondary,
 } as const;
+
+const STRIP_ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
+  city: 'business-outline',
+  home: 'home-outline',
+  factory: 'construct-outline',
+  route: 'git-branch-outline',
+  leaf: 'leaf-outline',
+  navigate: 'navigate-outline',
+};
 
 export function MapNeighborhoodStrip({ items, selectedId, onSelect }: Props) {
   if (items.length === 0) {
@@ -48,7 +60,16 @@ export function MapNeighborhoodStrip({ items, selectedId, onSelect }: Props) {
               shadows.soft,
               selected && styles.cardSelected,
             ]}>
-            <View style={[styles.accent, { backgroundColor: item.accentColor }]} />
+            <View style={styles.accentRow}>
+              <View style={[styles.accent, { backgroundColor: item.accentColor }]} />
+              {item.identityIconKey ? (
+                <Ionicons
+                  name={resolveIoniconForRegistryKey(item.identityIconKey)}
+                  size={12}
+                  color={item.accentColor}
+                />
+              ) : null}
+            </View>
             <Text style={styles.label} numberOfLines={1}>
               {item.label}
             </Text>
@@ -87,11 +108,18 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(26,143,138,0.35)',
     backgroundColor: colors.primaryMuted,
   },
+  accentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
+    minWidth: 0,
+  },
   accent: {
     width: 18,
     height: 3,
     borderRadius: 2,
-    marginBottom: 2,
+    flexShrink: 0,
   },
   label: {
     fontSize: 12,

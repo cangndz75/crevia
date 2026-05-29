@@ -16,7 +16,9 @@ import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
 import {
   DAY1_QUICK_PREP_TITLE,
+  HUB_QUICK_ACTION_COMPACT_CARD_MAX_HEIGHT,
   HUB_QUICK_ACTION_PREVIEW,
+  HUB_QUICK_ACTIONS_TITLE,
   resolveHubQuickActionsLayoutMode,
 } from '@/features/hub/hubUiPresentation';
 import { hubAssets } from '@/features/hub/utils/hubAssets';
@@ -72,12 +74,76 @@ export function HubQuickActionsPanel() {
     [day1EventId, isLockedRail, performHubQuickAction, router],
   );
 
+  const renderQuickActionTile = (
+    card: (typeof cards)[number],
+    lockedRail: boolean,
+  ) => {
+    const preview = HUB_QUICK_ACTION_PREVIEW[card.id];
+    const imageSource = hubAssets.quickActions[preview.imageKey];
+    const disabled =
+      !lockedRail && (card.status === 'disabled' || card.status === 'used');
+
+    return (
+      <Pressable
+        key={card.id}
+        onPress={() => onPress(card.id)}
+        disabled={disabled}
+        style={({ pressed }) => [
+          lockedRail ? styles.tileRailWrap : styles.tileGridWrap,
+          pressed && styles.tilePressed,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={preview.title}>
+        <LinearGradient
+          colors={[...preview.gradient]}
+          style={[
+            styles.tile,
+            lockedRail ? styles.tileRail : styles.tileGrid,
+            shadows.soft,
+          ]}>
+          <HubAssetImage
+            source={imageSource}
+            containerStyle={lockedRail ? styles.tileImage : styles.tileImageCompact}
+            contentFit="contain"
+          />
+          <Text style={styles.tileTitle} numberOfLines={1}>
+            {preview.title}
+          </Text>
+          <Text
+            style={[styles.tileTeaser, { color: preview.accent }]}
+            numberOfLines={1}>
+            {preview.teaser}
+          </Text>
+          {lockedRail ? (
+            <View style={styles.unlockRow}>
+              <Ionicons name="time-outline" size={10} color={colors.textSecondary} />
+              <Text style={styles.unlockText} numberOfLines={1}>
+                Gün 2
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.statusText} numberOfLines={1}>
+              {card.statusLabel}
+            </Text>
+          )}
+          {lockedRail ? (
+            <View style={styles.tileArrow}>
+              <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
+            </View>
+          ) : null}
+        </LinearGradient>
+      </Pressable>
+    );
+  };
+
   return (
     <View style={styles.wrap}>
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
           <Ionicons name="flash" size={16} color={colors.hubGoldDark} />
-          <Text style={styles.sectionTitle}>{DAY1_QUICK_PREP_TITLE}</Text>
+          <Text style={styles.sectionTitle} numberOfLines={1}>
+            {isLockedRail ? DAY1_QUICK_PREP_TITLE : HUB_QUICK_ACTIONS_TITLE}
+          </Text>
           {isLockedRail ? (
             <View style={styles.dayBadge}>
               <Text style={styles.dayBadgeText}>Gün 2</Text>
@@ -93,55 +159,18 @@ export function HubQuickActionsPanel() {
 
       {lastResult ? <ResultBanner result={lastResult} /> : null}
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.row}>
-        {cards.map((card) => {
-          const preview = HUB_QUICK_ACTION_PREVIEW[card.id];
-          const imageSource = hubAssets.quickActions[preview.imageKey];
-          const disabled = !isLockedRail && (card.status === 'disabled' || card.status === 'used');
-
-          return (
-            <Pressable
-              key={card.id}
-              onPress={() => onPress(card.id)}
-              disabled={disabled}
-              style={({ pressed }) => [pressed && styles.tilePressed]}
-              accessibilityRole="button"
-              accessibilityLabel={preview.title}>
-              <LinearGradient
-                colors={[...preview.gradient]}
-                style={[styles.tile, shadows.soft]}>
-                <HubAssetImage
-                  source={imageSource}
-                  containerStyle={styles.tileImage}
-                  contentFit="contain"
-                />
-                <Text style={styles.tileTitle} numberOfLines={1}>
-                  {preview.title}
-                </Text>
-                <Text style={[styles.tileTeaser, { color: preview.accent }]} numberOfLines={1}>
-                  {preview.teaser}
-                </Text>
-                {isLockedRail ? (
-                  <View style={styles.unlockRow}>
-                    <Ionicons name="time-outline" size={10} color={colors.textSecondary} />
-                    <Text style={styles.unlockText}>Gün 2</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.statusText} numberOfLines={1}>
-                    {card.statusLabel}
-                  </Text>
-                )}
-                <View style={styles.tileArrow}>
-                  <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
-                </View>
-              </LinearGradient>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      {isLockedRail ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.row}>
+          {cards.map((card) => renderQuickActionTile(card, true))}
+        </ScrollView>
+      ) : (
+        <View style={styles.grid}>
+          {cards.map((card) => renderQuickActionTile(card, false))}
+        </View>
+      )}
     </View>
   );
 }
@@ -179,10 +208,24 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '800',
     color: colors.textPrimary,
     letterSpacing: -0.2,
+    flexShrink: 1,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  tileGridWrap: {
+    width: '48%',
+    minWidth: 0,
+  },
+  tileRailWrap: {
+    flexShrink: 0,
   },
   dayBadge: {
     backgroundColor: colors.hubGoldMuted,
@@ -208,16 +251,25 @@ const styles = StyleSheet.create({
     paddingRight: spacing.sm,
   },
   tile: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
+    paddingTop: 10,
+    paddingBottom: 8,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    gap: 3,
+    minWidth: 0,
+  },
+  tileRail: {
     width: 132,
     minHeight: 148,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.8)',
-    paddingTop: 12,
-    paddingBottom: 10,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-    gap: 4,
+  },
+  tileGrid: {
+    width: '100%',
+    maxHeight: HUB_QUICK_ACTION_COMPACT_CARD_MAX_HEIGHT,
+    minHeight: 76,
   },
   tilePressed: {
     opacity: 0.92,
@@ -226,16 +278,24 @@ const styles = StyleSheet.create({
     width: 72,
     height: 56,
   },
+  tileImageCompact: {
+    width: 48,
+    height: 36,
+  },
   tileTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     color: colors.textPrimary,
     textAlign: 'center',
+    flexShrink: 1,
+    width: '100%',
   },
   tileTeaser: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     textAlign: 'center',
+    flexShrink: 1,
+    width: '100%',
   },
   unlockRow: {
     flexDirection: 'row',

@@ -36,7 +36,9 @@ export function DecisionResultHeader({
       </Pressable>
 
       <View style={styles.center}>
-        <Text style={styles.title}>Karar Sonucu</Text>
+        <Text style={styles.title} numberOfLines={1}>
+          Operasyon Sonucu
+        </Text>
         <Text style={styles.subtitle} numberOfLines={1}>
           {subtitle}
         </Text>

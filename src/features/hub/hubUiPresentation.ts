@@ -59,6 +59,7 @@ export const DAY1_PLAN_BODY = 'İlk gün hedefin: temel müdahaleyi öğrenmek.'
 export const DAY1_PLAN_CHIP = 'Öğrenme Günü';
 
 export const DAY1_QUICK_PREP_TITLE = 'Hızlı Hazırlıklar';
+export const HUB_QUICK_ACTIONS_TITLE = 'Hızlı aksiyonlar';
 export const DAY1_QUICK_PREP_SUBTITLE =
   "Gün 2'den itibaren günlük hazırlık hamleleri açılır.";
 

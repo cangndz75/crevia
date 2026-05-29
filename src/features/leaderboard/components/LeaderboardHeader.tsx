@@ -24,8 +24,8 @@ export function LeaderboardHeader({ onBack }: LeaderboardHeaderProps) {
 
       <View style={styles.textCol}>
         <Text style={styles.title}>Liderlik</Text>
-        <Text style={styles.subtitle}>
-          Pilot bölge performansına göre sıralama
+        <Text style={styles.subtitle} numberOfLines={1}>
+          Pilot performansın ve şehir operasyon prestijin
         </Text>
       </View>
 
