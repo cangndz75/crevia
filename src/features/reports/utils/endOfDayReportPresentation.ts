@@ -425,9 +425,17 @@ export function buildEndOfDayReportViewModel(params: {
   dailyXpReport: DailyXpReport;
   day1PriorityLine?: string | null;
   day1GoalsLine?: string | null;
+  /** Post-pilot hafif operasyon günü raporu başlık tonu */
+  postPilotLightDay?: boolean;
 }): EndOfDayReportViewModel {
-  const { report, metrics, dailyXpReport, day1PriorityLine, day1GoalsLine } =
-    params;
+  const {
+    report,
+    metrics,
+    dailyXpReport,
+    day1PriorityLine,
+    day1GoalsLine,
+    postPilotLightDay,
+  } = params;
   const isDay1 = report.day === 1;
   const isDay7 = report.day === 7;
   const successScore = computeEndOfDaySuccessScore(report, metrics);
@@ -453,8 +461,12 @@ export function buildEndOfDayReportViewModel(params: {
     isDay1,
     isDay7,
     successScore,
-    statusTitle: buildEndOfDayStatusTitle(successScore),
-    heroSubtitle: buildEndOfDayHeroSubtitle(successScore),
+    statusTitle: postPilotLightDay
+      ? 'Post-pilot operasyon günü'
+      : buildEndOfDayStatusTitle(successScore),
+    heroSubtitle: postPilotLightDay
+      ? 'Gündem etkisi bugünkü kararlarla şekillendi.'
+      : buildEndOfDayHeroSubtitle(successScore),
     impactMetrics: buildEndOfDayImpactMetrics(metrics),
     metricCards,
     systemSections: buildEndOfDaySystemSummarySections(report, 2),

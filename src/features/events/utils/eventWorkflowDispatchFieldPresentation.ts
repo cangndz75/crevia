@@ -188,8 +188,13 @@ export function collectDispatchFieldPresentationStrings(
   field: FieldScreenModel,
 ): string[] {
   return [
+    'İncele',
+    'Planla',
     'Yönlendir',
     'Sahada',
+    'Sonuç',
+    'Planlamaya Geç',
+    'Yönlendirmeye Geç',
     'Sahaya Yönlendir',
     'Sonucu Gör',
     dispatch.commandGoalLine,

@@ -45,6 +45,7 @@ import {
   normalizePersistedAuthorityState,
 } from '@/core/authority/authoritySeed';
 import { normalizePersistedBadgeState } from '@/core/badges/badgeSeed';
+import { normalizePostPilotOperationState } from '@/core/postPilot/postPilotOperationSeed';
 
 import type { GameStore } from './useGameStore';
 
@@ -224,6 +225,13 @@ function ensurePilotOnGameState(gameState: GameState): GameState {
     badgeState: normalizePersistedBadgeState(
       pilot.badgeState,
       pilot.currentPilotDay,
+    ),
+    postPilotOperation: normalizePostPilotOperationState(
+      pilot.postPilotOperation,
+      {
+        pilotStatus: pilot.status,
+        currentPilotDay: pilot.currentPilotDay,
+      },
     ),
   };
   if (pilot === gameState.pilot) {

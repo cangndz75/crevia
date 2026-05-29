@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { WORKFLOW_CTA_LABELS } from '@/core/ux/uxFlowPresentation';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import { shadows } from '@/ui/theme/shadows';
 
@@ -40,7 +41,9 @@ export function FieldWorkflowFooter({
           pressed && !disabled && !loading && styles.pressed,
         ]}
         accessibilityRole="button"
-        accessibilityLabel={loading ? 'Sonuç hazırlanıyor' : 'Sonucu Gör'}
+        accessibilityLabel={
+          loading ? 'Sonuç hazırlanıyor' : WORKFLOW_CTA_LABELS.field
+        }
         accessibilityState={{ disabled: disabled || loading, busy: loading }}>
         <LinearGradient
           colors={
@@ -52,8 +55,8 @@ export function FieldWorkflowFooter({
           end={{ x: 1, y: 0.5 }}
           style={styles.gradient}>
           <Ionicons name="arrow-forward-circle-outline" size={22} color="#FFFFFF" />
-          <Text style={styles.label}>
-            {loading ? 'Hazırlanıyor…' : 'Sonucu Gör'}
+          <Text style={styles.label} numberOfLines={1}>
+            {loading ? 'Hazırlanıyor…' : WORKFLOW_CTA_LABELS.field}
           </Text>
         </LinearGradient>
       </Pressable>

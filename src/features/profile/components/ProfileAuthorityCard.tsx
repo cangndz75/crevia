@@ -169,6 +169,7 @@ const styles = StyleSheet.create({
   },
   progressMeta: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   progressMetaLabel: {

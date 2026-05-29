@@ -191,11 +191,17 @@ export function HubTaskTrackingHero() {
               {goal.description}
             </Text>
             <View style={styles.rewardRow}>
-              <View style={styles.xpBadge}>
-                <Ionicons name="star" size={10} color={colors.hubGoldDark} />
-                <Text style={styles.xpText}>+{goal.rewardXp ?? 0} XP</Text>
-              </View>
-              <Text style={styles.progressMeta}>{formatGoalProgress(goal)}</Text>
+              {(goal.rewardXp ?? 0) > 0 ? (
+                <View style={styles.rewardBadge}>
+                  <Ionicons name="star" size={10} color={colors.hubGoldDark} />
+                  <Text style={styles.rewardText} numberOfLines={1}>
+                    +{goal.rewardXp} ilerleme
+                  </Text>
+                </View>
+              ) : null}
+              <Text style={styles.progressMeta} numberOfLines={1}>
+                {formatGoalProgress(goal)}
+              </Text>
             </View>
           </View>
           <ProgressRing percent={goal.progressPercent} />
@@ -285,7 +291,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 2,
   },
-  xpBadge: {
+  rewardBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
@@ -293,11 +299,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: radius.full,
+    flexShrink: 1,
+    minWidth: 0,
   },
-  xpText: {
+  rewardText: {
     fontSize: 10,
     fontWeight: '800',
     color: colors.hubGoldDark,
+    flexShrink: 1,
   },
   progressMeta: {
     fontSize: 10,
@@ -306,6 +315,8 @@ const styles = StyleSheet.create({
   },
   statusCol: {
     width: 108,
+    maxWidth: '34%',
+    flexShrink: 0,
     gap: 6,
     justifyContent: 'center',
   },

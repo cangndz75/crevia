@@ -61,6 +61,11 @@ import {
   recordPilotDailySnapshot,
   syncPilotRunDay,
 } from '@/core/game/pilotRun';
+import {
+  applyDerivedScopesToPostPilotState,
+  createInitialPostPilotOperationState,
+  normalizePostPilotOperationState,
+} from '@/core/postPilot';
 
 import {
   INITIAL_DAILY_GOAL_RUNTIME,
@@ -322,6 +327,8 @@ type GameStoreActions = {
   advancePilotDay: () => void;
   completePilot: (finalResult: PilotFinalResult) => void;
   completePilotFromCurrentState: () => void;
+  markMainOperationPreviewSeen: () => void;
+  startLightMainOperation: () => void;
   resetPilotState: () => void;
   refreshPilotEventsForCurrentDay: () => void;
   restPersonnelTeam: (
@@ -1862,6 +1869,44 @@ export const useGameStore = create<GameStore>()(
               ),
             }));
           }
+        } else if (
+          nextGameState.pilot.status === 'completed' &&
+          normalizePostPilotOperationState(
+            nextGameState.pilot.postPilotOperation,
+            {
+              pilotStatus: 'completed',
+              currentPilotDay: nextGameState.pilot.currentPilotDay,
+            },
+          ).phase === 'main_operation_light'
+        ) {
+          let postPilotOp = normalizePostPilotOperationState(
+            nextGameState.pilot.postPilotOperation,
+            {
+              pilotStatus: 'completed',
+              currentPilotDay: nextGameState.pilot.currentPilotDay,
+            },
+          );
+          postPilotOp = {
+            ...postPilotOp,
+            operationDay: nextGameState.city.day,
+            lastUpdatedDay: nextGameState.city.day,
+            postPilotDailyEventSet: undefined,
+          };
+          postPilotOp = applyDerivedScopesToPostPilotState(postPilotOp, {
+            postPilotOperation: postPilotOp,
+            pilotStatus: 'completed',
+            authorityState: nextGameState.pilot.authorityState,
+          });
+          nextGameState = withPilot(nextGameState, (pilot) => ({
+            ...pilot,
+            postPilotOperation: postPilotOp,
+          }));
+          const postPilotRefresh = refreshPilotEventsFromGameState(
+            nextGameState,
+            [],
+          );
+          nextGameState = withSyncedPulse(postPilotRefresh.gameState);
+          nextEventPool = postPilotRefresh.eventPool;
         }
 
         const nextDay = nextGameState.city.day;
@@ -2133,6 +2178,15 @@ export const useGameStore = create<GameStore>()(
             });
             run = finalizePilotRun(run, finalMetrics, pilot.currentPilotDay);
           }
+          const postPilotOperation = normalizePostPilotOperationState(
+            pilot.postPilotOperation ??
+              createInitialPostPilotOperationState({
+                pilotStatus: 'completed',
+                currentPilotDay: closingDay,
+              }),
+            { pilotStatus: 'completed', currentPilotDay: closingDay },
+          );
+
           return {
             ...pilot,
             status: 'completed' as const,
@@ -2140,6 +2194,7 @@ export const useGameStore = create<GameStore>()(
             run,
             authorityState: authorityResult.authorityState,
             badgeState: badgePilotResult.badgeState,
+            postPilotOperation,
           };
         });
         const leaderboardUpdate = buildPilotLeaderboardPersistUpdate({
@@ -2183,6 +2238,100 @@ export const useGameStore = create<GameStore>()(
           snapshots,
         });
         get().completePilot(finalResult);
+      },
+
+      markMainOperationPreviewSeen: () => {
+        const { gameState } = get();
+        if (gameState.pilot.status !== 'completed') {
+          return;
+        }
+
+        const current = normalizePostPilotOperationState(
+          gameState.pilot.postPilotOperation,
+          {
+            pilotStatus: 'completed',
+            currentPilotDay: gameState.pilot.currentPilotDay,
+          },
+        );
+
+        if (current.phase !== 'pilot_complete_idle') {
+          return;
+        }
+
+        const next: typeof current = {
+          ...current,
+          phase: 'preview_seen',
+          previewSeenAt: current.previewSeenAt ?? new Date().toISOString(),
+          lastUpdatedDay: gameState.pilot.currentPilotDay,
+        };
+
+        set({
+          gameState: withPilot(gameState, (pilot) => ({
+            ...pilot,
+            postPilotOperation: next,
+          })),
+        });
+      },
+
+      startLightMainOperation: () => {
+        const { gameState, eventPool } = get();
+        if (gameState.pilot.status !== 'completed') {
+          return;
+        }
+
+        const closingDay = gameState.pilot.currentPilotDay;
+        let next = normalizePostPilotOperationState(
+          gameState.pilot.postPilotOperation,
+          { pilotStatus: 'completed', currentPilotDay: closingDay },
+        );
+
+        if (next.phase === 'main_operation_light') {
+          return;
+        }
+
+        const operationDay = Math.max(
+          8,
+          gameState.city.day,
+          closingDay + 1,
+        );
+
+        next = {
+          ...next,
+          phase: 'main_operation_light',
+          lightOperationStartedAt:
+            next.lightOperationStartedAt ?? new Date().toISOString(),
+          lastUpdatedDay: operationDay,
+          operationDay,
+          postPilotDailyEventSet: undefined,
+        };
+
+        next = applyDerivedScopesToPostPilotState(next, {
+          postPilotOperation: next,
+          pilotStatus: 'completed',
+          authorityState: gameState.pilot.authorityState,
+        });
+
+        let nextGameState = withPilot(gameState, (pilot) => ({
+          ...pilot,
+          postPilotOperation: next,
+        }));
+        nextGameState = {
+          ...nextGameState,
+          city: {
+            ...nextGameState.city,
+            day: operationDay,
+          },
+        };
+
+        const postPilotRefresh = refreshPilotEventsFromGameState(
+          nextGameState,
+          eventPool,
+        );
+
+        set({
+          gameState: withSyncedPulse(postPilotRefresh.gameState),
+          eventPool: postPilotRefresh.eventPool,
+        });
       },
 
       resetPilotState: () => {
@@ -2397,6 +2546,9 @@ export const selectSelectedPilotDistrictId = (s: GameStore) =>
 export const selectCurrentPilotDay = (s: GameStore) =>
   s.gameState.pilot.currentPilotDay;
 export const selectPilotStatus = (s: GameStore) => s.gameState.pilot.status;
+
+export const selectPostPilotOperation = (s: GameStore) =>
+  s.gameState.pilot.postPilotOperation;
 export const selectPilotRun = (s: GameStore) => s.gameState.pilot.run;
 export const selectDailyEventSet = (s: GameStore) =>
   s.gameState.pilot.dailyEventSet ?? null;

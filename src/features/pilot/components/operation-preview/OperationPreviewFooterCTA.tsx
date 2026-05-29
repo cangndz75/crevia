@@ -1,4 +1,3 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
@@ -10,15 +9,23 @@ import { shadows } from "@/ui/theme/shadows";
 import { spacing } from "@/ui/theme/spacing";
 
 type OperationPreviewFooterCTAProps = {
+  primaryLabel: string;
+  primaryEnabled: boolean;
+  onPrimaryPress?: () => void;
   onPilotReport: () => void;
   onHub?: () => void;
   onLeaderboard?: () => void;
+  footerNote?: string;
 };
 
 export function OperationPreviewFooterCTA({
+  primaryLabel,
+  primaryEnabled,
+  onPrimaryPress,
   onPilotReport,
   onHub,
   onLeaderboard,
+  footerNote,
 }: OperationPreviewFooterCTAProps) {
   return (
     <Animated.View
@@ -26,23 +33,32 @@ export function OperationPreviewFooterCTA({
       style={styles.wrap}
     >
       <View style={[styles.ctaCard, shadows.card]}>
-        <Pressable
-          disabled
-          style={styles.primaryBtn}
-          accessibilityState={{ disabled: true }}
-        >
-          <LinearGradient
-            colors={[colors.hubGoldMuted, "#FFF8E8"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.primaryGradient}
-          >
-            <Ionicons name="lock-closed" size={17} color={colors.hubGoldDark} />
-            <Text style={styles.primaryText}>
-              Ana Operasyon Yakında Açılacak
+        {primaryEnabled && onPrimaryPress ? (
+          <Pressable
+            onPress={onPrimaryPress}
+            style={styles.primaryBtn}
+            accessibilityRole="button"
+            accessibilityLabel={primaryLabel}>
+            <LinearGradient
+              colors={[colors.headerTealDark, colors.primary]}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={styles.primaryGradient}>
+              <Text style={styles.primaryText} numberOfLines={1}>
+                {primaryLabel}
+              </Text>
+            </LinearGradient>
+          </Pressable>
+        ) : (
+          <Pressable
+            disabled
+            style={styles.primaryBtnDisabled}
+            accessibilityState={{ disabled: true }}>
+            <Text style={styles.primaryTextDisabled} numberOfLines={1}>
+              {primaryLabel}
             </Text>
-          </LinearGradient>
-        </Pressable>
+          </Pressable>
+        )}
 
         {onHub ? (
           <GameButton
@@ -70,9 +86,9 @@ export function OperationPreviewFooterCTA({
         />
       </View>
 
-      <Text style={styles.footerNote}>
-        Ana operasyon modu ilerleyen güncellemelerde aktif edilecek.
-      </Text>
+      {footerNote ? (
+        <Text style={styles.footerNote}>{footerNote}</Text>
+      ) : null}
     </Animated.View>
   );
 }
@@ -93,22 +109,32 @@ const styles = StyleSheet.create({
   primaryBtn: {
     borderRadius: radius.lg,
     overflow: "hidden",
-    borderWidth: 1,
-    borderColor: `${colors.hubGold}99`,
   },
   primaryGradient: {
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: spacing.sm,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
   },
   primaryText: {
     fontSize: 15,
     fontWeight: "800",
-    color: colors.hubGoldDark,
+    color: colors.textInverse,
     letterSpacing: -0.2,
+  },
+  primaryBtnDisabled: {
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundAlt,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: "center",
+  },
+  primaryTextDisabled: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.textSecondary,
   },
   secondaryBtn: {
     alignSelf: "stretch",

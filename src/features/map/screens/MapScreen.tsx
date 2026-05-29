@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import { DEFAULT_PILOT_DISTRICT_ID } from '@/core/models/DistrictProfile';
+import { isPostPilotLightEventLoopEligible } from '@/core/postPilot';
 import { selectIsDay1TutorialActive } from '@/features/tutorial/tutorialSelectors';
 import {
   selectActiveEvents,
@@ -151,15 +152,49 @@ export function MapScreen() {
     [pilotAreaId, gameDay],
   );
 
+  const pilotStatus = useGameStore((s) => s.gameState.pilot.status);
+  const postPilotOperation = useGameStore((s) => s.gameState.pilot.postPilotOperation);
+  const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
+
   const neighborhoodStripItems = useMemo(
     () =>
       buildMapNeighborhoodStripItems({
         pilotDistrictId: selectedDistrictId,
         focusDistrictId,
         gameDay,
+        postPilot: {
+          pilotStatus,
+          postPilotOperation,
+          authorityState,
+        },
       }),
-    [focusDistrictId, gameDay, selectedDistrictId],
+    [
+      authorityState,
+      focusDistrictId,
+      gameDay,
+      pilotStatus,
+      postPilotOperation,
+      selectedDistrictId,
+    ],
   );
+
+  const postPilotFieldSignal = useMemo(() => {
+    const gameState = useGameStore.getState().gameState;
+    if (!isPostPilotLightEventLoopEligible(gameState)) {
+      return undefined;
+    }
+    const districtEvents = activeEvents.filter((event) => {
+      const neighborhoodId = event.neighborhoodId?.toLowerCase() ?? '';
+      return (
+        neighborhoodId.includes(focusDistrictId) ||
+        event.district?.toLowerCase().includes(focusDistrictId)
+      );
+    });
+    if (districtEvents.length === 0) {
+      return undefined;
+    }
+    return 'Gündem olayı · Aktif saha sinyali';
+  }, [activeEvents, focusDistrictId]);
 
   const operationPanel = useMemo(
     () =>
@@ -174,6 +209,7 @@ export function MapScreen() {
         vehicleState,
         hideFleetSignals: hideMapFleetSignals,
         dayEventTitle: dayEvent.mainEventTitle,
+        postPilotFieldSignal,
       }),
     [
       activeEvents,
@@ -184,6 +220,7 @@ export function MapScreen() {
       hideMapFleetSignals,
       mapViewMode,
       pilotAreaId,
+      postPilotFieldSignal,
       selectedDistrictId,
       vehicleState,
     ],

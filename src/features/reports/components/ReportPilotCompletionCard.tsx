@@ -165,7 +165,7 @@ export function ReportPilotCompletionCard({
         ) : null}
 
         <GameButton
-          title="Ana Operasyonu Önizle"
+          title="Ana Operasyona Göz At"
           onPress={() => router.push(MAIN_OPERATION_PREVIEW_ROUTE)}
           style={styles.cta}
         />

@@ -13,6 +13,7 @@ import { HubTodayFlowStrip } from '@/features/hub/components/HubTodayFlowStrip';
 import { HubDailyPriorityCard } from '@/features/hub/components/HubDailyPriorityCard';
 import { HubPersonnelStrip } from '@/features/hub/components/HubPersonnelStrip';
 import { HubPilotReportBanner } from '@/features/hub/components/HubPilotReportBanner';
+import { PostPilotAgendaBanner } from '@/features/hub/components/PostPilotAgendaBanner';
 import { HubQuickActionsPanel } from '@/features/hub/components/HubQuickActionsPanel';
 import { HubRegionPulseSection } from '@/features/hub/components/HubRegionPulseSection';
 import { HubRewardsJourney } from '@/features/hub/components/HubRewardsJourney';
@@ -129,6 +130,8 @@ export function HubScreen() {
         </TutorialTarget>
 
         <HubAuthorityProgressChip />
+
+        <PostPilotAgendaBanner />
 
         <View style={styles.criticalWrap}>
           {showInlineFocusHints && criticalEventHint ? (

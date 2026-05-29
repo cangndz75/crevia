@@ -66,8 +66,10 @@ export function EventWorkflowStepper({
                   styles.label,
                   compact && styles.labelCompact,
                   active && styles.labelActive,
+                  past && styles.labelPast,
                 ]}
-                numberOfLines={1}>
+                numberOfLines={1}
+                ellipsizeMode="tail">
                 {step.label}
               </Text>
               {active ? (
@@ -96,11 +98,13 @@ const styles = StyleSheet.create({
   },
   stepCol: {
     flex: 1,
+    flexShrink: 1,
     alignItems: 'center',
-    minWidth: 56,
+    minWidth: 0,
+    maxWidth: 72,
   },
   stepColCompact: {
-    minWidth: 52,
+    maxWidth: 64,
   },
   nodeRow: {
     flexDirection: 'row',
@@ -176,6 +180,10 @@ const styles = StyleSheet.create({
   labelActive: {
     color: eventDetail.tealDark,
     fontWeight: '800',
+  },
+  labelPast: {
+    color: eventDetail.teal,
+    fontWeight: '700',
   },
   labelCompact: {
     marginTop: 4,

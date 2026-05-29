@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { resolveReportContinueCtaLabel } from '@/core/ux/uxFlowPresentation';
 import { buildDay1TutorialPriorityLine } from '@/core/dailyPriority/dailyPriorityPresentation';
 import { MAIN_OPERATION_PREVIEW_ROUTE } from '@/core/pilotCompletion';
 import { buildDailyXpReport } from '@/core/xp/xpReport';
@@ -104,10 +105,10 @@ export function ReportScreen() {
       ? 'İlk gün hedeflerini tanı; yarın tam takip başlar.'
       : undefined;
 
-  const continueTitle =
-    displayReport.day === 7 && pilotCompletionSummary
-      ? 'Ana Operasyona Göz At'
-      : 'Operasyon Merkezine Dön';
+  const continueTitle = resolveReportContinueCtaLabel(
+    displayReport.day,
+    Boolean(pilotCompletionSummary),
+  );
 
   const onContinue = () => {
     if (displayReport.day === 7 && pilotCompletionSummary) {

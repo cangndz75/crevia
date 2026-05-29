@@ -13,6 +13,7 @@ import {
   getInspectFindingsScene,
   getInspectNeighborhoodHero,
 } from '@/features/events/utils/eventWorkflowAssets';
+import { WORKFLOW_CTA_LABELS } from '@/core/ux/uxFlowPresentation';
 import {
   INSPECT_HINT_TEXT,
   buildEvidenceMetrics,
@@ -85,7 +86,7 @@ export function EventInspectPhase({
 
       <EventWorkflowFooter
         hint={INSPECT_HINT_TEXT}
-        ctaLabel="Planlamayı Aç"
+        ctaLabel={WORKFLOW_CTA_LABELS.inspect}
         onPress={onOpenPlanning}
       />
     </View>

@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { WORKFLOW_CTA_LABELS } from '@/core/ux/uxFlowPresentation';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import { shadows } from '@/ui/theme/shadows';
 
@@ -40,7 +41,9 @@ export function DispatchWorkflowFooter({
           pressed && !disabled && !loading && styles.pressed,
         ]}
         accessibilityRole="button"
-        accessibilityLabel={loading ? 'Yönlendiriliyor' : 'Sahaya Yönlendir'}
+        accessibilityLabel={
+          loading ? 'Yönlendiriliyor' : WORKFLOW_CTA_LABELS.dispatch
+        }
         accessibilityState={{ disabled: disabled || loading, busy: loading }}>
         <LinearGradient
           colors={
@@ -52,8 +55,8 @@ export function DispatchWorkflowFooter({
           end={{ x: 1, y: 0.5 }}
           style={styles.gradient}>
           <Ionicons name="navigate-outline" size={22} color="#FFFFFF" />
-          <Text style={styles.label}>
-            {loading ? 'Yönlendiriliyor…' : 'Sahaya Yönlendir'}
+          <Text style={styles.label} numberOfLines={1}>
+            {loading ? 'Yönlendiriliyor…' : WORKFLOW_CTA_LABELS.dispatch}
           </Text>
         </LinearGradient>
       </Pressable>

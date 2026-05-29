@@ -3,6 +3,8 @@ import {
   shouldClearPilotActiveEvents,
 } from '@/core/game/clearActiveEventsForGameState';
 import { ensureDailyEventsForDay } from '@/core/game/ensureDailyEventsForDay';
+import { refreshPostPilotEventsFromGameState } from '@/core/game/refreshPostPilotEventsFromGameState';
+import { isPostPilotLightEventLoopEligible } from '@/core/postPilot/postPilotEventEngine';
 import type { ContainerState } from '@/core/containers/containerTypes';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import type { EventCard } from '@/core/models/EventCard';
@@ -33,6 +35,10 @@ export function refreshPilotEventsFromGameState(
   currentEventPool: EventCard[],
   options?: RefreshPilotEventsFromGameStateOptions,
 ): RefreshPilotEventsFromGameStateResult {
+  if (isPostPilotLightEventLoopEligible(gameState)) {
+    return refreshPostPilotEventsFromGameState(gameState, currentEventPool);
+  }
+
   if (shouldClearPilotActiveEvents(gameState)) {
     return {
       gameState: clearActiveEventsForGameState(gameState),

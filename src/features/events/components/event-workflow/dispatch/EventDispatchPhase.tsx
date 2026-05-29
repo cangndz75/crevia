@@ -36,6 +36,8 @@ type Props = {
   onDismissHint?: (id: string) => void;
   resourcesHighlighted?: boolean;
   decisionsHighlighted?: boolean;
+  /** Day 1 tutorial: alternatif karar listesini gizle, akışı sade tut. */
+  compactTutorial?: boolean;
 };
 
 export function EventDispatchPhase({
@@ -53,6 +55,7 @@ export function EventDispatchPhase({
   onDismissHint,
   resourcesHighlighted = false,
   decisionsHighlighted = false,
+  compactTutorial = false,
 }: Props) {
   const selectedDecision = useMemo(
     () => event.decisions.find((d) => d.id === selectedDecisionId) ?? null,
@@ -120,17 +123,19 @@ export function EventDispatchPhase({
           />
         </TutorialTarget>
 
-        <View style={styles.sectionGap}>
-          <EventDecisionList
-            event={event}
-            selectedDecisionId={selectedDecisionId}
-            onSelect={onSelectDecision}
-            affordabilityByDecisionId={affordabilityByDecisionId}
-            excludeDecisionIds={quickDecisionIds}
-            variant="full"
-            title="Alternatif yönlendirmeler"
-          />
-        </View>
+        {!compactTutorial ? (
+          <View style={styles.sectionGap}>
+            <EventDecisionList
+              event={event}
+              selectedDecisionId={selectedDecisionId}
+              onSelect={onSelectDecision}
+              affordabilityByDecisionId={affordabilityByDecisionId}
+              excludeDecisionIds={quickDecisionIds}
+              variant="full"
+              title="Alternatif yönlendirmeler"
+            />
+          </View>
+        ) : null}
       </ScrollView>
 
       <DispatchWorkflowFooter

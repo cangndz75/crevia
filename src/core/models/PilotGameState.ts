@@ -1,6 +1,7 @@
 import type { ButterflyHookState } from '@/core/events/butterflyHookTypes';
 import type { AuthorityState } from '@/core/authority/authorityTypes';
 import type { BadgeState } from '@/core/badges/badgeTypes';
+import type { PostPilotOperationState } from '@/core/postPilot/postPilotOperationTypes';
 import type { DailyEventSet } from './DailyEventSet';
 import type { PilotDistrictId } from './DistrictProfile';
 import type { PilotRun } from './PilotRun';
@@ -58,4 +59,6 @@ export type PilotGameState = {
   authorityState?: AuthorityState;
   /** Rozet ilerlemesi ve kazanımları. */
   badgeState?: BadgeState;
+  /** Pilot sonrası ana operasyon hazırlık fazı — staged scope activation. */
+  postPilotOperation?: PostPilotOperationState;
 };

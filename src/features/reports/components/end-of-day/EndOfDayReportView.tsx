@@ -15,6 +15,9 @@ import { ReportPilotCompletionCard } from '@/features/reports/components/ReportP
 import type { PilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
 import { buildEndOfDayReportViewModel } from '@/features/reports/utils/endOfDayReportPresentation';
 import type { useReportPilotCompletionSummary } from '@/features/pilot/hooks/usePilotCompletionSummary';
+import { normalizePostPilotOperationState } from '@/core/postPilot';
+import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
+import { useGameStore } from '@/store/useGameStore';
 import { spacing } from '@/ui/theme/spacing';
 
 type Props = {
@@ -39,12 +42,30 @@ export function EndOfDayReportView({
   pilotReportContext,
   pilotCompletionSummary,
 }: Props) {
+  const postPilotLightDay = useGameStore((s) => {
+    if (s.gameState.pilot.status !== 'completed') {
+      return false;
+    }
+    const postPilot = normalizePostPilotOperationState(
+      s.gameState.pilot.postPilotOperation,
+      {
+        pilotStatus: 'completed',
+        currentPilotDay: s.gameState.pilot.currentPilotDay,
+      },
+    );
+    return (
+      postPilot.phase === 'main_operation_light' &&
+      report.day >= POST_PILOT_FIRST_OPERATION_DAY
+    );
+  });
+
   const model = buildEndOfDayReportViewModel({
     report,
     metrics,
     dailyXpReport,
     day1PriorityLine,
     day1GoalsLine,
+    postPilotLightDay,
   });
 
   const sectionGap = model.isDay7 ? spacing.sm : spacing.md;

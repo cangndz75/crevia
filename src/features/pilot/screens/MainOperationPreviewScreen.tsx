@@ -1,7 +1,12 @@
 import { useRouter } from 'expo-router';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import {
+  buildPostPilotPreviewCopyLines,
+  buildPostPilotPreviewCtaLabel,
+} from '@/core/postPilot';
 import { getPilotDistrictHeroImage } from '@/features/hub/utils/hubAssets';
 import { OperationPreviewAuthorityCard } from '@/features/pilot/components/operation-preview/OperationPreviewAuthorityCard';
 import { ProgressionBridgeCard } from '@/features/pilot/components/ProgressionBridgeCard';
@@ -25,7 +30,26 @@ export function MainOperationPreviewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const districtId = useGameStore((s) => s.gameState.pilot.selectedDistrictId);
-  const preview = useOperationPreviewState();
+  const pilotStatus = useGameStore((s) => s.gameState.pilot.status);
+  const markMainOperationPreviewSeen = useGameStore(
+    (s) => s.markMainOperationPreviewSeen,
+  );
+  const startLightMainOperation = useGameStore((s) => s.startLightMainOperation);
+  const preview = useOperationPreviewState({ forcePilotComplete: true });
+  const previewMarkedRef = useRef(false);
+
+  const pilotCompleted = pilotStatus === 'completed';
+  const primaryLabel = buildPostPilotPreviewCtaLabel(
+    pilotCompleted ? 'completed' : 'active',
+  );
+
+  useEffect(() => {
+    if (!pilotCompleted || previewMarkedRef.current) {
+      return;
+    }
+    previewMarkedRef.current = true;
+    markMainOperationPreviewSeen();
+  }, [markMainOperationPreviewSeen, pilotCompleted]);
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -38,9 +62,20 @@ export function MainOperationPreviewScreen() {
   const handleInfo = () => {
     Alert.alert(
       'Ana Operasyon Önizlemesi',
-      'Şehir ölçeğindeki ana operasyon modu henüz açılmadı. Günlük kararlar için alttaki Operasyon sekmesini kullan.',
+      'Şehir ölçeğindeki ana operasyon hazırlığı kademeli açılır. Günlük kararlar için alttaki Operasyon sekmesini kullan.',
     );
   };
+
+  const handleStartLightOperation = () => {
+    if (!pilotCompleted) {
+      router.push('/events/pilot-final-report');
+      return;
+    }
+    startLightMainOperation();
+    router.replace('/');
+  };
+
+  const copyLines = buildPostPilotPreviewCopyLines();
 
   return (
     <View style={[styles.root, { paddingBottom: insets.bottom }]}>
@@ -65,6 +100,15 @@ export function MainOperationPreviewScreen() {
         />
         <OperationPreviewAuthorityCard summary={preview.authoritySummary} />
         <ProgressionBridgeCard summary={preview.progressionBridgeSummary} />
+
+        <View style={styles.copyCard}>
+          {copyLines.map((line) => (
+            <Text key={line} style={styles.copyLine} numberOfLines={2}>
+              {line}
+            </Text>
+          ))}
+        </View>
+
         <OperationPreviewRoadmap
           steps={preview.roadmapSteps}
           hint={preview.roadmapHint}
@@ -78,6 +122,9 @@ export function MainOperationPreviewScreen() {
         <OperationPreviewLegacyCard values={preview.legacyValues} />
         <OperationPreviewSystemsGrid cards={preview.systemCards} />
         <OperationPreviewFooterCTA
+          primaryLabel={primaryLabel}
+          primaryEnabled={pilotCompleted}
+          onPrimaryPress={handleStartLightOperation}
           onPilotReport={() => {
             if (router.canGoBack()) {
               router.back();
@@ -87,6 +134,7 @@ export function MainOperationPreviewScreen() {
           }}
           onHub={() => router.replace('/')}
           onLeaderboard={() => router.push('/leaderboard')}
+          footerNote="Ana operasyon hafif hazırlık modunda başlar; günlük yük sonraki güncellemelerde artacak."
         />
       </ScrollView>
     </View>
@@ -111,5 +159,19 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+  },
+  copyCard: {
+    gap: spacing.xs,
+    padding: spacing.md,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  copyLine: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '500',
+    color: colors.textSecondary,
   },
 });

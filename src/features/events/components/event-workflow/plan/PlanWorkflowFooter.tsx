@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { WORKFLOW_CTA_LABELS } from '@/core/ux/uxFlowPresentation';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import { shadows } from '@/ui/theme/shadows';
 
@@ -40,7 +41,7 @@ export function PlanWorkflowFooter({
           pressed && !disabled && !loading && styles.pressed,
         ]}
         accessibilityRole="button"
-        accessibilityLabel={loading ? 'Yükleniyor' : 'Planı Onayla'}
+        accessibilityLabel={loading ? 'Yükleniyor' : WORKFLOW_CTA_LABELS.plan}
         accessibilityState={{ disabled: disabled || loading, busy: loading }}>
         <LinearGradient
           colors={
@@ -52,7 +53,9 @@ export function PlanWorkflowFooter({
           end={{ x: 1, y: 0.5 }}
           style={styles.gradient}>
           <Ionicons name="checkmark-done-outline" size={22} color="#FFFFFF" />
-          <Text style={styles.label}>{loading ? 'Onaylanıyor…' : 'Planı Onayla'}</Text>
+          <Text style={styles.label} numberOfLines={1}>
+            {loading ? 'Hazırlanıyor…' : WORKFLOW_CTA_LABELS.plan}
+          </Text>
         </LinearGradient>
       </Pressable>
     </View>

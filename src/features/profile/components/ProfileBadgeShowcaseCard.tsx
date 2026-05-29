@@ -94,7 +94,7 @@ function BadgeTile({ item }: { item: ProfileBadgeShowcaseItem }) {
         </Text>
       ) : !item.earned ? (
         <Text style={styles.tileLocked} numberOfLines={1}>
-          Kilitli
+          Sırada
         </Text>
       ) : null}
     </View>

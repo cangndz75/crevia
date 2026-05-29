@@ -2,6 +2,15 @@ import type { ContainerState } from '@/core/containers/containerTypes';
 import type { EventCard } from '@/core/models/EventCard';
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
+import {
+  buildPostPilotScopeStatusLabel,
+  derivePostPilotScopeStatuses,
+  normalizePostPilotOperationState,
+} from '@/core/postPilot';
+import type {
+  PostPilotPhase,
+  ScopeActivationStatus,
+} from '@/core/postPilot/postPilotOperationTypes';
 import { getNeighborhoodMapCharacterLine } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 import { colors } from '@/ui/theme/colors';
 
@@ -92,12 +101,58 @@ export function resolveNeighborhoodStripStatus(
   return 'watching';
 }
 
+export type MapPostPilotPresentationContext = {
+  pilotStatus: 'not_started' | 'active' | 'completed';
+  postPilotOperation?: unknown;
+  authorityState?: unknown;
+};
+
+function resolvePostPilotScopeLabelForDistrict(
+  districtId: MapDistrictId,
+  postPilotScopes: Record<'istasyon' | 'yesilvadi' | 'main_operation', ScopeActivationStatus>,
+): string | null {
+  if (districtId === 'istasyon') {
+    return buildPostPilotScopeStatusLabel(postPilotScopes.istasyon);
+  }
+  if (districtId === 'yesilvadi') {
+    return buildPostPilotScopeStatusLabel(postPilotScopes.yesilvadi);
+  }
+  return null;
+}
+
+function shouldApplyPostPilotStripLabels(
+  phase: PostPilotPhase | undefined,
+): boolean {
+  return (
+    phase === 'preview_seen' ||
+    phase === 'main_operation_light' ||
+    phase === 'main_operation_full'
+  );
+}
+
 export function buildMapNeighborhoodStripItems(params: {
   pilotDistrictId: PilotDistrictId;
   focusDistrictId: MapDistrictId;
   gameDay: number;
+  postPilot?: MapPostPilotPresentationContext;
 }): MapNeighborhoodStripItem[] {
   const pilotMapDistrict = mapDistrictFromPilot(params.pilotDistrictId);
+
+  const postPilotNormalized = params.postPilot
+    ? normalizePostPilotOperationState(params.postPilot.postPilotOperation, {
+        pilotStatus: params.postPilot.pilotStatus,
+        currentPilotDay: params.gameDay,
+      })
+    : null;
+
+  const postPilotScopes =
+    postPilotNormalized && shouldApplyPostPilotStripLabels(postPilotNormalized.phase)
+      ? derivePostPilotScopeStatuses({
+          postPilotOperation: postPilotNormalized,
+          pilotStatus: params.postPilot!.pilotStatus,
+          authorityState: params.postPilot!.authorityState,
+        })
+      : null;
 
   return MAP_DISTRICT_IDS.map((districtId) => {
     const region =
@@ -110,11 +165,16 @@ export function buildMapNeighborhoodStripItems(params: {
       params.gameDay,
     );
 
+    const postPilotLabel =
+      postPilotScopes != null
+        ? resolvePostPilotScopeLabelForDistrict(districtId, postPilotScopes)
+        : null;
+
     return {
       id: districtId,
       label: getMapDistrictLabel(districtId),
       status,
-      statusLabel: STATUS_LABELS[status],
+      statusLabel: postPilotLabel ?? STATUS_LABELS[status],
       accentColor: region.color,
     };
   });
@@ -151,6 +211,7 @@ export function buildMapOperationPanelModel(params: {
   vehicleState?: VehicleState;
   hideFleetSignals?: boolean;
   dayEventTitle?: string;
+  postPilotFieldSignal?: string;
 }): MapOperationPanelModel {
   const preset = getPilotPreset(params.pilotAreaId);
   const isDetailView = params.viewMode === 'detail';
@@ -219,7 +280,7 @@ export function buildMapOperationPanelModel(params: {
     riskLabel: getRiskDensityLabel(preset.riskDensity),
     riskTone: resolveRiskTone(preset.riskDensity),
     activeEventCount,
-    sahaNote: params.dayEventTitle,
+    sahaNote: params.postPilotFieldSignal ?? params.dayEventTitle,
     metrics: metrics.slice(0, 3),
     ctaLabel: isDetailView ? 'Şehir Haritasına Dön' : 'Detayı Gör',
     isDetailView,

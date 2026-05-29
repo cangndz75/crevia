@@ -624,6 +624,7 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           onDismissHint={(id) => dismissHint(id)}
           resourcesHighlighted={resourcesHighlight}
           decisionsHighlighted={decisionsHighlight}
+          compactTutorial={isDay1Tutorial}
         />
         <TutorialCoachOverlay
           screen="event_detail"
