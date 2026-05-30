@@ -118,6 +118,8 @@ const styles = StyleSheet.create({
   },
   rankLabel: {
     flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
     fontSize: 12,
     fontWeight: '800',
     color: colors.textPrimary,

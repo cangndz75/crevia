@@ -1,6 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
+import { isPositiveAuthorityGainSummary } from '@/core/animations/animationPresentation';
+import { useSoftPopAnimation } from '@/core/animations/useSoftPopAnimation';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { spacing } from '@/ui/theme/spacing';
@@ -20,9 +23,11 @@ export function ReportAuthoritySummary({
   }
 
   const visibleLines = lines.slice(0, 2);
+  const positiveGain = isPositiveAuthorityGainSummary(lines);
+  const { animatedStyle: gainPopStyle } = useSoftPopAnimation(positiveGain);
 
   return (
-    <View style={[styles.card, compact && styles.cardCompact]}>
+    <Animated.View style={[styles.card, compact && styles.cardCompact, gainPopStyle]}>
       <View style={styles.header}>
         <View style={styles.iconWrap}>
           <Ionicons name="ribbon-outline" size={16} color={colors.secondary} />
@@ -45,7 +50,7 @@ export function ReportAuthoritySummary({
           </Text>
         ))}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

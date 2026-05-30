@@ -1,6 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
+import { useEntranceAnimation } from '@/core/animations/useEntranceAnimation';
 import type { EventResultHeroModel } from '@/features/events/utils/eventResultPresentation';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import { colors } from '@/ui/theme/colors';
@@ -30,35 +32,38 @@ type Props = {
 };
 
 export function EventResultHeroCard({ model }: Props) {
+  const { animatedStyle } = useEntranceAnimation();
   const chip = CHIP_COLORS[model.tone];
 
   return (
-    <LinearGradient
-      colors={[...HERO_GRADIENTS[model.tone]]}
-      style={[styles.card, shadows.soft]}>
-      <Text style={styles.panelTitle} numberOfLines={1}>
-        {model.panelTitle}
-      </Text>
-      <View style={[styles.statusChip, { backgroundColor: chip.bg }]}>
-        <Text style={[styles.statusChipText, { color: chip.text }]} numberOfLines={1}>
-          {model.statusLabel}
+    <Animated.View style={animatedStyle}>
+      <LinearGradient
+        colors={[...HERO_GRADIENTS[model.tone]]}
+        style={[styles.card, shadows.soft]}>
+        <Text style={styles.panelTitle} numberOfLines={1}>
+          {model.panelTitle}
         </Text>
-      </View>
-      <Text style={styles.summary} numberOfLines={2}>
-        {model.summary}
-      </Text>
-      <View style={styles.contextRow}>
-        <Text style={styles.eventTitle} numberOfLines={2}>
-          {model.eventTitle}
+        <View style={[styles.statusChip, { backgroundColor: chip.bg }]}>
+          <Text style={[styles.statusChipText, { color: chip.text }]} numberOfLines={1}>
+            {model.statusLabel}
+          </Text>
+        </View>
+        <Text style={styles.summary} numberOfLines={2}>
+          {model.summary}
         </Text>
-        <Text style={styles.neighborhood} numberOfLines={1}>
-          {model.neighborhoodLabel}
+        <View style={styles.contextRow}>
+          <Text style={styles.eventTitle} numberOfLines={2}>
+            {model.eventTitle}
+          </Text>
+          <Text style={styles.neighborhood} numberOfLines={1}>
+            {model.neighborhoodLabel}
+          </Text>
+        </View>
+        <Text style={styles.decisionLine} numberOfLines={2}>
+          Karar: {model.decisionTitle}
         </Text>
-      </View>
-      <Text style={styles.decisionLine} numberOfLines={2}>
-        Karar: {model.decisionTitle}
-      </Text>
-    </LinearGradient>
+      </LinearGradient>
+    </Animated.View>
   );
 }
 
@@ -70,6 +75,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(6, 63, 59, 0.08)',
     minWidth: 0,
+    flexShrink: 1,
   },
   panelTitle: {
     fontSize: 10,
@@ -80,10 +86,9 @@ const styles = StyleSheet.create({
   },
   statusChip: {
     alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: radius.full,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    maxWidth: '100%',
   },
   statusChipText: {
     fontSize: 11,
@@ -91,19 +96,19 @@ const styles = StyleSheet.create({
   },
   summary: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
     color: eventDetail.textDark,
     lineHeight: 20,
+    letterSpacing: -0.2,
   },
   contextRow: {
     gap: 2,
-    minWidth: 0,
   },
   eventTitle: {
     fontSize: 13,
-    fontWeight: '800',
-    color: eventDetail.textDark,
-    letterSpacing: -0.15,
+    fontWeight: '700',
+    color: eventDetail.textMuted,
+    lineHeight: 18,
   },
   neighborhood: {
     fontSize: 11,
@@ -112,7 +117,8 @@ const styles = StyleSheet.create({
   },
   decisionLine: {
     fontSize: 12,
-    fontWeight: '700',
-    color: eventDetail.teal,
+    fontWeight: '600',
+    color: eventDetail.tealDark,
+    lineHeight: 17,
   },
 });

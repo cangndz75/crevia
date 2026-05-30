@@ -1,5 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+
+import { useEntranceAnimation } from '@/core/animations/useEntranceAnimation';
 
 import type { BadgeRarity } from '@/core/badges/badgeTypes';
 import { PROFILE_UI_COPY } from '@/features/profile/utils/profileScreenPresentation';
@@ -103,8 +106,10 @@ function BadgeTile({ item }: { item: ProfileBadgeShowcaseItem }) {
 }
 
 export function ProfileBadgeShowcaseCard({ summary }: ProfileBadgeShowcaseCardProps) {
+  const { animatedStyle } = useEntranceAnimation();
+
   return (
-    <View style={[styles.card, shadows.soft]}>
+    <Animated.View style={[styles.card, shadows.soft, animatedStyle]}>
       <View style={styles.head}>
         <View style={styles.iconWrap}>
           <Ionicons name="medal-outline" size={16} color={colors.hubGoldDark} />
@@ -149,7 +154,7 @@ export function ProfileBadgeShowcaseCard({ summary }: ProfileBadgeShowcaseCardPr
           ))}
         </View>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 

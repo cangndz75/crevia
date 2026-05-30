@@ -1,6 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { CreviaAnimatedPressable } from '@/core/animations/CreviaAnimatedPressable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { WORKFLOW_CTA_LABELS } from '@/core/ux/uxFlowPresentation';
@@ -32,14 +34,10 @@ export function FieldWorkflowFooter({
         </Text>
       </View>
 
-      <Pressable
+      <CreviaAnimatedPressable
         onPress={onPress}
         disabled={disabled || loading}
-        style={({ pressed }) => [
-          styles.pressable,
-          inactive && styles.disabled,
-          pressed && !disabled && !loading && styles.pressed,
-        ]}
+        style={[styles.pressable, inactive && styles.disabled]}
         accessibilityRole="button"
         accessibilityLabel={
           loading ? 'Sonuç hazırlanıyor' : WORKFLOW_CTA_LABELS.field
@@ -59,7 +57,7 @@ export function FieldWorkflowFooter({
             {loading ? 'Hazırlanıyor…' : WORKFLOW_CTA_LABELS.field}
           </Text>
         </LinearGradient>
-      </Pressable>
+      </CreviaAnimatedPressable>
     </View>
   );
 }

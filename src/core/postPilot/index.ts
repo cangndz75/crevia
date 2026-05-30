@@ -79,9 +79,6 @@ export {
   simulateStartLightMainOperation,
 } from './postPilotLoopAudit';
 
-export type { VerifyPostPilotLoopBalanceOutcome } from './verifyPostPilotLoopBalanceScenario';
-export { verifyPostPilotLoopBalanceScenario } from './verifyPostPilotLoopBalanceScenario';
-
 export type {
   PostPilotAgendaBannerChip,
   PostPilotAgendaBannerCta,
@@ -107,6 +104,3 @@ export {
   isPostPilotGeneratedEvent,
   postPilotUxContainsForbiddenWords,
 } from './postPilotOperationUxPresentation';
-
-export type { VerifyPostPilotUxOutcome } from './verifyPostPilotUxScenario';
-export { verifyPostPilotUxScenario } from './verifyPostPilotUxScenario';

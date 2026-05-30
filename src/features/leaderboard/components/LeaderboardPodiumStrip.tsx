@@ -1,5 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
+
+import { cardEntranceEntering } from '@/core/animations/animationEntering';
 
 import { LeaderboardDynamicAvatar } from '@/features/leaderboard/components/LeaderboardDynamicAvatar';
 import type { LeaderboardPodiumModel } from '@/features/leaderboard/utils/leaderboardPresentation';
@@ -50,7 +52,7 @@ function PodiumCard({
 
   return (
     <Animated.View
-      entering={FadeInUp.delay(delay).duration(360)}
+      entering={cardEntranceEntering(delay)}
       style={[
         styles.card,
         shadows.soft,

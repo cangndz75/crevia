@@ -49,6 +49,7 @@ function ReportEmpty({ onGoHub }: ReportEmptyProps) {
       <GameButton
         title="Operasyon Merkezine Dön"
         onPress={onGoHub}
+        microPress
         style={styles.primaryAction}
       />
     </GameScreenShell>
@@ -135,6 +136,7 @@ export function ReportScreen() {
       <GameButton
         title={continueTitle}
         onPress={onContinue}
+        microPress
         style={styles.primaryAction}
       />
       <TutorialCoachOverlay screen="daily_report" />

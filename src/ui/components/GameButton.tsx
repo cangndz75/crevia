@@ -1,5 +1,7 @@
 import { Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
+import Animated from 'react-native-reanimated';
 
+import { usePressScale } from '@/core/animations/usePressScale';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { typography } from '@/ui/theme/typography';
@@ -7,12 +9,16 @@ import { spacing } from '@/ui/theme/spacing';
 
 type GameButtonVariant = 'primary' | 'secondary' | 'ghost';
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 type GameButtonProps = {
   title: string;
   onPress: () => void;
   variant?: GameButtonVariant;
   style?: ViewStyle;
   disabled?: boolean;
+  /** Merkezi mikro press-scale feedback */
+  microPress?: boolean;
 };
 
 export function GameButton({
@@ -21,7 +27,37 @@ export function GameButton({
   variant = 'primary',
   style,
   disabled = false,
+  microPress = false,
 }: GameButtonProps) {
+  const press = usePressScale({ disabled });
+
+  if (microPress) {
+    return (
+      <AnimatedPressable
+        onPress={onPress}
+        disabled={disabled}
+        onPressIn={press.onPressIn}
+        onPressOut={press.onPressOut}
+        style={[
+          styles.base,
+          styles[variant],
+          press.animatedStyle,
+          disabled && variant === 'primary' && styles.primaryDisabled,
+          disabled && variant !== 'primary' && styles.disabled,
+          style,
+        ]}>
+        <Text
+          style={[
+            styles.label,
+            styles[`${variant}Label` as const],
+            disabled && styles.disabledLabel,
+          ]}>
+          {title}
+        </Text>
+      </AnimatedPressable>
+    );
+  }
+
   return (
     <Pressable
       onPress={onPress}

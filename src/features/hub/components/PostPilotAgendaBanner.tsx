@@ -1,7 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
+
+import { cardEntranceEntering } from '@/core/animations/animationEntering';
+import { CreviaAnimatedPressable } from '@/core/animations/CreviaAnimatedPressable';
 import { useShallow } from 'zustand/react/shallow';
 
 import {
@@ -59,7 +62,7 @@ export function PostPilotAgendaBanner({ compact = false }: PostPilotAgendaBanner
 
   return (
     <Animated.View
-      entering={FadeInUp.delay(60).duration(280).springify().damping(22)}
+      entering={cardEntranceEntering(60)}
       style={[styles.card, compact && styles.cardCompact, shadows.soft]}>
       <View style={styles.headRow}>
         <View
@@ -107,16 +110,16 @@ export function PostPilotAgendaBanner({ compact = false }: PostPilotAgendaBanner
 
       <View style={styles.ctaRow}>
         {model.primaryCta ? (
-          <Pressable
+          <CreviaAnimatedPressable
             onPress={() => router.push(model.primaryCta!.href as '/')}
-            style={({ pressed }) => [styles.primaryCta, pressed && styles.pressed]}
+            style={styles.primaryCta}
             accessibilityRole="button"
             accessibilityLabel={model.primaryCta.accessibilityLabel}>
             <Text style={styles.primaryCtaText} numberOfLines={1}>
               {model.primaryCta.label}
             </Text>
             <Ionicons name="chevron-forward" size={14} color="#fff" />
-          </Pressable>
+          </CreviaAnimatedPressable>
         ) : null}
 
         {model.showMapLink ? (

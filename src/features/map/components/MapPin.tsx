@@ -1,8 +1,12 @@
+import Animated from 'react-native-reanimated';
 import { Circle, G, Text as SvgText } from 'react-native-svg';
 
+import { usePulseAnimation } from '@/core/animations/usePulseAnimation';
 import { colors } from '@/ui/theme/colors';
 
 import type { MapPin as MapPinModel } from '../types/map';
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 type Props = {
   pin: MapPinModel;
@@ -68,32 +72,38 @@ export function MapPin({
   const fontSize = normalized ? 0.02 : 7;
 
   const glowColor = selected ? colors.primary : pin.color;
+  const glowR = r + (normalized ? (selected ? 0.012 : 0.008) : selected ? 6 : 4);
+  const isSelected = Boolean(selected);
+  const { glowAnimatedProps } = usePulseAnimation(isSelected);
 
   return (
     <G onPress={() => onPress?.(pin.id)}>
-      {(pin.severity === 'critical' || selected) && (
-        <Circle
-          cx={cx}
-          cy={cy}
-          r={r + (normalized ? (selected ? 0.012 : 0.008) : selected ? 6 : 4)}
-          fill={glowColor}
-          opacity={selected ? 0.28 : 0.2}
-        />
-      )}
+      {(pin.severity === 'critical' || isSelected) &&
+        (isSelected ? (
+          <AnimatedCircle
+            animatedProps={glowAnimatedProps}
+            cx={cx}
+            cy={cy}
+            r={glowR}
+            fill={glowColor}
+          />
+        ) : (
+          <Circle cx={cx} cy={cy} r={glowR} fill={glowColor} opacity={0.2} />
+        ))}
       <Circle
         cx={cx}
         cy={cy}
         r={r}
         fill={pin.color}
-        stroke={selected ? colors.primary : isVehicle ? 'rgba(255,255,255,0.95)' : '#FFFFFF'}
+        stroke={isSelected ? colors.primary : isVehicle ? 'rgba(255,255,255,0.95)' : '#FFFFFF'}
         strokeWidth={
           normalized
-            ? selected
+            ? isSelected
               ? 0.004
               : isVehicle
                 ? 0.0025
                 : 0.003
-            : selected
+            : isSelected
               ? 2.5
               : isVehicle
                 ? 1.25

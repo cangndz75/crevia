@@ -96,6 +96,7 @@ const styles = StyleSheet.create({
   scroll: {
     gap: eventDetail.sectionGap,
     paddingTop: 4,
+    minWidth: 0,
   },
   stepperGap: {
     marginTop: -2,

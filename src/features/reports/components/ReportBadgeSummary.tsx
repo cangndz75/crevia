@@ -1,5 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+
+import { useSoftPopAnimation } from '@/core/animations/useSoftPopAnimation';
 
 import {
   buildReportBadgeSummaryModel,
@@ -116,8 +119,9 @@ export function ReportBadgeSummary({
   }
 
   const isEarned = model.mode === 'earned';
+  const { animatedStyle: earnedPopStyle } = useSoftPopAnimation(isEarned);
 
-  return (
+  const card = (
     <GameCard
       padding={compact ? 'md' : 'lg'}
       style={[
@@ -144,6 +148,12 @@ export function ReportBadgeSummary({
       )}
     </GameCard>
   );
+
+  if (!isEarned) {
+    return card;
+  }
+
+  return <Animated.View style={earnedPopStyle}>{card}</Animated.View>;
 }
 
 const styles = StyleSheet.create({

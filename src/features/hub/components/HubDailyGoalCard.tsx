@@ -1,12 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  type SharedValue,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import { CreviaAnimatedPressable } from '@/core/animations/CreviaAnimatedPressable';
 
 import { selectPrimaryDailyGoal } from '@/core/dailyGoals/dailyGoalSelectors';
 import { DAY1_GOALS_PLACEHOLDER } from '@/core/onboarding/onboardingPresentation';
@@ -16,8 +11,6 @@ import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type HubDailyGoalCardProps = {
   onEndDay: () => void;
@@ -43,13 +36,6 @@ export function HubDailyGoalCard({ onEndDay, endDayOnly = false }: HubDailyGoalC
     });
     return day <= 2 && !vis.showDailyPrioritySelection;
   });
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: scale.value < 1 ? 0.94 : 1,
-  }));
-
   if (!goal) {
     if (!showGoalsPlaceholder || endDayOnly) return null;
     return (
@@ -72,7 +58,7 @@ export function HubDailyGoalCard({ onEndDay, endDayOnly = false }: HubDailyGoalC
   if (endDayOnly) {
     return (
       <View style={[styles.panel, styles.panelEndDayOnly, shadows.card]}>
-        <EndDayButton onEndDay={onEndDay} scale={scale} animatedStyle={animatedStyle} />
+        <EndDayButton onEndDay={onEndDay} />
       </View>
     );
   }
@@ -111,33 +97,19 @@ export function HubDailyGoalCard({ onEndDay, endDayOnly = false }: HubDailyGoalC
         </View>
       </View>
 
-      <EndDayButton onEndDay={onEndDay} scale={scale} animatedStyle={animatedStyle} />
+      <EndDayButton onEndDay={onEndDay} />
     </View>
   );
 }
 
-function EndDayButton({
-  onEndDay,
-  scale,
-  animatedStyle,
-}: {
-  onEndDay: () => void;
-  scale: SharedValue<number>;
-  animatedStyle: ReturnType<typeof useAnimatedStyle>;
-}) {
+function EndDayButton({ onEndDay }: { onEndDay: () => void }) {
   return (
     <View style={styles.endDayFooter}>
-      <AnimatedPressable
+      <CreviaAnimatedPressable
         onPress={onEndDay}
-        onPressIn={() => {
-          scale.value = withSpring(0.98, { damping: 15, stiffness: 300 });
-        }}
-        onPressOut={() => {
-          scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-        }}
         accessibilityRole="button"
         accessibilityLabel="Günü bitir"
-        style={[styles.endDayBtn, animatedStyle]}>
+        style={styles.endDayBtn}>
         <LinearGradient
           colors={['#0F4A47', colors.headerTealDark, colors.primary]}
           start={{ x: 0, y: 0 }}
@@ -158,7 +130,7 @@ function EndDayButton({
           </View>
           <Ionicons name="chevron-forward" size={19} color="rgba(255,255,255,0.95)" />
         </LinearGradient>
-      </AnimatedPressable>
+      </CreviaAnimatedPressable>
     </View>
   );
 }

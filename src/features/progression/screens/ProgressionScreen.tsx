@@ -1,59 +1,71 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
-import { AuthorityBadgeGrid } from '@/features/progression/components/authorities/AuthorityBadgeGrid';
-import { BadgesTabPanel } from '@/features/progression/components/authorities/BadgesTabPanel';
-import { CollectionProgressCard } from '@/features/progression/components/authorities/CollectionProgressCard';
-import { ProgressionScreenIntro } from '@/features/progression/components/authorities/ProgressionScreenIntro';
+import { AuthoritiesTabPanel } from '@/features/progression/components/authorities/AuthoritiesTabPanel';
 import {
-  ProgressionSegmentTabs,
-  type ProgressionTabKey,
-} from '@/features/progression/components/authorities/ProgressionSegmentTabs';
-import { WeeklyUnlockablesSection } from '@/features/progression/components/authorities/WeeklyUnlockablesCard';
+  AuthorityTabsPill,
+  type AuthorityTabKey,
+} from '@/features/progression/components/authorities/AuthorityTabsPill';
+import { BadgesTabPanel } from '@/features/progression/components/authorities/BadgesTabPanel';
+import { CollectionProgressHeroCard } from '@/features/progression/components/authorities/CollectionProgressHeroCard';
+import {
+  AUTHORITY_COLLECTION_THEME,
+  buildAuthorityBadgePreviewModels,
+  buildCollectionHeroModel,
+  buildWeeklyUnlockModels,
+} from '@/features/progression/utils/authorityCollectionPresentation';
 import { deriveAuthoritiesScreenModel } from '@/features/progression/utils/authoritiesScreenModel';
 import { useGameStore } from '@/store/useGameStore';
 import { GameScreenShell } from '@/ui/components/GameScreenShell';
-import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
 
 export function ProgressionScreen() {
   const totalXp = useGameStore((s) => s.playerProgress?.totalXp ?? 0);
   const pilotDay = useGameStore((s) => s.gameState.pilot.currentPilotDay);
-  const [tab, setTab] = useState<ProgressionTabKey>('authorities');
+  const badgeState = useGameStore((s) => s.gameState.pilot.badgeState);
+  const [tab, setTab] = useState<AuthorityTabKey>('authorities');
 
   const model = useMemo(
     () => deriveAuthoritiesScreenModel(totalXp, pilotDay),
     [totalXp, pilotDay],
   );
 
+  const heroModel = useMemo(
+    () =>
+      buildCollectionHeroModel(badgeState, pilotDay, {
+        collected: model.collectionCollected,
+        total: model.collectionTotal,
+        progress: model.collectionProgress,
+      }),
+    [badgeState, pilotDay, model.collectionCollected, model.collectionProgress, model.collectionTotal],
+  );
+
+  const weeklyItems = useMemo(
+    () => buildWeeklyUnlockModels(model.weeklyItems),
+    [model.weeklyItems],
+  );
+
+  const previewItems = useMemo(
+    () => buildAuthorityBadgePreviewModels(model.gridItems),
+    [model.gridItems],
+  );
+
   return (
     <GameScreenShell
       screenTitle="Yetkiler"
-      backgroundColor={colors.background}
+      backgroundColor={AUTHORITY_COLLECTION_THEME.screenBg}
       contentStyle={styles.content}>
-      <ProgressionScreenIntro />
-      <ProgressionSegmentTabs active={tab} onChange={setTab} />
+      <CollectionProgressHeroCard {...heroModel} />
+      <AuthorityTabsPill active={tab} onChange={setTab} />
 
       {tab === 'authorities' ? (
-        <View style={styles.panel}>
-          <CollectionProgressCard
-            collected={model.collectionCollected}
-            total={model.collectionTotal}
-            progress={model.collectionProgress}
-          />
-          <WeeklyUnlockablesSection
-            daysLeft={model.daysLeftThisWeek}
-            items={model.weeklyItems}
-          />
-          <AuthorityBadgeGrid items={model.gridItems} />
-        </View>
-      ) : (
-        <BadgesTabPanel
-          collectionCollected={model.collectionCollected}
-          collectionTotal={model.collectionTotal}
-          collectionProgress={model.collectionProgress}
-          badgeTabItems={model.badgeTabItems}
+        <AuthoritiesTabPanel
+          daysLeft={model.daysLeftThisWeek}
+          weeklyItems={weeklyItems}
+          previewItems={previewItems}
         />
+      ) : (
+        <BadgesTabPanel badgeTabItems={model.badgeTabItems} />
       )}
     </GameScreenShell>
   );
@@ -61,10 +73,7 @@ export function ProgressionScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    gap: spacing.lg,
-    paddingTop: spacing.md,
-  },
-  panel: {
-    gap: spacing.lg,
+    gap: 0,
+    paddingTop: spacing.sm,
   },
 });

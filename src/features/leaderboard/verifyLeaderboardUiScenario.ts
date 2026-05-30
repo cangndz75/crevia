@@ -1,5 +1,6 @@
 import { verifyLeaderboardScenario } from '@/core/leaderboard/verifyLeaderboardScenario';
 import type { LeaderboardEntry } from '@/core/leaderboard/leaderboardTypes';
+import { verifyFullUxFlowScenario } from '@/core/ux/verifyFullUxFlowScenario';
 import { PROFILE_UI_COPY } from '@/features/profile/utils/profileScreenPresentation';
 
 import {
@@ -12,7 +13,6 @@ import {
   formatPrestigeScoreText,
   LEADERBOARD_LAYOUT_GUARDS,
   verifyLeaderboardPresentationDedupes,
-  runLeaderboardUiRegressionChecks,
 } from './utils/leaderboardPresentation';
 import { formatLeaderboardScoreBpp } from './utils/leaderboardUiModel';
 
@@ -234,12 +234,8 @@ export function verifyLeaderboardUiScenario(): VerifyLeaderboardUiOutcome {
     'Skor motoru veya pilot completion data değişmez',
   );
 
-  const regression = runLeaderboardUiRegressionChecks();
-  assert(
-    checks,
-    regression.fullUxOk,
-    'full UX flow verify bozulmaz',
-  );
+  const fullUx = verifyFullUxFlowScenario();
+  assert(checks, fullUx.ok, 'full UX flow verify bozulmaz');
 
   const core = verifyLeaderboardScenario();
   assert(

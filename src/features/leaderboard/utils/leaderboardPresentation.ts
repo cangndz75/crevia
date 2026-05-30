@@ -1,5 +1,4 @@
 import type { LeaderboardEntry } from '@/core/leaderboard/leaderboardTypes';
-import { verifyFullUxFlowScenario } from '@/core/ux/verifyFullUxFlowScenario';
 
 import { dedupePilotScores } from './leaderboardProfileModel';
 import {
@@ -340,11 +339,4 @@ export function verifyLeaderboardPresentationDedupes(
   entries: LeaderboardEntry[],
 ): LeaderboardEntry[] {
   return dedupePilotScores(entries);
-}
-
-export function runLeaderboardUiRegressionChecks(): {
-  fullUxOk: boolean;
-} {
-  const fullUx = verifyFullUxFlowScenario();
-  return { fullUxOk: fullUx.ok };
 }

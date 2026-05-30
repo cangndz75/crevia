@@ -3,12 +3,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  FadeInUp,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
+
+import { cardEntranceEntering } from '@/core/animations/animationEntering';
+import { CreviaAnimatedPressable } from '@/core/animations/CreviaAnimatedPressable';
 import { useShallow } from 'zustand/react/shallow';
 
 import { buildEventCategoryChip } from '@/core/events/eventContentPresentation';
@@ -35,8 +33,6 @@ import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function formatUrgencyRemaining(hours: number): string {
   const h = Math.floor(hours);
@@ -81,15 +77,10 @@ export function HubCriticalEventCard() {
     );
   }, [flowSlice.decisionHistory, presentation]);
 
-  const ctaScale = useSharedValue(1);
-  const ctaAnim = useAnimatedStyle(() => ({
-    transform: [{ scale: ctaScale.value }],
-  }));
-
   if (!presentation) {
     return (
       <Animated.View
-        entering={FadeInUp.duration(280)}
+        entering={cardEntranceEntering()}
         style={[styles.card, styles.emptyCard, shadows.soft]}>
         <HubAssetImage
           source={hubAssets.regionCalm}
@@ -131,7 +122,7 @@ export function HubCriticalEventCard() {
 
   return (
     <Animated.View
-      entering={FadeInUp.delay(30).duration(320).springify().damping(20)}
+      entering={cardEntranceEntering(30)}
       style={[
         styles.card,
         shadows.card,
@@ -237,17 +228,11 @@ export function HubCriticalEventCard() {
       </Pressable>
 
       <View style={styles.footer}>
-        <AnimatedPressable
-          onPressIn={() => {
-            ctaScale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
-          }}
-          onPressOut={() => {
-            ctaScale.value = withSpring(1, { damping: 15, stiffness: 300 });
-          }}
+        <CreviaAnimatedPressable
           onPress={goToEvent}
           accessibilityRole="button"
           accessibilityLabel={lifecycle.ctaLabel ?? 'İncele'}
-          style={[styles.cta, ctaAnim]}>
+          style={styles.cta}>
           {isResolved ? (
             <View
               style={[
@@ -276,7 +261,7 @@ export function HubCriticalEventCard() {
               <Ionicons name="chevron-forward" size={15} color="#fff" />
             </LinearGradient>
           )}
-        </AnimatedPressable>
+        </CreviaAnimatedPressable>
       </View>
     </Animated.View>
   );
