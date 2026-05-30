@@ -1,5 +1,6 @@
 import type { GameStore } from '@/store/useGameStore';
 import { buildDay1AuthoritySummaryLines } from '@/core/authority/authorityPresentation';
+import { buildFirstReportGuidanceModel } from '@/core/onboarding/onboardingPresentation';
 
 import {
   DAY1_TUTORIAL_STEPS,
@@ -126,15 +127,15 @@ export type Day1ReportTutorialCopy = {
   warningLine: string;
 };
 
+const DAY1_REPORT_GUIDANCE = buildFirstReportGuidanceModel();
+
 export const DAY1_REPORT_TUTORIAL_COPY: Day1ReportTutorialCopy = {
-  title: '1. Gün Tamamlandı',
-  summaryLines: [
-    'Bugün ilk saha kararını verdin. Mahalle güveni kısmen toparlandı, fakat ekip yoğunluğu arttı. Yarın kararlarının yan etkilerini daha net görmeye başlayacaksın.',
-  ],
+  title: DAY1_REPORT_GUIDANCE.title,
+  summaryLines: DAY1_REPORT_GUIDANCE.summaryLines,
   learningLine:
-    'Kararlar sadece anlık sonuç üretmez. Bazı etkiler sonraki günlere taşınır.',
+    'Operasyon kararların halk, ekip ve kaynak dengesini birlikte etkiler.',
   warningLine:
-    'Personel yorgunluğu artarsa ekipler ilerleyen günlerde hata yapabilir.',
+    'Pilot boyunca yetki değerlendirmesi günlük raporlarda izlenir.',
 };
 
 export function selectShowDay1TutorialReportCopy(s: GameStore): boolean {
@@ -163,7 +164,10 @@ export function applyDay1TutorialReportCopy(
     quickActionSummaryLines: undefined,
     badgeEvaluation: undefined,
     badgeSummaryLines: undefined,
-    authoritySummaryLines: buildDay1AuthoritySummaryLines(),
+    authoritySummaryLines:
+      DAY1_REPORT_GUIDANCE.authorityIntroLines.length > 0
+        ? DAY1_REPORT_GUIDANCE.authorityIntroLines
+        : buildDay1AuthoritySummaryLines(),
     dailyGoalResults: [
       {
         title: 'İlk gün hedefi',

@@ -13,6 +13,7 @@ import { PlanEventSummaryCard } from '@/features/events/components/event-workflo
 import { OnboardingFocusHint } from '@/features/onboarding/components/OnboardingFocusHint';
 import type { OnboardingHint } from '@/core/onboarding/onboardingTypes';
 import { TutorialTarget } from '@/features/tutorial/TutorialTarget';
+import { OnboardingPhaseHint } from '@/features/onboarding/components/OnboardingPhaseHint';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import type { FieldResourceRow, ResolvedQuickAction } from '@/features/events/utils/eventDetailDecisionUtils';
 import { getInspectNeighborhoodHero } from '@/features/events/utils/eventWorkflowAssets';
@@ -38,6 +39,7 @@ type Props = {
   decisionsHighlighted?: boolean;
   /** Day 1 tutorial: alternatif karar listesini gizle, akışı sade tut. */
   compactTutorial?: boolean;
+  phaseHint?: string | null;
 };
 
 export function EventDispatchPhase({
@@ -56,6 +58,7 @@ export function EventDispatchPhase({
   resourcesHighlighted = false,
   decisionsHighlighted = false,
   compactTutorial = false,
+  phaseHint = null,
 }: Props) {
   const selectedDecision = useMemo(
     () => event.decisions.find((d) => d.id === selectedDecisionId) ?? null,
@@ -89,6 +92,8 @@ export function EventDispatchPhase({
           remainingLabel={model.remainingLabel}
           thumbnail={thumbnail}
         />
+
+        {phaseHint ? <OnboardingPhaseHint text={phaseHint} /> : null}
 
         <View style={styles.stepperGap}>
           <EventWorkflowStepper activeStep="assign" compact />

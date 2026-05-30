@@ -15,6 +15,8 @@ import {
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
 import {
+  DAY1_LOCKED_QUICK_ACTION_DISPLAY,
+  DAY1_LOCKED_QUICK_ACTION_ORDER,
   DAY1_QUICK_PREP_TITLE,
   HUB_QUICK_ACTION_COMPACT_CARD_MAX_HEIGHT,
   HUB_QUICK_ACTION_PREVIEW,
@@ -55,6 +57,16 @@ export function HubQuickActionsPanel() {
 
   const isLockedRail = resolveHubQuickActionsLayoutMode(cards, day1Disabled) === 'locked-rail';
 
+  const visibleCards = useMemo(() => {
+    if (!isLockedRail) {
+      return cards;
+    }
+    const byId = new Map(cards.map((c) => [c.id, c]));
+    return DAY1_LOCKED_QUICK_ACTION_ORDER.map((id) => byId.get(id)).filter(
+      (c): c is (typeof cards)[number] => c != null,
+    );
+  }, [cards, isLockedRail]);
+
   const onPress = useCallback(
     (actionId: HubQuickActionId) => {
       if (isLockedRail) {
@@ -79,6 +91,9 @@ export function HubQuickActionsPanel() {
     lockedRail: boolean,
   ) => {
     const preview = HUB_QUICK_ACTION_PREVIEW[card.id];
+    const lockedDisplay = DAY1_LOCKED_QUICK_ACTION_DISPLAY[card.id];
+    const title = lockedRail && lockedDisplay ? lockedDisplay.title : preview.title;
+    const teaser = lockedRail && lockedDisplay ? lockedDisplay.teaser : preview.teaser;
     const imageSource = hubAssets.quickActions[preview.imageKey];
     const disabled =
       !lockedRail && (card.status === 'disabled' || card.status === 'used');
@@ -93,7 +108,7 @@ export function HubQuickActionsPanel() {
           pressed && styles.tilePressed,
         ]}
         accessibilityRole="button"
-        accessibilityLabel={preview.title}>
+        accessibilityLabel={title}>
         <LinearGradient
           colors={[...preview.gradient]}
           style={[
@@ -107,30 +122,28 @@ export function HubQuickActionsPanel() {
             contentFit="contain"
           />
           <Text style={styles.tileTitle} numberOfLines={1}>
-            {preview.title}
+            {title}
           </Text>
           <Text
             style={[styles.tileTeaser, { color: preview.accent }]}
             numberOfLines={1}>
-            {preview.teaser}
+            {teaser}
           </Text>
           {lockedRail ? (
             <View style={styles.unlockRow}>
-              <Ionicons name="time-outline" size={10} color={colors.textSecondary} />
+              <Ionicons name="time-outline" size={11} color={colors.textSecondary} />
               <Text style={styles.unlockText} numberOfLines={1}>
                 Gün 2
               </Text>
+              <View style={styles.tileArrow}>
+                <Ionicons name="chevron-forward" size={12} color={colors.textSecondary} />
+              </View>
             </View>
           ) : (
             <Text style={styles.statusText} numberOfLines={1}>
               {card.statusLabel}
             </Text>
           )}
-          {lockedRail ? (
-            <View style={styles.tileArrow}>
-              <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
-            </View>
-          ) : null}
         </LinearGradient>
       </Pressable>
     );
@@ -164,11 +177,11 @@ export function HubQuickActionsPanel() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.row}>
-          {cards.map((card) => renderQuickActionTile(card, true))}
+          {visibleCards.map((card) => renderQuickActionTile(card, true))}
         </ScrollView>
       ) : (
         <View style={styles.grid}>
-          {cards.map((card) => renderQuickActionTile(card, false))}
+          {visibleCards.map((card) => renderQuickActionTile(card, false))}
         </View>
       )}
     </View>
@@ -208,7 +221,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '800',
     color: colors.textPrimary,
     letterSpacing: -0.2,
@@ -262,8 +275,8 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   tileRail: {
-    width: 132,
-    minHeight: 148,
+    width: 118,
+    minHeight: 156,
     borderRadius: 20,
   },
   tileGrid: {
@@ -300,8 +313,10 @@ const styles = StyleSheet.create({
   unlockRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    marginTop: 2,
+    gap: 4,
+    marginTop: 4,
+    width: '100%',
+    justifyContent: 'center',
   },
   unlockText: {
     fontSize: 10,
@@ -314,16 +329,13 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   tileArrow: {
-    position: 'absolute',
-    right: 8,
-    top: '50%',
-    marginTop: -10,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(255,255,255,0.85)',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.9)',
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 'auto',
   },
   banner: {
     borderRadius: 10,

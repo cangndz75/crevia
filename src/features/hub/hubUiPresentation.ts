@@ -56,12 +56,29 @@ export const HUB_QUICK_ACTION_PREVIEW_TILE_HEIGHT = 88;
 
 export const DAY1_PLAN_TITLE = 'Bugünkü Plan';
 export const DAY1_PLAN_BODY = 'İlk gün hedefin: temel müdahaleyi öğrenmek.';
-export const DAY1_PLAN_CHIP = 'Öğrenme Günü';
+export const DAY1_PLAN_CHIP = '🎓 Öğrenme Günü';
 
 export const DAY1_QUICK_PREP_TITLE = 'Hızlı Hazırlıklar';
 export const HUB_QUICK_ACTIONS_TITLE = 'Hızlı aksiyonlar';
 export const DAY1_QUICK_PREP_SUBTITLE =
   "Gün 2'den itibaren günlük hazırlık hamleleri açılır.";
+
+export const DAY1_LOCKED_QUICK_ACTION_DISPLAY: Partial<
+  Record<
+    HubQuickActionId,
+    { title: string; teaser: string }
+  >
+> = {
+  field_duty: { title: 'Saha Nöbeti', teaser: 'Ekip hazırlığı' },
+  route_preparation: { title: 'Rota Hazırlığı', teaser: 'Araç & rota' },
+  neighborhood_patrol: { title: 'Malzeme Kontrolü', teaser: 'Stok & malzeme' },
+};
+
+export const DAY1_LOCKED_QUICK_ACTION_ORDER: HubQuickActionId[] = [
+  'field_duty',
+  'route_preparation',
+  'neighborhood_patrol',
+];
 
 export const DAY1_FLOW_TIMELINE_PREVIEW_LINES = [
   'Karar uygulandı, olay gün sonu raporuna aktarılacak.',

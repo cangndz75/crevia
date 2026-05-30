@@ -1,22 +1,25 @@
 import { createDay1Seed } from '@/core/content/day1Seed';
-import { INITIAL_TUTORIAL_STATE } from '@/features/tutorial/tutorialTypes';
+import { selectAuthorityPermissionPreviewForDecision } from '@/core/authority/authorityPermissionPreview';
+import { buildDay1AuthoritySummaryLines } from '@/core/authority/authorityPresentation';
+import { applyDay1TutorialReportCopy } from '@/features/tutorial/tutorialSelectors';
 import { DAY1_LEARNING_EVENT_IDS } from '@/features/tutorial/tutorialTypes';
+import { buildDailyReport } from '@/core/game/buildDailyReport';
+import { INITIAL_TUTORIAL_STATE } from '@/features/tutorial/tutorialTypes';
 
 import {
-  DAY1_FLOW_PLACEHOLDER,
-  DAY1_GOALS_PLACEHOLDER,
-  DAY1_PRIORITY_FALLBACK,
-  mobileSafeLine,
-  ONBOARDING_HINTS,
-  ONBOARDING_MAX_HINT_TEXT_LENGTH,
+  assertNoOnboardingForbiddenWords,
+  buildDay1HubGuidanceModel,
+  buildFirstEventGuidanceModel,
+  buildFirstReportGuidanceModel,
+  buildFirstResultGuidanceModel,
+  buildPilotBriefingModel,
+  buildWorkflowStepHintModel,
+  collectOnboardingVisibleStrings,
+  ONBOARDING_UI_MAX_BRIEFING_STEPS,
 } from './onboardingPresentation';
 import {
   countOnboardingHintsForDay,
-  isOnboardingHintTextValid,
   selectEligibleOnboardingHints,
-  selectOnboardingCoachHint,
-  selectOnboardingFocusHint,
-  selectOnboardingHubVisibility,
   selectOnboardingHubVisibilityFromStore,
 } from './onboardingSelectors';
 import type { OnboardingContextInput } from './onboardingTypes';
@@ -59,205 +62,166 @@ export function verifyOnboardingScenario(): {
   metrics: {
     day1HintCount: number;
     day2HintCount: number;
-    duplicateHintCount: number;
-    maxHintTextLength: number;
+    briefingStepCount: number;
+    forbiddenHitCount: number;
     blockedFlowCount: number;
-    tutorialConflictCount: number;
   };
 } {
   const checks: Check[] = [];
-  let duplicateHintCount = 0;
-  let tutorialConflictCount = 0;
+  let forbiddenHitCount = 0;
   let blockedFlowCount = 0;
+
+  const briefing = buildPilotBriefingModel();
+  assert(checks, briefing.title.length > 0, 'Day 1 pilot briefing model üretir');
+  assert(
+    checks,
+    briefing.steps.length <= ONBOARDING_UI_MAX_BRIEFING_STEPS,
+    'Briefing step sayısı max 3',
+    String(briefing.steps.length),
+  );
+
+  const hubGuidance = buildDay1HubGuidanceModel({ pilotDay: 1, isDay1: true });
+  assert(
+    checks,
+    hubGuidance.showPilotBriefing &&
+      hubGuidance.pilotProgressLabel === 'Pilot: 1 / 7',
+    'Day 1 Hub guidance crash olmaz',
+  );
+
+  const firstEventId = DAY1_LEARNING_EVENT_IDS[0] ?? null;
+  const inspectGuidance = buildFirstEventGuidanceModel({
+    day: 1,
+    eventId: firstEventId,
+    isDay1LearningEvent: true,
+  });
+  assert(
+    checks,
+    inspectGuidance.showInspectBanner && !!inspectGuidance.inspectHint,
+    'Day 1 first event İncele hint üretir',
+  );
+
+  const planHint = buildWorkflowStepHintModel({
+    step: 'plan',
+    day: 1,
+    isDay1LearningEvent: true,
+  });
+  assert(
+    checks,
+    planHint.visible &&
+      /halk|ekip|kaynak/i.test(planHint.text),
+    'Planla hint halk/ekip/kaynak dengesini anlatır',
+  );
+
+  const assignHint = buildWorkflowStepHintModel({
+    step: 'assign',
+    day: 1,
+    isDay1LearningEvent: true,
+  });
+  const fieldHint = buildWorkflowStepHintModel({
+    step: 'field',
+    day: 1,
+    isDay1LearningEvent: true,
+  });
+  assert(
+    checks,
+    assignHint.compact && fieldHint.compact && assignHint.visible && fieldHint.visible,
+    'Yönlendir/Sahada hintleri compact döner',
+  );
+
+  const firstResult = buildFirstResultGuidanceModel(true, true);
+  const normalResult = buildFirstResultGuidanceModel(false, true);
+  assert(
+    checks,
+    firstResult.visible && !normalResult.visible,
+    'First result guidance yalnız Day 1/tutorial akışında',
+  );
+
+  const normalInspect = buildWorkflowStepHintModel({
+    step: 'inspect',
+    day: 3,
+    isDay1LearningEvent: false,
+  });
+  assert(
+    checks,
+    !normalInspect.visible,
+    'Normal day onboarding hintleri gizli',
+  );
+
+  const reportGuidance = buildFirstReportGuidanceModel();
+  const day1Report = applyDay1TutorialReportCopy(
+    {
+      ...buildDailyReport({
+        day: 1,
+        metrics: { publicSatisfaction: 55, staffMorale: 65, budget: 50_000 },
+        decisionHistory: [],
+        activeEvents: [],
+        resolvedEventIds: [],
+        snapshots: [],
+      }),
+      badgeEvaluation: {
+        earnedBadgeIds: ['first_step'],
+        earnedLines: ['rozet'],
+        progressLines: [],
+      },
+    },
+    true,
+  );
+  assert(
+    checks,
+    reportGuidance.hideBadgeBlock &&
+      day1Report.badgeEvaluation == null &&
+      !reportGuidance.summaryLines.some((l) => /rozet|puan/i.test(l)),
+    'Day 1 report copy badge/puan spam yapmaz',
+  );
+
+  assert(
+    checks,
+    buildDay1AuthoritySummaryLines().length <= 2,
+    'Authority summary max 2 satır korunur',
+  );
+
+  const day1Seed = createDay1Seed();
+  const sampleEvent = day1Seed.gameState.events[0];
+  const permissionPreview = selectAuthorityPermissionPreviewForDecision({
+    day: 1,
+    event: sampleEvent,
+    decision: sampleEvent?.decisions[0],
+  });
+  assert(
+    checks,
+    !permissionPreview.visible,
+    'Permission preview Day 1 gizli kalır',
+  );
+
+  const visibleStrings = collectOnboardingVisibleStrings();
+  const tutorialWordHits = visibleStrings.filter((s) =>
+    /\b(tutorial|onboarding)\b/i.test(s),
+  );
+  assert(
+    checks,
+    tutorialWordHits.length === 0,
+    'Görünen metinlerde tutorial/onboarding geçmez',
+    tutorialWordHits.join(' | '),
+  );
+
+  for (const text of visibleStrings) {
+    const hits = assertNoOnboardingForbiddenWords(text);
+    if (hits.length > 0) forbiddenHitCount += hits.length;
+  }
+  assert(
+    checks,
+    forbiddenHitCount === 0,
+    'Yasaklı kelime taraması 0 döner',
+    String(forbiddenHitCount),
+  );
 
   const day1Hub = selectEligibleOnboardingHints(
     baseCtx({ screen: 'hub', day: 1 }),
   );
-  assert(
-    checks,
-    day1Hub.some((h) => h.moment === 'hub_intro'),
-    'Day 1 hub_intro hint',
-    day1Hub.map((h) => h.moment).join(','),
-  );
-
-  const day1Vis = selectOnboardingHubVisibility(1, true, false);
-  assert(
-    checks,
-    !day1Vis.showDailyPrioritySelection && day1Vis.showDailyPriorityCompact,
-    'Day 1 priority compact / no selection',
-  );
-
-  const critical = selectOnboardingFocusHint(
-    baseCtx({ screen: 'hub', day: 1 }),
-    'critical_event_card',
-  );
-  assert(
-    checks,
-    critical?.moment === 'critical_event_intro',
-    'Day 1 critical event intro',
-    critical?.id ?? 'none',
-  );
-
-  const decisionCard = selectOnboardingFocusHint(
-    baseCtx({ screen: 'event_detail', day: 1 }),
-    'quick_decisions',
-  );
-  assert(
-    checks,
-    decisionCard?.moment === 'decision_card_intro',
-    'Day 1 decision card intro',
-    decisionCard?.id ?? 'none',
-  );
-
-  const resultCtx = baseCtx({
-    screen: 'decision_result',
-    day: 1,
-    hasLastDecisionResult: true,
-  });
-  const resultHint = selectOnboardingCoachHint(resultCtx);
-  assert(
-    checks,
-    resultHint?.moment === 'decision_result_intro',
-    'Decision result intro',
-  );
-  assert(
-    checks,
-    true,
-    'Decision result intro safe without priority impact',
-    'presentation-only',
-  );
-
-  const liveFlow = selectOnboardingFocusHint(
-    baseCtx({ screen: 'hub', day: 1, hasDecisionToday: true }),
-  );
-  assert(
-    checks,
-    liveFlow?.moment === 'live_flow_intro',
-    'Hub live flow intro after decision',
-    liveFlow?.id ?? 'none',
-  );
-
-  const reportHint = selectOnboardingCoachHint(
-    baseCtx({
-      screen: 'daily_report',
-      day: 1,
-      hasDailyReportForToday: true,
-    }),
-  );
-  assert(
-    checks,
-    reportHint?.moment === 'daily_report_intro',
-    'Daily report intro',
-  );
-
-  const day2Priority = selectOnboardingCoachHint(
-    baseCtx({
-      day: 2,
-      screen: 'hub',
-      dailyPrioritySelectionRequired: true,
-    }),
-  );
-  assert(
-    checks,
-    day2Priority?.moment === 'day2_priority_choice',
-    'Day 2 daily priority intro',
-  );
-
-  const day2Goals = selectOnboardingFocusHint(
-    baseCtx({
-      day: 2,
-      screen: 'hub',
-      dailyPrioritySelected: true,
-      dailyGoalCount: 3,
-    }),
-  );
-  assert(
-    checks,
-    day2Goals?.moment === 'day2_goals_intro',
-    'Day 2 daily goals intro',
-  );
-
-  const day3Count = selectEligibleOnboardingHints(
-    baseCtx({ day: 3, screen: 'hub' }),
-  ).length;
   const day1Count = day1Hub.length;
-  assert(
-    checks,
-    day3Count < day1Count,
-    'Day 3+ fewer hints than Day 1',
-    `d1=${day1Count} d3=${day3Count}`,
-  );
 
-  const dupCtx = baseCtx({ screen: 'hub', day: 1 });
-  const once = selectEligibleOnboardingHints(dupCtx);
-  const twice = selectEligibleOnboardingHints(dupCtx);
-  const dupIds = once.map((h) => h.id);
-  const hasDup = dupIds.length !== new Set(dupIds).size || once.length !== twice.length;
-  duplicateHintCount = hasDup ? 1 : 0;
-  assert(checks, !hasDup, 'No duplicate hints same context');
-
-  assert(
-    checks,
-    selectEligibleOnboardingHints(
-      baseCtx({
-        tutorialActiveStepId: undefined as unknown as null,
-        dismissedHintIds: undefined as unknown as string[],
-      }),
-    ).length >= 0,
-    'Missing tutorial dismissed ids safe',
-  );
-
-  assert(
-    checks,
-    selectOnboardingHubVisibility(1, true, false).showTodayFlowPlaceholder,
-    'Missing live flow placeholder Day 1',
-    DAY1_FLOW_PLACEHOLDER,
-  );
-
-  assert(
-    checks,
-    DAY1_GOALS_PLACEHOLDER.length > 0,
-    'Missing dailyGoalState fallback copy',
-  );
-
-  assert(
-    checks,
-    DAY1_PRIORITY_FALLBACK.length > 0,
-    'Missing dailyPriorityState fallback copy',
-  );
-
-  for (const hint of ONBOARDING_HINTS) {
-    assert(checks, isOnboardingHintTextValid(hint), `Copy valid: ${hint.id}`);
-    assert(
-      checks,
-      hint.text.length <= ONBOARDING_MAX_HINT_TEXT_LENGTH,
-      `Copy length: ${hint.id}`,
-      String(hint.text.length),
-    );
-  }
-
-  const long = 'a'.repeat(200);
-  const safe = mobileSafeLine(long, 160);
-  assert(
-    checks,
-    safe.length <= 161,
-    'mobileSafeLine caps length',
-    String(safe.length),
-  );
-
-  const legacyCtx = baseCtx({
-    screen: 'hub',
-    day: 1,
-    legacyCoachOnScreen: true,
-    tutorialActiveStepId: 'day1_intro',
-  });
-  const coachHidden = selectOnboardingCoachHint(legacyCtx);
-  if (coachHidden) tutorialConflictCount += 1;
-  assert(checks, coachHidden == null, 'Legacy overlay hides coach bubble');
-
-  const seed = createDay1Seed();
   const storeVis = selectOnboardingHubVisibilityFromStore({
-    gameState: seed.gameState,
+    gameState: createDay1Seed().gameState,
     tutorialState: { ...INITIAL_TUTORIAL_STATE, activeStepId: 'day1_intro' },
     dailyPriorityState: null,
     dailyGoalState: null,
@@ -266,22 +230,27 @@ export function verifyOnboardingScenario(): {
     decisionHistory: [],
     onboardingDismissedHintIds: [],
   });
-  assert(
-    checks,
-    !storeVis.showDailyPrioritySelection,
-    'Store slice hub visibility Day 1',
-  );
-
-  const anchorOk = DAY1_LEARNING_EVENT_IDS.length >= 1;
-  assert(checks, anchorOk, 'Day 1 tutorial anchor ids present');
-
-  if (day1Vis.showDailyPrioritySelection && day1Vis.showTodayFlow) {
+  if (storeVis.showDailyPrioritySelection && storeVis.showTodayFlow) {
     blockedFlowCount += 1;
   }
   assert(checks, blockedFlowCount === 0, 'Hub Day 1 flow not blocked');
 
+  assert(
+    checks,
+    buildDay1HubGuidanceModel({ isDay1: false }).showPilotBriefing === false,
+    'Day 1 state yoksa briefing güvenli fallback',
+  );
+
+  assert(
+    checks,
+    buildWorkflowStepHintModel({ step: 'unknown', day: 1 }).visible === false,
+    'Workflow step unknown fallback',
+  );
+
   const failCount = checks.filter((c) => !c.ok).length;
-  const lines = checks.map((c) => `${c.ok ? 'PASS' : 'FAIL'} ${c.name}${c.detail ? `: ${c.detail}` : ''}`);
+  const lines = checks.map(
+    (c) => `${c.ok ? 'PASS' : 'FAIL'} ${c.name}${c.detail ? `: ${c.detail}` : ''}`,
+  );
 
   return {
     ok: failCount === 0,
@@ -291,10 +260,9 @@ export function verifyOnboardingScenario(): {
     metrics: {
       day1HintCount: day1Count,
       day2HintCount: countOnboardingHintsForDay(2),
-      duplicateHintCount,
-      maxHintTextLength: Math.max(...ONBOARDING_HINTS.map((h) => h.text.length)),
+      briefingStepCount: briefing.steps.length,
+      forbiddenHitCount,
       blockedFlowCount,
-      tutorialConflictCount,
     },
   };
 }

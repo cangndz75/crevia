@@ -76,7 +76,6 @@ export function HubDailyPriorityCard() {
                 <View style={styles.day1Titles}>
                   <Text style={styles.day1Title}>{DAY1_PLAN_TITLE}</Text>
                   <View style={styles.day1Chip}>
-                    <Ionicons name="school" size={11} color={colors.primary} />
                     <Text style={styles.day1ChipText}>{DAY1_PLAN_CHIP}</Text>
                   </View>
                 </View>
@@ -96,85 +95,65 @@ export function HubDailyPriorityCard() {
               )}
             </Text>
 
-            <View style={styles.progressBlock}>
-              <View style={styles.progressLabelRow}>
-                <Text style={styles.progressLabel}>İlerlemen</Text>
-                <Text style={styles.progressPercent}>{progressPercent}%</Text>
-              </View>
-              <View style={styles.progressTrackWrap}>
-                <HubAssetImage
-                  source={hubAssets.day1Plan.progressStar}
-                  containerStyle={styles.progressIconLeft}
-                  contentFit="contain"
-                />
-                <View style={styles.progressTrack}>
-                  <LinearGradient
-                    colors={[colors.primary, colors.headerTealDark]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={[
-                      styles.progressFill,
-                      { width: `${progressPercent}%` },
-                    ]}
-                  />
-                </View>
-                <HubAssetImage
-                  source={hubAssets.day1Plan.progressChest}
-                  containerStyle={styles.progressIconRight}
-                  contentFit="contain"
-                />
-              </View>
-            </View>
-
-            <View style={styles.stepsRow}>
-              {DAY1_PLAN_STEPS.map((step, index) => {
-                const done = index === 0 || (index === 1 && hasDecisionToday);
-                const locked = !done && index > 0;
-                return (
-                  <View key={step.label} style={styles.stepCol}>
-                    <View style={styles.stepNodeRow}>
-                      {index > 0 ? (
-                        <View style={[styles.stepDash, done && styles.stepDashDone]} />
-                      ) : null}
-                      <View
-                        style={[
-                          styles.stepCircle,
-                          done && styles.stepCircleDone,
-                          locked && styles.stepCircleLocked,
-                        ]}>
-                        {done ? (
-                          <Ionicons name="checkmark" size={14} color="#fff" />
-                        ) : locked ? (
-                          <Ionicons
-                            name="lock-closed"
-                            size={12}
-                            color={colors.textSecondary}
-                          />
-                        ) : (
-                          <Ionicons
-                            name={step.icon}
-                            size={14}
-                            color={colors.headerTealDark}
-                          />
-                        )}
-                      </View>
-                      {index < DAY1_PLAN_STEPS.length - 1 ? (
+            <View style={styles.stepsFooter}>
+              <View style={styles.stepsRow}>
+                {DAY1_PLAN_STEPS.map((step, index) => {
+                  const done = index === 0 || (index === 1 && hasDecisionToday);
+                  const locked = !done && index > 0;
+                  return (
+                    <View key={step.label} style={styles.stepCol}>
+                      <View style={styles.stepNodeRow}>
+                        {index > 0 ? (
+                          <View style={[styles.stepDash, done && styles.stepDashDone]} />
+                        ) : null}
                         <View
                           style={[
-                            styles.stepDash,
-                            index === 0 && hasDecisionToday && styles.stepDashDone,
-                          ]}
-                        />
-                      ) : null}
+                            styles.stepCircle,
+                            done && styles.stepCircleDone,
+                            locked && styles.stepCircleLocked,
+                          ]}>
+                          {done ? (
+                            <Ionicons name="checkmark" size={14} color="#fff" />
+                          ) : locked ? (
+                            <Ionicons
+                              name="lock-closed"
+                              size={12}
+                              color={colors.textSecondary}
+                            />
+                          ) : (
+                            <Ionicons
+                              name={step.icon}
+                              size={14}
+                              color={colors.headerTealDark}
+                            />
+                          )}
+                        </View>
+                        {index < DAY1_PLAN_STEPS.length - 1 ? (
+                          <View
+                            style={[
+                              styles.stepDash,
+                              index === 0 && hasDecisionToday && styles.stepDashDone,
+                            ]}
+                          />
+                        ) : null}
+                      </View>
+                      <Text
+                        style={[styles.stepLabel, done && styles.stepLabelDone]}
+                        numberOfLines={1}>
+                        {step.label}
+                      </Text>
                     </View>
-                    <Text
-                      style={[styles.stepLabel, done && styles.stepLabelDone]}
-                      numberOfLines={1}>
-                      {step.label}
-                    </Text>
-                  </View>
-                );
-              })}
+                  );
+                })}
+              </View>
+              <View style={styles.progressCorner}>
+                <Text style={styles.progressPercent}>{progressPercent}%</Text>
+                <HubAssetImage
+                  source={hubAssets.day1Plan.progressChest}
+                  containerStyle={styles.progressChest}
+                  contentFit="contain"
+                />
+              </View>
             </View>
           </LinearGradient>
         </View>
@@ -389,52 +368,32 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.primary,
   },
-  progressBlock: {
-    gap: 8,
-  },
-  progressLabelRow: {
+  stepsFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
+    gap: 8,
+    minWidth: 0,
   },
-  progressLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textPrimary,
+  progressCorner: {
+    alignItems: 'center',
+    gap: 2,
+    flexShrink: 0,
   },
   progressPercent: {
     fontSize: 12,
     fontWeight: '800',
     color: colors.headerTealDark,
   },
-  progressTrackWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  progressIconLeft: {
+  progressChest: {
     width: 28,
     height: 28,
   },
-  progressIconRight: {
-    width: 32,
-    height: 32,
-  },
-  progressTrack: {
-    flex: 1,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.hubGoldTrack,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 5,
-  },
   stepsRow: {
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 4,
+    minWidth: 0,
   },
   stepCol: {
     flex: 1,

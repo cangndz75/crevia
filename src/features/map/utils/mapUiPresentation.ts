@@ -1,3 +1,6 @@
+import type { ComponentProps } from 'react';
+import Ionicons from '@expo/vector-icons/Ionicons';
+
 import type { ContainerState } from '@/core/containers/containerTypes';
 import type { EventCard } from '@/core/models/EventCard';
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
@@ -21,8 +24,17 @@ import { colors } from '@/ui/theme/colors';
 import { CITY_DISTRICT_REGIONS } from '../data/cityOverviewGeometry';
 import type { MapDistrictId } from '../data/mapDistrictConstants';
 import { MAP_DISTRICT_IDS } from '../data/mapDistrictConstants';
-import { mapDistrictFromPilot, pilotDistrictFromMapDistrict } from '../data/mapDistrictMapping';
-import { getPilotPreset, getRiskDensityLabel } from '../data/mapSelectors';
+import {
+  mapDistrictFromPilot,
+  pilotAreaFromMapDistrict,
+  pilotDistrictFromMapDistrict,
+} from '../data/mapDistrictMapping';
+import {
+  getCrews,
+  getDayEvent,
+  getPilotPreset,
+  getRiskDensityLabel,
+} from '../data/mapSelectors';
 import type { MapViewMode, PilotAreaId } from '../types/map';
 import { getMapDistrictLabel } from './mapDistrictLabels';
 import { buildNeighborhoodContainerMapSignals } from './containerMapAdapter';
@@ -59,19 +71,45 @@ export type MapOperationMetric = {
   tone?: 'teal' | 'gold' | 'warn' | 'neutral';
 };
 
+export type MapActiveOperationOverlayModel = {
+  title: string;
+  eventName: string;
+  timeLabel: string;
+};
+
+export type MapFilterChipModel = {
+  dayLabel: string;
+  districtLabel: string;
+  districtAccentColor: string;
+};
+
+export type DistrictRiskSummaryMetric = {
+  key: 'social' | 'personnel' | 'operation';
+  label: string;
+  value: string;
+  sublabel: string;
+  icon: ComponentProps<typeof Ionicons>['name'];
+  progress: number;
+  progressColor: string;
+};
+
 export type MapOperationPanelModel = {
   visible: boolean;
   districtId: MapDistrictId;
   districtLabel: string;
   characterLine?: string;
+  summaryDescription?: string;
   identityRiskChips?: DistrictRiskChip[];
   riskLabel: string;
   riskTone: 'teal' | 'gold' | 'warn' | 'danger';
   activeEventCount: number;
+  activeEventsPillLabel: string;
   /** Post-pilot gündem satırı (saha notundan ayrı). */
   agendaSignalLine?: string;
   sahaNote?: string;
   metrics: MapOperationMetric[];
+  riskMetrics: DistrictRiskSummaryMetric[];
+  recommendedAction?: string;
   ctaLabel: string;
   isDetailView: boolean;
 };
@@ -82,6 +120,111 @@ const STATUS_LABELS: Record<MapNeighborhoodStripStatus, string> = {
   approaching: 'Yaklaşıyor',
   preview: 'Önizleme',
 };
+
+function resolveStripRiskStatusLabel(
+  districtId: MapDistrictId,
+  pilotMapDistrict: MapDistrictId,
+): string {
+  const areaId = pilotAreaFromMapDistrict(districtId);
+  if (!areaId) {
+    return districtId === pilotMapDistrict ? 'İzleniyor' : 'Sakin';
+  }
+  const preset = getPilotPreset(areaId);
+  if (preset.riskDensity >= 60) return 'Yüksek Risk';
+  if (preset.riskDensity >= 40) return 'Orta Risk';
+  return 'Sakin';
+}
+
+function averageCrewEfficiency(areaId: PilotAreaId): number {
+  const values = getCrews(areaId)
+    .map((crew) => crew.efficiency)
+    .filter((n) => Number.isFinite(n));
+  if (values.length === 0) {
+    const preset = getPilotPreset(areaId);
+    return Math.min(92, Math.round(58 + preset.riskDensity / 3));
+  }
+  return Math.round(values.reduce((sum, n) => sum + n, 0) / values.length);
+}
+
+function riskLevelProgress(value: string): number {
+  const normalized = value.toLowerCase();
+  if (normalized.includes('yüksek')) return 0.82;
+  if (normalized.includes('orta')) return 0.58;
+  if (normalized.includes('düşük')) return 0.34;
+  return 0.5;
+}
+
+export function buildMapFilterChipModel(params: {
+  gameDay: number;
+  pilotAreaId: PilotAreaId;
+}): MapFilterChipModel {
+  const preset = getPilotPreset(params.pilotAreaId);
+  return {
+    dayLabel: `Gün ${params.gameDay}`,
+    districtLabel: preset.shortName,
+    districtAccentColor: preset.themeColor,
+  };
+}
+
+export function buildMapActiveOperationOverlayModel(params: {
+  pilotAreaId: PilotAreaId;
+  gameDay: number;
+  activeEvents: EventCard[];
+}): MapActiveOperationOverlayModel | null {
+  const preset = getPilotPreset(params.pilotAreaId);
+  const dayEvent = getDayEvent(params.pilotAreaId, params.gameDay);
+  if (params.activeEvents.length === 0 && !dayEvent.activeOperationTitle) {
+    return null;
+  }
+  const primaryEvent = params.activeEvents[0];
+  return {
+    title: 'Canlı Operasyon',
+    eventName: primaryEvent?.title ?? dayEvent.activeOperationTitle,
+    timeLabel: '18:30',
+  };
+}
+
+export function buildDistrictRiskSummaryMetrics(
+  focusDistrictId: MapDistrictId,
+  fallbackPilotAreaId: PilotAreaId,
+): DistrictRiskSummaryMetric[] {
+  const areaId = pilotAreaFromMapDistrict(focusDistrictId) ?? fallbackPilotAreaId;
+  const preset = getPilotPreset(areaId);
+  const efficiency = averageCrewEfficiency(areaId);
+
+  return [
+    {
+      key: 'social',
+      label: 'Sosyal Risk',
+      value: preset.socialRisk,
+      sublabel: 'Değişken yoğunluk',
+      icon: 'people-outline',
+      progress: riskLevelProgress(preset.socialRisk),
+      progressColor: '#0F8F86',
+    },
+    {
+      key: 'personnel',
+      label: 'Personel',
+      value: preset.staffTempo,
+      sublabel: `Ekip verimliliği %${efficiency}`,
+      icon: 'person-outline',
+      progress: efficiency / 100,
+      progressColor: '#E59A22',
+    },
+    {
+      key: 'operation',
+      label: 'Operasyon',
+      value: preset.operationDifficulty,
+      sublabel:
+        preset.operationDifficulty.toLowerCase().includes('yüksek')
+          ? 'Operasyon zorluğu yüksek'
+          : 'Operasyon temposu dengeli',
+      icon: 'flash-outline',
+      progress: riskLevelProgress(preset.operationDifficulty),
+      progressColor: '#D8A21D',
+    },
+  ];
+}
 
 export function mapUiTextContainsBannedWords(text: string): string[] {
   const haystack = text.toLowerCase();
@@ -178,11 +321,17 @@ export function buildMapNeighborhoodStripItems(params: {
         ? resolvePostPilotScopeLabelForDistrict(districtId, postPilotScopes)
         : null;
 
+    const stripStatusLabel =
+      postPilotLabel ??
+      (status === 'preview'
+        ? STATUS_LABELS.preview
+        : resolveStripRiskStatusLabel(districtId, pilotMapDistrict));
+
     return {
       id: districtId,
       label: getMapDistrictLabel(districtId),
       status,
-      statusLabel: postPilotLabel ?? STATUS_LABELS[status],
+      statusLabel: stripStatusLabel,
       accentColor:
         status === 'preview'
           ? region.color
@@ -288,15 +437,30 @@ export function buildMapOperationPanelModel(params: {
     };
   }
 
+  const focusAreaId =
+    pilotAreaFromMapDistrict(params.focusDistrictId) ?? params.pilotAreaId;
+  const focusPreset = getPilotPreset(focusAreaId);
+  const summaryDescription =
+    characterLine?.replace(/\n/g, ' ') ?? focusPreset.character;
+  const riskMetrics = buildDistrictRiskSummaryMetrics(
+    params.focusDistrictId,
+    params.pilotAreaId,
+  );
+
   return {
     visible: true,
     districtId: params.focusDistrictId,
     districtLabel,
     characterLine: characterLine ?? undefined,
+    summaryDescription,
     identityRiskChips,
-    riskLabel: getRiskDensityLabel(preset.riskDensity),
-    riskTone: resolveRiskTone(preset.riskDensity),
+    riskLabel: getRiskDensityLabel(focusPreset.riskDensity),
+    riskTone: resolveRiskTone(focusPreset.riskDensity),
     activeEventCount,
+    activeEventsPillLabel:
+      activeEventCount > 0
+        ? `${activeEventCount} aktif olay`
+        : 'Gündem sakin',
     agendaSignalLine:
       params.postPilotMapContextLine && activeEventCount > 0
         ? params.postPilotMapContextLine
@@ -306,6 +470,10 @@ export function buildMapOperationPanelModel(params: {
         ? undefined
         : params.dayEventTitle,
     metrics: metrics.slice(0, 3),
+    riskMetrics,
+    recommendedAction: focusPreset.recommendedAction
+      ? `Önerilen Aksiyon: ${focusPreset.recommendedAction}`
+      : undefined,
     ctaLabel: isDetailView ? 'Şehir Haritasına Dön' : 'Detayı Gör',
     isDetailView,
   };
@@ -326,6 +494,12 @@ export function collectMapUiPresentationStrings(
     panel.sahaNote ?? '',
     ...panel.metrics.map((metric) => `${metric.label} ${metric.value}`),
     panel.ctaLabel,
+    panel.summaryDescription ?? '',
+    panel.recommendedAction ?? '',
+    panel.activeEventsPillLabel,
+    ...panel.riskMetrics.map(
+      (metric) => `${metric.label} ${metric.value} ${metric.sublabel}`,
+    ),
   ].filter(Boolean);
 }
 

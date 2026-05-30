@@ -1,26 +1,17 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import type { MapFilterChipModel } from '@/features/map/utils/mapUiPresentation';
+import { mapUi } from '@/features/map/utils/mapUiTokens';
 import { colors } from '@/ui/theme/colors';
-import { radius } from '@/ui/theme/radius';
-import { spacing } from '@/ui/theme/spacing';
-
-import { getPilotPreset } from '../data/mapSelectors';
-import type { PilotAreaId } from '../types/map';
+import { shadows } from '@/ui/theme/shadows';
 
 type Props = {
-  gameDay: number;
-  pilotAreaId: PilotAreaId;
+  filter: MapFilterChipModel;
   onGuidePress?: () => void;
 };
 
-export function MapOperationHeader({
-  gameDay,
-  pilotAreaId,
-  onGuidePress,
-}: Props) {
-  const preset = getPilotPreset(pilotAreaId);
-
+export function MapOperationHeader({ filter, onGuidePress }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.titleRow}>
@@ -39,25 +30,26 @@ export function MapOperationHeader({
             accessibilityLabel="Harita rehberi">
             <Ionicons
               name="information-circle-outline"
-              size={18}
-              color={colors.primary}
+              size={24}
+              color={mapUi.teal}
             />
           </Pressable>
         ) : null}
       </View>
 
       <View style={styles.chipRow}>
-        <View style={styles.chip}>
-          <Ionicons name="calendar-outline" size={12} color={colors.primary} />
-          <Text style={styles.chipText} numberOfLines={1}>
-            Gün {gameDay}
+        <View style={styles.dayChip}>
+          <Ionicons name="calendar-outline" size={16} color={mapUi.teal} />
+          <Text style={styles.dayChipText} numberOfLines={1}>
+            {filter.dayLabel}
           </Text>
         </View>
-        <View style={[styles.chip, styles.areaChip]}>
-          <View style={[styles.dot, { backgroundColor: preset.themeColor }]} />
-          <Text style={styles.chipText} numberOfLines={1}>
-            {preset.shortName}
+        <View style={styles.areaChip}>
+          <View style={[styles.dot, { backgroundColor: filter.districtAccentColor }]} />
+          <Text style={styles.areaChipText} numberOfLines={1}>
+            {filter.districtLabel}
           </Text>
+          <Ionicons name="chevron-down" size={16} color={mapUi.gold} />
         </View>
       </View>
     </View>
@@ -66,70 +58,87 @@ export function MapOperationHeader({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
+    paddingHorizontal: mapUi.screenPadding,
+    gap: 14,
+    marginBottom: 2,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.sm,
+    gap: 12,
   },
   titleCopy: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
+    gap: 4,
   },
   title: {
-    fontSize: 18,
+    fontSize: 29,
+    lineHeight: 34,
     fontWeight: '800',
-    color: colors.textPrimary,
-    letterSpacing: -0.3,
+    color: mapUi.textDark,
+    letterSpacing: -0.4,
   },
   subtitle: {
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 16,
+    lineHeight: 24,
     fontWeight: '500',
-    color: colors.textSecondary,
+    color: mapUi.textSecondary,
   },
   guideBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: colors.primaryMuted,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: mapUi.mint,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   chipRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
+    gap: 10,
+    marginBottom: 2,
   },
-  chip: {
+  dayChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: radius.full,
+    gap: 8,
+    height: 46,
+    paddingHorizontal: 14,
+    borderRadius: 23,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    maxWidth: '48%',
+    ...shadows.soft,
+  },
+  dayChipText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: mapUi.textDark,
   },
   areaChip: {
-    backgroundColor: colors.hubGoldMuted,
-    borderColor: 'rgba(212,160,23,0.22)',
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 46,
+    paddingHorizontal: 14,
+    borderRadius: 23,
+    backgroundColor: mapUi.goldSoft,
+    borderWidth: 1,
+    borderColor: mapUi.goldBorder,
   },
-  chipText: {
-    fontSize: 11,
+  areaChipText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 14,
     fontWeight: '800',
-    color: colors.textPrimary,
-    flexShrink: 1,
+    color: mapUi.textDark,
   },
   dot: {
-    width: 7,
-    height: 7,
+    width: 8,
+    height: 8,
     borderRadius: 4,
     flexShrink: 0,
   },

@@ -1,6 +1,13 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useMemo, type ComponentProps } from 'react';
+import {
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { resolveReportContinueCtaLabel } from '@/core/ux/uxFlowPresentation';
 import { buildDay1TutorialPriorityLine } from '@/core/dailyPriority/dailyPriorityPresentation';
@@ -28,7 +35,29 @@ import { GameScreenShell } from '@/ui/components/GameScreenShell';
 import { GameButton } from '@/ui/components/GameButton';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
-import { typography } from '@/ui/theme/typography';
+
+const END_OF_DAY_REPORT_IMAGE = require('@/assets/badges/end_of_day_report.png');
+
+const previewToneStyles = {
+  people: {
+    iconCircle: { backgroundColor: '#DDF5EE' },
+    iconColor: '#0F8F86',
+    segment: { backgroundColor: '#65BDAF' },
+    segmentMuted: { backgroundColor: '#CDE9E3' },
+  },
+  team: {
+    iconCircle: { backgroundColor: '#DCEEFF' },
+    iconColor: '#2477A8',
+    segment: { backgroundColor: '#78AEE0' },
+    segmentMuted: { backgroundColor: '#D4E5F5' },
+  },
+  resource: {
+    iconCircle: { backgroundColor: '#FFF1C9' },
+    iconColor: '#D59A14',
+    segment: { backgroundColor: '#E7BD58' },
+    segmentMuted: { backgroundColor: '#F3DFAC' },
+  },
+} as const;
 
 function goToHub(router: ReturnType<typeof useRouter>) {
   router.push('/');
@@ -38,20 +67,113 @@ type ReportEmptyProps = {
   onGoHub: () => void;
 };
 
+type ReportPreviewTone = 'people' | 'team' | 'resource';
+
+type ReportPreviewMetricProps = {
+  icon: ComponentProps<typeof Ionicons>['name'];
+  title: string;
+  tone: ReportPreviewTone;
+};
+
+function ReportPreviewMetric({ icon, title, tone }: ReportPreviewMetricProps) {
+  const toneStyle = previewToneStyles[tone];
+
+  return (
+    <View style={styles.previewMetric}>
+      <View style={[styles.previewIconCircle, toneStyle.iconCircle]}>
+        <Ionicons name={icon} size={22} color={toneStyle.iconColor} />
+      </View>
+      <Text style={styles.previewMetricTitle} numberOfLines={1}>
+        {title}
+      </Text>
+
+      <View style={styles.skeletonBlock}>
+        <View style={styles.skeletonLineWide} />
+        <View style={styles.skeletonLineShort} />
+      </View>
+
+      <View style={styles.previewSegments}>
+        <View style={[styles.previewSegment, toneStyle.segment]} />
+        <View style={[styles.previewSegment, toneStyle.segment]} />
+        <View style={[styles.previewSegment, toneStyle.segment]} />
+        <View style={[styles.previewSegmentMuted, toneStyle.segmentMuted]} />
+      </View>
+    </View>
+  );
+}
+
 function ReportEmpty({ onGoHub }: ReportEmptyProps) {
   return (
-    <GameScreenShell screenTitle="Raporlar">
-      <Text style={typography.title}>Henüz Gün Sonu Raporu Yok</Text>
-      <Text style={[typography.body, styles.emptyBody]}>
-        Operasyon merkezinden günü bitirdiğinde burada günlük raporunu
-        göreceksin.
-      </Text>
-      <GameButton
-        title="Operasyon Merkezine Dön"
+    <GameScreenShell screenTitle="Raporlar" contentStyle={styles.emptyContent}>
+      <View style={styles.emptyHeroWrap}>
+        <View style={styles.emptyHeroGlow} pointerEvents="none" />
+        <Image
+          source={END_OF_DAY_REPORT_IMAGE}
+          style={styles.emptyHeroImage}
+          resizeMode="contain"
+        />
+      </View>
+
+      <View style={styles.emptyCopyBlock}>
+        <Text style={styles.emptyTitle}>Henüz Gün Sonu Raporu Yok</Text>
+        <Text style={styles.emptyBody}>
+          Operasyon merkezinden günü bitirdiğinde burada günlük raporunu
+          göreceksin.
+        </Text>
+      </View>
+
+      <View style={styles.previewCard}>
+        <Text style={styles.previewTitle}>Raporunda Neler Olacak?</Text>
+
+        <View style={styles.previewMetricsRow}>
+          <ReportPreviewMetric
+            icon="people"
+            title="Halk Etkisi"
+            tone="people"
+          />
+          <View style={styles.previewDivider} />
+          <ReportPreviewMetric
+            icon="construct"
+            title="Ekip Etkisi"
+            tone="team"
+          />
+          <View style={styles.previewDivider} />
+          <ReportPreviewMetric
+            icon="cube"
+            title="Kaynak Etkisi"
+            tone="resource"
+          />
+        </View>
+
+        <View style={styles.lockStrip}>
+          <Ionicons name="lock-closed" size={16} color={colors.textSecondary} />
+          <Text style={styles.lockStripText} numberOfLines={2}>
+            Raporlar, günü tamamladıktan sonra kilidini açılır.
+          </Text>
+        </View>
+      </View>
+
+      <Pressable
         onPress={onGoHub}
-        microPress
-        style={styles.primaryAction}
-      />
+        style={({ pressed }) => [
+          styles.emptyPrimaryCta,
+          pressed ? styles.emptyPrimaryCtaPressed : null,
+        ]}
+      >
+        <Text style={styles.emptyPrimaryCtaText}>Operasyon Merkezine Dön</Text>
+        <Ionicons name="chevron-forward" size={26} color={colors.surface} />
+      </Pressable>
+
+      <View style={styles.tipRow}>
+        <View style={styles.tipIconCircle}>
+          <Ionicons name="bulb" size={22} color={colors.warning} />
+        </View>
+        <Text style={styles.tipText}>
+          <Text style={styles.tipTextStrong}>İpucu: </Text>
+          Daha iyi sonuçlar için altyapını geliştir ve halkının ihtiyaçlarını
+          önceliklendir.
+        </Text>
+      </View>
     </GameScreenShell>
   );
 }
@@ -157,9 +279,200 @@ const styles = StyleSheet.create({
   stack: {
     gap: spacing.md,
   },
+  emptyContent: {
+    gap: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  emptyHeroWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+    minHeight: 200,
+  },
+  emptyHeroGlow: {
+    position: 'absolute',
+    width: 260,
+    height: 180,
+    borderRadius: 120,
+    backgroundColor: 'rgba(221, 245, 238, 0.55)',
+    top: 24,
+  },
+  emptyHeroImage: {
+    alignSelf: 'center',
+    width: '72%',
+    maxWidth: 290,
+    height: 220,
+  },
+  emptyCopyBlock: {
+    gap: spacing.sm,
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+  },
+  emptyTitle: {
+    fontSize: 29,
+    lineHeight: 35,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
   emptyBody: {
-    marginTop: spacing.sm,
+    fontSize: 17,
+    lineHeight: 26,
     color: colors.textSecondary,
+    textAlign: 'center',
+    maxWidth: 330,
+    alignSelf: 'center',
+  },
+  previewCard: {
+    borderRadius: 24,
+    padding: 18,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 143, 138, 0.12)',
+    shadowColor: '#0D3D3A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+    gap: spacing.md,
+  },
+  previewTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  previewMetricsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  previewDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.xs,
+    marginVertical: spacing.xs,
+  },
+  previewMetric: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  previewIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewMetricTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  skeletonBlock: {
+    width: '100%',
+    gap: 6,
+    paddingHorizontal: 2,
+  },
+  skeletonLineWide: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#E8E6E1',
+    width: '92%',
+    alignSelf: 'center',
+  },
+  skeletonLineShort: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#E8E6E1',
+    width: '68%',
+    alignSelf: 'center',
+  },
+  previewSegments: {
+    flexDirection: 'row',
+    gap: 4,
+    justifyContent: 'center',
+    width: '100%',
+  },
+  previewSegment: {
+    flex: 1,
+    maxWidth: 18,
+    height: 6,
+    borderRadius: 3,
+  },
+  previewSegmentMuted: {
+    flex: 1,
+    maxWidth: 18,
+    height: 6,
+    borderRadius: 3,
+  },
+  lockStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.backgroundAlt,
+    borderRadius: 20,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  lockStripText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  emptyPrimaryCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    height: 64,
+    borderRadius: 28,
+    backgroundColor: colors.headerTealDark,
+    paddingHorizontal: spacing.xl,
+    shadowColor: '#0D3D3A',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  emptyPrimaryCtaPressed: {
+    opacity: 0.92,
+  },
+  emptyPrimaryCtaText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.surface,
+  },
+  tipRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    paddingHorizontal: spacing.xs,
+  },
+  tipIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.warningMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  tipText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.textSecondary,
+  },
+  tipTextStrong: {
+    fontWeight: '700',
+    color: colors.textPrimary,
   },
   primaryAction: {
     marginTop: spacing.md,

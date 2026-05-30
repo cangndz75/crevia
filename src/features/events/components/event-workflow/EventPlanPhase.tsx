@@ -1,15 +1,19 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { PlanningDetailsSection } from '@/features/events/components/event-workflow/plan/details/PlanningDetailsSection';
+import { PlanDetailsInspectSection } from '@/features/events/components/event-workflow/plan/PlanDetailsInspectSection';
 import { PlanEventSummaryCard } from '@/features/events/components/event-workflow/plan/PlanEventSummaryCard';
 import { PlanOptionPicker } from '@/features/events/components/event-workflow/plan/PlanOptionPicker';
+import { PlanSummaryCard } from '@/features/events/components/event-workflow/plan/PlanSummaryCard';
 import { PlanWorkflowFooter } from '@/features/events/components/event-workflow/plan/PlanWorkflowFooter';
-import { RecommendedPlanCard } from '@/features/events/components/event-workflow/plan/RecommendedPlanCard';
 import { EventWorkflowStepper } from '@/features/events/components/event-workflow/EventWorkflowStepper';
-import { eventDetail } from '@/features/events/theme/eventDetailTokens';
+import { OnboardingPhaseHint } from '@/features/onboarding/components/OnboardingPhaseHint';
 import type { EventCard } from '@/core/models/EventCard';
 import { getInspectNeighborhoodHero } from '@/features/events/utils/eventWorkflowAssets';
+import {
+  buildPlanDisplayOptions,
+  buildPlanSummaryUi,
+} from '@/features/events/utils/eventWorkflowPlanUiPresentation';
 import {
   buildPlanScreenModel,
   type PlanOptionId,
@@ -20,17 +24,25 @@ type EventPlanPhaseProps = {
   event: EventCard;
   bottomPadding: number;
   onConfirmPlan: () => void;
+  phaseHint?: string | null;
 };
 
 export function EventPlanPhase({
   event,
   bottomPadding,
   onConfirmPlan,
+  phaseHint = null,
 }: EventPlanPhaseProps) {
   const model = useMemo(() => buildPlanScreenModel(event), [event]);
   const [selectedId, setSelectedId] = useState<PlanOptionId>(model.recommendedOptionId);
 
   const selectedPlan = model.planByOption[selectedId];
+  const displayOptions = useMemo(() => buildPlanDisplayOptions(model), [model]);
+  const summaryUi = useMemo(
+    () => buildPlanSummaryUi(selectedId, selectedPlan),
+    [selectedId, selectedPlan],
+  );
+
   const thumbnail = useMemo(
     () => getInspectNeighborhoodHero(resolveInspectDistrictId(event)),
     [event],
@@ -49,33 +61,31 @@ export function EventPlanPhase({
           thumbnail={thumbnail}
         />
 
+        {phaseHint ? <OnboardingPhaseHint text={phaseHint} /> : null}
+
         <View style={styles.stepperGap}>
           <EventWorkflowStepper activeStep="plan" compact />
         </View>
 
-        <RecommendedPlanCard plan={selectedPlan} planId={selectedId} selected />
+        <PlanOptionPicker
+          options={displayOptions}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+        />
 
-        <View style={styles.optionsGap}>
-          <PlanOptionPicker
-            options={model.options}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-          />
+        <View style={styles.summaryGap}>
+          <PlanSummaryCard summary={summaryUi} />
         </View>
 
         <View style={styles.detailsGap}>
-          <PlanningDetailsSection
-            event={event}
-            selectedPlan={selectedPlan}
+          <PlanDetailsInspectSection
             selectedPlanId={selectedId}
+            selectedPlan={selectedPlan}
           />
         </View>
       </ScrollView>
 
-      <PlanWorkflowFooter
-        summaryLine={selectedPlan.summaryLine}
-        onPress={onConfirmPlan}
-      />
+      <PlanWorkflowFooter onPress={onConfirmPlan} />
     </View>
   );
 }
@@ -85,17 +95,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    gap: 12,
+    gap: 14,
     paddingTop: 2,
   },
   stepperGap: {
     marginTop: -2,
     marginBottom: -2,
   },
-  optionsGap: {
+  summaryGap: {
     marginTop: 2,
   },
   detailsGap: {
-    marginTop: 6,
+    marginTop: 4,
   },
 });

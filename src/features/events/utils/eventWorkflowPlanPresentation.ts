@@ -36,8 +36,8 @@ export type PlanScreenModel = {
   planByOption: Record<PlanOptionId, PlanDetail>;
 };
 
-/** Özet satırı + CTA — scroll padding (hint yok) */
-export const PLAN_WORKFLOW_FOOTER_EXTRA = 44;
+/** Sticky CTA — scroll padding (özet şeridi yok) */
+export const PLAN_WORKFLOW_FOOTER_EXTRA = 20;
 
 function formatTry(amount: number): string {
   return `₺${amount.toLocaleString('tr-TR')}`;

@@ -6,17 +6,17 @@ import type { ContainerState } from '@/core/containers/containerTypes';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import type { EventCard } from '@/core/models/EventCard';
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
+import { MapActiveOperationOverlay } from '@/features/map/components/MapActiveOperationOverlay';
+import type { MapActiveOperationOverlayModel } from '@/features/map/utils/mapUiPresentation';
+import { mapUi } from '@/features/map/utils/mapUiTokens';
 import { colors } from '@/ui/theme/colors';
-import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
-import { spacing } from '@/ui/theme/spacing';
 
 import { type MapDistrictId } from '../data/mapAssets';
 import {
   mapDistrictFromPilot,
   pilotAreaFromMapDistrict,
 } from '../data/mapDistrictMapping';
-import { getPilotPreset } from '../data/mapSelectors';
 import type { ActiveLayers, MapFilterId, MapViewMode, PilotAreaId } from '../types/map';
 import { getNeighborhoodMapCharacterLine } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 import { getMapDistrictLabel } from '../utils/mapDistrictLabels';
@@ -39,11 +39,17 @@ type Props = {
   hideContainerSignals?: boolean;
   hideVehicleSignals?: boolean;
   selectedPinId?: string | null;
+  activeOperationOverlay?: MapActiveOperationOverlayModel | null;
   onLayersPress: () => void;
   onDistrictSelect: (districtId: MapDistrictId) => void;
   onBackToOverview: () => void;
   onPinPress?: (pinId: string) => void;
 };
+
+const MAP_HEIGHT = Math.min(
+  390,
+  Math.max(360, Math.round(Dimensions.get('window').height * 0.42)),
+);
 
 export function CityMapCard({
   viewMode,
@@ -59,12 +65,12 @@ export function CityMapCard({
   hideContainerSignals = false,
   hideVehicleSignals = false,
   selectedPinId = null,
+  activeOperationOverlay = null,
   onLayersPress,
   onDistrictSelect,
   onBackToOverview,
   onPinPress,
 }: Props) {
-  const preset = getPilotPreset(pilotAreaId);
   const mapControlsRef = useRef<ZoomableMapControls>(null);
   const isDetail = viewMode === 'detail';
   const detailLabel = getMapDistrictLabel(detailDistrictId);
@@ -78,49 +84,8 @@ export function CityMapCard({
     [onDistrictSelect],
   );
 
-  const focusLabel = isDetail
-    ? `${detailLabel} — detay harita`
-    : preset.mapFocusLabel;
-
   return (
     <View style={[styles.card, shadows.card]}>
-      <View style={styles.focusBadge}>
-        {isDetail ? (
-          <Pressable
-            onPress={onBackToOverview}
-            style={styles.backBtn}
-            accessibilityLabel="Şehir haritasına dön"
-          >
-            <Ionicons name="chevron-back" size={16} color={colors.primary} />
-            <Text style={styles.backBtnText}>Şehir</Text>
-          </Pressable>
-        ) : (
-          <Ionicons name="locate" size={12} color={preset.themeColor} />
-        )}
-        <View style={styles.focusTextCol}>
-          <Text
-            style={[
-              styles.focusBadgeText,
-              { color: isDetail ? colors.textPrimary : preset.themeColor },
-            ]}
-          >
-            {focusLabel}
-          </Text>
-          {isDetail && detailCharacterLine ? (
-            <Text style={styles.characterLine} numberOfLines={1}>
-              {detailCharacterLine}
-            </Text>
-          ) : null}
-        </View>
-        {activeEvents.length > 0 && (
-          <View style={styles.eventBadge}>
-            <Text style={styles.eventBadgeText}>
-              {activeEvents.length} aktif olay
-            </Text>
-          </View>
-        )}
-      </View>
-
       <View style={styles.mapArea}>
         {isDetail ? (
           <DistrictDetailMap
@@ -159,141 +124,142 @@ export function CityMapCard({
           />
         )}
 
-        <MapLegend filter={selectedFilter} />
+        {isDetail ? (
+          <Pressable
+            onPress={onBackToOverview}
+            style={styles.detailBackChip}
+            accessibilityLabel="Şehir haritasına dön">
+            <Ionicons name="chevron-back" size={16} color={mapUi.teal} />
+            <View style={styles.detailBackCopy}>
+              <Text style={styles.detailBackTitle} numberOfLines={1}>
+                {detailLabel}
+              </Text>
+              {detailCharacterLine ? (
+                <Text style={styles.detailBackSub} numberOfLines={1}>
+                  {detailCharacterLine}
+                </Text>
+              ) : null}
+            </View>
+          </Pressable>
+        ) : activeOperationOverlay ? (
+          <MapActiveOperationOverlay model={activeOperationOverlay} />
+        ) : null}
+
+        <Pressable style={styles.layersBtn} onPress={onLayersPress}>
+          <Ionicons name="layers-outline" size={20} color={mapUi.textDark} />
+          <Text style={styles.layersBtnText}>Katmanlar</Text>
+        </Pressable>
 
         <View style={styles.zoomControls}>
           <Pressable
             style={styles.zoomBtn}
             onPress={() => mapControlsRef.current?.zoomIn()}
-            accessibilityLabel="Yakınlaştır"
-          >
-            <Ionicons name="add" size={18} color={colors.textPrimary} />
+            accessibilityLabel="Yakınlaştır">
+            <Ionicons name="add" size={24} color={mapUi.textDark} />
           </Pressable>
           <Pressable
             style={styles.zoomBtn}
             onPress={() => mapControlsRef.current?.zoomOut()}
-            accessibilityLabel="Uzaklaştır"
-          >
-            <Ionicons name="remove" size={18} color={colors.textPrimary} />
+            accessibilityLabel="Uzaklaştır">
+            <Ionicons name="remove" size={24} color={mapUi.textDark} />
           </Pressable>
           <Pressable
-            style={styles.zoomBtn}
+            style={[styles.zoomBtn, styles.zoomBtnAccent]}
             onPress={() => mapControlsRef.current?.reset()}
-            accessibilityLabel="Haritayı sığdır"
-          >
-            <Ionicons name="locate" size={16} color={preset.themeColor} />
+            accessibilityLabel="Haritayı sığdır">
+            <Ionicons name="locate" size={22} color={mapUi.gold} />
           </Pressable>
         </View>
 
-        <Pressable style={styles.layersBtn} onPress={onLayersPress}>
-          <Ionicons name="layers" size={16} color={colors.textPrimary} />
-          <Text style={styles.layersBtnText}>Katmanlar</Text>
-        </Pressable>
+        <MapLegend filter={selectedFilter} />
       </View>
     </View>
   );
 }
 
-const MAP_HEIGHT = Math.min(
-  380,
-  Math.max(260, Math.round(Dimensions.get('window').height * 0.34)),
-);
-
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: spacing.lg,
-    borderRadius: radius.xxl,
-    backgroundColor: colors.surface,
+    marginHorizontal: mapUi.screenPadding,
+    borderRadius: mapUi.mapCardRadius,
+    backgroundColor: mapUi.mapBackdrop,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.border,
-  },
-  focusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    flexWrap: 'wrap',
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    paddingRight: 4,
-  },
-  backBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  focusTextCol: {
-    flex: 1,
-    gap: 2,
-    minWidth: 0,
-  },
-  focusBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  characterLine: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  eventBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryMuted,
-  },
-  eventBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.primary,
+    borderColor: 'rgba(6, 63, 59, 0.1)',
   },
   mapArea: {
     height: MAP_HEIGHT,
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: '#E8E4DA',
+    backgroundColor: mapUi.mapBackdrop,
+  },
+  detailBackChip: {
+    position: 'absolute',
+    top: 18,
+    left: 18,
+    right: 120,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    zIndex: 12,
+    ...shadows.soft,
+  },
+  detailBackCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
+  },
+  detailBackTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: mapUi.textDark,
+  },
+  detailBackSub: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: mapUi.textSecondary,
   },
   zoomControls: {
     position: 'absolute',
-    left: 12,
-    top: 12,
-    gap: 6,
+    left: 18,
+    top: '36%',
+    gap: 12,
     zIndex: 10,
   },
   zoomBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(6, 63, 59, 0.08)',
     ...shadows.soft,
+  },
+  zoomBtnAccent: {
+    borderColor: mapUi.goldBorder,
   },
   layersBtn: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 18,
+    right: 18,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: radius.full,
+    gap: 8,
+    height: 54,
+    paddingHorizontal: 16,
+    borderRadius: 24,
     backgroundColor: colors.surface,
     zIndex: 10,
     ...shadows.soft,
   },
   layersBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '800',
+    color: mapUi.textDark,
   },
 });

@@ -97,7 +97,7 @@ function parseSuccessPct(successLabel: string): number {
   return Number.isFinite(n) ? n : 90;
 }
 
-function derivePlanMetrics(plan: PlanDetail, planId: PlanOptionId): PlanMetrics {
+export function derivePlanMetrics(plan: PlanDetail, planId: PlanOptionId): PlanMetrics {
   const successPct = parseSuccessPct(plan.successLabel);
   const costAmount = parseCostAmount(plan.costLabel);
   const costLevel: PlanMetrics['costLevel'] =

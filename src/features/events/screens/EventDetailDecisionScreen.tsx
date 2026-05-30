@@ -44,9 +44,14 @@ import {
   FIELD_WORKFLOW_FOOTER_EXTRA,
 } from '@/features/events/utils/eventWorkflowDispatchFieldPresentation';
 import {
+  buildFirstEventGuidanceModel,
+  buildWorkflowStepHintModel,
+} from '@/core/onboarding/onboardingPresentation';
+import {
   EVENT_WORKFLOW_FOOTER_EXTRA,
   type OperationWorkflowStepId,
 } from '@/features/events/utils/eventWorkflowPresentation';
+import { isDay1LearningEventId } from '@/features/tutorial/tutorialTypes';
 import { selectPersonnelImpactPreviewForDecision } from '@/core/personnel/personnelPresentation';
 import { selectVehicleImpactPreviewForDecision } from '@/core/vehicles/vehiclePresentation';
 import { isContainerRelevantEvent } from '@/core/containers/containerDecisionEffects';
@@ -275,6 +280,31 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
   const showPlanPhase = useOperationWorkflow && operationStep === 'plan';
   const showDispatchPhase = useOperationWorkflow && operationStep === 'assign';
   const showFieldPhase = useOperationWorkflow && operationStep === 'field';
+
+  const isDay1LearningEvent = event ? isDay1LearningEventId(event.id) : false;
+
+  const firstEventGuidance = useMemo(
+    () =>
+      buildFirstEventGuidanceModel({
+        day: currentDay,
+        eventId: event?.id,
+        isDay1LearningEvent,
+      }),
+    [currentDay, event?.id, isDay1LearningEvent],
+  );
+
+  const workflowPhaseHint = useMemo(() => {
+    const hint = buildWorkflowStepHintModel({
+      step: operationStep,
+      day: currentDay,
+      isDay1LearningEvent,
+    });
+    return hint.visible ? hint.text : null;
+  }, [operationStep, currentDay, isDay1LearningEvent]);
+
+  const inspectPhaseHint = firstEventGuidance.showInspectBanner
+    ? firstEventGuidance.inspectHint
+    : null;
 
   const bottomPadding = useMemo(() => {
     const safe = Math.max(insets.bottom, 12);
@@ -571,6 +601,7 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           event={event}
           bottomPadding={bottomPadding}
           onOpenPlanning={() => setOperationStep('plan')}
+          phaseHint={inspectPhaseHint}
         />
         <TutorialCoachOverlay
           screen="event_detail"
@@ -592,6 +623,7 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           event={event}
           bottomPadding={bottomPadding}
           onConfirmPlan={() => setOperationStep('assign')}
+          phaseHint={workflowPhaseHint}
         />
         <TutorialCoachOverlay
           screen="event_detail"
@@ -625,6 +657,7 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           resourcesHighlighted={resourcesHighlight}
           decisionsHighlighted={decisionsHighlight}
           compactTutorial={isDay1Tutorial}
+          phaseHint={workflowPhaseHint}
         />
         <TutorialCoachOverlay
           screen="event_detail"
@@ -652,6 +685,7 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           onComplete={handleApplyPress}
           completeDisabled={!effectiveSelectedId || applying}
           applying={applying}
+          phaseHint={workflowPhaseHint}
         />
         <TutorialCoachOverlay
           screen="event_detail"

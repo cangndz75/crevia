@@ -3,7 +3,6 @@ import { useCallback } from 'react';
 import {
   Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -12,10 +11,101 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { usePersonnelTeams } from '@/features/personnel/hooks/usePersonnelTeams';
 import type { RestActionType } from '@/core/personnel/personnelTypes';
+import type { PersonnelTeamCardView } from '@/core/personnel/personnelTypes';
 import { useGameStore } from '@/store/useGameStore';
-import { PersonnelTeamCard } from '@/ui/components/personnel/PersonnelTeamCard';
 import { colors } from '@/ui/theme/colors';
+import { radius } from '@/ui/theme/radius';
+import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
+
+function teamIcon(name: string): keyof typeof Ionicons.glyphMap {
+  const lower = name.toLowerCase();
+  if (lower.includes('sürücü') || lower.includes('surucu')) {
+    return 'car-outline';
+  }
+  if (lower.includes('temizlik') || lower.includes('atık')) {
+    return 'trash-outline';
+  }
+  return 'people-outline';
+}
+
+function HubPersonnelRow({
+  team,
+  onRestPress,
+  restDisabled,
+}: {
+  team: PersonnelTeamCardView;
+  onRestPress?: () => void;
+  restDisabled?: boolean;
+}) {
+  const isHighFatigue = team.fatigue >= 71;
+  const fatigueTone = isHighFatigue
+    ? colors.warning
+    : team.fatigue >= 51
+      ? colors.hubGoldDark
+      : colors.secondary;
+  const moraleTone =
+    team.morale < 40
+      ? colors.warning
+      : team.morale >= 60
+        ? colors.success
+        : colors.textSecondary;
+
+  return (
+    <View style={styles.row}>
+      <View style={styles.rowIcon}>
+        <Ionicons name={teamIcon(team.name)} size={18} color={colors.primary} />
+      </View>
+      <View style={styles.rowBody}>
+        <Text style={styles.rowTitle} numberOfLines={1}>
+          {team.name}
+        </Text>
+        <View style={styles.metricsRow}>
+          <View style={styles.metricCol}>
+            <Text style={styles.metricLabel}>Yorg.</Text>
+            <View style={styles.metricTrack}>
+              <View
+                style={[
+                  styles.metricFill,
+                  { width: `${team.fatigue}%`, backgroundColor: fatigueTone },
+                ]}
+              />
+            </View>
+            <Text style={styles.metricValue}>{team.fatigue}</Text>
+          </View>
+          <View style={styles.metricCol}>
+            <Text style={styles.metricLabel}>Moral</Text>
+            <View style={styles.metricTrack}>
+              <View
+                style={[
+                  styles.metricFill,
+                  { width: `${team.morale}%`, backgroundColor: moraleTone },
+                ]}
+              />
+            </View>
+            <Text style={styles.metricValue}>{team.morale}</Text>
+          </View>
+        </View>
+      </View>
+      <View style={styles.statusPill}>
+        <Text style={styles.statusText} numberOfLines={1}>
+          {team.statusLabel}
+        </Text>
+      </View>
+      {onRestPress && !team.restModeLabel ? (
+        <Pressable
+          onPress={onRestPress}
+          disabled={restDisabled}
+          hitSlop={6}
+          style={({ pressed }) => [pressed && styles.pressed]}
+          accessibilityRole="button"
+          accessibilityLabel={`${team.name} dinlendir`}>
+          <Ionicons name="moon-outline" size={16} color={colors.secondary} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
 
 export function HubPersonnelStrip() {
   const teams = usePersonnelTeams();
@@ -64,6 +154,15 @@ export function HubPersonnelStrip() {
     [runRestAction],
   );
 
+  const handleGlobalRest = useCallback(() => {
+    const first = teams.find((t) => !t.restModeLabel);
+    if (!first) {
+      Alert.alert('Personel', 'Tüm ekipler dinlenme planında.');
+      return;
+    }
+    showRestPicker(first.id, first.name, false);
+  }, [showRestPicker, teams]);
+
   if (teams.length === 0) {
     return null;
   }
@@ -71,7 +170,7 @@ export function HubPersonnelStrip() {
   return (
     <Animated.View entering={FadeIn.duration(280)} style={styles.wrap}>
       <View style={styles.header}>
-        <Text style={styles.title}>PERSONEL DURUMU</Text>
+        <Text style={styles.title}>Personel Durumu</Text>
         <Pressable
           style={styles.seeAllBtn}
           onPress={() =>
@@ -83,36 +182,43 @@ export function HubPersonnelStrip() {
           }
           accessibilityRole="button"
           accessibilityLabel="Tüm personeli gör">
-          <Text style={styles.seeAllText}>Tümünü Gör</Text>
+          <Text style={styles.seeAllText}>Tümünü gör</Text>
           <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
         </Pressable>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}>
-        {teams.map((team) => (
-          <PersonnelTeamCard
-            key={team.id}
-            team={team}
-            variant="compact"
-            style={styles.cardSpacing}
-            onRestPress={() =>
-              showRestPicker(team.id, team.name, team.restModeLabel != null)
-            }
-            restDisabled={team.restModeLabel != null}
-          />
+      <View style={[styles.card, shadows.soft]}>
+        {teams.map((team, index) => (
+          <View key={team.id}>
+            {index > 0 ? <View style={styles.divider} /> : null}
+            <HubPersonnelRow
+              team={team}
+              onRestPress={() =>
+                showRestPicker(team.id, team.name, team.restModeLabel != null)
+              }
+              restDisabled={team.restModeLabel != null}
+            />
+          </View>
         ))}
-      </ScrollView>
+
+        <Pressable
+          onPress={handleGlobalRest}
+          style={({ pressed }) => [styles.restFooter, pressed && styles.pressed]}
+          accessibilityRole="button"
+          accessibilityLabel="Dinlendir">
+          <Ionicons name="moon-outline" size={16} color={colors.secondary} />
+          <Text style={styles.restFooterText}>Dinlendir</Text>
+        </Pressable>
+      </View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
-    gap: 6,
+    gap: 8,
     marginHorizontal: spacing.lg,
+    minWidth: 0,
   },
   header: {
     flexDirection: 'row',
@@ -120,10 +226,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: {
-    fontSize: 11,
+    fontSize: 15,
     fontWeight: '800',
-    color: colors.textSecondary,
-    letterSpacing: 0.4,
+    color: colors.textPrimary,
+    letterSpacing: -0.2,
   },
   seeAllBtn: {
     flexDirection: 'row',
@@ -132,15 +238,118 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.textSecondary,
   },
-  scrollContent: {
-    gap: 8,
-    paddingVertical: 2,
-    paddingRight: spacing.sm,
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    overflow: 'hidden',
+    minWidth: 0,
   },
-  cardSpacing: {
-    marginRight: 0,
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    minWidth: 0,
+  },
+  rowIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  rowBody: {
+    flex: 1,
+    gap: 6,
+    minWidth: 0,
+  },
+  rowTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    minWidth: 0,
+  },
+  metricCol: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minWidth: 0,
+  },
+  metricLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    width: 34,
+    flexShrink: 0,
+  },
+  metricTrack: {
+    flex: 1,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.backgroundAlt,
+    overflow: 'hidden',
+    minWidth: 0,
+  },
+  metricFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  metricValue: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    width: 20,
+    textAlign: 'right',
+    flexShrink: 0,
+  },
+  statusPill: {
+    backgroundColor: colors.purpleMuted,
+    borderRadius: radius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexShrink: 0,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.purple,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  restFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 4,
+    marginHorizontal: -14,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+    backgroundColor: colors.backgroundAlt,
+  },
+  restFooterText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.secondary,
+  },
+  pressed: {
+    opacity: 0.85,
   },
 });

@@ -1,33 +1,27 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter, type Href } from "expo-router";
-import { useMemo } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter, type Href } from 'expo-router';
+import { useMemo } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getTimeGreeting } from "@/core/utils/timeGreeting";
-import { getPilotDistrictHeroImage } from "@/features/hub/utils/hubAssets";
-import { useGameStatus } from "@/store/gameSelectors";
-import { HeaderAvatar } from "@/ui/components/game-header/HeaderAvatar";
-import { colors } from "@/ui/theme/colors";
-import { radius } from "@/ui/theme/radius";
-import { spacing } from "@/ui/theme/spacing";
-
-const RESOURCE_PILL_MAX_WIDTH = 118;
+import { getTimeGreeting } from '@/core/utils/timeGreeting';
+import { getPilotDistrictHeroImage } from '@/features/hub/utils/hubAssets';
+import { useGameStatus } from '@/store/gameSelectors';
+import { HeaderAvatar } from '@/ui/components/game-header/HeaderAvatar';
+import { colors } from '@/ui/theme/colors';
+import { spacing } from '@/ui/theme/spacing';
 
 function buildPilotMetaLine(
   day: number,
   districtName: string,
   level: number,
 ): string {
-  const short = districtName.split(" ")[0] ?? districtName;
+  const short = districtName.split(' ')[0] ?? districtName;
   return `${day}. Gün · ${short} · Sv.${level}`;
 }
 
-/**
- * Merkez header — kompakt avatar + meta | kaynak/XP + kısayollar.
- */
 export function DashboardHeader() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -51,11 +45,10 @@ export function DashboardHeader() {
   return (
     <View style={styles.outer}>
       <LinearGradient
-        colors={[colors.headerTealDark, colors.headerTeal, "#1E9A95"]}
+        colors={[colors.headerTealDark, colors.headerTeal, '#1E9A95']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.gradient, { paddingTop: insets.top + spacing.xs }]}
-      >
+        style={[styles.gradient, { paddingTop: insets.top + spacing.xs }]}>
         <Image
           source={skylineSource}
           style={styles.skyline}
@@ -66,13 +59,12 @@ export function DashboardHeader() {
         <View style={styles.content}>
           <View style={styles.mainRow}>
             <Pressable
-              onPress={() => router.push("/profile" as Href)}
+              onPress={() => router.push('/profile' as Href)}
               accessibilityRole="button"
               accessibilityLabel="Profili aç"
-              style={styles.avatarPress}
-            >
+              style={styles.avatarPress}>
               <HeaderAvatar
-                size={48}
+                size={52}
                 level={status.level}
                 showLevelBadge
                 borderColor="rgba(255,255,255,0.9)"
@@ -84,8 +76,7 @@ export function DashboardHeader() {
                 style={styles.greeting}
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                minimumFontScale={0.88}
-              >
+                minimumFontScale={0.88}>
                 {greetingShort}
                 <Text style={styles.greetingEmoji}> {greeting.emoji}</Text>
               </Text>
@@ -95,42 +86,39 @@ export function DashboardHeader() {
             </View>
 
             <View style={styles.rightCol}>
-              <View style={styles.resourcePill}>
-                <View style={styles.pillHalf}>
-                  <Ionicons name="wallet" size={11} color={colors.hubGold} />
-                  <Text style={styles.pillValue} numberOfLines={1}>
+              <View style={styles.resourceRow}>
+                <View style={styles.goldPill}>
+                  <Ionicons name="briefcase" size={12} color={colors.hubGoldDark} />
+                  <Text style={styles.goldPillText} numberOfLines={1}>
                     {status.sourceShort}
                   </Text>
                 </View>
-                <View style={styles.pillDivider} />
-                <View style={styles.pillHalf}>
-                  <Ionicons name="star" size={10} color={colors.hubGold} />
-                  <Text style={styles.pillValue} numberOfLines={1}>
+                <View style={styles.xpPill}>
+                  <Ionicons name="star" size={11} color={colors.hubGold} />
+                  <Text style={styles.xpPillText} numberOfLines={1}>
                     {status.xp}/{status.xpTarget}
                   </Text>
                 </View>
               </View>
               <View style={styles.shortcutRow}>
                 <Pressable
-                  onPress={() => router.push("/leaderboard" as Href)}
+                  onPress={() => router.push('/reports' as Href)}
                   style={({ pressed }) => [
-                    styles.squareShortcut,
+                    styles.goldShortcut,
                     pressed && styles.shortcutPressed,
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="Liderlik tablosu"
-                >
-                  <Ionicons name="podium-outline" size={16} color={colors.hubGold} />
+                  accessibilityLabel="Raporlar">
+                  <Ionicons name="bar-chart" size={16} color={colors.hubGoldDark} />
                 </Pressable>
                 <Pressable
-                  onPress={() => router.push("/social" as Href)}
+                  onPress={() => router.push('/social' as Href)}
                   style={({ pressed }) => [
-                    styles.squareShortcut,
+                    styles.tealShortcut,
                     pressed && styles.shortcutPressed,
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="Bildirimler ve sosyal nabız"
-                >
+                  accessibilityLabel="Bildirimler">
                   <Ionicons
                     name="notifications-outline"
                     size={16}
@@ -143,8 +131,8 @@ export function DashboardHeader() {
         </View>
 
         <LinearGradient
-          colors={["transparent", "rgba(252,249,242,0.5)", colors.hubCream]}
-          locations={[0, 0.6, 1]}
+          colors={['transparent', 'rgba(252,249,242,0.55)', colors.hubCream]}
+          locations={[0, 0.55, 1]}
           style={styles.bottomFade}
           pointerEvents="none"
         />
@@ -155,31 +143,31 @@ export function DashboardHeader() {
 
 const styles = StyleSheet.create({
   outer: {
-    overflow: "hidden",
+    overflow: 'hidden',
     zIndex: 1,
   },
   gradient: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: 12,
-    position: "relative",
+    paddingBottom: 14,
+    position: 'relative',
   },
   skyline: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.1,
+    opacity: 0.12,
   },
   bottomFade: {
-    position: "absolute",
+    position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    height: 16,
+    height: 20,
   },
   content: {
     zIndex: 1,
   },
   mainRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: 10,
   },
   avatarPress: {
@@ -188,74 +176,93 @@ const styles = StyleSheet.create({
   greetCol: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
-    paddingRight: 2,
+    gap: 3,
+    paddingTop: 4,
   },
   greeting: {
-    fontSize: 16,
-    fontWeight: "800",
+    fontSize: 17,
+    fontWeight: '800',
     color: colors.textInverse,
     letterSpacing: -0.3,
   },
   greetingEmoji: {
-    fontSize: 15,
+    fontSize: 16,
   },
   meta: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.82)",
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.85)',
   },
   rightCol: {
-    alignItems: "flex-end",
-    gap: 6,
+    alignItems: 'flex-end',
+    gap: 8,
     flexShrink: 0,
   },
-  resourcePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: RESOURCE_PILL_MAX_WIDTH,
-    backgroundColor: "rgba(255,255,255,0.14)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
-    borderRadius: radius.md,
-    paddingHorizontal: 6,
-    paddingVertical: 5,
-    gap: 4,
+  resourceRow: {
+    flexDirection: 'row',
+    gap: 6,
   },
-  pillHalf: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 3,
+  goldPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.hubGoldMuted,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 183, 49, 0.35)',
+    maxWidth: 72,
     minWidth: 0,
   },
-  pillDivider: {
-    width: 1,
-    height: 18,
-    backgroundColor: "rgba(255,255,255,0.24)",
-    flexShrink: 0,
+  goldPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.hubGoldDark,
+    flexShrink: 1,
   },
-  pillValue: {
-    fontSize: 10,
-    fontWeight: "800",
+  xpPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    maxWidth: 72,
+    minWidth: 0,
+  },
+  xpPillText: {
+    fontSize: 11,
+    fontWeight: '800',
     color: colors.textInverse,
-    letterSpacing: -0.2,
     flexShrink: 1,
   },
   shortcutRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 6,
   },
-  squareShortcut: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: "rgba(255,255,255,0.14)",
+  goldShortcut: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    backgroundColor: colors.hubGoldMuted,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: 'rgba(245, 183, 49, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tealShortcut: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   shortcutPressed: {
     opacity: 0.88,

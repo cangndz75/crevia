@@ -141,9 +141,61 @@ const pillStyles = StyleSheet.create({
 
 type HubTaskTrackingHeroProps = {
   variant?: 'default' | 'compact' | 'focus';
+  pilotProgressLabel?: string | null;
+  pilotGoalLine?: string | null;
 };
 
-export function HubTaskTrackingHero({ variant = 'default' }: HubTaskTrackingHeroProps) {
+function PilotGoalStrip({
+  progressLabel,
+  goalLine,
+  compact,
+}: {
+  progressLabel: string;
+  goalLine: string;
+  compact: boolean;
+}) {
+  return (
+    <View style={[pilotStyles.strip, compact && pilotStyles.stripCompact]}>
+      <Text style={pilotStyles.progress} numberOfLines={1}>
+        {progressLabel}
+      </Text>
+      <Text style={pilotStyles.goal} numberOfLines={2}>
+        {goalLine}
+      </Text>
+    </View>
+  );
+}
+
+const pilotStyles = StyleSheet.create({
+  strip: {
+    gap: 2,
+    marginBottom: spacing.xs,
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  stripCompact: {
+    marginBottom: 6,
+  },
+  progress: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.primary,
+    letterSpacing: 0.2,
+  },
+  goal: {
+    fontSize: 11,
+    lineHeight: 14,
+    color: colors.textSecondary,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+});
+
+export function HubTaskTrackingHero({
+  variant = 'default',
+  pilotProgressLabel = null,
+  pilotGoalLine = null,
+}: HubTaskTrackingHeroProps) {
   const isCompact = variant === 'compact';
   const isFocus = variant === 'focus';
   const input = useHubDerivedInput();
@@ -157,6 +209,15 @@ export function HubTaskTrackingHero({ variant = 'default' }: HubTaskTrackingHero
 
   const rewardLabel = formatHubTaskRewardLabel(goal?.rewardXp);
 
+  const pilotStrip =
+    pilotProgressLabel && pilotGoalLine ? (
+      <PilotGoalStrip
+        progressLabel={pilotProgressLabel}
+        goalLine={pilotGoalLine}
+        compact={isCompact}
+      />
+    ) : null;
+
   if (!goal) {
     return (
       <Animated.View
@@ -167,6 +228,7 @@ export function HubTaskTrackingHero({ variant = 'default' }: HubTaskTrackingHero
           isCompact && styles.rowCompact,
           shadows.card,
         ]}>
+        {pilotStrip}
         <View style={[styles.statusColFull, isCompact && styles.statusColFullCompact]}>
           {statusItems.map((item) => (
             <StatusPill
@@ -183,22 +245,30 @@ export function HubTaskTrackingHero({ variant = 'default' }: HubTaskTrackingHero
   }
 
   const iconName = getDailyGoalIcon(goal) as keyof typeof Ionicons.glyphMap;
+  const useCompactFullWidth = isCompact && !pilotStrip;
 
   return (
     <Animated.View
       entering={FadeIn.duration(240)}
       style={[
-        styles.row,
-        isCompact && styles.rowCompact,
+        useCompactFullWidth ? styles.compactWrap : styles.row,
+        isCompact && !useCompactFullWidth && styles.rowCompact,
         isFocus && styles.rowFocus,
-        shadows.card,
+        !useCompactFullWidth && shadows.card,
       ]}>
-      <View style={[styles.goalCard, isCompact && styles.goalCardCompact]}>
+      {pilotStrip}
+      <View
+        style={[
+          styles.goalCard,
+          isCompact && styles.goalCardCompact,
+          useCompactFullWidth && styles.goalCardFullWidth,
+          useCompactFullWidth && shadows.card,
+        ]}>
         <View style={styles.goalHeader}>
           <View style={[styles.trophyWrap, isCompact && styles.trophyWrapCompact]}>
             <Ionicons
-              name={iconName}
-              size={isCompact ? 14 : 16}
+              name={isCompact ? 'flag-outline' : iconName}
+              size={isCompact ? 16 : 16}
               color={colors.hubGoldDark}
             />
           </View>
@@ -258,6 +328,11 @@ export function HubTaskTrackingHero({ variant = 'default' }: HubTaskTrackingHero
 }
 
 const styles = StyleSheet.create({
+  compactWrap: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.xs,
+    minWidth: 0,
+  },
   row: {
     flexDirection: 'row',
     gap: 8,
@@ -281,15 +356,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(26, 143, 138, 0.12)',
-    padding: 12,
+    borderColor: 'rgba(0, 0, 0, 0.05)',
+    padding: 14,
     gap: 8,
     minWidth: 0,
   },
   goalCardCompact: {
-    padding: 10,
+    padding: 12,
     gap: 6,
     borderRadius: radius.lg,
+  },
+  goalCardFullWidth: {
+    flex: undefined,
+    width: '100%',
   },
   goalHeader: {
     flexDirection: 'row',
@@ -297,11 +376,11 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   trophyWrap: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: colors.hubGoldMuted,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.hubGold,
     alignItems: 'center',
     justifyContent: 'center',
@@ -312,10 +391,9 @@ const styles = StyleSheet.create({
     borderRadius: 11,
   },
   sectionLabel: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '700',
     color: colors.textSecondary,
-    letterSpacing: 0.6,
   },
   goalBody: {
     flexDirection: 'row',

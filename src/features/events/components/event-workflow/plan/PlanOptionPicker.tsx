@@ -1,42 +1,32 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { PlanOptionVisualBlock } from '@/features/events/components/event-workflow/plan/PlanOptionVisual';
-import { PLAN_OPTION_VISUALS } from '@/features/events/components/event-workflow/plan/planOptionVisuals';
-import type {
-  PlanOption,
-  PlanOptionId,
-} from '@/features/events/utils/eventWorkflowPlanPresentation';
+import type { PlanOptionId } from '@/features/events/utils/eventWorkflowPlanPresentation';
+import {
+  getPlanDisplayToneStyle,
+  type PlanDisplayOption,
+} from '@/features/events/utils/eventWorkflowPlanUiPresentation';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import { shadows } from '@/ui/theme/shadows';
 
+const SELECTED_BORDER = '#006B63';
+
 type PlanOptionPickerProps = {
-  options: PlanOption[];
+  options: PlanDisplayOption[];
   selectedId: PlanOptionId;
   onSelect: (id: PlanOptionId) => void;
 };
-
-function StatChip({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.statChip}>
-      <Text style={styles.statChipLabel}>{label}</Text>
-      <Text style={styles.statChipValue} numberOfLines={1}>
-        {value}
-      </Text>
-    </View>
-  );
-}
 
 function PlanOptionCard({
   option,
   selected,
   onPress,
 }: {
-  option: PlanOption;
+  option: PlanDisplayOption;
   selected: boolean;
   onPress: () => void;
 }) {
-  const visual = PLAN_OPTION_VISUALS[option.id];
+  const tone = getPlanDisplayToneStyle(option.tone);
 
   return (
     <Pressable
@@ -45,49 +35,43 @@ function PlanOptionCard({
         styles.card,
         shadows.soft,
         selected ? styles.cardSelected : styles.cardDefault,
-        selected && { borderColor: visual.iconColor },
         pressed && styles.pressed,
       ]}
       accessibilityRole="button"
       accessibilityState={{ selected }}>
-      <View style={styles.cardInner}>
-        <PlanOptionVisualBlock planId={option.id} selected={selected} visual={visual} />
+      {selected ? (
+        <View style={styles.selectedCheck}>
+          <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+        </View>
+      ) : null}
+
+      <View style={styles.cardRow}>
+        <View style={[styles.iconCircle, { backgroundColor: tone.iconCircle }]}>
+          <Ionicons name={option.iconName} size={24} color={tone.iconColor} />
+        </View>
 
         <View style={styles.content}>
-          <View style={styles.titleRow}>
-            <Text style={styles.title} numberOfLines={1}>
-              {option.title}
-            </Text>
-            {selected ? (
-              <View style={[styles.checkBadge, { backgroundColor: visual.iconColor }]}>
-                <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-              </View>
-            ) : (
-              <View style={styles.radio} />
-            )}
-          </View>
-
-          <Text style={styles.tagline} numberOfLines={1}>
-            {visual.tagline}
+          <Text style={styles.title} numberOfLines={1}>
+            {option.title}
           </Text>
-
-          <View style={styles.chipRow}>
-            <StatChip label="Süre" value={option.durationLabel} />
-            <StatChip label="Başarı" value={option.successLabel} />
+          <Text style={styles.description} numberOfLines={2}>
+            {option.description}
+          </Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaText} numberOfLines={1}>
+              {option.durationLabel}
+            </Text>
+            <Text style={styles.metaDot}>·</Text>
+            <Text style={styles.metaText} numberOfLines={1}>
+              {option.successLabel}
+            </Text>
           </View>
+        </View>
 
-          <View style={styles.footerRow}>
-            <View style={styles.costPill}>
-              <Text style={styles.costPillText} numberOfLines={1}>
-                {option.costNote}
-              </Text>
-            </View>
-            {option.extraNote ? (
-              <Text style={styles.extraNote} numberOfLines={1}>
-                {option.extraNote}
-              </Text>
-            ) : null}
-          </View>
+        <View style={[styles.effectPill, { backgroundColor: tone.pillBg }]}>
+          <Text style={[styles.effectPillText, { color: tone.pillText }]} numberOfLines={2}>
+            {option.effectLabel}
+          </Text>
         </View>
       </View>
     </Pressable>
@@ -102,9 +86,17 @@ export function PlanOptionPicker({
   return (
     <View style={styles.wrap}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Plan Seçenekleri</Text>
-        <Text style={styles.sectionHint}>Birini seç, detaylar güncellenir</Text>
+        <Ionicons name="sparkles" size={18} color={eventDetail.teal} />
+        <View style={styles.sectionHeaderText}>
+          <Text style={styles.sectionTitle} numberOfLines={1}>
+            Plan Seçenekleri
+          </Text>
+          <Text style={styles.sectionHint} numberOfLines={1}>
+            İhtiyacına en uygun planı seç.
+          </Text>
+        </View>
       </View>
+
       <View style={styles.list}>
         {options.map((option) => (
           <PlanOptionCard
@@ -122,19 +114,26 @@ export function PlanOptionPicker({
 const styles = StyleSheet.create({
   wrap: {
     marginHorizontal: eventDetail.screenPadding,
-    gap: 10,
+    gap: 12,
   },
   sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  sectionHeaderText: {
+    flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: '800',
     color: eventDetail.textDark,
-    letterSpacing: -0.1,
+    letterSpacing: -0.2,
   },
   sectionHint: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '500',
     color: eventDetail.textMuted,
   },
@@ -142,115 +141,103 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   card: {
-    borderRadius: 16,
-    borderWidth: 2,
+    width: '100%',
+    borderRadius: 20,
+    borderWidth: 1.5,
     overflow: 'hidden',
+    minHeight: 108,
+    justifyContent: 'center',
   },
   cardDefault: {
     backgroundColor: eventDetail.card,
-    borderColor: 'rgba(6, 63, 59, 0.07)',
+    borderColor: 'rgba(6, 63, 59, 0.08)',
   },
   cardSelected: {
     backgroundColor: eventDetail.mintSoft,
-    borderColor: eventDetail.teal,
+    borderColor: SELECTED_BORDER,
+    minHeight: 128,
   },
   pressed: {
     opacity: 0.94,
-    transform: [{ scale: 0.995 }],
   },
-  cardInner: {
+  selectedCheck: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: SELECTED_BORDER,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
+  cardRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    padding: 12,
-    paddingRight: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    paddingRight: 12,
+  },
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   content: {
     flex: 1,
     minWidth: 0,
-    gap: 6,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
+    gap: 4,
+    paddingTop: 2,
+    paddingRight: 4,
   },
   title: {
-    flex: 1,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
     color: eventDetail.textDark,
+    paddingRight: 28,
   },
-  tagline: {
-    fontSize: 11,
+  description: {
+    fontSize: 12,
     fontWeight: '500',
     color: eventDetail.textMuted,
-    marginTop: -2,
+    lineHeight: 17,
   },
-  checkBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radio: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: 'rgba(107, 125, 120, 0.4)',
-    backgroundColor: '#FFFFFF',
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  statChip: {
-    backgroundColor: 'rgba(255,255,255,0.72)',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(6, 63, 59, 0.05)',
-    minWidth: 72,
-  },
-  statChipLabel: {
-    fontSize: 9,
-    fontWeight: '600',
-    color: eventDetail.textMuted,
-    marginBottom: 1,
-  },
-  statChipValue: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: eventDetail.textDark,
-  },
-  footerRow: {
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 4,
+    marginTop: 2,
   },
-  costPill: {
-    backgroundColor: eventDetail.mint,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    maxWidth: '55%',
-  },
-  costPillText: {
-    fontSize: 10,
+  metaText: {
+    fontSize: 11,
     fontWeight: '700',
-    color: eventDetail.tealDark,
+    color: eventDetail.textMuted,
+    flexShrink: 1,
   },
-  extraNote: {
-    flex: 1,
-    minWidth: 0,
+  metaDot: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: eventDetail.textMuted,
+  },
+  effectPill: {
+    alignSelf: 'center',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    maxWidth: 78,
+    minWidth: 64,
+    flexShrink: 0,
+  },
+  effectPillText: {
     fontSize: 10,
-    fontWeight: '600',
-    color: '#B45309',
+    fontWeight: '800',
+    textAlign: 'center',
+    lineHeight: 13,
   },
 });

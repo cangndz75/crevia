@@ -52,6 +52,58 @@ export type OnboardingHubVisibility = {
   muteStatusCards: boolean;
 };
 
+export type PilotBriefingStep = {
+  title: string;
+  line: string;
+  iconKey: string;
+};
+
+export type PilotBriefingModel = {
+  title: string;
+  subtitle: string;
+  goalLine: string;
+  steps: PilotBriefingStep[];
+};
+
+export type Day1HubGuidanceModel = {
+  showPilotBriefing: boolean;
+  pilotProgressLabel: string | null;
+  pilotGoalLine: string | null;
+};
+
+export type OnboardingWorkflowStepId =
+  | 'inspect'
+  | 'plan'
+  | 'assign'
+  | 'field'
+  | 'result'
+  | 'unknown';
+
+export type WorkflowStepHintModel = {
+  visible: boolean;
+  text: string;
+  compact: boolean;
+};
+
+export type FirstEventGuidanceModel = {
+  showInspectBanner: boolean;
+  inspectHint: string | null;
+};
+
+export type FirstResultGuidanceModel = {
+  visible: boolean;
+  title: string;
+  line: string;
+};
+
+export type FirstReportGuidanceModel = {
+  title: string;
+  summaryLines: string[];
+  authorityIntroLines: string[];
+  hideBadgeBlock: boolean;
+  hideScoreCard: boolean;
+};
+
 export type OnboardingContextInput = {
   day: number;
   screen: OnboardingScreen;

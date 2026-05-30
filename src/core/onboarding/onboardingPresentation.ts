@@ -1,4 +1,13 @@
-import type { OnboardingHint } from './onboardingTypes';
+import type {
+  Day1HubGuidanceModel,
+  FirstEventGuidanceModel,
+  FirstReportGuidanceModel,
+  FirstResultGuidanceModel,
+  OnboardingHint,
+  OnboardingWorkflowStepId,
+  PilotBriefingModel,
+  WorkflowStepHintModel,
+} from './onboardingTypes';
 
 export const ONBOARDING_MAX_HINT_TEXT_LENGTH = 160;
 
@@ -169,3 +178,225 @@ export const LEGACY_TUTORIAL_STEP_BY_MOMENT: Partial<
   decision_result_intro: 'decision_result',
   daily_report_intro: 'daily_report',
 };
+
+// —— İlk 5 dakika / pilot görev sunumu (oyuncuya görünen metinler) ——
+
+export const ONBOARDING_UI_MAX_BRIEFING_STEPS = 3;
+
+export const ONBOARDING_FORBIDDEN_WORDS = [
+  'tutorial',
+  'onboarding',
+  'xp',
+  'level up',
+  'rank up',
+  'kilitli',
+  'premium',
+  'satın al',
+  'paywall',
+  'yetkin yetersiz',
+] as const;
+
+const PILOT_BRIEFING_COPY = {
+  title: '7 Günlük Pilot Görev',
+  subtitle:
+    'Cumhuriyet bölgesinde operasyon kararlarını yönetecek, halk güveni, ekip dengesi ve kaynak kullanımını birlikte takip edeceksin.',
+  goalLine: 'Pilot sonunda üst yönetim performansını değerlendirecek.',
+} as const;
+
+const PILOT_BRIEFING_HUB_STEPS: PilotBriefingModel['steps'] = [
+  {
+    title: 'İncele',
+    line: 'Sahadan gelen sinyali oku.',
+    iconKey: 'workflow_inspect',
+  },
+  {
+    title: 'Planla',
+    line: 'Halk, ekip ve kaynak etkisini karşılaştır.',
+    iconKey: 'workflow_plan',
+  },
+  {
+    title: 'Sahaya Yönlendir',
+    line: 'Doğru ekibi ve önceliği sahaya çıkar.',
+    iconKey: 'workflow_assign',
+  },
+] as const;
+
+const WORKFLOW_STEP_HINT_COPY: Record<
+  Exclude<OnboardingWorkflowStepId, 'unknown'>,
+  string
+> = {
+  inspect: 'Önce sahadan gelen sinyali incele.',
+  plan: 'Her seçenek halk, ekip ve kaynak dengesini farklı etkiler.',
+  assign: 'Seçtiğin planı sahaya çıkar.',
+  field: 'Operasyonun ilk etkisini izle.',
+  result: 'Bu ekran kararının sahadaki etkisini özetler.',
+};
+
+export function assertNoOnboardingForbiddenWords(text: string): string[] {
+  const lower = text.toLowerCase();
+  const hits: string[] = [];
+  for (const word of ONBOARDING_FORBIDDEN_WORDS) {
+    const pattern =
+      word === 'xp'
+        ? /\bxp\b/i
+        : new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    if (pattern.test(lower)) {
+      hits.push(word);
+    }
+  }
+  return hits;
+}
+
+export function collectOnboardingVisibleStrings(): string[] {
+  const strings: string[] = [
+    PILOT_BRIEFING_COPY.title,
+    PILOT_BRIEFING_COPY.subtitle,
+    PILOT_BRIEFING_COPY.goalLine,
+    ...PILOT_BRIEFING_HUB_STEPS.flatMap((s) => [s.title, s.line]),
+    ...Object.values(WORKFLOW_STEP_HINT_COPY),
+    buildFirstReportGuidanceModel().title,
+    ...buildFirstReportGuidanceModel().summaryLines,
+    ...buildFirstReportGuidanceModel().authorityIntroLines,
+    buildFirstResultGuidanceModel(true, true).title,
+    buildFirstResultGuidanceModel(true, true).line,
+  ];
+  for (const hint of ONBOARDING_HINTS) {
+    strings.push(hint.title, hint.text, ...(hint.ctaText ? [hint.ctaText] : []));
+    if (hint.stepPill) strings.push(hint.stepPill);
+  }
+  return strings;
+}
+
+export function buildPilotBriefingModel(): PilotBriefingModel {
+  return {
+    title: PILOT_BRIEFING_COPY.title,
+    subtitle: mobileSafeLine(PILOT_BRIEFING_COPY.subtitle, 120),
+    goalLine: PILOT_BRIEFING_COPY.goalLine,
+    steps: PILOT_BRIEFING_HUB_STEPS.slice(0, ONBOARDING_UI_MAX_BRIEFING_STEPS),
+  };
+}
+
+export type BuildDay1HubGuidanceInput = {
+  pilotDay?: number;
+  pilotDayTotal?: number;
+  isDay1?: boolean;
+};
+
+export function buildDay1HubGuidanceModel(
+  input: BuildDay1HubGuidanceInput = {},
+): Day1HubGuidanceModel {
+  const pilotDay = Math.max(1, input.pilotDay ?? 1);
+  const pilotDayTotal = Math.max(1, input.pilotDayTotal ?? 7);
+  const isDay1 = input.isDay1 ?? pilotDay === 1;
+
+  if (!isDay1) {
+    return {
+      showPilotBriefing: false,
+      pilotProgressLabel: null,
+      pilotGoalLine: null,
+    };
+  }
+
+  return {
+    showPilotBriefing: true,
+    pilotProgressLabel: `Pilot: ${pilotDay} / ${pilotDayTotal}`,
+    pilotGoalLine: mobileSafeLine(
+      'Hedef: 7 günü tamamla, yetki değerlendirmesine hazırlan.',
+      72,
+    ),
+  };
+}
+
+export type BuildFirstEventGuidanceInput = {
+  day?: number;
+  eventId?: string | null;
+  isDay1LearningEvent?: boolean;
+};
+
+export function buildFirstEventGuidanceModel(
+  input: BuildFirstEventGuidanceInput = {},
+): FirstEventGuidanceModel {
+  const day = input.day ?? 1;
+  const isFirst =
+    day === 1 &&
+    !!input.eventId &&
+    (input.isDay1LearningEvent ?? false);
+
+  if (!isFirst) {
+    return { showInspectBanner: false, inspectHint: null };
+  }
+
+  return {
+    showInspectBanner: true,
+    inspectHint: WORKFLOW_STEP_HINT_COPY.inspect,
+  };
+}
+
+export type BuildWorkflowStepHintInput = {
+  step: OnboardingWorkflowStepId;
+  day?: number;
+  isDay1LearningEvent?: boolean;
+  isFirstTutorialResult?: boolean;
+};
+
+export function buildWorkflowStepHintModel(
+  input: BuildWorkflowStepHintInput,
+): WorkflowStepHintModel {
+  const day = input.day ?? 1;
+  const onDay1Flow =
+    day === 1 && (input.isDay1LearningEvent ?? false);
+
+  if (input.step === 'result') {
+    const visible =
+      !!input.isFirstTutorialResult && (day === 1 || onDay1Flow);
+    return {
+      visible,
+      text: visible ? WORKFLOW_STEP_HINT_COPY.result : '',
+      compact: true,
+    };
+  }
+
+  if (!onDay1Flow || input.step === 'unknown') {
+    return { visible: false, text: '', compact: true };
+  }
+
+  const text =
+    input.step in WORKFLOW_STEP_HINT_COPY
+      ? WORKFLOW_STEP_HINT_COPY[
+          input.step as Exclude<OnboardingWorkflowStepId, 'unknown'>
+        ]
+      : '';
+
+  return {
+    visible: text.length > 0,
+    text,
+    compact: true,
+  };
+}
+
+export function buildFirstResultGuidanceModel(
+  isDay1TutorialFlow: boolean,
+  isFirstTutorialResult: boolean,
+): FirstResultGuidanceModel {
+  const visible = isDay1TutorialFlow && isFirstTutorialResult;
+  return {
+    visible,
+    title: 'Sonucu Gör',
+    line: WORKFLOW_STEP_HINT_COPY.result,
+  };
+}
+
+export function buildFirstReportGuidanceModel(): FirstReportGuidanceModel {
+  return {
+    title: 'Bugünkü pilot başlangıcı tamamlandı.',
+    summaryLines: [
+      'Yarın kararların daha fazla sistem etkisi gösterecek.',
+    ],
+    authorityIntroLines: [
+      'Yetki değerlendirmesi pilot boyunca izlenir.',
+      'Gün sonunda üst yönetim güven puanını günceller.',
+    ],
+    hideBadgeBlock: true,
+    hideScoreCard: true,
+  };
+}

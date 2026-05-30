@@ -1,12 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '@/ui/theme/colors';
-import { radius } from '@/ui/theme/radius';
-import { shadows } from '@/ui/theme/shadows';
-import { spacing } from '@/ui/theme/spacing';
-
 import { resolveIoniconForRegistryKey } from '@/core/presentation/creviaIconPresentation';
+import { mapUi } from '@/features/map/utils/mapUiTokens';
+import { colors } from '@/ui/theme/colors';
+import { shadows } from '@/ui/theme/shadows';
 
 import type { MapDistrictId } from '../data/mapAssets';
 import type { MapNeighborhoodStripItem } from '../utils/mapUiPresentation';
@@ -17,13 +15,6 @@ type Props = {
   onSelect?: (districtId: MapDistrictId) => void;
 };
 
-const STATUS_COLORS = {
-  active: colors.primary,
-  watching: colors.secondary,
-  approaching: colors.hubGoldDark,
-  preview: colors.textSecondary,
-} as const;
-
 const STRIP_ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
   city: 'business-outline',
   home: 'home-outline',
@@ -32,6 +23,22 @@ const STRIP_ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
   leaf: 'leaf-outline',
   navigate: 'navigate-outline',
 };
+
+function segmentFill(level: number): string {
+  if (level >= 3) return mapUi.gold;
+  if (level >= 2) return mapUi.riskHigh;
+  if (level >= 1) return mapUi.teal;
+  return '#E4E2DD';
+}
+
+function resolveSegmentLevel(item: MapNeighborhoodStripItem, selected: boolean): number {
+  if (selected) return 3;
+  const label = item.statusLabel.toLowerCase();
+  if (label.includes('yüksek') || label.includes('kritik')) return 3;
+  if (label.includes('orta') || label.includes('izlen')) return 2;
+  if (label.includes('önizleme')) return 0;
+  return 1;
+}
 
 export function MapNeighborhoodStrip({ items, selectedId, onSelect }: Props) {
   if (items.length === 0) {
@@ -51,6 +58,16 @@ export function MapNeighborhoodStrip({ items, selectedId, onSelect }: Props) {
       contentContainerStyle={styles.scroll}>
       {items.map((item) => {
         const selected = item.id === selectedId;
+        const iconName = item.identityIconKey
+          ? resolveIoniconForRegistryKey(item.identityIconKey)
+          : STRIP_ICON_MAP.factory;
+        const segmentLevel = resolveSegmentLevel(item, selected);
+        const statusColor = selected
+          ? mapUi.gold
+          : item.statusLabel.toLowerCase().includes('yüksek')
+            ? mapUi.riskHigh
+            : mapUi.teal;
+
         return (
           <Pressable
             key={item.id}
@@ -58,29 +75,44 @@ export function MapNeighborhoodStrip({ items, selectedId, onSelect }: Props) {
             style={[
               styles.card,
               shadows.soft,
-              selected && styles.cardSelected,
+              selected ? styles.cardSelected : styles.cardDefault,
             ]}>
-            <View style={styles.accentRow}>
-              <View style={[styles.accent, { backgroundColor: item.accentColor }]} />
-              {item.identityIconKey ? (
-                <Ionicons
-                  name={resolveIoniconForRegistryKey(item.identityIconKey)}
-                  size={12}
-                  color={item.accentColor}
-                />
-              ) : null}
-            </View>
-            <Text style={styles.label} numberOfLines={1}>
-              {item.label}
-            </Text>
-            <Text
+            <View
               style={[
-                styles.status,
-                { color: STATUS_COLORS[item.status] },
-              ]}
-              numberOfLines={1}>
-              {item.statusLabel}
-            </Text>
+                styles.thumb,
+                { backgroundColor: selected ? mapUi.goldSoft : mapUi.mint },
+              ]}>
+              <Ionicons name={iconName} size={22} color={item.accentColor} />
+            </View>
+
+            <View style={styles.copy}>
+              <Text style={styles.label} numberOfLines={1}>
+                {item.label}
+              </Text>
+              <View style={styles.statusRow}>
+                <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                <Text
+                  style={[styles.status, { color: statusColor }]}
+                  numberOfLines={1}>
+                  {item.statusLabel}
+                </Text>
+              </View>
+              <View style={styles.segments}>
+                {[0, 1, 2, 3].map((index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.segment,
+                      {
+                        backgroundColor: segmentFill(
+                          index < segmentLevel ? segmentLevel : 0,
+                        ),
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+            </View>
           </Pressable>
         );
       })}
@@ -90,58 +122,89 @@ export function MapNeighborhoodStrip({ items, selectedId, onSelect }: Props) {
 
 const styles = StyleSheet.create({
   scroll: {
-    paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
+    paddingHorizontal: mapUi.screenPadding,
+    gap: 12,
+    paddingVertical: 2,
   },
   card: {
-    width: 108,
-    minWidth: 0,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    gap: 2,
-  },
-  cardSelected: {
-    borderColor: 'rgba(26,143,138,0.35)',
-    backgroundColor: colors.primaryMuted,
-  },
-  accentRow: {
+    width: 168,
+    minHeight: 94,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginBottom: 2,
-    minWidth: 0,
+    gap: 10,
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
-  accent: {
-    width: 18,
-    height: 3,
-    borderRadius: 2,
+  cardDefault: {
+    backgroundColor: colors.surface,
+  },
+  cardSelected: {
+    borderColor: mapUi.gold,
+    backgroundColor: '#FFFCF5',
+  },
+  thumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
   },
+  copy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
   label: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '800',
-    color: colors.textPrimary,
+    color: mapUi.textDark,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minWidth: 0,
+  },
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    flexShrink: 0,
   },
   status: {
-    fontSize: 10,
+    flex: 1,
+    minWidth: 0,
+    fontSize: 12,
     fontWeight: '700',
   },
+  segments: {
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 2,
+  },
+  segment: {
+    flex: 1,
+    height: 5,
+    borderRadius: 3,
+    maxWidth: 22,
+  },
   empty: {
-    marginHorizontal: spacing.lg,
-    padding: spacing.md,
-    borderRadius: radius.lg,
+    marginHorizontal: mapUi.screenPadding,
+    padding: 14,
+    borderRadius: 18,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
   emptyText: {
-    fontSize: 12,
-    lineHeight: 17,
-    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    color: mapUi.textSecondary,
     fontWeight: '500',
   },
 });

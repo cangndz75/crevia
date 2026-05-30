@@ -54,6 +54,8 @@ import {
   getVehicles,
 } from '../data/mapSelectors';
 import {
+  buildMapActiveOperationOverlayModel,
+  buildMapFilterChipModel,
   buildMapNeighborhoodStripItems,
   buildMapOperationPanelModel,
 } from '../utils/mapUiPresentation';
@@ -156,6 +158,23 @@ export function MapScreen() {
   const postPilotOperation = useGameStore((s) => s.gameState.pilot.postPilotOperation);
   const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
 
+  const filterChips = useMemo(
+    () => buildMapFilterChipModel({ gameDay, pilotAreaId }),
+    [gameDay, pilotAreaId],
+  );
+
+  const activeOperationOverlay = useMemo(
+    () =>
+      mapViewMode === 'overview'
+        ? buildMapActiveOperationOverlayModel({
+            pilotAreaId,
+            gameDay,
+            activeEvents,
+          })
+        : null,
+    [activeEvents, gameDay, mapViewMode, pilotAreaId],
+  );
+
   const neighborhoodStripItems = useMemo(
     () =>
       buildMapNeighborhoodStripItems({
@@ -219,7 +238,6 @@ export function MapScreen() {
       mapViewMode,
       pilotAreaId,
       postPilotMapContextLine,
-      gameStateForMap,
       selectedDistrictId,
       vehicleState,
     ],
@@ -299,12 +317,12 @@ export function MapScreen() {
 
   return (
     <GameScreenShell
-      screenTitle="Operasyon Haritası"
-      backgroundColor={colors.background}>
+      screenTitle="Harita"
+      backgroundColor={colors.background}
+      contentStyle={styles.shellContent}>
       <View style={styles.stack}>
         <MapOperationHeader
-          gameDay={gameDay}
-          pilotAreaId={pilotAreaId}
+          filter={filterChips}
           onGuidePress={() => setGuideOpen(true)}
         />
 
@@ -322,6 +340,7 @@ export function MapScreen() {
           hideContainerSignals={hideMapFleetSignals}
           hideVehicleSignals={hideMapFleetSignals}
           selectedPinId={selectedPinId}
+          activeOperationOverlay={activeOperationOverlay}
           onLayersPress={() => setLayerPanelOpen(true)}
           onDistrictSelect={handleDistrictSelect}
           onBackToOverview={handleBackToOverview}
@@ -343,20 +362,23 @@ export function MapScreen() {
         <MapOperationBottomPanel
           model={operationPanel}
           onPressCta={handleBottomPanelCta}
+          onPressRecommended={handleBottomPanelCta}
         />
 
-        <MapFilterTabs selected={selectedFilter} onSelect={setSelectedFilter} />
+        <View style={styles.filterSection}>
+          <MapFilterTabs selected={selectedFilter} onSelect={setSelectedFilter} />
 
-        <Animated.View
-          key={`${selectedFilter}-${pilotAreaId}-${gameDay}`}
-          entering={FadeIn.duration(220)}
-          style={styles.filterContent}>
-          {renderFilterContent()}
-        </Animated.View>
+          <Animated.View
+            key={`${selectedFilter}-${pilotAreaId}-${gameDay}`}
+            entering={FadeIn.duration(220)}
+            style={styles.filterContent}>
+            {renderFilterContent()}
+          </Animated.View>
 
-        {(gameDay >= 7 || selectedFilter === 'events') && (
-          <PilotAreaSummaryPanel pilotAreaId={pilotAreaId} gameDay={gameDay} />
-        )}
+          {(gameDay >= 7 || selectedFilter === 'events') && (
+            <PilotAreaSummaryPanel pilotAreaId={pilotAreaId} gameDay={gameDay} />
+          )}
+        </View>
       </View>
 
       <LayerPanel
@@ -372,12 +394,18 @@ export function MapScreen() {
 }
 
 const styles = StyleSheet.create({
+  shellContent: {
+    paddingBottom: spacing.xl,
+  },
   stack: {
-    gap: spacing.sm,
+    gap: 14,
     paddingBottom: spacing.md,
+  },
+  filterSection: {
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   filterContent: {
     gap: spacing.sm,
-    marginTop: 2,
   },
 });

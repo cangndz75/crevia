@@ -3,8 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { EVENT_RESULT_COPY } from '@/features/events/utils/eventResultPresentation';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
-import { colors } from '@/ui/theme/colors';
-import { radius } from '@/ui/theme/radius';
+import { shadows } from '@/ui/theme/shadows';
 
 type Props = {
   note: string;
@@ -12,46 +11,62 @@ type Props = {
 
 export function EventResultFieldNoteCard({ note }: Props) {
   return (
-    <View style={styles.card}>
-      <View style={styles.head}>
-        <Ionicons name="chatbubble-ellipses-outline" size={14} color={colors.primary} />
-        <Text style={styles.title} numberOfLines={1}>
-          {EVENT_RESULT_COPY.fieldNoteTitle}
+    <View style={[styles.card, shadows.soft]}>
+      <View style={styles.content}>
+        <View style={styles.head}>
+          <Ionicons
+            name="chatbubble-ellipses-outline"
+            size={18}
+            color={eventDetail.teal}
+          />
+          <Text style={styles.title} numberOfLines={1}>
+            {EVENT_RESULT_COPY.fieldNoteTitle}
+          </Text>
+        </View>
+        <Text style={styles.body} numberOfLines={2}>
+          {note}
         </Text>
       </View>
-      <Text style={styles.body} numberOfLines={2}>
-        {note}
-      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: eventDetail.mintSoft,
-    borderRadius: radius.lg,
+    marginHorizontal: 18,
+    backgroundColor: '#E8F7F0',
+    borderRadius: 21,
     borderWidth: 1,
-    borderColor: 'rgba(11, 107, 97, 0.12)',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderColor: 'rgba(11, 107, 97, 0.14)',
+    padding: 16,
+    minHeight: 92,
+    minWidth: 0,
+    overflow: 'hidden',
+  },
+  content: {
     gap: 6,
     minWidth: 0,
+    flexShrink: 1,
   },
   head: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+    minWidth: 0,
   },
   title: {
-    fontSize: 11,
+    fontSize: 15,
     fontWeight: '800',
     color: eventDetail.tealDark,
-    letterSpacing: 0.2,
+    flexShrink: 1,
+    minWidth: 0,
   },
   body: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
     color: eventDetail.textDark,
-    lineHeight: 18,
+    lineHeight: 21,
+    flexShrink: 1,
+    minWidth: 0,
   },
 });

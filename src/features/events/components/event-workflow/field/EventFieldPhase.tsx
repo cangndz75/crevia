@@ -10,6 +10,7 @@ import { FieldImpactMetricsRow } from '@/features/events/components/event-workfl
 import { FieldWorkflowFooter } from '@/features/events/components/event-workflow/field/FieldWorkflowFooter';
 import { LiveOperationCard } from '@/features/events/components/event-workflow/field/LiveOperationCard';
 import { PlanEventSummaryCard } from '@/features/events/components/event-workflow/plan/PlanEventSummaryCard';
+import { OnboardingPhaseHint } from '@/features/onboarding/components/OnboardingPhaseHint';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import { getInspectNeighborhoodHero } from '@/features/events/utils/eventWorkflowAssets';
 import { buildFieldScreenModel } from '@/features/events/utils/eventWorkflowDispatchFieldPresentation';
@@ -25,6 +26,7 @@ type Props = {
   onComplete: () => void;
   completeDisabled?: boolean;
   applying?: boolean;
+  phaseHint?: string | null;
 };
 
 export function EventFieldPhase({
@@ -37,6 +39,7 @@ export function EventFieldPhase({
   onComplete,
   completeDisabled = false,
   applying = false,
+  phaseHint = null,
 }: Props) {
   const model = useMemo(
     () =>
@@ -67,6 +70,8 @@ export function EventFieldPhase({
           remainingLabel={model.progressLabel}
           thumbnail={thumbnail}
         />
+
+        {phaseHint ? <OnboardingPhaseHint text={phaseHint} /> : null}
 
         <View style={styles.stepperGap}>
           <EventWorkflowStepper activeStep="field" compact />

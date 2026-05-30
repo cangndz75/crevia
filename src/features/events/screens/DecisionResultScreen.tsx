@@ -4,16 +4,21 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { selectPrimaryDailyGoal } from '@/core/dailyGoals/dailyGoalSelectors';
 import { PostPilotEventContextChip } from '@/features/events/components/PostPilotEventContextChip';
-import { DecisionResultActionBar } from '@/features/events/components/DecisionResultActionBar';
 import { DecisionResultHeader } from '@/features/events/components/DecisionResultHeader';
 import { EventResultFieldNoteCard } from '@/features/events/components/EventResultFieldNoteCard';
 import { EventResultHeroCard } from '@/features/events/components/EventResultHeroCard';
 import { EventResultImpactMetricsRow } from '@/features/events/components/EventResultImpactMetricsRow';
-import { EventResultMetaFeedbackStrip } from '@/features/events/components/EventResultMetaFeedbackStrip';
+import {
+  EventResultActionRows,
+  EventResultInfoCard,
+  EventResultProgressStrips,
+} from '@/features/events/components/EventResultMetaFeedbackStrip';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import { createEmptyDecisionResultFallback } from '@/features/events/utils/decisionResultModel';
 import { buildEventResultViewModel } from '@/features/events/utils/eventResultPresentation';
+import { resolveEventResultHeroImage } from '@/features/events/utils/eventResultUiPresentation';
 import {
   selectLastDailyReport,
   selectLastDecisionResult,
@@ -25,6 +30,11 @@ import { TutorialCoachOverlay } from '@/features/tutorial/TutorialCoachOverlay';
 import { selectActiveTutorialStepForScreen } from '@/features/tutorial/tutorialSelectors';
 import type { EventCard, SolvedEvent } from '@/core/models/EventCard';
 import type { DecisionResultSnapshot } from '@/features/events/types/decisionResultTypes';
+import { buildFirstResultGuidanceModel } from '@/core/onboarding/onboardingPresentation';
+import { OnboardingPhaseHint } from '@/features/onboarding/components/OnboardingPhaseHint';
+import { selectIsDay1TutorialEligible } from '@/features/tutorial/tutorialSelectors';
+import { isDay1LearningEventId } from '@/features/tutorial/tutorialTypes';
+import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
 
@@ -66,11 +76,13 @@ function resolveEventForResult(
 export function DecisionResultScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useAppTabBarHeight();
   const snapshot = useGameStore(selectLastDecisionResult);
   const lastDailyReport = useGameStore(selectLastDailyReport);
   const currentDay = useGameStore((s) => s.gameState.city.day);
   const activeEvents = useGameStore((s) => s.gameState.events);
   const solvedEvents = useGameStore((s) => s.gameState.solvedEvents);
+  const dailyGoalState = useGameStore((s) => s.dailyGoalState);
 
   const result = snapshot ?? createEmptyDecisionResultFallback();
   const isMissing = snapshot == null;
@@ -86,14 +98,33 @@ export function DecisionResultScreen() {
     lastDailyReport.day === currentDay &&
     activeEvents.length === 0;
 
+  const dailyGoalProgress = useMemo(() => {
+    const primary = selectPrimaryDailyGoal(dailyGoalState);
+    if (!primary) {
+      return null;
+    }
+    const total = dailyGoalState?.goals.length ?? 1;
+    const current = dailyGoalState?.goals.filter((g) => g.isCompleted).length ?? 0;
+    return { current: Math.max(current, primary.isCompleted ? 1 : 0), total: Math.max(total, 1) };
+  }, [dailyGoalState]);
+
   const viewModel = useMemo(
     () =>
       buildEventResultViewModel(result, {
         event: relatedEvent,
         preferEndDayCta: preferEndDay,
         isFallback: isMissing,
+        dailyGoalProgress,
       }),
-    [isMissing, preferEndDay, relatedEvent, result],
+    [dailyGoalProgress, isMissing, preferEndDay, relatedEvent, result],
+  );
+
+  const heroModel = useMemo(
+    () => ({
+      ...viewModel.hero,
+      imageSource: resolveEventResultHeroImage(result, relatedEvent),
+    }),
+    [relatedEvent, result, viewModel.hero],
   );
 
   const goHub = useCallback(() => {
@@ -116,6 +147,15 @@ export function DecisionResultScreen() {
     selectActiveTutorialStepForScreen(s, 'decision_result'),
   );
   const { coachHint, dismissHint } = useOnboardingHint('decision_result');
+  const isDay1Flow = useGameStore(selectIsDay1TutorialEligible);
+  const isFirstTutorialResult =
+    !!result.eventId && isDay1LearningEventId(result.eventId);
+  const resultGuidance = buildFirstResultGuidanceModel(
+    isDay1Flow,
+    isFirstTutorialResult,
+  );
+
+  const scrollBottomPadding = tabBarHeight + Math.max(insets.bottom, 8) + spacing.md;
 
   return (
     <View style={styles.root}>
@@ -128,7 +168,10 @@ export function DecisionResultScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}>
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: scrollBottomPadding },
+        ]}>
         {isMissing ? (
           <View style={styles.missingBox}>
             <Text style={styles.missingTitle}>{result.summaryTitle}</Text>
@@ -139,22 +182,23 @@ export function DecisionResultScreen() {
         ) : (
           <>
             {viewModel.showPostPilotContext && relatedEvent ? (
-              <Animated.View entering={FadeIn.duration(220)}>
+              <Animated.View entering={FadeIn.duration(220)} style={styles.postPilotChip}>
                 <PostPilotEventContextChip event={relatedEvent} />
               </Animated.View>
             ) : null}
 
+            {resultGuidance.visible ? (
+              <View style={styles.resultGuidance}>
+                <OnboardingPhaseHint text={resultGuidance.line} />
+              </View>
+            ) : null}
+
             <Animated.View entering={FadeInUp.duration(300).springify().damping(22)}>
-              <EventResultHeroCard model={viewModel.hero} />
-              {viewModel.districtContextLine ? (
-                <Text style={styles.districtContext} numberOfLines={1}>
-                  {viewModel.districtContextLine}
-                </Text>
-              ) : null}
+              <EventResultHeroCard model={heroModel} />
             </Animated.View>
 
             <Animated.View entering={FadeInUp.delay(80).duration(280)}>
-              <EventResultImpactMetricsRow metrics={viewModel.metrics} />
+              <EventResultImpactMetricsRow rows={viewModel.impactRows} />
             </Animated.View>
 
             <Animated.View entering={FadeInUp.delay(120).duration(280)}>
@@ -162,12 +206,16 @@ export function DecisionResultScreen() {
             </Animated.View>
 
             <Animated.View entering={FadeInUp.delay(150).duration(260)}>
-              <EventResultMetaFeedbackStrip lines={viewModel.metaLines} />
+              <EventResultProgressStrips strips={viewModel.progressStrips} />
+            </Animated.View>
+
+            <Animated.View entering={FadeInUp.delay(170).duration(260)}>
+              <EventResultInfoCard model={viewModel.infoCard} />
             </Animated.View>
 
             {result.butterflyHint ? (
               <Animated.View
-                entering={FadeInUp.delay(180).duration(260)}
+                entering={FadeInUp.delay(190).duration(260)}
                 style={[
                   styles.butterflyHintCard,
                   result.butterflyHint.tone === 'warning'
@@ -184,24 +232,31 @@ export function DecisionResultScreen() {
                 </Text>
               </Animated.View>
             ) : null}
+
+            <Animated.View entering={FadeInUp.delay(210).duration(280)}>
+              <EventResultActionRows
+                primaryTitle={viewModel.actions.primaryTitle}
+                primarySubtitle={viewModel.actions.primarySubtitle}
+                secondaryTitle={viewModel.actions.secondaryTitle}
+                secondarySubtitle={viewModel.actions.secondarySubtitle}
+                showSecondary={viewModel.actions.showSecondary}
+                onPrimaryPress={handlePrimaryCta}
+                onSecondaryPress={goReports}
+              />
+            </Animated.View>
           </>
         )}
       </ScrollView>
 
-      <DecisionResultActionBar
-        primaryLabel={viewModel.nextStep.primaryCtaLabel}
-        onPrimaryPress={handlePrimaryCta}
-        onGoHub={goHub}
-      />
       <TutorialCoachOverlay
         screen="decision_result"
-        bottomOffset={Math.max(insets.bottom, 12) + 88}
+        bottomOffset={tabBarHeight + 16}
       />
       {coachHint && !legacyTutorialStep ? (
         <OnboardingCoachBubble
           hint={coachHint}
           onDismiss={() => dismissHint(coachHint.id)}
-          bottomOffset={Math.max(insets.bottom, 12) + 88}
+          bottomOffset={tabBarHeight + 16}
         />
       ) : null}
     </View>
@@ -214,12 +269,20 @@ const styles = StyleSheet.create({
     backgroundColor: eventDetail.bg,
   },
   scroll: {
-    paddingHorizontal: eventDetail.screenPadding,
     paddingTop: 4,
-    paddingBottom: spacing.xl,
-    gap: 12,
+    gap: 14,
+  },
+  postPilotChip: {
+    marginHorizontal: 18,
+    minWidth: 0,
+  },
+  resultGuidance: {
+    marginHorizontal: 18,
+    minWidth: 0,
+    flexShrink: 1,
   },
   missingBox: {
+    marginHorizontal: 18,
     backgroundColor: eventDetail.card,
     borderRadius: eventDetail.cardRadius,
     padding: spacing.lg,
@@ -237,16 +300,8 @@ const styles = StyleSheet.create({
     color: eventDetail.textMuted,
     lineHeight: 20,
   },
-  districtContext: {
-    marginTop: 6,
-    fontSize: 11,
-    fontWeight: '600',
-    color: eventDetail.textMuted,
-    lineHeight: 15,
-    flexShrink: 1,
-    minWidth: 0,
-  },
   butterflyHintCard: {
+    marginHorizontal: 18,
     borderRadius: eventDetail.smallRadius,
     paddingHorizontal: 12,
     paddingVertical: 10,

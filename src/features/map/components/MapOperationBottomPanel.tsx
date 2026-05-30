@@ -1,61 +1,88 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import type {
+  DistrictRiskSummaryMetric,
+  MapOperationPanelModel,
+} from '@/features/map/utils/mapUiPresentation';
+import { mapUi } from '@/features/map/utils/mapUiTokens';
 import { colors } from '@/ui/theme/colors';
-import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
-import { spacing } from '@/ui/theme/spacing';
-
-import type { MapOperationPanelModel } from '../utils/mapUiPresentation';
 
 type Props = {
   model: MapOperationPanelModel;
   onPressCta?: () => void;
+  onPressRecommended?: () => void;
 };
 
 const RISK_COLORS = {
-  teal: colors.primary,
-  gold: colors.hubGoldDark,
-  warn: colors.warning,
-  danger: colors.danger,
+  teal: mapUi.teal,
+  gold: mapUi.gold,
+  warn: mapUi.riskHigh,
+  danger: mapUi.riskCritical,
 } as const;
 
-export function MapOperationBottomPanel({ model, onPressCta }: Props) {
+function DistrictRiskMetricCard({ metric }: { metric: DistrictRiskSummaryMetric }) {
+  return (
+    <View style={styles.metricCard}>
+      <View style={styles.metricIconWrap}>
+        <Ionicons name={metric.icon} size={18} color={metric.progressColor} />
+      </View>
+      <Text style={styles.metricLabel} numberOfLines={1}>
+        {metric.label}
+      </Text>
+      <Text style={styles.metricValue} numberOfLines={1}>
+        {metric.value}
+      </Text>
+      <Text style={styles.metricSub} numberOfLines={2}>
+        {metric.sublabel}
+      </Text>
+      <View style={styles.progressTrack}>
+        <View
+          style={[
+            styles.progressFill,
+            {
+              width: `${Math.round(metric.progress * 100)}%`,
+              backgroundColor: metric.progressColor,
+            },
+          ]}
+        />
+      </View>
+    </View>
+  );
+}
+
+export function MapOperationBottomPanel({
+  model,
+  onPressCta,
+  onPressRecommended,
+}: Props) {
   if (!model.visible) {
     return null;
   }
 
   return (
-    <View style={[styles.panel, shadows.soft]}>
-      <View style={styles.header}>
-        <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow} numberOfLines={1}>
-            Seçili bölge özeti
+    <View style={[styles.panel, shadows.card]}>
+      <View style={styles.topRow}>
+        <Text style={styles.eyebrow} numberOfLines={1}>
+          Seçili bölge özeti
+        </Text>
+        <View style={styles.eventsPill}>
+          <Ionicons name="pulse-outline" size={14} color={mapUi.teal} />
+          <Text style={styles.eventsPillText} numberOfLines={1}>
+            {model.activeEventsPillLabel}
           </Text>
-          <Text style={styles.title} numberOfLines={1}>
-            {model.districtLabel}
-          </Text>
-          {model.characterLine ? (
-            <Text style={styles.character} numberOfLines={2}>
-              {model.characterLine}
-            </Text>
-          ) : null}
-          {model.identityRiskChips && model.identityRiskChips.length > 0 ? (
-            <View style={styles.riskChipRow}>
-              {model.identityRiskChips.map((chip) => (
-                <View key={chip.id} style={styles.riskChip}>
-                  <Text style={styles.riskChipText} numberOfLines={1}>
-                    {chip.label}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
         </View>
+      </View>
+
+      <View style={styles.titleRow}>
+        <Text style={styles.title} numberOfLines={1}>
+          {model.districtLabel}
+        </Text>
         <View
           style={[
             styles.riskPill,
-            { borderColor: `${RISK_COLORS[model.riskTone]}44` },
+            { backgroundColor: mapUi.goldSoft, borderColor: mapUi.goldBorder },
           ]}>
           <Text
             style={[styles.riskText, { color: RISK_COLORS[model.riskTone] }]}
@@ -65,9 +92,15 @@ export function MapOperationBottomPanel({ model, onPressCta }: Props) {
         </View>
       </View>
 
+      {model.summaryDescription ? (
+        <Text style={styles.description} numberOfLines={2}>
+          {model.summaryDescription}
+        </Text>
+      ) : null}
+
       {model.agendaSignalLine ? (
         <View style={styles.agendaRow}>
-          <Ionicons name="pulse-outline" size={14} color={colors.primary} />
+          <Ionicons name="pulse-outline" size={14} color={mapUi.teal} />
           <Text style={styles.agendaText} numberOfLines={2}>
             {model.agendaSignalLine}
           </Text>
@@ -76,7 +109,7 @@ export function MapOperationBottomPanel({ model, onPressCta }: Props) {
 
       {model.sahaNote ? (
         <View style={styles.noteRow}>
-          <Ionicons name="document-text-outline" size={13} color={colors.primary} />
+          <Ionicons name="document-text-outline" size={13} color={mapUi.teal} />
           <Text style={styles.noteText} numberOfLines={2}>
             Saha notu: {model.sahaNote}
           </Text>
@@ -84,23 +117,29 @@ export function MapOperationBottomPanel({ model, onPressCta }: Props) {
       ) : null}
 
       <View style={styles.metricsRow}>
-        {model.metrics.map((metric) => (
-          <View key={metric.key} style={styles.metricCell}>
-            <Text style={styles.metricValue} numberOfLines={1}>
-              {metric.value}
-            </Text>
-            <Text style={styles.metricLabel} numberOfLines={1}>
-              {metric.label}
-            </Text>
-          </View>
+        {model.riskMetrics.map((metric) => (
+          <DistrictRiskMetricCard key={metric.key} metric={metric} />
         ))}
       </View>
+
+      {model.recommendedAction ? (
+        <Pressable
+          style={styles.recommendedStrip}
+          onPress={onPressRecommended ?? onPressCta}
+          accessibilityRole="button">
+          <Ionicons name="bulb-outline" size={20} color={mapUi.gold} />
+          <Text style={styles.recommendedText} numberOfLines={2}>
+            {model.recommendedAction}
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={mapUi.gold} />
+        </Pressable>
+      ) : null}
 
       <Pressable style={styles.cta} onPress={onPressCta}>
         <Text style={styles.ctaText} numberOfLines={1}>
           {model.ctaLabel}
         </Text>
-        <Ionicons name="chevron-forward" size={16} color={colors.textInverse} />
+        <Ionicons name="chevron-forward" size={18} color={colors.textInverse} />
       </Pressable>
     </View>
   );
@@ -108,86 +147,84 @@ export function MapOperationBottomPanel({ model, onPressCta }: Props) {
 
 const styles = StyleSheet.create({
   panel: {
-    marginHorizontal: spacing.lg,
-    backgroundColor: 'rgba(255,255,255,0.96)',
-    borderRadius: radius.xl,
+    marginHorizontal: mapUi.screenPadding,
+    backgroundColor: colors.surface,
+    borderRadius: 26,
     borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-    gap: spacing.sm,
+    borderColor: 'rgba(6, 63, 59, 0.08)',
+    padding: 18,
+    gap: 12,
+    marginTop: 16,
   },
-  header: {
+  topRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-  },
-  headerCopy: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
   },
   eyebrow: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: colors.textSecondary,
-    letterSpacing: 0.3,
+    flex: 1,
+    minWidth: 0,
+    fontSize: 12,
+    fontWeight: '700',
+    color: mapUi.textSecondary,
+    letterSpacing: 0.2,
   },
-  title: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  character: {
-    fontSize: 11,
-    lineHeight: 16,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
-  riskChipRow: {
+  eventsPill: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    marginTop: 2,
-  },
-  riskChip: {
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: mapUi.mint,
     maxWidth: '48%',
     flexShrink: 1,
-    minWidth: 0,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: radius.full,
-    backgroundColor: colors.backgroundAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  riskChipText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: colors.textSecondary,
+  eventsPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: mapUi.tealDark,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  title: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 22,
+    fontWeight: '800',
+    color: mapUi.textDark,
+    letterSpacing: -0.3,
   },
   riskPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
     borderWidth: 1,
-    backgroundColor: colors.background,
-    maxWidth: '38%',
+    maxWidth: '42%',
     flexShrink: 1,
   },
   riskText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
+  },
+  description: {
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '500',
+    color: mapUi.textSecondary,
   },
   agendaRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 6,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: 'rgba(26, 143, 138, 0.16)',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    backgroundColor: mapUi.mint,
   },
   agendaText: {
     flex: 1,
@@ -195,7 +232,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     fontWeight: '700',
-    color: colors.primary,
+    color: mapUi.teal,
   },
   noteRow: {
     flexDirection: 'row',
@@ -205,48 +242,99 @@ const styles = StyleSheet.create({
   noteText: {
     flex: 1,
     minWidth: 0,
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 12,
+    lineHeight: 17,
     fontWeight: '600',
-    color: colors.textPrimary,
+    color: mapUi.textDark,
   },
   metricsRow: {
     flexDirection: 'row',
-    gap: spacing.xs,
+    flexWrap: 'wrap',
+    gap: 10,
   },
-  metricCell: {
-    flex: 1,
-    minWidth: 0,
-    borderRadius: radius.md,
-    backgroundColor: colors.background,
+  metricCard: {
+    flexGrow: 1,
+    flexBasis: '30%',
+    minWidth: 96,
+    maxWidth: '100%',
+    minHeight: 100,
+    borderRadius: 18,
+    backgroundColor: '#FFFCF8',
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    gap: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    gap: 4,
   },
-  metricValue: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: colors.textPrimary,
+  metricIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
   },
   metricLabel: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '700',
-    color: colors.textSecondary,
+    color: mapUi.textSecondary,
+  },
+  metricValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: mapUi.textDark,
+  },
+  metricSub: {
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '600',
+    color: mapUi.textSecondary,
+    minHeight: 28,
+  },
+  progressTrack: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#EDE9E0',
+    overflow: 'hidden',
+    marginTop: 2,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  recommendedStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 56,
+    borderRadius: 18,
+    backgroundColor: mapUi.goldSoft,
+    borderWidth: 1,
+    borderColor: mapUi.goldBorder,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  recommendedText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '700',
+    color: '#8A6510',
   },
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    borderRadius: radius.lg,
-    backgroundColor: colors.headerTealDark,
-    paddingVertical: 11,
-    paddingHorizontal: spacing.md,
+    gap: 6,
+    borderRadius: 22,
+    backgroundColor: mapUi.tealDark,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
   ctaText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '800',
     color: colors.textInverse,
   },

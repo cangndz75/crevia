@@ -25,15 +25,19 @@ export function DecisionResultHeader({
     'Operasyon sonucu';
 
   return (
-    <View style={[styles.wrap, { paddingTop: Math.max(insets.top, 8) + 4 }]}>
-      <Pressable
-        onPress={onClose}
-        style={({ pressed }) => [styles.closeBtn, pressed && styles.pressed]}
-        accessibilityRole="button"
-        accessibilityLabel="Merkeze dön">
-        <Ionicons name="close" size={22} color={eventDetail.tealDark} />
-        <Text style={styles.closeLabel}>Merkez</Text>
-      </Pressable>
+    <View style={[styles.wrap, { paddingTop: Math.max(insets.top, 8) + 2 }]}>
+      <View style={styles.sideSlot}>
+        <Pressable
+          onPress={onClose}
+          style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
+          accessibilityRole="button"
+          accessibilityLabel="Merkeze dön">
+          <Ionicons name="chevron-back" size={20} color={eventDetail.tealDark} />
+          <Text style={styles.backLabel} numberOfLines={1}>
+            Merkez
+          </Text>
+        </Pressable>
+      </View>
 
       <View style={styles.center}>
         <Text style={styles.title} numberOfLines={1}>
@@ -44,33 +48,47 @@ export function DecisionResultHeader({
         </Text>
       </View>
 
-      <View style={styles.dayChip}>
-        <Text style={styles.dayChipText}>Gün {day}</Text>
+      <View style={styles.sideSlot}>
+        <View style={styles.dayChip}>
+          <Text style={styles.dayChipText} numberOfLines={1}>
+            Gün {day}
+          </Text>
+        </View>
       </View>
     </View>
   );
 }
 
+export { DecisionResultHeader as EventResultTopBar };
+
+const SIDE_SLOT_WIDTH = 88;
+
 const styles = StyleSheet.create({
   wrap: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: eventDetail.screenPadding,
-    paddingBottom: 12,
-    gap: 8,
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingBottom: 10,
   },
-  closeBtn: {
+  sideSlot: {
+    width: SIDE_SLOT_WIDTH,
+    minWidth: 0,
+    flexShrink: 0,
+  },
+  backBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingVertical: 6,
-    paddingRight: 4,
-    minWidth: 72,
+    gap: 2,
+    paddingVertical: 4,
+    minWidth: 0,
+    flexShrink: 1,
   },
-  closeLabel: {
+  backLabel: {
     fontSize: 13,
     fontWeight: '700',
     color: eventDetail.teal,
+    flexShrink: 1,
+    minWidth: 0,
   },
   pressed: {
     opacity: 0.7,
@@ -78,14 +96,15 @@ const styles = StyleSheet.create({
   center: {
     flex: 1,
     alignItems: 'center',
-    paddingTop: 2,
     minWidth: 0,
+    paddingHorizontal: 4,
   },
   title: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: eventDetail.textDark,
     letterSpacing: -0.3,
+    textAlign: 'center',
   },
   subtitle: {
     marginTop: 2,
@@ -93,17 +112,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: eventDetail.textMuted,
     textAlign: 'center',
+    flexShrink: 1,
+    minWidth: 0,
   },
   dayChip: {
+    alignSelf: 'flex-end',
     backgroundColor: eventDetail.mint,
-    borderRadius: 12,
+    borderRadius: 14,
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    minWidth: 56,
-    alignItems: 'center',
+    paddingVertical: 5,
+    minWidth: 0,
   },
   dayChipText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     color: eventDetail.tealDark,
   },

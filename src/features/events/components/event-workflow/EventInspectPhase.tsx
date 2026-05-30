@@ -14,6 +14,7 @@ import {
   getInspectFindingsScene,
   getInspectNeighborhoodHero,
 } from '@/features/events/utils/eventWorkflowAssets';
+import { OnboardingPhaseHint } from '@/features/onboarding/components/OnboardingPhaseHint';
 import { WORKFLOW_CTA_LABELS } from '@/core/ux/uxFlowPresentation';
 import {
   INSPECT_HINT_TEXT,
@@ -27,6 +28,7 @@ type EventInspectPhaseProps = {
   event: EventCard;
   bottomPadding: number;
   onOpenPlanning: () => void;
+  phaseHint?: string | null;
 };
 
 /** Sinyal Özeti ile Ana Bulgular arası: sectionGap (16) − 4 = 12 */
@@ -36,6 +38,7 @@ export function EventInspectPhase({
   event,
   bottomPadding,
   onOpenPlanning,
+  phaseHint = null,
 }: EventInspectPhaseProps) {
   const signalSummary = useMemo(() => buildSignalSummary(event), [event]);
   const evidenceMetrics = useMemo(() => buildEvidenceMetrics(event), [event]);
@@ -76,6 +79,8 @@ export function EventInspectPhase({
             {districtContextLine}
           </Text>
         ) : null}
+
+        {phaseHint ? <OnboardingPhaseHint text={phaseHint} /> : null}
 
         <View style={styles.stepperGap}>
           <EventWorkflowStepper activeStep="inspect" />
