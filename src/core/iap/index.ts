@@ -67,3 +67,49 @@ export {
   verifyIapProductDesignScenario,
   type VerifyIapProductDesignOutcome,
 } from './verifyIapProductDesignScenario';
+
+export {
+  verifyIapIntegrationScenario,
+  type VerifyIapIntegrationOutcome,
+} from './verifyIapIntegrationScenario';
+
+export type {
+  IapRuntimeConfig,
+  IapRuntimeMode,
+  IapRuntimeAdapterStatus,
+  IapRuntimeProduct,
+  IapRuntimeProductListResult,
+  IapValidationResult,
+} from './iapRuntimeTypes';
+
+export {
+  getIapRuntimeConfig,
+  isIapRuntimeEnabled,
+  isRevenueCatConfigured,
+  getRevenueCatApiKeyForPlatform,
+  validateIapRuntimeConfig,
+  looksLikeRevenueCatSecretKey,
+  IAP_RUNTIME_ENV_DOC,
+} from './iapRuntimeConfig';
+
+export {
+  initializeIapRuntime,
+  fetchIapProducts,
+  purchaseIapProduct,
+  restoreIapPurchases,
+  getActiveIapEntitlements,
+  isIapAvailableForRuntime,
+  shouldUseMockPurchaseForOfferScreen,
+  shouldUseRevenueCatPurchaseForOfferScreen,
+  getLastIapRuntimeStatus,
+} from './iapRuntimeService';
+
+export {
+  configureRevenueCatIap,
+  fetchRevenueCatProducts,
+  purchaseRevenueCatProduct,
+  restoreRevenueCatPurchases,
+  getRevenueCatActiveEntitlements,
+  syncRevenueCatEntitlementToMonetizationState,
+  isRevenueCatAdapterConfigured,
+} from './revenueCatIapAdapter';

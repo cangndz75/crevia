@@ -7,6 +7,11 @@ import {
   buildMicroDecisionPresentationInput,
 } from '@/core/microDecisions';
 import { shouldHideAdvancedSystemForFirstTenMinutes } from '@/core/onboarding/firstTenMinutesPresentation';
+import {
+  buildCommonAnalyticsBase,
+  trackCreviaEvent,
+  trackOncePerRuntime,
+} from '@/core/analytics/analyticsRuntime';
 import { deriveMicroDecisionAccessMode } from '@/core/microDecisions/microDecisionEngine';
 import { LiveOperationDecisionCard } from '@/features/hub/components/LiveOperationDecisionCard';
 import {
@@ -77,6 +82,16 @@ export function HubLiveOperationsCard({ compact = false }: HubLiveOperationsCard
     isDay1,
   ]);
 
+  useEffect(() => {
+    if (!model?.decisions.length) return;
+    const base = buildCommonAnalyticsBase(gameState, 'event_field', monetization);
+    for (const decision of model.decisions) {
+      trackOncePerRuntime(`micro_decision_seen:${decision.id}`, 'micro_decision_seen', base, {
+        eventType: 'operations',
+      });
+    }
+  }, [gameState, model, monetization]);
+
   if (
     shouldHideAdvancedSystemForFirstTenMinutes(gameState, 'live_micro_decisions') ||
     !model ||
@@ -105,7 +120,14 @@ export function HubLiveOperationsCard({ compact = false }: HubLiveOperationsCard
             <LiveOperationDecisionCard
               key={decision.id}
               model={decision}
-              onSelectOption={(optionId) => resolveMicroDecision(decision.id, optionId)}
+              onSelectOption={(optionId) => {
+                resolveMicroDecision(decision.id, optionId);
+                trackCreviaEvent(
+                  'micro_decision_resolved',
+                  buildCommonAnalyticsBase(gameState, 'event_field', monetization),
+                  { optionId, eventType: 'operations' },
+                );
+              }}
             />
           ))}
         </View>

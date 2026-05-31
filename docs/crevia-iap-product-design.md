@@ -125,7 +125,7 @@ Aktif değil / bulunamadı:
 ## IAP SDK entegrasyonu — Aşama 2 planı
 
 1. `IapAdapter` implementasyonu (RevenueCat veya native wrapper).
-2. `PostPilotOfferScreen` → `purchaseIapProduct` / `restoreIapPurchases`.
+2. `PostPilotOfferScreen` → `purchaseIapProduct` / `restoreIapPurchases` — **Aşama 2 tamamlandı**; ayrıntılar: [crevia-iap-integration.md](./crevia-iap-integration.md).
 3. `trackAnalyticsEvent` instrumentation (schema hazır).
 4. App Store Connect + Play Console product id oluşturma.
 5. Fiyatlandırma finalize + store listing.

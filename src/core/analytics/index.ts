@@ -66,3 +66,40 @@ export {
   verifyAnalyticsScenario,
   type VerifyAnalyticsOutcome,
 } from './verifyAnalyticsScenario';
+
+export {
+  trackCreviaEvent,
+  trackOncePerRuntime,
+  clearAnalyticsRuntimeGuardsForTesting,
+  getAnalyticsRuntimeGuardKeysForTesting,
+  buildCommonAnalyticsBase,
+  getAnalyticsAccessModeFromGameState,
+  getAnalyticsDayFields,
+  hasAnalyticsRuntimeGuard,
+  type AnalyticsTrackBase,
+} from './analyticsRuntime';
+
+export {
+  sanitizeAnalyticsId,
+  sanitizeAnalyticsEventType,
+  getAssignmentFitBand,
+  getAssignmentFitBandFromLabel,
+  getResourceStatusBand,
+  getCrisisRiskBand,
+  getResultBandFromSummaryTone,
+  getRatingBandFromSeasonRating,
+  buildDecisionAnalyticsPayload,
+  buildAssignmentAnalyticsPayload,
+  buildResourceAnalyticsPayload,
+  buildCrisisAnalyticsPayload,
+  buildSeasonEndAnalyticsPayload,
+  buildEventResultAnalyticsPayload,
+  resolveAssignmentForEventPayload,
+  scoreToResourceStatusBand,
+  getAnalyticsAccessMode,
+} from './analyticsPayloadBuilders';
+
+export {
+  verifyAnalyticsRuntimeScenario,
+  type VerifyAnalyticsRuntimeOutcome,
+} from './verifyAnalyticsRuntimeScenario';

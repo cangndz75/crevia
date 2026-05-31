@@ -1,3 +1,8 @@
+import type { IapEntitlementState } from '@/core/iap/iapProductTypes';
+import {
+  buildOwnedPackFromEntitlement,
+  shouldUnlockMainOperationFromEntitlement,
+} from '@/core/iap/iapEntitlementMapping';
 import type { GameState } from '@/core/models/GameState';
 
 import { MAIN_OPERATION_PRODUCT_ID } from './monetizationConstants';
@@ -196,6 +201,34 @@ export function selectLimitedContinue(
     offerStatus: 'limited_selected',
     selectedLimitedContinueDay: day,
     ownedPacks: [],
+  };
+}
+
+export function applyIapEntitlementToMonetizationState(
+  state: MonetizationState,
+  entitlement: IapEntitlementState,
+  day: number,
+): MonetizationState {
+  if (!shouldUnlockMainOperationFromEntitlement(entitlement)) {
+    return state;
+  }
+  if (
+    getMainOperationAccess(state) === 'full' &&
+    isMainOperationPackOwned(state)
+  ) {
+    return state;
+  }
+  const pack = buildOwnedPackFromEntitlement(entitlement, day);
+  const ownedPacks =
+    pack && !state.ownedPacks.some((p) => p.productId === pack.productId)
+      ? [...state.ownedPacks, pack]
+      : state.ownedPacks;
+  return {
+    ...state,
+    mainOperationAccess: 'full',
+    offerStatus: 'mock_purchased',
+    mockPurchaseCompletedDay: day,
+    ownedPacks,
   };
 }
 

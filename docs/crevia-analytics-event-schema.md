@@ -10,7 +10,7 @@ Soft-launch öncesi hangi oyuncu davranışlarının ölçüleceğini netleştir
 - Event isimleri `snake_case`, sabit union type (`AnalyticsEventName`).
 - Her event: `surface`, `schemaVersion`, funnel bağlantısı ve allowlist/required key listesi.
 - Production’da `trackAnalyticsEvent` no-op; ağ isteği yok.
-- Instrumentation sonraki aşamada; bu aşamada schema + verify yeterli.
+- Runtime instrumentation (MVP Aşama 2): kritik funnel eventleri `trackCreviaEvent` / `trackOncePerRuntime` ile bağlı — bkz. [crevia-analytics-runtime-instrumentation.md](./crevia-analytics-runtime-instrumentation.md). Gerçek SDK hâlâ sonraki aşama.
 
 ## Privacy-safe
 

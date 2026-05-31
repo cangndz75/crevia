@@ -1,8 +1,18 @@
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { StyleSheet, Text, View } from 'react-native';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
+import {
+  buildCrisisAnalyticsPayload,
+  buildResourceAnalyticsPayload,
+  buildSeasonEndAnalyticsPayload,
+} from '@/core/analytics/analyticsPayloadBuilders';
+import {
+  buildCommonAnalyticsBase,
+  trackOncePerRuntime,
+} from '@/core/analytics/analyticsRuntime';
 import { normalizeAuthorityState } from '@/core/authority/authoritySeed';
+import { buildSeasonEndEvaluationModel, buildSeasonEndReportCardModel } from '@/core/seasonEnd';
 import type { DailyReport } from '@/core/models/DailyReport';
 import type { GameMetrics } from '@/core/models/GameMetrics';
 import type { DailyXpReport } from '@/core/xp/xpReport';
@@ -91,6 +101,15 @@ export function EndOfDayReportView({
   );
   const currentPilotDay = useGameStore((s) => s.gameState.pilot.currentPilotDay);
   const gameState = useGameStore((s) => s.gameState);
+  const monetization = useGameStore((s) => s.monetization);
+  const crisisState = useGameStore((s) => s.crisisState);
+  const operationalResources = useGameStore((s) => s.operationalResources);
+  const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
+  const operationSignals = useGameStore((s) => s.operationSignals);
+  const crisisActionState = useGameStore((s) => s.crisisActionState);
+  const assignments = useGameStore((s) => s.assignments);
+  const microDecisionState = useGameStore((s) => s.microDecisionState);
+  const socialPulseState = useGameStore((s) => s.socialPulseState);
 
   const reportGuard = useMemo(
     () => buildFirstTenMinutesReportGuard(gameState),
@@ -172,6 +191,129 @@ export function EndOfDayReportView({
         : null,
     [pilotReportContext, decisionHistory, report.day],
   );
+
+  const seasonEndInput = useMemo(
+    () => ({
+      gameState,
+      monetization,
+      mainOperationSeason,
+      operationSignals,
+      operationalResources,
+      crisisState,
+      crisisActionState,
+      assignments,
+      microDecisionState,
+      socialPulseState,
+    }),
+    [
+      assignments,
+      crisisActionState,
+      crisisState,
+      gameState,
+      mainOperationSeason,
+      microDecisionState,
+      monetization,
+      operationSignals,
+      operationalResources,
+      socialPulseState,
+    ],
+  );
+
+  const seasonEndEvaluation = useMemo(
+    () => buildSeasonEndEvaluationModel(seasonEndInput),
+    [seasonEndInput],
+  );
+
+  const seasonEndCardModel = useMemo(
+    () => buildSeasonEndReportCardModel(seasonEndInput),
+    [seasonEndInput],
+  );
+
+  useEffect(() => {
+    const base = buildCommonAnalyticsBase(gameState, 'report', monetization);
+    const dayKey = report.day;
+
+    trackOncePerRuntime(`report_opened:${dayKey}`, 'report_opened', base);
+    trackOncePerRuntime(`report_primary_impact_seen:${dayKey}`, 'report_primary_impact_seen', base);
+
+    if (!reportGuard.compactPrimaryImpact) {
+      trackOncePerRuntime(`report_daily_plan_seen:${dayKey}`, 'report_daily_plan_seen', base);
+      trackOncePerRuntime(
+        `report_assignment_seen:${dayKey}`,
+        'report_assignment_seen',
+        base,
+        { assignmentFitBand: 'steady' },
+      );
+    }
+
+    if (!reportGuard.hideCrisis) {
+      trackOncePerRuntime(
+        `report_crisis_seen:${dayKey}`,
+        'report_crisis_seen',
+        base,
+        buildCrisisAnalyticsPayload(crisisState, gameState, monetization),
+      );
+    }
+
+    const activeCrisisAction = crisisActionState.activeActionId
+      ? crisisActionState.actionsById[crisisActionState.activeActionId]
+      : undefined;
+    if (!reportGuard.hideCrisisActions && activeCrisisAction?.type) {
+      trackOncePerRuntime(
+        `crisis_action_processed:${dayKey}`,
+        'crisis_action_processed',
+        buildCommonAnalyticsBase(gameState, 'hub', monetization),
+        {
+          ...buildCrisisAnalyticsPayload(crisisState, gameState, monetization),
+          hasCrisisAction: true,
+          optionId: activeCrisisAction.type,
+        },
+      );
+    }
+
+    trackOncePerRuntime(
+      `report_resources_seen:${dayKey}`,
+      'report_resources_seen',
+      base,
+      buildResourceAnalyticsPayload(operationalResources),
+    );
+
+    if (!reportGuard.hideMicroDecisions) {
+      trackOncePerRuntime(`report_micro_decision_seen:${dayKey}`, 'report_micro_decision_seen', base);
+    }
+
+    if (!reportGuard.hideMainOperation) {
+      trackOncePerRuntime(`report_main_operation_seen:${dayKey}`, 'report_main_operation_seen', base);
+    }
+
+    if (seasonEndEvaluation) {
+      const seasonPayload = buildSeasonEndAnalyticsPayload(
+        seasonEndEvaluation,
+        gameState,
+        monetization,
+      );
+      trackOncePerRuntime(`season_end_seen:${dayKey}`, 'season_end_seen', base, seasonPayload);
+      trackOncePerRuntime(
+        `report_season_end_seen:${dayKey}`,
+        'report_season_end_seen',
+        base,
+        seasonPayload,
+      );
+    }
+  }, [
+    crisisActionState.activeActionId,
+    crisisState,
+    gameState,
+    monetization,
+    operationalResources,
+    report.day,
+    reportGuard.compactPrimaryImpact,
+    reportGuard.hideCrisis,
+    reportGuard.hideCrisisActions,
+    reportGuard.hideMainOperation,
+    reportGuard.hideMicroDecisions,
+    seasonEndEvaluation,
+  ]);
 
   return (
     <View style={styles.stack}>

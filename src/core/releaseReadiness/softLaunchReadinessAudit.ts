@@ -8,6 +8,8 @@ import { verifyAnalyticsScenario } from '@/core/analytics/verifyAnalyticsScenari
 import { verifyAssignmentScenario } from '@/core/assignments/verifyAssignmentScenario';
 import { verifyDayPipelineScenario } from '@/core/dayPipeline/verifyDayPipelineScenario';
 import { runFullLoopAnalysis } from '@/core/fullLoop/runFullLoopSimulation';
+import { runIapSandboxQaAudit } from '@/core/iapQa/iapSandboxQaAudit';
+import { IAP_SANDBOX_QA_DOCS_PATH } from '@/core/iapQa/iapSandboxQaConstants';
 import { verifyIapProductDesignScenario } from '@/core/iap/verifyIapProductDesignScenario';
 import { getMainOperationProductDefinition } from '@/core/iap/iapProductDesign';
 import { IAP_UI_FORBIDDEN_WORDS } from '@/core/iap/iapProductConstants';
@@ -608,6 +610,8 @@ export function auditIapReadiness(mode: SoftLaunchReadinessAuditMode): SoftLaunc
   const implBlob = [
     'src/core/iap/iapAdapterContract.ts',
     'src/core/iap/iapProductDesign.ts',
+    'src/core/iap/revenueCatIapAdapter.ts',
+    'src/core/iap/iapRuntimeService.ts',
   ]
     .map(readRepo)
     .join('\n');
@@ -621,9 +625,9 @@ export function auditIapReadiness(mode: SoftLaunchReadinessAuditMode): SoftLaunc
       pass(
         'monetization_iap.real_sdk',
         'monetization_iap',
-        'IAP SDK import detected',
-        'Native billing module present in iap core.',
-        'Wire PostPilotOfferScreen to adapter.',
+        'IAP SDK code present',
+        'react-native-purchases isolated in revenueCatIapAdapter.',
+        'Complete manual sandbox QA on development build.',
         'monetization',
       ),
     );
@@ -651,6 +655,61 @@ export function auditIapReadiness(mode: SoftLaunchReadinessAuditMode): SoftLaunc
     );
   }
 
+  const sandboxQa = runIapSandboxQaAudit();
+  if (sandboxQa.health === 'BLOCKED' || sandboxQa.health === 'FAIL') {
+    findings.push(
+      warnFinding(
+        'monetization_iap.sandbox_qa_audit',
+        'monetization_iap',
+        'IAP sandbox QA audit issues',
+        `verify:iap-sandbox-qa health=${sandboxQa.health}.`,
+        'Fix BLOCKER/FAIL before sandbox test.',
+        'monetization',
+      ),
+    );
+  } else {
+    findings.push(
+      warnFinding(
+        'monetization_iap.sandbox_qa_pending',
+        'monetization_iap',
+        'IAP sandbox QA manual steps pending',
+        `Automatic checks: ${sandboxQa.passCount} pass, ${sandboxQa.warnCount} warn — store/dashboard/native manual.`,
+        'Run npm run verify:iap-sandbox-qa and docs/crevia-iap-sandbox-qa.md.',
+        'monetization',
+      ),
+    );
+  }
+
+  if (
+    sandboxQa.findings.some(
+      (f) =>
+        (f.id === 'env.ios_public_key' || f.id === 'env.android_public_key') &&
+        f.severity === 'warn',
+    )
+  ) {
+    findings.push(
+      warnFinding(
+        'monetization_iap.public_keys_pending',
+        'monetization_iap',
+        'RevenueCat public SDK keys pending',
+        'EXPO_PUBLIC_REVENUECAT_* not set for sandbox.',
+        'Add appl_/goog_ keys to .env or EAS secrets.',
+        'monetization',
+      ),
+    );
+  }
+
+  findings.push(
+    warnFinding(
+      'monetization_iap.sandbox_purchase_pending',
+      'monetization_iap',
+      'Manual sandbox purchase not verified',
+      'Automated store purchase test out of scope.',
+      'Complete purchase smoke test on EAS dev build.',
+      'monetization',
+    ),
+  );
+
   findings.push(
     warnFinding(
       'monetization_iap.store_product_ids',
@@ -672,6 +731,19 @@ export function auditIapReadiness(mode: SoftLaunchReadinessAuditMode): SoftLaunc
       'product',
     ),
   );
+
+  if (existsSync(join(REPO_ROOT, IAP_SANDBOX_QA_DOCS_PATH))) {
+    findings.push(
+      pass(
+        'monetization_iap.sandbox_qa_docs',
+        'monetization_iap',
+        'IAP sandbox QA docs',
+        IAP_SANDBOX_QA_DOCS_PATH,
+        'Follow checklist before device test.',
+        'monetization',
+      ),
+    );
+  }
 
   if (existsSync(join(REPO_ROOT, SOFT_LAUNCH_IAP_DOCS_PATH))) {
     findings.push(
@@ -764,23 +836,42 @@ export function auditAnalyticsReadiness(mode: SoftLaunchReadinessAuditMode): Sof
       blockerFinding(
         'analytics.instrumentation_launch',
         'analytics',
-        'Runtime analytics instrumentation required',
-        'trackAnalyticsEvent not connected to production SDK.',
-        'Wire instrumentation before soft-launch build.',
+        'Production analytics SDK required',
+        'trackAnalyticsEvent is no-op; wire Firebase/Amplitude/PostHog before soft-launch build.',
+        'Connect SDK + dashboard; run manual funnel smoke on device.',
         'analytics',
       ),
     );
   } else {
-    findings.push(
-      warnFinding(
-        'analytics.instrumentation_pending',
-        'analytics',
-        'Runtime analytics instrumentation pending',
-        'Schema ready; UI instrumentation not connected.',
-        'Connect trackAnalyticsEvent in PostPilotOffer and key surfaces.',
-        'analytics',
-      ),
-    );
+    const runtimeBlob = readRepo('src/core/analytics/analyticsRuntime.ts');
+    const hasRuntimeInstrumentation =
+      runtimeBlob.includes('trackCreviaEvent') &&
+      runtimeBlob.includes('trackOncePerRuntime') &&
+      readRepo('src/features/hub/screens/HubScreen.tsx').includes('trackOncePerRuntime');
+
+    if (hasRuntimeInstrumentation) {
+      findings.push(
+        pass(
+          'analytics.instrumentation_mvp',
+          'analytics',
+          'Runtime analytics instrumentation (MVP)',
+          'Critical funnel events wired via trackCreviaEvent / trackOncePerRuntime (no-op tracker).',
+          'Wire production SDK + dashboard before launch_candidate build.',
+          'analytics',
+        ),
+      );
+    } else {
+      findings.push(
+        warnFinding(
+          'analytics.instrumentation_pending',
+          'analytics',
+          'Runtime analytics instrumentation pending',
+          'Schema ready; UI instrumentation not connected.',
+          'Connect trackAnalyticsEvent in PostPilotOffer and key surfaces.',
+          'analytics',
+        ),
+      );
+    }
     findings.push(
       warnFinding(
         'analytics.dashboard_pending',

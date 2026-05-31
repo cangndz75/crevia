@@ -180,12 +180,21 @@ export function verifySoftLaunchReadinessScenario(): VerifySoftLaunchReadinessOu
       'missing iap design',
     ) && ok;
 
+  ok =
+    assert(
+      checks,
+      hasFinding(result, (f) => f.id === 'monetization_iap.real_sdk') ||
+        hasFinding(result, (f) => f.id === 'monetization_iap.sandbox_qa_pending'),
+      'IAP SDK code or sandbox QA finding',
+      'missing IAP SDK/sandbox finding',
+    ) && ok;
+
   if (
     !warn(
       checks,
-      hasFinding(result, (f) => f.id === 'monetization_iap.iap_sdk_pending'),
-      'real SDK pending WARN',
-      'IAP SDK WARN missing',
+      hasFinding(result, (f) => f.id === 'monetization_iap.sandbox_qa_pending'),
+      'IAP sandbox QA pending WARN',
+      'IAP sandbox QA WARN missing',
     )
   ) {
     hasWarn = true;
@@ -229,9 +238,10 @@ export function verifySoftLaunchReadinessScenario(): VerifySoftLaunchReadinessOu
   if (
     !warn(
       checks,
-      hasFinding(result, (f) => f.id === 'analytics.instrumentation_pending'),
-      'runtime instrumentation WARN',
-      'instrumentation WARN missing',
+      hasFinding(result, (f) => f.id === 'analytics.instrumentation_pending') ||
+        hasFinding(result, (f) => f.id === 'analytics.instrumentation_mvp'),
+      'runtime instrumentation status',
+      'instrumentation finding missing',
     )
   ) {
     hasWarn = true;
@@ -411,9 +421,11 @@ export function verifySoftLaunchReadinessScenario(): VerifySoftLaunchReadinessOu
   ok =
     assert(
       checks,
-      hasFinding(launchResult, (f) => f.id === 'monetization_iap.iap_sdk_missing_launch'),
-      'IAP SDK launch blocker simulated',
-      'missing launch IAP blocker',
+      hasFinding(launchResult, (f) => f.id === 'monetization_iap.iap_sdk_missing_launch') ||
+        hasFinding(launchResult, (f) => f.id === 'monetization_iap.sandbox_qa_pending') ||
+        hasFinding(launchResult, (f) => f.id === 'monetization_iap.sandbox_purchase_pending'),
+      'IAP launch gating finding (SDK missing or sandbox QA pending)',
+      'missing launch IAP finding',
     ) && ok;
   ok =
     assert(

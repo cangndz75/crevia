@@ -4,6 +4,14 @@ import { StyleSheet, View } from 'react-native';
 
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import { DEFAULT_PILOT_DISTRICT_ID } from '@/core/models/DistrictProfile';
+import {
+  buildCrisisAnalyticsPayload,
+  buildResourceAnalyticsPayload,
+} from '@/core/analytics/analyticsPayloadBuilders';
+import {
+  buildCommonAnalyticsBase,
+  trackOncePerRuntime,
+} from '@/core/analytics/analyticsRuntime';
 import { buildMainOperationMapScopeBadges } from '@/core/mainOperation/mainOperationPresentation';
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 import { buildPostPilotMapContextLineForGameState } from '@/core/postPilot/postPilotOperationUxPresentation';
@@ -244,6 +252,38 @@ export function MapScreen() {
     () => buildMapResourcePresentationBundle(mapResourceInput),
     [mapResourceInput],
   );
+
+  useEffect(() => {
+    const base = buildCommonAnalyticsBase(gameStateForMap, 'map', monetization);
+    trackOncePerRuntime(`map_opened:${gameDay}`, 'map_opened', base);
+
+    if (showPostPilotMapChrome && mapResourcePresentation.visible) {
+      trackOncePerRuntime(
+        `map_resource_overlay_seen:${gameDay}`,
+        'map_resource_overlay_seen',
+        base,
+        buildResourceAnalyticsPayload(operationalResources),
+      );
+    }
+
+    if (showPostPilotMapChrome && mapCrisisPresentation.visible) {
+      trackOncePerRuntime(
+        `map_crisis_overlay_seen:${gameDay}`,
+        'map_crisis_overlay_seen',
+        base,
+        buildCrisisAnalyticsPayload(crisisState, gameStateForMap, monetization),
+      );
+    }
+  }, [
+    crisisState,
+    gameDay,
+    gameStateForMap,
+    mapCrisisPresentation.visible,
+    mapResourcePresentation.visible,
+    monetization,
+    operationalResources,
+    showPostPilotMapChrome,
+  ]);
 
   const crisisHighlightDistrictIds = useMemo(() => {
     if (!showPostPilotMapChrome || !mapCrisisPresentation.visible) {

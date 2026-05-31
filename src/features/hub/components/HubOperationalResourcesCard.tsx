@@ -2,6 +2,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { buildResourceAnalyticsPayload } from '@/core/analytics/analyticsPayloadBuilders';
+import {
+  buildCommonAnalyticsBase,
+  trackCreviaEvent,
+} from '@/core/analytics/analyticsRuntime';
 import {
   buildOperationalResourceEngineInputFromStore,
   buildOperationalResourceHubModel,
@@ -103,7 +108,14 @@ export function HubOperationalResourcesCard() {
                 styles.cta,
                 getPressFeedbackStyle({ pressed }),
               ]}
-              onPress={() => setDetailOpen(true)}
+              onPress={() => {
+                const base = buildCommonAnalyticsBase(gameState, 'hub', monetization);
+                trackCreviaEvent('operational_resources_detail_opened', base, {
+                  ...buildResourceAnalyticsPayload(operationalResources),
+                  source: 'hub_resources_cta',
+                });
+                setDetailOpen(true);
+              }}
               accessibilityRole="button"
               accessibilityLabel={model.detailCtaLabel}>
               <Text style={styles.ctaText} numberOfLines={1}>

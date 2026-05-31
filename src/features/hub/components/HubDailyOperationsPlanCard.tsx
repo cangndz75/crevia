@@ -20,6 +20,11 @@ import type {
   DailyPlanOption,
   DailyVehicleFocus,
 } from '@/core/dailyPlanning/dailyPlanningTypes';
+import { sanitizeAnalyticsId } from '@/core/analytics/analyticsPayloadBuilders';
+import {
+  buildCommonAnalyticsBase,
+  trackCreviaEvent,
+} from '@/core/analytics/analyticsRuntime';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import {
   HUB_PREMIUM_COLORS,
@@ -139,10 +144,21 @@ export function HubDailyOperationsPlanCard({
     setEditorOpen(true);
   };
 
+  const trackPlanConfirmed = () => {
+    const base = buildCommonAnalyticsBase(gameState, 'hub', monetization);
+    trackCreviaEvent('daily_plan_confirmed', base, {
+      source: 'hub_card',
+      districtId: sanitizeAnalyticsId(dailyOperationsPlan.districtFocusId),
+      optionId: sanitizeAnalyticsId(dailyOperationsPlan.personnelFocus),
+      isFirstSession: base.isFirstSession,
+    });
+  };
+
   const handleConfirm = () => {
     playLightImpactHaptic();
     if (hubModel.canConfirm) {
       confirmPlan();
+      trackPlanConfirmed();
       return;
     }
     if (!isDay1 && hubModel.canEdit) {
@@ -159,6 +175,7 @@ export function HubDailyOperationsPlanCard({
       vehicleFocus: draftVehicle,
       containerFocus: draftContainer,
     });
+    trackPlanConfirmed();
     setEditorOpen(false);
   };
 

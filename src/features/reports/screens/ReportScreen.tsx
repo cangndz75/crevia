@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import { buildCommonAnalyticsBase, trackCreviaEvent } from '@/core/analytics/analyticsRuntime';
 import { resolveReportContinueCtaLabel } from '@/core/ux/uxFlowPresentation';
 import { buildDay1TutorialPriorityLine } from '@/core/dailyPriority/dailyPriorityPresentation';
 import { MAIN_OPERATION_PREVIEW_ROUTE } from '@/core/pilotCompletion';
@@ -181,12 +182,18 @@ export function ReportScreen() {
   const router = useRouter();
   const report = useGameStore(selectLastDailyReport);
   const gameState = useGameStore((s) => s.gameState);
+  const monetization = useGameStore((s) => s.monetization);
   const lastClosedDay = useGameStore((s) => s.lastClosedDay);
   const metrics = useGameMetrics();
   const playerProgressFromStore = useGameStore((s) => s.playerProgress);
   const decisionHistory = useGameStore(selectDecisionHistory);
 
-  const onGoHub = () => goToHub(router);
+  const onGoHub = () => {
+    if (report) {
+      trackCreviaEvent('hub_returned', buildCommonAnalyticsBase(gameState, 'hub', monetization));
+    }
+    goToHub(router);
+  };
 
   if (!report) {
     return <ReportEmpty onGoHub={onGoHub} />;

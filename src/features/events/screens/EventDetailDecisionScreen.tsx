@@ -15,6 +15,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ASSIGNMENT_COPY } from '@/core/assignments/assignmentConstants';
 import { getEventAssignment } from '@/core/assignments/assignmentState';
 import {
+  buildAssignmentAnalyticsPayload,
+  buildDecisionAnalyticsPayload,
+  sanitizeAnalyticsEventType,
+} from '@/core/analytics/analyticsPayloadBuilders';
+import { buildCommonAnalyticsBase } from '@/core/analytics/analyticsRuntime';
+import { trackCreviaEvent, trackOncePerRuntime } from '@/core/analytics/analyticsRuntime';
+import {
   checkDecisionAffordability,
   type DecisionAffordabilityCheck,
 } from '@/core/economy/economyAffordability';
@@ -126,7 +133,9 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
   const economyState = useGameStore((s) => s.economyState);
   const personnelState = useGameStore(selectPersonnelState);
   const eventAdvisor = useGameStore((s) => s.gameState.eventAdvisor);
-  const currentDay = useGameStore((s) => s.gameState.city.day);
+  const gameState = useGameStore((s) => s.gameState);
+  const monetization = useGameStore((s) => s.monetization);
+  const currentDay = gameState.city.day;
   const isDay1Tutorial = useGameStore(selectIsDay1TutorialActive);
   const dailyEventSet = useGameStore((s) => s.gameState.pilot.dailyEventSet);
   const containerState = useGameStore(selectContainerState);
@@ -491,6 +500,12 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
         return;
       }
       playSuccessHaptic();
+      if (selectedDecision) {
+        trackCreviaEvent(
+          'decision_selected',
+          buildDecisionAnalyticsPayload(event, selectedDecision, gameState, monetization),
+        );
+      }
       router.push('/events/decision-result');
     } catch {
       Alert.alert(
@@ -525,6 +540,44 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
   }, [applySelectedDecision, effectiveSelectedId]);
 
   const assignmentPrepRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!event) return;
+    trackOncePerRuntime(
+      `first_event_opened:${event.id}`,
+      'first_event_opened',
+      buildCommonAnalyticsBase(gameState, 'event_plan', monetization),
+      { eventType: sanitizeAnalyticsEventType(event) },
+    );
+  }, [event, gameState, monetization]);
+
+  useEffect(() => {
+    if (!event || operationStep !== 'assign') return;
+    trackOncePerRuntime(
+      `assignment_seen:${event.id}`,
+      'assignment_seen',
+      buildAssignmentAnalyticsPayload(
+        event,
+        getEventAssignment(assignments, event.id),
+        gameState,
+        monetization,
+      ),
+    );
+  }, [assignments, event, gameState, monetization, operationStep]);
+
+  useEffect(() => {
+    if (!event || operationStep !== 'field') return;
+    trackOncePerRuntime(
+      `field_phase_started:${event.id}`,
+      'field_phase_started',
+      buildAssignmentAnalyticsPayload(
+        event,
+        getEventAssignment(assignments, event.id),
+        gameState,
+        monetization,
+      ),
+    );
+  }, [assignments, event, gameState, monetization, operationStep]);
 
   useEffect(() => {
     if (!event || operationStep !== 'assign') return;

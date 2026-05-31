@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MONETIZATION_COPY } from '@/core/monetization/monetizationConstants';
@@ -13,6 +13,14 @@ type Props = {
   onPrimary: () => void;
   onSecondary: () => void;
   onRestore: () => void;
+  primaryDisabled?: boolean;
+  restoreDisabled?: boolean;
+  statusMessage?: string;
+  errorMessage?: string;
+  priceLabel?: string;
+  productDisplayLabel?: string;
+  isPurchasing?: boolean;
+  isRestoring?: boolean;
 };
 
 export function PostPilotAccessChoiceCard({
@@ -20,8 +28,17 @@ export function PostPilotAccessChoiceCard({
   onPrimary,
   onSecondary,
   onRestore,
+  primaryDisabled = false,
+  restoreDisabled = false,
+  statusMessage,
+  errorMessage,
+  priceLabel,
+  productDisplayLabel,
+  isPurchasing = false,
+  isRestoring = false,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const primaryBusy = isPurchasing || isRestoring;
 
   if (model.isFullAccess) {
     return (
@@ -53,6 +70,32 @@ export function PostPilotAccessChoiceCard({
 
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      {productDisplayLabel || priceLabel ? (
+        <View style={styles.productMeta}>
+          {productDisplayLabel ? (
+            <Text style={styles.productTitle} numberOfLines={1}>
+              {productDisplayLabel}
+            </Text>
+          ) : null}
+          {priceLabel ? (
+            <Text style={styles.productPrice} numberOfLines={1}>
+              {priceLabel}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
+      {statusMessage ? (
+        <Text style={styles.statusInline} numberOfLines={2}>
+          {statusMessage}
+        </Text>
+      ) : null}
+      {errorMessage ? (
+        <Text style={styles.errorInline} numberOfLines={2}>
+          {errorMessage}
+        </Text>
+      ) : null}
+
       {model.isLimitedAccess ? (
         <View style={[styles.statusCard, styles.statusLimited]}>
           <Text style={styles.statusTitle} numberOfLines={1}>
@@ -65,19 +108,29 @@ export function PostPilotAccessChoiceCard({
       ) : null}
 
       <Pressable
+        disabled={primaryDisabled || primaryBusy}
         onPress={() => {
+          if (primaryDisabled || primaryBusy) return;
           playLightImpactHaptic();
           onPrimary();
         }}
-        style={({ pressed }) => [styles.primaryWrap, getPressFeedbackStyle({ pressed })]}>
+        style={({ pressed }) => [
+          styles.primaryWrap,
+          (primaryDisabled || primaryBusy) && styles.disabled,
+          getPressFeedbackStyle({ pressed: pressed && !primaryDisabled }),
+        ]}>
         <LinearGradient
           colors={[eventDetail.tealDark, eventDetail.teal]}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={styles.primaryBtn}>
-          <Text style={styles.primaryLabel} numberOfLines={1}>
-            {model.primaryCtaLabel}
-          </Text>
+          {isPurchasing ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.primaryLabel} numberOfLines={1}>
+              {model.primaryCtaLabel}
+            </Text>
+          )}
         </LinearGradient>
       </Pressable>
 
@@ -98,14 +151,21 @@ export function PostPilotAccessChoiceCard({
       ) : null}
 
       <Pressable
+        disabled={restoreDisabled || primaryBusy}
         onPress={() => {
+          if (restoreDisabled || primaryBusy) return;
+          playLightImpactHaptic();
           onRestore();
-          Alert.alert('Erişim', MONETIZATION_COPY.restoreFeedback);
         }}
-        accessibilityRole="button">
-        <Text style={styles.restoreLabel} numberOfLines={1}>
-          {model.restoreLabel}
-        </Text>
+        accessibilityRole="button"
+        style={restoreDisabled ? styles.disabled : undefined}>
+        {isRestoring ? (
+          <ActivityIndicator size="small" color="#6B8480" />
+        ) : (
+          <Text style={styles.restoreLabel} numberOfLines={1}>
+            {model.restoreLabel}
+          </Text>
+        )}
       </Pressable>
 
       <Text style={styles.footer} numberOfLines={2}>
@@ -120,6 +180,35 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingTop: 8,
     minWidth: 0,
+  },
+  productMeta: {
+    gap: 2,
+    alignItems: 'center',
+  },
+  productTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: eventDetail.tealDark,
+  },
+  productPrice: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B8480',
+  },
+  statusInline: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: eventDetail.tealDark,
+    textAlign: 'center',
+  },
+  errorInline: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9A6B3A',
+    textAlign: 'center',
+  },
+  disabled: {
+    opacity: 0.55,
   },
   statusCard: {
     borderRadius: 14,

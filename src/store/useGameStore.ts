@@ -227,7 +227,9 @@ import {
   buildDevJumpPilotCompletedGameState,
   deriveMonetizationStateFromGameState,
 } from '@/core/monetization/monetizationEngine';
+import type { IapEntitlementState } from '@/core/iap/iapProductTypes';
 import {
+  applyIapEntitlementToMonetizationState,
   createInitialMonetizationState,
   markMainOperationOfferSeen,
   mockPurchaseMainOperationPack,
@@ -526,6 +528,7 @@ type GameStoreActions = {
   markMainOperationOfferSeen: () => void;
   continueWithLimitedAgenda: () => void;
   mockPurchaseMainOperationPack: () => void;
+  applyIapEntitlementToMonetization: (entitlement: IapEntitlementState) => void;
   restoreMainOperationAccessPlaceholder: () => void;
   refreshMainOperationSeason: () => void;
   processMainOperationSeasonForEndOfDay: () => void;
@@ -2207,6 +2210,40 @@ export const useGameStore = create<GameStore>()(
         let nextGameState = applyFullAccessToGameState(current.gameState);
         const nextMonetization = mockPurchaseMainOperationPack(
           current.monetization,
+          day,
+        );
+        const nextSeason = syncMainOperationSeasonAfterFullUnlock(
+          nextGameState,
+          nextMonetization,
+          current.mainOperationSeason,
+        );
+        const postPilotRefresh = refreshPilotEventsForStore(
+          nextGameState,
+          current.eventPool,
+          {
+            ...current,
+            monetization: nextMonetization,
+            mainOperationSeason: nextSeason,
+          },
+        );
+        set({
+          gameState: withSyncedPulse(postPilotRefresh.gameState),
+          eventPool: postPilotRefresh.eventPool,
+          monetization: nextMonetization,
+          mainOperationSeason: nextSeason,
+        });
+      },
+
+      applyIapEntitlementToMonetization: (entitlement) => {
+        const current = get();
+        const day = Math.max(
+          current.gameState.city.day,
+          current.gameState.pilot.currentPilotDay,
+        );
+        const nextGameState = applyFullAccessToGameState(current.gameState);
+        const nextMonetization = applyIapEntitlementToMonetizationState(
+          current.monetization,
+          entitlement,
           day,
         );
         const nextSeason = syncMainOperationSeasonAfterFullUnlock(

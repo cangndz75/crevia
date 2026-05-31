@@ -41,6 +41,7 @@ export function getSoftLaunchReleaseDecision(
   const sdkReady = !result.findings.some(
     (f) =>
       f.id === 'monetization_iap.iap_sdk_pending' ||
+      f.id === 'monetization_iap.sandbox_qa_pending' ||
       f.id === 'monetization_iap.iap_sdk_missing_launch',
   );
   const instrumentationReady = !result.findings.some(
@@ -81,6 +82,9 @@ export function getNextRecommendedPatch(result: SoftLaunchReadinessAuditResult):
   if (result.findings.some((f) => f.id.includes('manual_playtest'))) {
     return 'Manual playtest patch — docs/crevia-player-flow-playtest-checklist.md ile 4 profil + gerçek cihaz testi.';
   }
+  if (result.findings.some((f) => f.id === 'monetization_iap.sandbox_qa_pending')) {
+    return 'IAP Sandbox QA (Aşama 1) — EAS dev build, RevenueCat/store dashboard, sandbox purchase + restore manuel test.';
+  }
   if (
     result.findings.some((f) => f.id === 'monetization_iap.iap_sdk_pending') &&
     result.auditMode === 'pre_sdk'
@@ -101,6 +105,12 @@ export function buildSoftLaunchNextSteps(result: SoftLaunchReadinessAuditResult)
   if (result.releaseDecision === 'Blocked') {
     steps.push('Blocker bulgularını gider ve verify paketini yeniden çalıştır.');
     return steps;
+  }
+  if (result.findings.some((f) => f.id === 'monetization_iap.sandbox_qa_pending')) {
+    steps.push('npm run verify:iap-sandbox-qa — env keys, native checklist, sandbox smoke test.');
+  }
+  if (result.findings.some((f) => f.id === 'monetization_iap.public_keys_pending')) {
+    steps.push('EXPO_PUBLIC_REVENUECAT_IOS/ANDROID public keys — EAS secrets.');
   }
   if (result.findings.some((f) => f.id === 'monetization_iap.iap_sdk_pending')) {
     steps.push('Real IAP SDK entegrasyonu (Aşama 2) — IapAdapter + store ürünleri.');

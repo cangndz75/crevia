@@ -1,8 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { buildSeasonEndAnalyticsPayload } from '@/core/analytics/analyticsPayloadBuilders';
+import { trackCreviaEvent } from '@/core/analytics/analyticsRuntime';
 import {
   buildSeasonEndDetailSheetModel,
+  buildSeasonEndEvaluationModel,
   buildSeasonEndReportCardModel,
   type SeasonEndEvaluationInput,
 } from '@/core/seasonEnd';
@@ -76,6 +79,11 @@ export function ReportSeasonEndEvaluationCard({
     ],
   );
 
+  const seasonEndEvaluation = useMemo(
+    () => buildSeasonEndEvaluationModel(input),
+    [input],
+  );
+
   const cardModel = useMemo(
     () => buildSeasonEndReportCardModel(input),
     [input],
@@ -88,7 +96,15 @@ export function ReportSeasonEndEvaluationCard({
     return buildSeasonEndDetailSheetModel(input);
   }, [input, sheetVisible]);
 
-  const handleOpenSheet = useCallback(() => setSheetVisible(true), []);
+  const handleOpenSheet = useCallback(() => {
+    if (seasonEndEvaluation) {
+      trackCreviaEvent(
+        'season_end_detail_opened',
+        buildSeasonEndAnalyticsPayload(seasonEndEvaluation, gameState, monetization),
+      );
+    }
+    setSheetVisible(true);
+  }, [gameState, monetization, seasonEndEvaluation]);
   const handleCloseSheet = useCallback(() => setSheetVisible(false), []);
 
   if (!cardModel) {

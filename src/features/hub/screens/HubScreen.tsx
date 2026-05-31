@@ -1,7 +1,15 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import {
+  buildCrisisAnalyticsPayload,
+  buildResourceAnalyticsPayload,
+} from '@/core/analytics/analyticsPayloadBuilders';
+import {
+  buildCommonAnalyticsBase,
+  trackOncePerRuntime,
+} from '@/core/analytics/analyticsRuntime';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import { HubFirstTenMinutesGuideCard } from '@/features/hub/components/HubFirstTenMinutesGuideCard';
 import { HubAdvisorCard } from '@/features/hub/components/HubAdvisorCard';
@@ -59,6 +67,8 @@ export function HubScreen() {
   const endCurrentDay = useGameStore((s) => s.endCurrentDay);
   const gameState = useGameStore((s) => s.gameState);
   const monetization = useGameStore((s) => s.monetization);
+  const crisisState = useGameStore((s) => s.crisisState);
+  const operationalResources = useGameStore((s) => s.operationalResources);
   const postPilotOperation = useGameStore(selectPostPilotOperation);
   const activeEvents = useGameStore(selectActiveEvents);
   const eventCount = activeEvents.length;
@@ -86,6 +96,56 @@ export function HubScreen() {
     () => buildHubCardVisibilityModel(gameState, monetization),
     [gameState, monetization],
   );
+
+  const hubDay = gameState.city.day;
+
+  useEffect(() => {
+    const base = buildCommonAnalyticsBase(gameState, 'hub', monetization);
+    trackOncePerRuntime(`day_started:${hubDay}`, 'day_started', base);
+
+    if (hubCardVisibility.showFirstDayGuide) {
+      trackOncePerRuntime(`first_guide_seen:${hubDay}`, 'first_guide_seen', base, {
+        isTutorial: true,
+      });
+    }
+
+    if (hubCardVisibility.showDailyPlan !== 'hidden') {
+      trackOncePerRuntime(`daily_plan_seen:${hubDay}`, 'daily_plan_seen', base);
+    }
+
+    if (hubCardVisibility.showOperationalResources) {
+      trackOncePerRuntime(
+        `operational_resources_card_seen:${hubDay}`,
+        'operational_resources_card_seen',
+        base,
+        buildResourceAnalyticsPayload(operationalResources),
+      );
+    }
+
+    if (hubCardVisibility.showMainOperationSeason) {
+      trackOncePerRuntime(`season_goal_card_seen:${hubDay}`, 'season_goal_card_seen', base);
+    }
+
+    if (hubCardVisibility.showCrisis) {
+      trackOncePerRuntime(
+        `crisis_desk_seen:${hubDay}`,
+        'crisis_desk_seen',
+        base,
+        buildCrisisAnalyticsPayload(crisisState, gameState, monetization),
+      );
+    }
+  }, [
+    crisisState,
+    gameState,
+    hubCardVisibility.showCrisis,
+    hubCardVisibility.showDailyPlan,
+    hubCardVisibility.showFirstDayGuide,
+    hubCardVisibility.showMainOperationSeason,
+    hubCardVisibility.showOperationalResources,
+    hubDay,
+    monetization,
+    operationalResources,
+  ]);
 
   const { coachHint, dismissHint } = useOnboardingHint('hub');
   const metricsHighlight = useTutorialHighlight('hub', 'hub_metrics');

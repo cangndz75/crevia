@@ -15,6 +15,8 @@ import {
   buildCrisisActionSheetModel,
 } from '@/core/crisisActions/crisisActionPresentation';
 import type { CrisisActionType } from '@/core/crisisActions/crisisActionTypes';
+import { buildCrisisAnalyticsPayload } from '@/core/analytics/analyticsPayloadBuilders';
+import { trackCreviaEvent } from '@/core/analytics/analyticsRuntime';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import {
   HUB_PREMIUM_COLORS,
@@ -84,6 +86,11 @@ export function CrisisActionSheet({ visible, onClose }: CrisisActionSheetProps) 
   const handleConfirm = () => {
     if (!selectedType) return;
     playLightImpactHaptic();
+    trackCreviaEvent(
+      'crisis_action_selected',
+      buildCrisisAnalyticsPayload(crisisState, gameState, monetization),
+      { optionId: selectedType, source: 'crisis_sheet' },
+    );
     selectAction(selectedType);
     setSelectedType(null);
     onClose();

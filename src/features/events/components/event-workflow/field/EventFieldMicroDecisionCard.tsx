@@ -1,7 +1,9 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { EventCard } from '@/core/models/EventCard';
+import { buildAssignmentAnalyticsPayload } from '@/core/analytics/analyticsPayloadBuilders';
+import { trackCreviaEvent, trackOncePerRuntime } from '@/core/analytics/analyticsRuntime';
 import {
   buildMicroDecisionCardModel,
   buildMicroDecisionPresentationInput,
@@ -59,6 +61,15 @@ export function EventFieldMicroDecisionCard({ event }: Props) {
     microDecisionState,
   ]);
 
+  useEffect(() => {
+    if (!cardModel) return;
+    trackOncePerRuntime(
+      `micro_decision_seen:${cardModel.id}`,
+      'micro_decision_seen',
+      buildAssignmentAnalyticsPayload(event, undefined, gameState, monetization),
+    );
+  }, [cardModel, event, gameState, monetization]);
+
   if (
     shouldHideAdvancedSystemForFirstTenMinutes(gameState, 'live_micro_decisions') ||
     !cardModel
@@ -73,7 +84,14 @@ export function EventFieldMicroDecisionCard({ event }: Props) {
       </Text>
       <LiveOperationDecisionCard
         model={cardModel}
-        onSelectOption={(optionId) => resolveMicroDecision(cardModel.id, optionId)}
+        onSelectOption={(optionId) => {
+          resolveMicroDecision(cardModel.id, optionId);
+          trackCreviaEvent(
+            'micro_decision_resolved',
+            buildAssignmentAnalyticsPayload(event, undefined, gameState, monetization),
+            { optionId },
+          );
+        }}
       />
     </View>
   );

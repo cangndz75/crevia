@@ -6,6 +6,8 @@ import {
   buildCrisisActionHubModel,
   buildCrisisActionPresentationInputFromStore,
 } from '@/core/crisisActions/crisisActionPresentation';
+import { buildCrisisAnalyticsPayload } from '@/core/analytics/analyticsPayloadBuilders';
+import { trackCreviaEvent } from '@/core/analytics/analyticsRuntime';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import { CrisisActionSheet } from '@/features/hub/components/CrisisActionSheet';
 import {
@@ -134,6 +136,10 @@ export function HubCrisisActionCard({ compact = false }: HubCrisisActionCardProp
             accessibilityLabel={hubModel.ctaLabel}
             onPress={() => {
               playLightImpactHaptic();
+              trackCreviaEvent(
+                'crisis_action_sheet_opened',
+                buildCrisisAnalyticsPayload(crisisState, gameState, monetization),
+              );
               setSheetOpen(true);
             }}
             style={({ pressed }) => [

@@ -13,6 +13,8 @@ import {
   shouldUseFirstTenMinutesAssignmentSimpleMode,
 } from '@/core/onboarding/firstTenMinutesPresentation';
 import { buildAssignmentResourceFitLine } from '@/core/operationalResources/operationalResourcePresentation';
+import { buildAssignmentAnalyticsPayload } from '@/core/analytics/analyticsPayloadBuilders';
+import { trackCreviaEvent } from '@/core/analytics/analyticsRuntime';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import type { EventCard } from '@/core/models/EventCard';
 import { AssignmentEditorModal } from '@/features/events/components/assignment/AssignmentEditorModal';
@@ -35,6 +37,7 @@ const TONE_COLORS = {
 export function EventAssignmentPanel({ event, compactTutorial = false }: Props) {
   const storeSlice = useGameStore((s) => ({
     gameState: s.gameState,
+    monetization: s.monetization,
     operationSignals: s.operationSignals,
     advisorState: s.advisorState,
     dailyOperationsPlan: s.dailyOperationsPlan,
@@ -75,6 +78,15 @@ export function EventAssignmentPanel({ event, compactTutorial = false }: Props) 
   const handleConfirm = () => {
     playLightImpactHaptic();
     confirmAssignment(event.id);
+    trackCreviaEvent(
+      'assignment_confirmed',
+      buildAssignmentAnalyticsPayload(
+        event,
+        assignment,
+        storeSlice.gameState,
+        storeSlice.monetization,
+      ),
+    );
   };
 
   const isProcessed = assignment.status === 'processed';

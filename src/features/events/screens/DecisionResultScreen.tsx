@@ -1,9 +1,11 @@
 import { useRouter, type Href } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { buildEventResultAnalyticsPayload } from '@/core/analytics/analyticsPayloadBuilders';
+import { trackOncePerRuntime } from '@/core/analytics/analyticsRuntime';
 import { selectPrimaryDailyGoal } from '@/core/dailyGoals/dailyGoalSelectors';
 import { PostPilotEventContextChip } from '@/features/events/components/PostPilotEventContextChip';
 import { DecisionResultHeader } from '@/features/events/components/DecisionResultHeader';
@@ -79,9 +81,11 @@ export function DecisionResultScreen() {
   const tabBarHeight = useAppTabBarHeight();
   const snapshot = useGameStore(selectLastDecisionResult);
   const lastDailyReport = useGameStore(selectLastDailyReport);
-  const currentDay = useGameStore((s) => s.gameState.city.day);
-  const activeEvents = useGameStore((s) => s.gameState.events);
-  const solvedEvents = useGameStore((s) => s.gameState.solvedEvents);
+  const gameState = useGameStore((s) => s.gameState);
+  const monetization = useGameStore((s) => s.monetization);
+  const currentDay = gameState.city.day;
+  const activeEvents = gameState.events;
+  const solvedEvents = gameState.solvedEvents;
   const dailyGoalState = useGameStore((s) => s.dailyGoalState);
 
   const result = snapshot ?? createEmptyDecisionResultFallback();
@@ -91,6 +95,20 @@ export function DecisionResultScreen() {
     () => resolveEventForResult(result, activeEvents, solvedEvents),
     [activeEvents, result, solvedEvents],
   );
+
+  useEffect(() => {
+    if (isMissing || !result.eventId) return;
+    trackOncePerRuntime(
+      `event_completed:${result.eventId}`,
+      'event_completed',
+      buildEventResultAnalyticsPayload(
+        relatedEvent,
+        result.resultTone,
+        gameState,
+        monetization,
+      ),
+    );
+  }, [gameState, isMissing, monetization, relatedEvent, result.eventId, result.resultTone]);
 
   const preferEndDay =
     !isMissing &&
