@@ -542,7 +542,7 @@ export function verifyInteractionContractsScenario(): VerifyInteractionContracts
     ),
   );
 
-  record(assert(checks, SAVE_VERSION === 21, 'SAVE_VERSION değişmedi (21)', `SAVE_VERSION ${SAVE_VERSION}`));
+  record(assert(checks, SAVE_VERSION === 22, 'SAVE_VERSION değişmedi (22)', `SAVE_VERSION ${SAVE_VERSION}`));
 
   const staticWithNotes = INTERACTION_CONTRACT_REGISTRY.filter(
     (c) => c.visualAffordance === 'static_card',

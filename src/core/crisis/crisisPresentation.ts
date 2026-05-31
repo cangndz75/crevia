@@ -6,6 +6,8 @@ import type { EventCard } from '@/core/models/EventCard';
 import type { EventDecision } from '@/core/models/EventCard';
 import type { EventAssignmentState } from '@/core/assignments/assignmentTypes';
 
+import { BALANCE_COPY } from '@/core/balance/gameplayImpactConstants';
+
 import { CRISIS_ACCESS_COPY, CRISIS_UI_COPY } from './crisisConstants';
 import {
   buildCrisisEngineInput,
@@ -166,7 +168,18 @@ export function buildCrisisDeskReportModel(
     state.riskLevel === 'stable' &&
     (input.assignments?.dailyAssignmentSummary?.strongFitCount ?? 0) > 0
   ) {
-    lines.push('Güçlü saha atamaları kriz riskini düşürdü.');
+    lines.push(BALANCE_COPY.crisisPreventiveReduced);
+  }
+
+  if (
+    (input.assignments?.dailyAssignmentSummary?.weakFitCount ?? 0) > 0 &&
+    state.riskLevel !== 'stable'
+  ) {
+    lines.push(BALANCE_COPY.crisisMonitorCarry);
+  }
+
+  if (input.dailyOperationsPlan?.vehicleFocus === 'preventive_maintenance') {
+    lines.push(BALANCE_COPY.crisisPreventiveReduced);
   }
 
   return {

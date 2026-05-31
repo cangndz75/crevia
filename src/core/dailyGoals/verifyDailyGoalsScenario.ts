@@ -228,7 +228,7 @@ export function verifyDailyGoalsScenario(): VerifyDailyGoalsOutcome {
 
   const normalized = normalizePersistedSave(legacySave);
   assert(checks, 'v6 save dailyGoalState fallback', normalized?.dailyGoalState != null);
-  assert(checks, 'SAVE_VERSION güncel', SAVE_VERSION === 21);
+  assert(checks, 'SAVE_VERSION güncel', SAVE_VERSION === 22);
 
   assert(
     checks,

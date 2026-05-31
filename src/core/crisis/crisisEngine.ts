@@ -16,6 +16,9 @@ import type {
   OperationSignalStatus,
   OperationSignalsState,
 } from '@/core/operations/operationSignalTypes';
+import { BALANCE_COPY } from '@/core/balance/gameplayImpactConstants';
+import { scaleGameplayDelta } from '@/core/balance/gameplayImpactTuning';
+import type { GameplayImpactScaleContext } from '@/core/balance/gameplayImpactTypes';
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 
 import {
@@ -155,7 +158,68 @@ export function calculateCityCrisisScore(input: CrisisEngineInput): number {
     raw = Math.min(45, raw);
   }
 
-  return clampCrisisScore(raw);
+  return applyGameplayCrisisModifiers(input, clampCrisisScore(raw), signals);
+}
+
+function buildCrisisScaleContext(input: CrisisEngineInput): GameplayImpactScaleContext {
+  return {
+    gameState: input.gameState,
+    monetization: input.monetization,
+    isDay1Tutorial: input.gameState.city.day <= 1,
+    postPilotLightPhase: accessModeFromInput(input) === 'limited_preview',
+    isCrisisRelated: true,
+    crisisRiskElevated:
+      input.crisisState.riskLevel === 'elevated' ||
+      input.crisisState.riskLevel === 'critical',
+  };
+}
+
+function accessModeFromInput(input: CrisisEngineInput): CrisisAccessMode {
+  return deriveCrisisAccessMode(input.gameState, input.monetization);
+}
+
+export function applyGameplayCrisisModifiers(
+  input: CrisisEngineInput,
+  baseScore: number,
+  signals: OperationSignalsState,
+): number {
+  const accessMode = accessModeFromInput(input);
+  if (accessMode === 'inactive') {
+    return baseScore;
+  }
+
+  const ctx = buildCrisisScaleContext(input);
+  let score = baseScore;
+  const summary = input.assignments?.dailyAssignmentSummary;
+  const plan = input.dailyOperationsPlan;
+
+  if (summary) {
+    if (summary.strongFitCount > summary.weakFitCount) {
+      score -= scaleGameplayDelta(4, ctx);
+    }
+    if (summary.weakFitCount > 0) {
+      score += scaleGameplayDelta(5, ctx);
+    }
+  }
+
+  const vehicleStrained =
+    signals.vehicles.status === 'strained' || signals.vehicles.status === 'critical';
+  const containerStrained =
+    signals.containers.status === 'strained' || signals.containers.status === 'critical';
+
+  if (plan?.vehicleFocus === 'preventive_maintenance' && vehicleStrained && containerStrained) {
+    score -= scaleGameplayDelta(4, ctx);
+  }
+
+  if (
+    plan?.vehicleFocus === 'high_capacity' &&
+    plan.personnelFocus === 'rapid_response' &&
+    vehicleStrained
+  ) {
+    score += scaleGameplayDelta(3, ctx);
+  }
+
+  return clampCrisisScore(score);
 }
 
 export function buildCrisisSignals(input: CrisisEngineInput): CrisisSignal[] {

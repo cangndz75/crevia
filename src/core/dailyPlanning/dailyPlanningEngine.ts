@@ -8,6 +8,10 @@ import {
 } from '@/core/operations/operationSignalState';
 import type { OperationSignalsState } from '@/core/operations/operationSignalTypes';
 
+import { BALANCE_COPY } from '@/core/balance/gameplayImpactConstants';
+import { scaleGameplayDelta } from '@/core/balance/gameplayImpactTuning';
+import type { GameplayImpactScaleContext } from '@/core/balance/gameplayImpactTypes';
+
 import {
   DAILY_CONTAINER_FOCUS_OPTIONS,
   DAILY_PERSONNEL_FOCUS_OPTIONS,
@@ -27,12 +31,12 @@ import type {
   DailyPlanningEngineInput,
 } from './dailyPlanningTypes';
 
-function scaleDelta(delta: number, isDay1: boolean): number {
-  if (!isDay1) return delta;
-  if (delta === 0) return 0;
-  const scaled = Math.round(delta * 0.5);
-  if (delta < 0) return Math.min(-1, scaled);
-  return Math.max(1, scaled);
+function buildPlanScaleContext(input: DailyPlanningEngineInput): GameplayImpactScaleContext {
+  return {
+    gameState: input.gameState,
+    isDay1Tutorial: input.isDay1Tutorial,
+    postPilotLightPhase: input.postPilotLightPhase,
+  };
 }
 
 function pushEffect(
@@ -40,9 +44,9 @@ function pushEffect(
   domain: DailyPlanEffect['domain'],
   delta: number,
   reason: string,
-  isDay1: boolean,
+  input: DailyPlanningEngineInput,
 ): void {
-  const scaled = scaleDelta(delta, isDay1);
+  const scaled = scaleGameplayDelta(delta, buildPlanScaleContext(input));
   if (scaled === 0) return;
   effects.push({ domain, delta: scaled, reason });
 }
@@ -58,26 +62,41 @@ export function calculateDailyPlanEffects(
   input: DailyPlanningEngineInput,
   plan: DailyOperationsPlanState,
 ): DailyPlanEffect[] {
-  const isDay1 = input.isDay1Tutorial === true;
   const effects: DailyPlanEffect[] = [];
+  const signals = input.operationSignals;
+  const vehiclesStrained =
+    signals?.vehicles.status === 'strained' ||
+    signals?.vehicles.status === 'critical';
+  const containersHigh =
+    (signals?.containers.score ?? 0) >= 50 ||
+    signals?.containers.status === 'strained' ||
+    signals?.containers.status === 'critical';
 
   switch (plan.personnelFocus) {
     case 'balanced_shift':
-      pushEffect(effects, 'personnel', -2, 'Dengeli vardiya personel baskısını hafifletir', isDay1);
-      pushEffect(effects, 'overall', -1, 'Genel operasyon dengesi korunur', isDay1);
+      pushEffect(effects, 'personnel', -3, 'Dengeli vardiya personel baskısını hafifletir', input);
+      pushEffect(effects, 'overall', -1, 'Operasyon dengesi korunur', input);
       break;
     case 'rapid_response':
-      pushEffect(effects, 'personnel', 4, 'Hızlı müdahale personel yükünü artırır', isDay1);
-      pushEffect(effects, 'districts', -3, 'Mahalle tepkisi hızlı yönetilir', isDay1);
+      pushEffect(effects, 'districts', -5, BALANCE_COPY.rapidResponseReport, input);
+      pushEffect(effects, 'personnel', 6, 'Hızlı müdahale personel baskısını artırır', input);
+      pushEffect(effects, 'vehicles', 2, 'Saha hızı için araç yükü artar', input);
       break;
     case 'rest_rotation':
-      pushEffect(effects, 'personnel', -6, 'Dinlendirme rotasyonu personel baskısını düşürür', isDay1);
-      pushEffect(effects, 'overall', -1, 'Yarın için saha dengesi korunur', isDay1);
+      pushEffect(effects, 'personnel', -8, 'Dinlendirme rotasyonu personel baskısını düşürür', input);
+      pushEffect(effects, 'overall', -2, BALANCE_COPY.restRotationReport, input);
+      pushEffect(effects, 'districts', 2, 'Bugünkü müdahale hızı sınırlı kalır', input);
       break;
     case 'field_inspection':
-      pushEffect(effects, 'districts', -5, 'Saha denetimi mahalle riskini erken görünür kılar', isDay1);
-      pushEffect(effects, 'overall', -1, 'Genel risk görünürlüğü artar', isDay1);
-      pushEffect(effects, 'personnel', 2, 'Denetim ekibi ek yük taşır', isDay1);
+      pushEffect(effects, 'districts', -6, 'Saha denetimi mahalle riskini erken görünür kılar', input);
+      pushEffect(effects, 'personnel', 3, 'Denetim ekibi ek yük taşır', input);
+      if (
+        signals?.overall.status === 'watch' ||
+        signals?.overall.status === 'strained' ||
+        signals?.overall.status === 'critical'
+      ) {
+        pushEffect(effects, 'overall', -2, 'Kriz eşiği izlemesi desteklendi', input);
+      }
       break;
     default:
       break;
@@ -85,19 +104,25 @@ export function calculateDailyPlanEffects(
 
   switch (plan.vehicleFocus) {
     case 'ready_fleet':
-      pushEffect(effects, 'vehicles', -2, 'Filo hazır odağı araç baskısını dengeler', isDay1);
+      pushEffect(effects, 'vehicles', -3, 'Filo hazır odağı araç baskısını dengeler', input);
       break;
     case 'preventive_maintenance':
-      pushEffect(effects, 'vehicles', -7, 'Önleyici bakım araç riskini düşürür', isDay1);
-      pushEffect(effects, 'overall', -1, 'Bakım odağı genel riski hafifletir', isDay1);
+      pushEffect(effects, 'vehicles', -9, BALANCE_COPY.preventiveMaintenanceReport, input);
+      if (containersHigh) {
+        pushEffect(effects, 'containers', 2, 'Önleyici bakım konteyner gecikmesi riski', input);
+      }
       break;
     case 'high_capacity':
-      pushEffect(effects, 'vehicles', 4, 'Yüksek kapasite filo yükünü artırır', isDay1);
-      pushEffect(effects, 'containers', -3, 'Büyük müdahalelerde konteyner etkisi artar', isDay1);
+      pushEffect(effects, 'containers', -7, 'Yüksek kapasite konteyner baskısını düşürür', input);
+      pushEffect(effects, 'vehicles', 7, 'Filo kapasitesi zorlanır', input);
+      pushEffect(effects, 'personnel', 2, 'Yoğun saha personel yükü artar', input);
+      if (vehiclesStrained) {
+        pushEffect(effects, 'overall', 2, 'Araç baskısı zaten yüksek; kriz riski izlenir', input);
+      }
       break;
     case 'route_check':
-      pushEffect(effects, 'vehicles', -3, 'Rota kontrolü gecikme riskini azaltır', isDay1);
-      pushEffect(effects, 'districts', -2, 'Mahalle rotaları dengelenir', isDay1);
+      pushEffect(effects, 'vehicles', -4, 'Rota kontrolü gecikme riskini azaltır', input);
+      pushEffect(effects, 'districts', -4, 'Mahalle rotaları dengelenir', input);
       break;
     default:
       break;
@@ -105,21 +130,22 @@ export function calculateDailyPlanEffects(
 
   switch (plan.containerFocus) {
     case 'standard_collection':
-      pushEffect(effects, 'containers', -2, 'Standart toplama konteyner dengesini korur', isDay1);
+      pushEffect(effects, 'containers', -3, 'Standart toplama konteyner dengesini korur', input);
       break;
     case 'intensive_collection':
-      pushEffect(effects, 'containers', -7, 'Yoğun toplama doluluk baskısını düşürür', isDay1);
-      pushEffect(effects, 'vehicles', 3, 'Yoğun toplama filo baskısını artırır', isDay1);
-      pushEffect(effects, 'personnel', 2, 'Yoğun toplama personel yükünü artırır', isDay1);
+      pushEffect(effects, 'containers', -9, 'Yoğun toplama doluluk baskısını düşürür', input);
+      pushEffect(effects, 'vehicles', 5, 'Yoğun toplama filo baskısını artırır', input);
+      pushEffect(effects, 'personnel', 3, 'Yoğun toplama personel yükünü artırır', input);
       break;
     case 'cleanliness_maintenance':
-      pushEffect(effects, 'containers', -5, 'Temizlik bakımı konteyner riskini düşürür', isDay1);
-      pushEffect(effects, 'districts', -2, 'Sosyal tepki riski azalır', isDay1);
+      pushEffect(effects, 'containers', -6, 'Temizlik bakımı konteyner riskini düşürür', input);
+      pushEffect(effects, 'districts', -5, 'Mahalle ve sosyal baskı yumuşar', input);
+      pushEffect(effects, 'vehicles', 1, 'Temizlik rotası araç yükünü hafif artırır', input);
       break;
     case 'risk_inspection':
-      pushEffect(effects, 'containers', -3, 'Risk incelemesi gizli sorunları erken gösterir', isDay1);
-      pushEffect(effects, 'districts', -3, 'Mahalle risk görünürlüğü artar', isDay1);
-      pushEffect(effects, 'overall', -1, 'Genel plan etkisi dengelenir', isDay1);
+      pushEffect(effects, 'containers', -4, 'Risk incelemesi gizli sorunları erken gösterir', input);
+      pushEffect(effects, 'districts', -5, 'Mahalle risk görünürlüğü artar', input);
+      pushEffect(effects, 'overall', -2, 'Önleyici inceleme operasyon dengesini destekler', input);
       break;
     default:
       break;
@@ -129,9 +155,9 @@ export function calculateDailyPlanEffects(
     pushEffect(
       effects,
       'districts',
-      -4,
+      -6,
       'Seçili mahalle odağı bölgesel baskıyı hafifletir',
-      isDay1,
+      input,
     );
   }
 
@@ -266,13 +292,15 @@ export function buildDailyPlanImpactPreview(
   const containerOpt = DAILY_CONTAINER_FOCUS_OPTIONS[plan.containerFocus];
 
   if (plan.vehicleFocus === 'preventive_maintenance') {
-    lines.push('Bugünkü önleyici bakım odağı araç riskini dengeliyor.');
+    lines.push(BALANCE_COPY.preventiveMaintenanceReport);
     tone = 'positive';
   }
   if (plan.personnelFocus === 'rapid_response') {
-    lines.push(
-      'Hızlı müdahale odağı bu kararı güçlendirir, personel yorgunluğu artabilir.',
-    );
+    lines.push(BALANCE_COPY.rapidResponseReport);
+    tone = 'warning';
+  }
+  if (plan.personnelFocus === 'rest_rotation') {
+    lines.push(BALANCE_COPY.restRotationReport);
     tone = 'warning';
   }
   if (plan.containerFocus === 'cleanliness_maintenance') {

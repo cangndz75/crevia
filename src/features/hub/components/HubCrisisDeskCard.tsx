@@ -4,6 +4,10 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { buildCrisisDeskHubModel } from '@/core/crisis';
 import {
+  buildCrisisActionPresentationInputFromStore,
+  buildCrisisActionHubModel,
+} from '@/core/crisisActions/crisisActionPresentation';
+import {
   HUB_PREMIUM_RADIUS,
   hubPremiumShadowCard,
 } from '@/features/hub/utils/hubPremiumPresentation';
@@ -25,6 +29,8 @@ export function HubCrisisDeskCard({ compact = false }: HubCrisisDeskCardProps) {
   const gameState = useGameStore((s) => s.gameState);
   const monetization = useGameStore((s) => s.monetization);
   const crisisState = useGameStore((s) => s.crisisState);
+  const crisisActionState = useGameStore((s) => s.crisisActionState);
+  const operationSignals = useGameStore((s) => s.operationSignals);
 
   const model = useMemo(
     () =>
@@ -33,6 +39,29 @@ export function HubCrisisDeskCard({ compact = false }: HubCrisisDeskCardProps) {
       }),
     [gameState, monetization, crisisState, compact],
   );
+
+  const crisisActionHint = useMemo(() => {
+    const input = buildCrisisActionPresentationInputFromStore({
+      gameState,
+      monetization,
+      crisisState,
+      operationSignals,
+      crisisActionState,
+    });
+    const actionModel = buildCrisisActionHubModel(input, { compact });
+    if (!actionModel?.visible) return undefined;
+    if (actionModel.selectedLabel) {
+      return 'Bugünkü kriz hamlesi seçildi.';
+    }
+    return 'Kriz hamlesi hazır';
+  }, [
+    compact,
+    crisisActionState,
+    crisisState,
+    gameState,
+    monetization,
+    operationSignals,
+  ]);
 
   if (!model?.visible) {
     return null;
@@ -99,6 +128,12 @@ export function HubCrisisDeskCard({ compact = false }: HubCrisisDeskCardProps) {
               </View>
             ))}
           </View>
+        ) : null}
+
+        {crisisActionHint ? (
+          <Text style={styles.actionHint} numberOfLines={1}>
+            {crisisActionHint}
+          </Text>
         ) : null}
 
         <Text style={styles.footer} numberOfLines={2}>
@@ -190,6 +225,12 @@ const styles = StyleSheet.create({
   signalTitle: {
     fontSize: 12,
     color: '#1D2939',
+  },
+  actionHint: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9A6B12',
+    marginTop: 4,
   },
   footer: {
     fontSize: 11,

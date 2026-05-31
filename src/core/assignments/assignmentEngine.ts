@@ -5,6 +5,10 @@ import {
 } from '@/core/operations/operationSignalState';
 import type { OperationSignalsState } from '@/core/operations/operationSignalTypes';
 
+import { BALANCE_COPY } from '@/core/balance/gameplayImpactConstants';
+import { scaleGameplayDelta } from '@/core/balance/gameplayImpactTuning';
+import type { GameplayImpactScaleContext } from '@/core/balance/gameplayImpactTypes';
+
 import {
   ASSIGNMENT_CATEGORY_TAGS,
   ASSIGNMENT_COPY,
@@ -45,12 +49,14 @@ export type EventAssignmentCategory =
   | 'crisis'
   | 'default';
 
-function scaleDelta(delta: number, isDay1: boolean): number {
-  if (!isDay1) return delta;
-  if (delta === 0) return 0;
-  const scaled = Math.round(delta * 0.5);
-  if (delta < 0) return Math.min(-1, scaled);
-  return Math.max(1, scaled);
+function buildAssignmentScaleContext(
+  input: AssignmentEngineInput,
+): GameplayImpactScaleContext {
+  return {
+    gameState: input.gameState,
+    isDay1Tutorial: input.isDay1Tutorial,
+    postPilotLightPhase: input.postPilotLightPhase,
+  };
 }
 
 function pushEffect(
@@ -58,10 +64,10 @@ function pushEffect(
   domain: AssignmentEffectDomain,
   delta: number,
   reason: string,
-  isDay1: boolean,
+  input: AssignmentEngineInput,
   tags: string[] = ['assignment'],
 ): void {
-  const scaled = scaleDelta(delta, isDay1);
+  const scaled = scaleGameplayDelta(delta, buildAssignmentScaleContext(input));
   if (scaled === 0) return;
   effects.push({
     domain,
@@ -69,6 +75,44 @@ function pushEffect(
     reason,
     sourceTags: [...tags, 'assignment'],
   });
+}
+
+function applyCompatibilityModifiers(
+  effects: AssignmentEffect[],
+  compatibilityScore: number,
+  input: AssignmentEngineInput,
+): AssignmentEffect[] {
+  if (compatibilityScore >= 75) {
+    const boosted = effects.map((e) => {
+      if (e.delta >= 0) return e;
+      const boostedDelta = scaleGameplayDelta(
+        Math.round(e.delta * 1.25),
+        buildAssignmentScaleContext(input),
+      );
+      return { ...e, delta: boostedDelta, reason: e.reason };
+    });
+    boosted.push({
+      domain: 'overall',
+      delta: scaleGameplayDelta(-2, buildAssignmentScaleContext(input)),
+      reason: BALANCE_COPY.strongFitReport,
+      sourceTags: ['assignment', 'strong_fit'],
+    });
+    return boosted;
+  }
+  if (compatibilityScore < 45) {
+    const related =
+      effects.find((e) => e.domain !== 'overall')?.domain ?? 'overall';
+    return [
+      ...effects,
+      {
+        domain: related,
+        delta: scaleGameplayDelta(4, buildAssignmentScaleContext(input)),
+        reason: BALANCE_COPY.weakFitReport,
+        sourceTags: ['assignment', 'weak_fit', 'carry_over'],
+      },
+    ];
+  }
+  return effects;
 }
 
 export function getEventCategoryForAssignment(event: EventCard): EventAssignmentCategory {
@@ -324,16 +368,20 @@ export function calculateAssignmentCompatibility(
     warnings.push('Atama bu olayın ana ihtiyacıyla tam uyumlu değil.');
   }
 
-  const effects = calculateAssignmentEffects(input, event, {
-    ...assignment,
-    eventId: event.id,
-    day: input.gameState.city.day,
-    status: 'draft',
-    source: 'advisor_suggested',
-    compatibilityScore: score,
-    compatibilityLabel: label,
-    effects: [],
-  } as EventAssignmentState);
+  const effects = calculateAssignmentEffects(
+    input,
+    event,
+    {
+      ...assignment,
+      eventId: event.id,
+      day: input.gameState.city.day,
+      status: 'draft',
+      source: 'advisor_suggested',
+      compatibilityScore: score,
+      compatibilityLabel: label,
+      effects: [],
+    } as EventAssignmentState,
+  );
 
   const summary =
     strengths[0] ??
@@ -348,7 +396,6 @@ export function calculateAssignmentEffects(
   event: EventCard,
   assignment: EventAssignmentState,
 ): AssignmentEffect[] {
-  const isDay1 = input.isDay1Tutorial === true;
   const effects: AssignmentEffect[] = [];
   const category = getEventCategoryForAssignment(event);
   const related: AssignmentEffectDomain =
@@ -365,9 +412,9 @@ export function calculateAssignmentEffects(
     assignment.vehicleType === 'maintenance_vehicle' &&
     category === 'container'
   ) {
-    pushEffect(effects, 'containers', -6, 'Teknik ekip ve bakım aracı konteyner etkisini güçlendirdi', isDay1);
-    pushEffect(effects, 'vehicles', 1, 'Bakım aracı filo üzerinde hafif yük', isDay1);
-    pushEffect(effects, 'overall', -2, 'Genel konteyner riski azaldı', isDay1);
+    pushEffect(effects, 'containers', -8, 'Teknik ekip ve bakım aracı konteyner etkisini güçlendirdi', input);
+    pushEffect(effects, 'vehicles', 2, 'Bakım aracı filo üzerinde hafif yük', input);
+    pushEffect(effects, 'overall', -3, 'Genel konteyner riski azaldı', input);
   }
 
   if (
@@ -375,51 +422,56 @@ export function calculateAssignmentEffects(
     assignment.approachType === 'public_first' &&
     category === 'social'
   ) {
-    pushEffect(effects, 'districts', -6, 'Halk odaklı atama sosyal tepkiyi yumuşattı', isDay1);
-    pushEffect(effects, 'personnel', 1, 'İletişim ekibi ek koordinasyon yükü', isDay1);
-    pushEffect(effects, 'overall', -2, 'Genel mahalle gerilimi azaldı', isDay1);
+    pushEffect(effects, 'districts', -8, 'Halk odaklı atama sosyal tepkiyi yumuşattı', input);
+    pushEffect(effects, 'personnel', 2, 'İletişim ekibi ek koordinasyon yükü', input);
+    pushEffect(effects, 'overall', -3, 'Genel mahalle gerilimi azaldı', input);
   }
 
   if (
     assignment.vehicleType === 'high_capacity_vehicle' &&
     assignment.approachType === 'rapid_response'
   ) {
-    pushEffect(effects, related, -5, 'Hızlı kapasite müdahalesi bugünkü baskıyı düşürdü', isDay1);
-    pushEffect(effects, 'vehicles', 4, 'Filo kapasitesi zorlandı', isDay1);
-    pushEffect(effects, 'personnel', 3, 'Saha ekibi yorgunluk riski taşıdı', isDay1);
+    pushEffect(effects, related, -7, 'Hızlı kapasite müdahalesi bugünkü baskıyı düşürdü', input);
+    pushEffect(effects, 'vehicles', 6, 'Filo kapasitesi zorlandı', input);
+    pushEffect(effects, 'personnel', 4, 'Saha ekibi yorgunluk riski taşıdı', input);
   }
 
   if (assignment.approachType === 'low_resource') {
-    pushEffect(effects, 'overall', -1, 'Düşük kaynak operasyonu korundu', isDay1);
-    pushEffect(effects, related, 4, 'Sorunun tekrar etme riski arttı', isDay1);
+    pushEffect(effects, 'overall', -1, BALANCE_COPY.lowResourceReport, input);
+    pushEffect(effects, related, 6, 'Sorun yarına taşınabilir', input);
   }
 
   if (assignment.approachType === 'lasting_fix') {
-    pushEffect(effects, related, -4, 'Kalıcı çözüm yarınki riski azalttı', isDay1);
-    pushEffect(effects, 'overall', -2, 'Genel operasyon dengesi iyileşti', isDay1);
-    pushEffect(effects, 'personnel', 1, 'Kalıcı çözüm ek saha süresi istedi', isDay1);
+    pushEffect(effects, related, -6, 'Kalıcı çözüm yarınki riski azalttı', input);
+    pushEffect(effects, 'overall', -3, 'Genel operasyon dengesi iyileşti', input);
+    pushEffect(effects, 'personnel', 2, 'Kalıcı çözüm bugünkü hızı sınırladı', input);
   }
 
   if (assignment.approachType === 'balanced_response') {
-    pushEffect(effects, 'overall', -1, 'Dengeli müdahale genel riski hafifletti', isDay1);
-    pushEffect(effects, related, -2, 'Olay alanında dengeli etki', isDay1);
+    pushEffect(effects, 'overall', -2, 'Dengeli müdahale genel riski hafifletti', input);
+    pushEffect(effects, related, -3, 'Olay alanında dengeli etki', input);
   }
 
   if (assignment.personnelType === 'field_response_team') {
-    pushEffect(effects, 'personnel', 3, 'Saha müdahale ekibi personel yükünü artırdı', isDay1);
-    pushEffect(effects, related, -3, 'Acil müdahale hızlandı', isDay1);
+    pushEffect(effects, 'personnel', 3, 'Saha müdahale ekibi personel yükünü artırdı', input);
+    pushEffect(effects, related, -3, 'Acil müdahale hızlandı', input);
   }
 
   if (assignment.vehicleType === 'route_support_vehicle') {
-    pushEffect(effects, 'vehicles', -3, 'Rota desteği filo gecikmesini azalttı', isDay1);
-    pushEffect(effects, 'districts', -2, 'Mahalle rotaları dengelendi', isDay1);
+    pushEffect(effects, 'vehicles', -5, 'Rota desteği filo gecikmesini azalttı', input);
+    pushEffect(effects, 'districts', -5, 'Mahalle rotaları dengelendi', input);
+    pushEffect(effects, 'personnel', 1, 'Rota desteği ek koordinasyon istedi', input);
   }
 
   if (effects.length === 0) {
-    pushEffect(effects, related, -2, 'Seçilen atama operasyon sinyalini hafifletti', isDay1);
+    pushEffect(effects, related, -2, 'Seçilen atama operasyon sinyalini hafifletti', input);
   }
 
-  return effects;
+  const score =
+    typeof assignment.compatibilityScore === 'number'
+      ? assignment.compatibilityScore
+      : 50;
+  return applyCompatibilityModifiers(effects, score, input);
 }
 
 export function buildAssignmentImpactPreview(
@@ -434,9 +486,13 @@ export function buildAssignmentImpactPreview(
 
   let summary = compat.summary;
   if (compat.label === 'Güçlü uyum') {
-    summary = 'Seçili saha ataması bu kararın etkisini güçlendiriyor.';
+    summary = BALANCE_COPY.strongFitReport;
   } else if (compat.label === 'Zayıf uyum') {
-    summary = 'Atama bu olayın ana ihtiyacıyla tam uyumlu değil.';
+    summary = `${BALANCE_COPY.weakFitReport} ${BALANCE_COPY.carryOverMonitor}`;
+  }
+  if (assignment.approachType === 'low_resource') {
+    summary = BALANCE_COPY.lowResourceReport;
+    tone = 'warning';
   }
   if (compat.strengths.some((s) => s.includes('Günlük plan'))) {
     summary = 'Günlük planla güçlü uyum var.';
@@ -595,6 +651,9 @@ export function getAssignmentAdvisorComment(
   const vehicle = VEHICLE_ASSIGNMENT_OPTIONS[assignment.vehicleType].label;
 
   if (level === 1 || band === 'early_observation') {
+    if (assignment.approachType === 'low_resource') {
+      return BALANCE_COPY.eceLevel1Cautious;
+    }
     if (assignment.compatibilityLabel === 'Güçlü uyum') {
       return 'Bu atama genel olarak uygun görünüyor. Araç tarafını izlemek iyi olur.';
     }
@@ -602,7 +661,11 @@ export function getAssignmentAdvisorComment(
   }
 
   if (assignment.compatibilityLabel === 'Zayıf uyum') {
-    return 'Bu atama hızlı görünüyor ama olayın ana teknik ihtiyacını tam karşılamayabilir.';
+    return `${BALANCE_COPY.weakFitReport} ${BALANCE_COPY.carryOverMonitor}`;
+  }
+
+  if (assignment.approachType === 'low_resource' && level >= 2) {
+    return BALANCE_COPY.eceLevel2LowResource;
   }
 
   if (level >= 3) {

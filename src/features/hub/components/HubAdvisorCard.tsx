@@ -10,6 +10,10 @@ import {
   getAdvisorAvatarInitials,
 } from '@/core/advisors/advisorPresentation';
 import { buildCrisisAdvisorNoteModel } from '@/core/crisis';
+import {
+  buildCrisisActionHubModel,
+  buildCrisisActionPresentationInputFromStore,
+} from '@/core/crisisActions/crisisActionPresentation';
 import { buildMainOperationAdvisorNote } from '@/core/mainOperation';
 import { getAdvisorLevelFromExperience } from '@/core/advisors/advisorState';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
@@ -44,6 +48,7 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
   const assignments = useGameStore((s) => s.assignments);
   const microDecisionState = useGameStore((s) => s.microDecisionState);
   const crisisState = useGameStore((s) => s.crisisState);
+  const crisisActionState = useGameStore((s) => s.crisisActionState);
   const isDay1 = useGameStore(selectIsDay1TutorialEligible);
   const askDaily = useGameStore((s) => s.askAdvisorForDailySummary);
   const acknowledgeMissed = useGameStore((s) => s.acknowledgeAdvisorMissedSignal);
@@ -61,6 +66,23 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
         dailyOperationsPlan,
         isDay1Tutorial: isDay1,
         mainOperationAdvisorNote: (() => {
+          const crisisActionInput = buildCrisisActionPresentationInputFromStore({
+            gameState,
+            monetization,
+            crisisState,
+            operationSignals,
+            dailyOperationsPlan,
+            assignments,
+            mainOperationSeason,
+            advisorState,
+            crisisActionState,
+          });
+          const crisisActionHub = buildCrisisActionHubModel(crisisActionInput, {
+            compact,
+          });
+          if (crisisActionHub?.advisorLine) {
+            return crisisActionHub.advisorLine;
+          }
           const crisisNote = buildCrisisAdvisorNoteModel(
             gameState,
             monetization,
@@ -98,7 +120,9 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
       assignments,
       microDecisionState,
       crisisState,
+      crisisActionState,
       isDay1,
+      compact,
     ],
   );
 

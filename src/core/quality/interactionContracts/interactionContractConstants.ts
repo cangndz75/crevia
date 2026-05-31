@@ -45,6 +45,8 @@ export const KNOWN_INTERACTION_ACTIONS = [
   'devJumpToFullMainOperationForTesting',
   'devRaiseCrisisRiskForTesting',
   'devGenerateMicroDecisionForTesting',
+  'devGenerateCrisisActionForTesting',
+  'selectCrisisResolutionAction',
   'devJumpToDay8LimitedForTesting',
   'clearSaveAndReset',
   'endCurrentDay',

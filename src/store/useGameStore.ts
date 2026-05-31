@@ -275,6 +275,17 @@ import {
 } from '@/core/microDecisions/microDecisionState';
 import type { MicroDecisionState } from '@/core/microDecisions/microDecisionTypes';
 import {
+  buildCrisisActionEngineInputFromStore,
+  processCrisisActionsEndOfDay,
+  refreshCrisisActionsForDay,
+  selectCrisisActionByType,
+} from '@/core/crisisActions/crisisActionEngine';
+import { createInitialCrisisActionState } from '@/core/crisisActions/crisisActionState';
+import type {
+  CrisisActionState,
+  CrisisActionType,
+} from '@/core/crisisActions/crisisActionTypes';
+import {
   attachAdvisorPredictionAfterInsight,
   evaluateAdvisorPredictionsAgainstSignals,
 } from '@/core/advisors/advisorPrediction';
@@ -420,6 +431,7 @@ type GameStoreState = {
   monetization: MonetizationState;
   mainOperationSeason: MainOperationSeasonState;
   crisisState: CrisisState;
+  crisisActionState: CrisisActionState;
   microDecisionState: MicroDecisionState;
   tutorialState: TutorialState;
   /** Oturum içi onboarding ipucu kapatmaları — persist edilmez. */
@@ -509,6 +521,10 @@ type GameStoreActions = {
   resolveMicroDecision: (decisionId: string, optionId: string) => void;
   skipMicroDecision: (decisionId: string) => void;
   processMicroDecisionsForEndOfDay: () => void;
+  refreshCrisisActionForCurrentDay: () => void;
+  selectCrisisResolutionAction: (actionType: CrisisActionType) => void;
+  processCrisisActionsForEndOfDay: () => void;
+  devGenerateCrisisActionForTesting?: () => void;
   devGenerateMicroDecisionForTesting?: () => void;
   devRaiseCrisisRiskForTesting: () => void;
   devJumpToFullMainOperationForTesting: () => void;
@@ -755,6 +771,7 @@ function applySeedBundle(
   | 'monetization'
   | 'mainOperationSeason'
   | 'crisisState'
+  | 'crisisActionState'
   | 'microDecisionState'
   | 'tutorialState'
   | 'bestPilotScores'
@@ -814,11 +831,31 @@ function applySeedBundle(
     monetization: createInitialMonetizationState(),
     mainOperationSeason: createInitialMainOperationSeasonState(),
     crisisState: createInitialCrisisState(),
+    crisisActionState: createInitialCrisisActionState(),
     microDecisionState: createInitialMicroDecisionState(),
     tutorialState: { ...INITIAL_TUTORIAL_STATE },
     bestPilotScores: [],
     lastPilotScore: undefined,
   };
+}
+
+function buildCrisisActionInputFromStore(
+  state: GameStoreState,
+  overrides?: Partial<ReturnType<typeof buildCrisisActionEngineInputFromStore>>,
+) {
+  return buildCrisisActionEngineInputFromStore({
+    gameState: overrides?.gameState ?? state.gameState,
+    monetization: overrides?.monetization ?? state.monetization,
+    crisisState: overrides?.crisisState ?? state.crisisState,
+    operationSignals: overrides?.operationSignals ?? state.operationSignals,
+    assignments: overrides?.assignments ?? state.assignments,
+    dailyOperationsPlan:
+      overrides?.dailyOperationsPlan ?? state.dailyOperationsPlan,
+    mainOperationSeason:
+      overrides?.mainOperationSeason ?? state.mainOperationSeason,
+    advisorState: overrides?.advisorState ?? state.advisorState,
+    crisisActionState: overrides?.crisisActionState ?? state.crisisActionState,
+  });
 }
 
 function buildMicroDecisionInputFromStore(
@@ -2269,6 +2306,54 @@ export const useGameStore = create<GameStore>()(
         set({ microDecisionState: next });
       },
 
+      refreshCrisisActionForCurrentDay: () => {
+        const current = get();
+        set({
+          crisisActionState: refreshCrisisActionsForDay(
+            buildCrisisActionInputFromStore(current),
+          ),
+        });
+      },
+
+      selectCrisisResolutionAction: (actionType) => {
+        const current = get();
+        set({
+          crisisActionState: selectCrisisActionByType(
+            current.crisisActionState,
+            buildCrisisActionInputFromStore(current),
+            actionType,
+          ),
+        });
+      },
+
+      processCrisisActionsForEndOfDay: () => {
+        const current = get();
+        const closingDay = current.gameState.city.day;
+        const input = buildCrisisActionInputFromStore(current);
+        if (input.crisisActionState.lastProcessedDay === closingDay) {
+          return;
+        }
+        const result = processCrisisActionsEndOfDay(input, closingDay);
+        set({
+          crisisActionState: result.crisisActionState,
+          operationSignals: result.operationSignals,
+          crisisState: result.crisisState,
+          ...(result.mainOperationSeason
+            ? { mainOperationSeason: result.mainOperationSeason }
+            : {}),
+        });
+      },
+
+      devGenerateCrisisActionForTesting: () => {
+        if (!__DEV__) return;
+        const current = get();
+        if (current.monetization.mainOperationAccess !== 'full') {
+          get().devJumpToFullMainOperationForTesting();
+        }
+        get().devRaiseCrisisRiskForTesting();
+        get().refreshCrisisActionForCurrentDay();
+      },
+
       devRaiseCrisisRiskForTesting: () => {
         if (!__DEV__) {
           return;
@@ -2367,6 +2452,7 @@ export const useGameStore = create<GameStore>()(
           ),
           mainOperationSeason: createInitialMainOperationSeasonState(),
           crisisState: createInitialCrisisState(),
+          crisisActionState: createInitialCrisisActionState(),
           lastClosedDay: 7,
         });
       },
@@ -2532,6 +2618,7 @@ export const useGameStore = create<GameStore>()(
         const pilotActiveBeforeEnd =
           current.gameState.pilot.status === 'active';
 
+        // --- day pipeline: preflight_guard ---
         if (current.lastClosedDay === closingDay) {
           return;
         }
@@ -2563,6 +2650,7 @@ export const useGameStore = create<GameStore>()(
           districtNames,
         );
 
+        // --- day pipeline: event_outcome_snapshot ---
         const containerStateAfterNight = processContainersEndOfDay({
           containerState: current.containerState,
           day: closingDay,
@@ -2694,6 +2782,7 @@ export const useGameStore = create<GameStore>()(
           };
         })();
 
+        // --- day pipeline: authority_badge_process ---
         const closingAuthorityState = normalizeAuthorityState(
           current.gameState.pilot.authorityState,
           closingDay,
@@ -2755,6 +2844,7 @@ export const useGameStore = create<GameStore>()(
             ? buildDay1BadgeSummaryLines()
             : badgeEvaluationResult.summaryLines;
 
+        // --- day pipeline: report_build (endDay snapshot; domain cards read live slices) ---
         const result = endDay(toEngineState(current), {
           skipEventSelection: skipGenericEventSelection,
           personnelReport,
@@ -2841,6 +2931,7 @@ export const useGameStore = create<GameStore>()(
           [closingDay]: closingPriorityState,
         };
 
+        // --- day pipeline: post_day_refresh (pilot / post-pilot day advance) ---
         if (nextGameState.pilot.status === 'active') {
           const advancedGameState = syncCityDayWithPilotDay(
             advancePilotDayForGameState(nextGameState),
@@ -2918,6 +3009,7 @@ export const useGameStore = create<GameStore>()(
 
         const nextDay = nextGameState.city.day;
 
+        // --- day pipeline: advisor_eod_process (experience grant) ---
         let advisorStateAfterDay = grantAdvisorEndOfDayExperience(
           refreshAdvisorDailyUses(current.advisorState, closingDay),
           closingDay,
@@ -2937,24 +3029,35 @@ export const useGameStore = create<GameStore>()(
           operationSignals: current.operationSignals,
           isDay1Tutorial: selectIsDay1TutorialEligible(current),
         });
-        let operationSignalsAfterDay = processOperationSignalsEndOfDay(
-          closingSignalsInput,
-        );
+        // --- day pipeline: operation_signals_base_eod ---
+        let operationSignalsAfterDay =
+          current.operationSignals.lastProcessedDay === closingDay
+            ? current.operationSignals
+            : processOperationSignalsEndOfDay(closingSignalsInput);
 
         const planningInputClosing = buildDailyPlanningInput({
           ...current,
           gameState: current.gameState,
           operationSignals: operationSignalsAfterDay,
         });
-        const planProcessed = processDailyPlanEndOfDay({
-          plan: current.dailyOperationsPlan,
-          closingDay,
-          engineInput: planningInputClosing,
-        });
-        operationSignalsAfterDay = applyDailyPlanEffectsToOperationSignals(
-          operationSignalsAfterDay,
-          planProcessed.effects,
-        );
+        // --- day pipeline: daily_plan_effects ---
+        const planProcessed =
+          current.dailyOperationsPlan.lastProcessedDay === closingDay
+            ? {
+                plan: current.dailyOperationsPlan,
+                effects: [],
+              }
+            : processDailyPlanEndOfDay({
+                plan: current.dailyOperationsPlan,
+                closingDay,
+                engineInput: planningInputClosing,
+              });
+        if (planProcessed.effects.length > 0) {
+          operationSignalsAfterDay = applyDailyPlanEffectsToOperationSignals(
+            operationSignalsAfterDay,
+            planProcessed.effects,
+          );
+        }
 
         const assignmentInputClosing = buildAssignmentInput({
           ...current,
@@ -2963,16 +3066,22 @@ export const useGameStore = create<GameStore>()(
         const assignmentEvents = Object.keys(current.assignments.assignmentsByEventId)
           .map((id) => findStoreEvent(current, id))
           .filter((e): e is EventCard => e != null);
-        const assignmentProcessed = processAssignmentsEndOfDay({
-          assignments: current.assignments,
-          closingDay,
-          engineInput: assignmentInputClosing,
-          events: assignmentEvents,
-        });
-        operationSignalsAfterDay = applyAssignmentEffectsToOperationSignals(
-          operationSignalsAfterDay,
-          assignmentProcessed.effects,
-        );
+        // --- day pipeline: assignment_effects ---
+        const assignmentProcessed =
+          current.assignments.lastProcessedDay === closingDay
+            ? { state: current.assignments, effects: [] }
+            : processAssignmentsEndOfDay({
+                assignments: current.assignments,
+                closingDay,
+                engineInput: assignmentInputClosing,
+                events: assignmentEvents,
+              });
+        if (assignmentProcessed.effects.length > 0) {
+          operationSignalsAfterDay = applyAssignmentEffectsToOperationSignals(
+            operationSignalsAfterDay,
+            assignmentProcessed.effects,
+          );
+        }
 
         const mainOpInput = buildMainOperationEngineInput({
           gameState: current.gameState,
@@ -2981,10 +3090,11 @@ export const useGameStore = create<GameStore>()(
           operationSignals: operationSignalsAfterDay,
           assignments: assignmentProcessed.state,
         });
-        let mainOperationSeasonAfterDay = processMainOperationEndOfDay(
-          mainOpInput,
-          closingDay,
-        );
+        // --- day pipeline: main_operation_season_process ---
+        let mainOperationSeasonAfterDay =
+          current.mainOperationSeason.lastProcessedDay === closingDay
+            ? current.mainOperationSeason
+            : processMainOperationEndOfDay(mainOpInput, closingDay);
 
         const nextSignalsInput = buildOperationSignalsEngineInputFromStore({
           gameState: withSyncedPulse({
@@ -3003,6 +3113,7 @@ export const useGameStore = create<GameStore>()(
           nextDay,
         );
 
+        // --- day pipeline: micro_decision_effects ---
         const microEodResult = processMicroDecisionsEndOfDay(
           buildMicroDecisionInputFromStore({
             ...current,
@@ -3015,9 +3126,25 @@ export const useGameStore = create<GameStore>()(
         operationSignalsAfterDay = microEodResult.operationSignals;
         let crisisStateBeforeDerive = microEodResult.crisisState;
 
+        // --- day pipeline: crisis_action_effects (before crisis_state_process) ---
+        const crisisActionEod = processCrisisActionsEndOfDay(
+          buildCrisisActionInputFromStore({
+            ...current,
+            operationSignals: operationSignalsAfterDay,
+            crisisState: crisisStateBeforeDerive,
+            mainOperationSeason: mainOperationSeasonAfterDay,
+          }),
+          closingDay,
+        );
+        operationSignalsAfterDay = crisisActionEod.operationSignals;
+        crisisStateBeforeDerive = crisisActionEod.crisisState;
+        mainOperationSeasonAfterDay =
+          crisisActionEod.mainOperationSeason ?? mainOperationSeasonAfterDay;
+
         const hasCriticalEvent = nextGameState.events.some(
           (e) => e.riskLevel === 'critical' || e.riskLevel === 'high',
         );
+        // --- day pipeline: advisor_eod_process (prediction eval) ---
         const predictionEval = evaluateAdvisorPredictionsAgainstSignals({
           state: advisorStateAfterDay,
           signals: operationSignalsAfterDay,
@@ -3030,6 +3157,7 @@ export const useGameStore = create<GameStore>()(
         });
         advisorStateAfterDay = predictionEval.state;
 
+        // --- day pipeline: post_day_refresh (next-day plan / season) ---
         let dailyPlanAfterDay = refreshDailyOperationsPlanForDay(
           planProcessed.plan,
           nextDay,
@@ -3061,15 +3189,17 @@ export const useGameStore = create<GameStore>()(
           dailyOperationsPlan: planProcessed.plan,
           mainOperationSeason: mainOperationSeasonAfterDay,
         });
-        let crisisStateAfterDay = processCrisisEndOfDay(
-          crisisInput,
-          closingDay,
-        );
+        // --- day pipeline: crisis_state_process ---
+        let crisisStateAfterDay =
+          current.crisisState.lastProcessedDay === closingDay
+            ? current.crisisState
+            : processCrisisEndOfDay(crisisInput, closingDay);
         crisisStateAfterDay = deriveCrisisStateFromGameState({
           ...crisisInput,
           crisisState: crisisStateAfterDay,
         });
 
+        // --- day pipeline: cleanup (refresh / prune next-day slices) ---
         const microStateForNextDay = refreshMicroDecisionsForDay(
           buildMicroDecisionInputFromStore(
             {
@@ -3084,6 +3214,20 @@ export const useGameStore = create<GameStore>()(
             },
             { day: nextDay },
           ),
+        );
+
+        const crisisActionStateForNextDay = refreshCrisisActionsForDay(
+          buildCrisisActionInputFromStore({
+            ...current,
+            gameState: withSyncedPulse({
+              ...nextGameState,
+              city: { ...nextGameState.city },
+            }),
+            operationSignals: operationSignalsAfterDay,
+            crisisState: crisisStateAfterDay,
+            mainOperationSeason: mainOperationSeasonAfterDay,
+            crisisActionState: crisisActionEod.crisisActionState,
+          }),
         );
 
         const syncedMoraleCity = {
@@ -3156,6 +3300,7 @@ export const useGameStore = create<GameStore>()(
           assignments: assignmentProcessed.state,
           mainOperationSeason: mainOperationSeasonAfterDay,
           crisisState: crisisStateAfterDay,
+          crisisActionState: crisisActionStateForNextDay,
           microDecisionState: microStateForNextDay,
         });
       },
@@ -3702,6 +3847,8 @@ export const useGameStore = create<GameStore>()(
           ),
           microDecisionState:
             saved.microDecisionState ?? createInitialMicroDecisionState(),
+          crisisActionState:
+            saved.crisisActionState ?? createInitialCrisisActionState(),
           tutorialState: saved.tutorialState ?? { ...INITIAL_TUTORIAL_STATE },
           bestPilotScores: saved.bestPilotScores ?? [],
           lastPilotScore: saved.lastPilotScore,
@@ -3723,6 +3870,7 @@ export const useGameStore = create<GameStore>()(
           state.refreshOperationSignals();
           state.refreshDailyOperationsPlan();
           state.refreshMicroDecisionsForCurrentDay();
+          state.refreshCrisisActionForCurrentDay();
         }
       },
     },

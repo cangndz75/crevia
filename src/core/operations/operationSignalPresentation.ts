@@ -7,6 +7,9 @@ import {
 } from '@/core/neighborhoodIdentity/neighborhoodIdentityConstants';
 import { normalizeNeighborhoodId } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 
+import { describeDomainImpactChange } from '@/core/balance/gameplayImpactPresentation';
+import { BALANCE_COPY } from '@/core/balance/gameplayImpactConstants';
+
 import {
   DOMAIN_LABELS,
   SIGNAL_COPY,
@@ -192,9 +195,27 @@ export function buildOperationImpactPreviewModel(
   );
   const tone =
     maxAbs >= 6 ? 'warning' : maxAbs >= 3 ? 'neutral' : 'positive';
+  const impactHints: string[] = [];
+  if (preview.personnelDelta >= 4) {
+    impactHints.push(describeDomainImpactChange('personnel', preview.personnelDelta));
+  } else if (preview.personnelDelta <= -4) {
+    impactHints.push(describeDomainImpactChange('personnel', preview.personnelDelta));
+  }
+  if (preview.vehicleDelta >= 4) {
+    impactHints.push(describeDomainImpactChange('vehicles', preview.vehicleDelta));
+  } else if (preview.vehicleDelta <= -4) {
+    impactHints.push(describeDomainImpactChange('vehicles', preview.vehicleDelta));
+  }
+  if (preview.containerDelta >= 4) {
+    impactHints.push(BALANCE_COPY.carryOverRisk);
+  }
+  const summary =
+    impactHints.length > 0
+      ? `${preview.summary} ${impactHints[0]}`
+      : preview.summary;
   return {
     title: SIGNAL_COPY.impactTitle,
-    summary: preview.summary,
+    summary,
     severityLabel: preview.severityLabel,
     tone,
   };

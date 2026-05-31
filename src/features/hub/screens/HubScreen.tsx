@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import { HubAdvisorCard } from '@/features/hub/components/HubAdvisorCard';
 import { HubDailyOperationsPlanCard } from '@/features/hub/components/HubDailyOperationsPlanCard';
+import { HubCrisisActionCard } from '@/features/hub/components/HubCrisisActionCard';
 import { HubCrisisDeskCard } from '@/features/hub/components/HubCrisisDeskCard';
 import { HubMainOperationSeasonCard } from '@/features/hub/components/HubMainOperationSeasonCard';
 import { HubLiveOperationsCard } from '@/features/hub/components/HubLiveOperationsCard';
@@ -131,6 +132,8 @@ export function HubScreen() {
         <HubMainOperationSeasonCard compact={isDay1Layout} />
 
         <HubCrisisDeskCard compact={isDay1Layout} />
+
+        <HubCrisisActionCard compact={isDay1Layout} />
 
         <HubAdvisorCard compact={isDay1Layout} />
 

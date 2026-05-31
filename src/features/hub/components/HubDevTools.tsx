@@ -20,6 +20,9 @@ export function HubDevTools() {
   const devGenerateMicroDecision = useGameStore(
     (s) => s.devGenerateMicroDecisionForTesting,
   );
+  const devGenerateCrisisAction = useGameStore(
+    (s) => s.devGenerateCrisisActionForTesting,
+  );
 
   const reloadApp = useCallback(() => {
     if (typeof DevSettings.reload === 'function') {
@@ -106,6 +109,12 @@ export function HubDevTools() {
         onPress={() => devGenerateMicroDecision?.()}>
         <Ionicons name="flash-outline" size={16} color={colors.primary} />
         <Text style={styles.btnText}>Dev: Canlı Karar Üret</Text>
+      </Pressable>
+      <Pressable
+        style={[styles.btn, styles.btnPreview]}
+        onPress={() => devGenerateCrisisAction?.()}>
+        <Ionicons name="warning-outline" size={16} color={colors.primary} />
+        <Text style={styles.btnText}>Dev: Kriz Hamlesi Üret</Text>
       </Pressable>
       <PostPilotDevTools />
     </View>

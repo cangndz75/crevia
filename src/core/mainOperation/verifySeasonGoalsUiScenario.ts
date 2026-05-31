@@ -406,8 +406,8 @@ export function verifySeasonGoalsUiScenario(): VerifySeasonGoalsUiOutcome {
   ok =
     assert(
       checks,
-      SAVE_VERSION === 21,
-      'Full loop SAVE_VERSION 21 ile çalışıyor',
+      SAVE_VERSION === 22,
+      'Full loop SAVE_VERSION 22 ile çalışıyor',
       `SAVE_VERSION ${SAVE_VERSION}`,
     ) && ok;
 

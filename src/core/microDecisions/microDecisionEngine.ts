@@ -8,6 +8,10 @@ import {
   clampSignalScore,
 } from '@/core/operations/operationSignalState';
 import type { OperationSignalsState } from '@/core/operations/operationSignalTypes';
+import { BALANCE_COPY } from '@/core/balance/gameplayImpactConstants';
+import { getCarryOverRiskLine } from '@/core/balance/gameplayImpactPresentation';
+import { scaleGameplayDelta } from '@/core/balance/gameplayImpactTuning';
+import type { GameplayImpactScaleContext } from '@/core/balance/gameplayImpactTypes';
 
 import {
   ACCESS_MODE_DOMAINS,
@@ -107,6 +111,40 @@ export function buildMicroDecisionGenerationContext(
   };
 }
 
+function buildMicroScaleContext(
+  input: MicroDecisionEngineInput,
+  isCrisisRelated = false,
+): GameplayImpactScaleContext {
+  const fullAccess = isFullMainOperationAccess(input.gameState, input.monetization);
+  return {
+    gameState: input.gameState,
+    monetization: input.monetization,
+    isDay1Tutorial: input.gameState.city.day <= 1,
+    postPilotLightPhase: !fullAccess,
+    isCrisisRelated,
+    crisisRiskElevated:
+      input.crisisState.riskLevel === 'elevated' ||
+      input.crisisState.riskLevel === 'critical',
+  };
+}
+
+function scaleMicroEffects(
+  effects: MicroDecisionEffect[],
+  input: MicroDecisionEngineInput,
+  isCrisisRelated = false,
+): MicroDecisionEffect[] {
+  const ctx = buildMicroScaleContext(input, isCrisisRelated);
+  return effects
+    .map((e) => ({
+      ...e,
+      delta: scaleGameplayDelta(
+        e.delta,
+        e.domain === 'crisis' ? { ...ctx, isCrisisRelated: true } : ctx,
+      ),
+    }))
+    .filter((e) => e.delta !== 0);
+}
+
 function safeOption(
   id: string,
   label: string,
@@ -120,7 +158,7 @@ function safeOption(
   return { id, label, description, upside, tradeoff, tone, effects, sourceTags };
 }
 
-function buildAdvisorWarningOptions(): MicroDecisionOption[] {
+export function buildAdvisorWarningOptions(): MicroDecisionOption[] {
   return [
     safeOption(
       'public_comms',
@@ -130,8 +168,8 @@ function buildAdvisorWarningOptions(): MicroDecisionOption[] {
       'Saha kapasitesi daralır.',
       'positive',
       [
-        { domain: 'districts', delta: -4, reason: 'Mahalle gerilimi azalır.', sourceTags: ['advisor'] },
-        { domain: 'social', delta: -4, reason: 'Sosyal baskı düşer.', sourceTags: ['advisor'] },
+        { domain: 'districts', delta: -5, reason: 'Mahalle gerilimi azalır.', sourceTags: ['advisor'] },
+        { domain: 'social', delta: -5, reason: 'Sosyal baskı düşer.', sourceTags: ['advisor'] },
         { domain: 'personnel', delta: 1, reason: 'Ekip yükü artar.', sourceTags: ['advisor'] },
       ],
       ['advisor_warning'],
@@ -141,10 +179,10 @@ function buildAdvisorWarningOptions(): MicroDecisionOption[] {
       OPTION_LABELS.keepPlan,
       'Mevcut plana sadık kal.',
       'Operasyon akışı bozulmaz.',
-      'Tepki izlemeye kalır.',
+      getCarryOverRiskLine('plan_keep'),
       'neutral',
       [
-        { domain: 'districts', delta: 2, reason: 'Tepki izlemeye kalır.', sourceTags: ['advisor'] },
+        { domain: 'districts', delta: 3, reason: getCarryOverRiskLine('plan_keep'), sourceTags: ['advisor'] },
       ],
       ['advisor_warning'],
     ),
@@ -153,10 +191,11 @@ function buildAdvisorWarningOptions(): MicroDecisionOption[] {
       OPTION_LABELS.monitor,
       'Sinyali izlemeye al.',
       'Kapasite korunur.',
-      'Risk yarına taşınabilir.',
+      getCarryOverRiskLine('monitor'),
       'warning',
       [
-        { domain: 'planning', delta: 2, reason: 'Plan sapması izlenir.', sourceTags: ['advisor'] },
+        { domain: 'planning', delta: 2, reason: getCarryOverRiskLine('monitor'), sourceTags: ['advisor'] },
+        { domain: 'crisis', delta: 1, reason: 'Kriz sinyali izlenir.', sourceTags: ['advisor'] },
       ],
       ['advisor_warning'],
     ),
@@ -173,9 +212,9 @@ function buildFieldUpdateOptions(): MicroDecisionOption[] {
       'Konteyner gecikmesi artabilir.',
       'positive',
       [
-        { domain: 'vehicles', delta: -5, reason: 'Araç baskısı azalır.', sourceTags: ['field'] },
-        { domain: 'personnel', delta: 1, reason: 'Ekip yükü artar.', sourceTags: ['field'] },
-        { domain: 'containers', delta: 2, reason: 'Konteyner gecikmesi.', sourceTags: ['field'] },
+        { domain: 'vehicles', delta: -7, reason: 'Araç baskısı azalır.', sourceTags: ['field'] },
+        { domain: 'personnel', delta: 2, reason: 'Ekip yükü artar.', sourceTags: ['field'] },
+        { domain: 'containers', delta: 2, reason: BALANCE_COPY.preventiveTradeoff, sourceTags: ['field'] },
       ],
       ['field_update'],
     ),
@@ -187,8 +226,9 @@ function buildFieldUpdateOptions(): MicroDecisionOption[] {
       'Araç baskısı artabilir.',
       'warning',
       [
-        { domain: 'vehicles', delta: 4, reason: 'Araç yükü artar.', sourceTags: ['field'] },
-        { domain: 'assignments', delta: -3, reason: 'Atama verimi artar.', sourceTags: ['field'] },
+        { domain: 'vehicles', delta: 5, reason: 'Araç yükü artar.', sourceTags: ['field'] },
+        { domain: 'assignments', delta: -5, reason: 'Atama verimi artar.', sourceTags: ['field'] },
+        { domain: 'personnel', delta: 3, reason: 'Saha ekibi yükü artar.', sourceTags: ['field'] },
       ],
       ['field_update'],
     ),
@@ -207,7 +247,7 @@ function buildFieldUpdateOptions(): MicroDecisionOption[] {
   ];
 }
 
-function buildCrisisThresholdOptions(): MicroDecisionOption[] {
+export function buildCrisisThresholdOptions(): MicroDecisionOption[] {
   return [
     safeOption(
       'crisis_coord',
@@ -217,9 +257,10 @@ function buildCrisisThresholdOptions(): MicroDecisionOption[] {
       'Kapasite daralır.',
       'positive',
       [
-        { domain: 'crisis', delta: -8, reason: 'Kriz skoru düşer.', sourceTags: ['crisis'] },
-        { domain: 'personnel', delta: 2, reason: 'Ekip yükü artar.', sourceTags: ['crisis'] },
-        { domain: 'vehicles', delta: 2, reason: 'Araç yükü artar.', sourceTags: ['crisis'] },
+        { domain: 'crisis', delta: -10, reason: BALANCE_COPY.crisisPreventiveReduced, sourceTags: ['crisis'] },
+        { domain: 'personnel', delta: 3, reason: 'Ekip yükü artar.', sourceTags: ['crisis'] },
+        { domain: 'vehicles', delta: 3, reason: 'Araç yükü artar.', sourceTags: ['crisis'] },
+        { domain: 'planning', delta: -4, reason: 'Koordinasyon genel baskıyı düşürür.', sourceTags: ['crisis'] },
       ],
       ['crisis_threshold'],
     ),
@@ -231,9 +272,9 @@ function buildCrisisThresholdOptions(): MicroDecisionOption[] {
       'Gün içi tempo yavaşlar.',
       'warning',
       [
-        { domain: 'assignments', delta: -5, reason: 'Atama dengelenir.', sourceTags: ['crisis'] },
-        { domain: 'crisis', delta: -4, reason: 'Kriz baskısı düşer.', sourceTags: ['crisis'] },
-        { domain: 'personnel', delta: 1, reason: 'Ekip yükü artar.', sourceTags: ['crisis'] },
+        { domain: 'assignments', delta: -7, reason: 'Atama dengelenir.', sourceTags: ['crisis'] },
+        { domain: 'crisis', delta: -5, reason: 'Kriz baskısı düşer.', sourceTags: ['crisis'] },
+        { domain: 'personnel', delta: 2, reason: 'Ekip yükü artar.', sourceTags: ['crisis'] },
       ],
       ['crisis_threshold'],
     ),
@@ -245,8 +286,8 @@ function buildCrisisThresholdOptions(): MicroDecisionOption[] {
       'Kriz riski artabilir.',
       'warning',
       [
-        { domain: 'crisis', delta: 4, reason: 'Kriz izlenir.', sourceTags: ['crisis'] },
-        { domain: 'planning', delta: 2, reason: 'Plan riski artar.', sourceTags: ['crisis'] },
+        { domain: 'crisis', delta: 6, reason: BALANCE_COPY.crisisMonitorCarry, sourceTags: ['crisis'] },
+        { domain: 'planning', delta: 3, reason: getCarryOverRiskLine('monitor'), sourceTags: ['crisis'] },
       ],
       ['crisis_threshold'],
     ),
@@ -263,8 +304,8 @@ function buildDistrictRepOptions(): MicroDecisionOption[] {
       'Ekip zamanı harcanır.',
       'positive',
       [
-        { domain: 'districts', delta: -4, reason: 'Mahalle baskısı düşer.', sourceTags: ['district'] },
-        { domain: 'social', delta: -3, reason: 'Sosyal baskı düşer.', sourceTags: ['district'] },
+        { domain: 'districts', delta: -6, reason: 'Mahalle baskısı düşer.', sourceTags: ['district'] },
+        { domain: 'social', delta: -5, reason: 'Sosyal baskı düşer.', sourceTags: ['district'] },
         { domain: 'personnel', delta: 1, reason: 'Ekip yükü artar.', sourceTags: ['district'] },
       ],
       ['district_representative'],
@@ -277,8 +318,8 @@ function buildDistrictRepOptions(): MicroDecisionOption[] {
       'Kapasite daralır.',
       'warning',
       [
-        { domain: 'districts', delta: -5, reason: 'Mahalle baskısı düşer.', sourceTags: ['district'] },
-        { domain: 'personnel', delta: 2, reason: 'Ekip yükü artar.', sourceTags: ['district'] },
+        { domain: 'districts', delta: -6, reason: 'Mahalle baskısı düşer.', sourceTags: ['district'] },
+        { domain: 'personnel', delta: 3, reason: 'Ekip yükü artar.', sourceTags: ['district'] },
       ],
       ['district_representative'],
     ),
@@ -290,7 +331,7 @@ function buildDistrictRepOptions(): MicroDecisionOption[] {
       'Geri bildirim bekler.',
       'neutral',
       [
-        { domain: 'districts', delta: 2, reason: 'Mahalle baskısı izlenir.', sourceTags: ['district'] },
+        { domain: 'districts', delta: 3, reason: getCarryOverRiskLine('plan_keep'), sourceTags: ['district'] },
       ],
       ['district_representative'],
     ),
@@ -307,9 +348,9 @@ function buildOpportunityOptions(): MicroDecisionOption[] {
       'Kaynak kullanımı artar.',
       'positive',
       [
-        { domain: 'containers', delta: -5, reason: 'Konteyner baskısı düşer.', sourceTags: ['opportunity'] },
-        { domain: 'vehicles', delta: 2, reason: 'Araç yükü artar.', sourceTags: ['opportunity'] },
-        { domain: 'personnel', delta: 2, reason: 'Ekip yükü artar.', sourceTags: ['opportunity'] },
+        { domain: 'containers', delta: -7, reason: 'Konteyner baskısı düşer.', sourceTags: ['opportunity'] },
+        { domain: 'vehicles', delta: 3, reason: 'Araç yükü artar.', sourceTags: ['opportunity'] },
+        { domain: 'personnel', delta: 3, reason: 'Ekip yükü artar.', sourceTags: ['opportunity'] },
       ],
       ['operation_opportunity'],
     ),
@@ -321,7 +362,7 @@ function buildOpportunityOptions(): MicroDecisionOption[] {
       'Fırsat kaçabilir.',
       'neutral',
       [
-        { domain: 'planning', delta: -1, reason: 'Plan dengede kalır.', sourceTags: ['opportunity'] },
+        { domain: 'planning', delta: -2, reason: 'Operasyon dengesi korunur.', sourceTags: ['opportunity'] },
       ],
       ['operation_opportunity'],
     ),
@@ -333,7 +374,7 @@ function buildOpportunityOptions(): MicroDecisionOption[] {
       'Fırsat kaçabilir.',
       'warning',
       [
-        { domain: 'containers', delta: 1, reason: 'Baskı izlenir.', sourceTags: ['opportunity'] },
+        { domain: 'containers', delta: 2, reason: getCarryOverRiskLine('monitor'), sourceTags: ['opportunity'] },
       ],
       ['operation_opportunity'],
     ),
@@ -650,11 +691,13 @@ export function refreshMicroDecisionsForDay(
 }
 
 export function resolveMicroDecisionEffects(
-  _input: MicroDecisionEngineInput,
+  input: MicroDecisionEngineInput,
   decision: MicroDecision,
   option: MicroDecisionOption,
 ): MicroDecisionEffect[] {
-  return option.effects;
+  const isCrisis =
+    decision.type === 'crisis_threshold' || option.effects.some((e) => e.domain === 'crisis');
+  return scaleMicroEffects(option.effects, input, isCrisis);
 }
 
 export function applyMicroDecisionEffectsToOperationSignals(
@@ -749,6 +792,14 @@ export function processMicroDecisionsEndOfDay(
   operationSignals: OperationSignalsState;
   crisisState: CrisisState;
 } {
+  if (input.microDecisionState.lastProcessedDay === closingDay) {
+    return {
+      microDecisionState: input.microDecisionState,
+      operationSignals: input.operationSignals,
+      crisisState: input.crisisState,
+    };
+  }
+
   let state = expireOldMicroDecisions(input.microDecisionState, closingDay);
   let operationSignals = input.operationSignals;
   let crisisState = input.crisisState;
@@ -801,9 +852,13 @@ export function buildMicroDecisionReportLines(
     if (!option) continue;
     switch (decision.type) {
       case 'advisor_warning':
-        lines.push(
-          `Ece uyarısı sonrası ${option.label.toLowerCase()} seçildi; plan etkisi izlendi.`,
-        );
+        if (option.id === 'keep_plan' || option.id === 'monitor') {
+          lines.push(getCarryOverRiskLine(option.id === 'keep_plan' ? 'plan_keep' : 'monitor'));
+        } else {
+          lines.push(
+            `Ece uyarısı sonrası ${option.label.toLowerCase()} seçildi; saha etkisi belirginleşti.`,
+          );
+        }
         break;
       case 'field_update':
         lines.push(
@@ -811,9 +866,15 @@ export function buildMicroDecisionReportLines(
         );
         break;
       case 'crisis_threshold':
-        lines.push(
-          `Kriz eşiği kartında ${option.label.toLowerCase()} seçildi; şehir baskısı güncellendi.`,
-        );
+        if (option.id === 'crisis_coord') {
+          lines.push(BALANCE_COPY.crisisPreventiveReduced);
+        } else if (option.id === 'monitor') {
+          lines.push(BALANCE_COPY.crisisMonitorCarry);
+        } else {
+          lines.push(
+            `Kriz eşiği kartında ${option.label.toLowerCase()} seçildi; şehir baskısı güncellendi.`,
+          );
+        }
         break;
       case 'district_representative':
         lines.push(
