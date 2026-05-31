@@ -4,23 +4,19 @@ import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
+import { getHubRegionPulseImage } from '@/core/assets/creviaAssetPresentation';
+import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
 import { useHubDerivedInput } from '@/features/hub/hooks/useHubDerivedInput';
 import { deriveRegionPulse } from '@/features/hub/utils/hubDerived';
+import {
+  HUB_PREMIUM_COLORS,
+  HUB_PREMIUM_LAYOUT,
+  HUB_PREMIUM_RADIUS,
+  hubPremiumShadowCard,
+} from '@/features/hub/utils/hubPremiumPresentation';
 import { useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
-import { radius } from '@/ui/theme/radius';
-import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
-
-function regionIcon(id: string): keyof typeof Ionicons.glyphMap {
-  if (id.includes('sanayi') || id.includes('industrial')) {
-    return 'business-outline';
-  }
-  if (id.includes('cumhuriyet') || id.includes('pazar')) {
-    return 'storefront-outline';
-  }
-  return 'home-outline';
-}
 
 function PulseDots({ color, count }: { color: string; count: number }) {
   const dots = Math.min(4, Math.max(1, count));
@@ -79,17 +75,30 @@ export function HubRegionPulseSection() {
           <Animated.View
             key={r.id}
             entering={FadeIn.delay(idx * 40).duration(240)}
-            style={[styles.card, shadows.soft]}>
+            style={[
+              styles.card,
+              hubPremiumShadowCard(),
+              { borderColor: r.pulseColor },
+            ]}>
             <View style={styles.cardTop}>
-              <View style={styles.iconCircle}>
-                <Ionicons name={regionIcon(r.id)} size={18} color={colors.primary} />
+              <View style={[styles.iconCircle, { borderColor: r.pulseColor }]}>
+                <HubAssetImage
+                  source={getHubRegionPulseImage(r.id)}
+                  containerStyle={styles.regionAsset}
+                  contentFit="contain"
+                />
               </View>
-              <Text style={styles.moodEmoji}>{r.mood}</Text>
+              <View style={styles.moodBubble}>
+                <Text style={styles.moodEmoji}>{r.mood}</Text>
+              </View>
             </View>
-            <Text style={styles.name} numberOfLines={1}>
+            <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
               {r.shortName}
             </Text>
-            <Text style={[styles.status, { color: r.pulseColor }]} numberOfLines={1}>
+            <Text
+              style={[styles.status, { color: r.pulseColor }]}
+              numberOfLines={1}
+              ellipsizeMode="tail">
               {r.statusLabel}
             </Text>
             <PulseDots color={r.pulseColor} count={r.activeCount + 3} />
@@ -118,7 +127,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: '800',
-    color: colors.textPrimary,
+    color: HUB_PREMIUM_COLORS.textDark,
     letterSpacing: -0.2,
   },
   seeAllBtn: {
@@ -137,37 +146,51 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   card: {
-    width: 112,
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(26, 143, 138, 0.08)',
+    width: HUB_PREMIUM_LAYOUT.districtCardWidth,
+    height: HUB_PREMIUM_LAYOUT.districtCardHeight,
+    backgroundColor: HUB_PREMIUM_COLORS.card,
+    borderRadius: HUB_PREMIUM_RADIUS.quick,
+    borderWidth: 1.5,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    gap: 2,
+    gap: 4,
     minWidth: 0,
+    justifyContent: 'space-between',
   },
   cardTop: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 4,
   },
   iconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: colors.primaryMuted,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(189, 239, 231, 0.35)',
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  regionAsset: {
+    width: 28,
+    height: 28,
+  },
+  moodBubble: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: HUB_PREMIUM_COLORS.goldSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   moodEmoji: {
-    fontSize: 16,
+    fontSize: 14,
   },
   name: {
     fontSize: 14,
     fontWeight: '800',
-    color: colors.textPrimary,
+    color: HUB_PREMIUM_COLORS.textDark,
   },
   status: {
     fontSize: 11,

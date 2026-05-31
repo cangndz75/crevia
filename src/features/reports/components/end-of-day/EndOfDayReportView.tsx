@@ -1,24 +1,38 @@
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { StyleSheet, View } from 'react-native';
+import { useMemo } from 'react';
 
+import { normalizeAuthorityState } from '@/core/authority/authoritySeed';
 import type { DailyReport } from '@/core/models/DailyReport';
 import type { GameMetrics } from '@/core/models/GameMetrics';
 import type { DailyXpReport } from '@/core/xp/xpReport';
 import { EndOfDayReportHero } from '@/features/reports/components/end-of-day/EndOfDayReportHero';
-import { EndOfDayReportImpactStrip } from '@/features/reports/components/end-of-day/EndOfDayReportImpactStrip';
 import { EndOfDayReportMetaProgressSection } from '@/features/reports/components/end-of-day/EndOfDayReportMetaProgressSection';
-import { EndOfDayReportSystemSummaries } from '@/features/reports/components/end-of-day/EndOfDayReportSystemSummaries';
-import { EndOfDayReportTomorrowNotes } from '@/features/reports/components/end-of-day/EndOfDayReportTomorrowNotes';
-import { EndOfDayReportXpCard } from '@/features/reports/components/end-of-day/EndOfDayReportXpCard';
-import { PilotReportSummaryCard } from '@/features/reports/components/PilotReportSummaryCard';
+import { ReportAuthorityTrustCard } from '@/features/reports/components/end-of-day/premium/ReportAuthorityTrustCard';
+import { ReportPilotSummaryPremiumCard } from '@/features/reports/components/end-of-day/premium/ReportPilotSummaryPremiumCard';
+import { ReportPrimaryImpactSection } from '@/features/reports/components/end-of-day/premium/ReportPrimaryImpactSection';
+import { ReportTomorrowNotesCard } from '@/features/reports/components/end-of-day/premium/ReportTomorrowNotesCard';
+import { ReportHeaderCard } from '@/features/reports/components/ReportHeaderCard';
 import { ReportPilotCompletionCard } from '@/features/reports/components/ReportPilotCompletionCard';
+import {
+  buildReportAuthorityTrustModel,
+  buildReportPilotSummaryPremiumModel,
+  buildReportPrimaryImpactModel,
+  buildReportTomorrowNotesModel,
+} from '@/features/reports/presentation/reportPremiumPresentation';
+import {
+  buildReportHeaderModel,
+} from '@/features/reports/presentation/reportScreenPresentation';
 import type { PilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
 import { buildEndOfDayReportViewModel } from '@/features/reports/utils/endOfDayReportPresentation';
 import type { useReportPilotCompletionSummary } from '@/features/pilot/hooks/usePilotCompletionSummary';
 import { normalizePostPilotOperationState } from '@/core/postPilot';
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
-import { useGameStore } from '@/store/useGameStore';
-import { spacing } from '@/ui/theme/spacing';
+import {
+  selectDecisionHistory,
+  useGameStore,
+} from '@/store/useGameStore';
+import { useGameStatus } from '@/store/gameSelectors';
 
 type Props = {
   report: DailyReport;
@@ -30,8 +44,18 @@ type Props = {
   pilotCompletionSummary: ReturnType<typeof useReportPilotCompletionSummary>;
 };
 
-const enter = (delay: number) =>
-  FadeInUp.delay(delay).duration(260).springify().damping(24);
+const ENTER = {
+  header: FadeInUp.delay(0).duration(260).springify().damping(24),
+  hero: FadeInUp.delay(40).duration(260).springify().damping(24),
+  impact: FadeInUp.delay(80).duration(260).springify().damping(24),
+  authority: FadeInUp.delay(120).duration(260).springify().damping(24),
+  badge: FadeInUp.delay(140).duration(260).springify().damping(24),
+  notes: FadeInUp.delay(160).duration(260).springify().damping(24),
+  pilot: FadeInUp.delay(200).duration(260).springify().damping(24),
+  completion: FadeInUp.delay(240).duration(260).springify().damping(24),
+} as const;
+
+const PREMIUM_SECTION_GAP = 16;
 
 export function EndOfDayReportView({
   report,
@@ -42,22 +66,36 @@ export function EndOfDayReportView({
   pilotReportContext,
   pilotCompletionSummary,
 }: Props) {
-  const postPilotLightDay = useGameStore((s) => {
-    if (s.gameState.pilot.status !== 'completed') {
+  const decisionHistory = useGameStore(selectDecisionHistory);
+  const pilotAuthorityState = useGameStore(
+    (s) => s.gameState.pilot.authorityState,
+  );
+  const pilotStatus = useGameStore((s) => s.gameState.pilot.status);
+  const postPilotOperation = useGameStore(
+    (s) => s.gameState.pilot.postPilotOperation,
+  );
+  const currentPilotDay = useGameStore((s) => s.gameState.pilot.currentPilotDay);
+
+  const postPilotLightDay = useMemo(() => {
+    if (pilotStatus !== 'completed') {
       return false;
     }
-    const postPilot = normalizePostPilotOperationState(
-      s.gameState.pilot.postPilotOperation,
-      {
-        pilotStatus: 'completed',
-        currentPilotDay: s.gameState.pilot.currentPilotDay,
-      },
-    );
+    const postPilot = normalizePostPilotOperationState(postPilotOperation, {
+      pilotStatus: 'completed',
+      currentPilotDay,
+    });
     return (
       postPilot.phase === 'main_operation_light' &&
       report.day >= POST_PILOT_FIRST_OPERATION_DAY
     );
-  });
+  }, [pilotStatus, postPilotOperation, currentPilotDay, report.day]);
+
+  const authorityState = useMemo(
+    () => normalizeAuthorityState(pilotAuthorityState, report.day),
+    [pilotAuthorityState, report.day],
+  );
+
+  const gameStatus = useGameStatus();
 
   const model = buildEndOfDayReportViewModel({
     report,
@@ -68,11 +106,53 @@ export function EndOfDayReportView({
     postPilotLightDay,
   });
 
-  const sectionGap = model.isDay7 ? spacing.sm : spacing.md;
+  const headerModel = buildReportHeaderModel(gameStatus, report.day);
+
+  const impactModel = useMemo(
+    () =>
+      buildReportPrimaryImpactModel({
+        metrics,
+        decisionHistory,
+        day: report.day,
+        createdAt: report.createdAt,
+      }),
+    [metrics, decisionHistory, report.day, report.createdAt],
+  );
+
+  const authorityModel = useMemo(
+    () =>
+      buildReportAuthorityTrustModel({
+        authorityLines: report.authoritySummaryLines ?? [],
+        authorityDailyGain: report.authorityDailyGain,
+        authorityState,
+      }),
+    [report.authoritySummaryLines, report.authorityDailyGain, authorityState],
+  );
+
+  const tomorrowNotesModel = useMemo(
+    () => buildReportTomorrowNotesModel(model.tomorrowNotes),
+    [model.tomorrowNotes],
+  );
+
+  const pilotPremiumModel = useMemo(
+    () =>
+      pilotReportContext
+        ? buildReportPilotSummaryPremiumModel({
+            context: pilotReportContext,
+            decisionHistory,
+            reportDay: report.day,
+          })
+        : null,
+    [pilotReportContext, decisionHistory, report.day],
+  );
 
   return (
-    <View style={[styles.stack, model.isDay7 && styles.stackDay7]}>
-      <Animated.View entering={enter(0)}>
+    <View style={styles.stack}>
+      <Animated.View entering={ENTER.header}>
+        <ReportHeaderCard model={headerModel} />
+      </Animated.View>
+
+      <Animated.View entering={ENTER.hero}>
         <EndOfDayReportHero
           day={model.day}
           statusTitle={model.statusTitle}
@@ -81,51 +161,37 @@ export function EndOfDayReportView({
         />
       </Animated.View>
 
-      <Animated.View entering={enter(60)}>
-        <EndOfDayReportImpactStrip metrics={model.impactMetrics} />
+      <Animated.View entering={ENTER.impact}>
+        <ReportPrimaryImpactSection model={impactModel} />
       </Animated.View>
 
-      <Animated.View entering={enter(120)}>
+      <Animated.View entering={ENTER.authority}>
+        <ReportAuthorityTrustCard model={authorityModel} />
+      </Animated.View>
+
+      <Animated.View entering={ENTER.badge}>
         <EndOfDayReportMetaProgressSection
-          authorityLines={report.authoritySummaryLines ?? []}
+          authorityLines={[]}
           badgeEvaluation={report.badgeEvaluation}
           compact={model.isDay1}
+          badgeOnly
         />
       </Animated.View>
 
-      {model.showSystemSummaries ? (
-        <Animated.View entering={enter(180)}>
-          <EndOfDayReportSystemSummaries
-            sections={model.systemSections}
-            compact={model.isDay7}
-          />
+      {model.showTomorrowNotes ? (
+        <Animated.View entering={ENTER.notes}>
+          <ReportTomorrowNotesCard model={tomorrowNotesModel} />
         </Animated.View>
       ) : null}
 
-      {model.showTomorrowNotes && model.tomorrowNotes.length > 0 ? (
-        <Animated.View entering={enter(220)}>
-          <EndOfDayReportTomorrowNotes notes={model.tomorrowNotes} compact={model.isDay7} />
-        </Animated.View>
-      ) : null}
-
-      {model.showXpCard ? (
-        <Animated.View entering={enter(260)}>
-          <EndOfDayReportXpCard
-            totalXp={model.xpTotal}
-            subtitle={model.xpSubtitle}
-            breakdown={model.xpBreakdown}
-          />
-        </Animated.View>
-      ) : null}
-
-      {pilotReportContext ? (
-        <Animated.View entering={enter(300)}>
-          <PilotReportSummaryCard context={pilotReportContext} />
+      {pilotPremiumModel ? (
+        <Animated.View entering={ENTER.pilot}>
+          <ReportPilotSummaryPremiumCard model={pilotPremiumModel} />
         </Animated.View>
       ) : null}
 
       {pilotCompletionSummary ? (
-        <Animated.View entering={enter(340)} style={{ marginTop: sectionGap }}>
+        <Animated.View entering={ENTER.completion}>
           <ReportPilotCompletionCard summary={pilotCompletionSummary} compact />
         </Animated.View>
       ) : null}
@@ -133,17 +199,10 @@ export function EndOfDayReportView({
   );
 }
 
-export const endOfDayReportViewStyles = {
-  stack: {
-    gap: spacing.md,
-  },
-};
-
 const styles = StyleSheet.create({
   stack: {
-    gap: spacing.md,
-  },
-  stackDay7: {
-    gap: spacing.sm,
+    gap: PREMIUM_SECTION_GAP,
+    backgroundColor: '#F7F3EB',
+    minWidth: 0,
   },
 });

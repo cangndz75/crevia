@@ -132,6 +132,9 @@ export function AnimatedTabBar({
 
         const isEventsTab = route.name === 'events';
         const isHubTab = route.name === 'index';
+        const isReportsTab = route.name === 'reports';
+        const isMapTab = route.name === 'risks';
+        const accentTab = isEventsTab || isHubTab || isReportsTab || isMapTab;
 
         return (
           <Pressable
@@ -139,7 +142,7 @@ export function AnimatedTabBar({
             onPress={onPress}
             style={[
               styles.tab,
-              focused && (isEventsTab || isHubTab) && styles.tabAccentActive,
+              focused && accentTab && styles.tabAccentActive,
             ]}
             accessibilityRole="button"
             accessibilityState={{ selected: focused }}
@@ -148,14 +151,14 @@ export function AnimatedTabBar({
               focused={focused}
               icon={config.icon}
               iconFocused={config.iconFocused}
-              accent={isEventsTab || isHubTab}
+              accent={accentTab}
             />
             {focused && isEventsTab ? <View style={styles.activeDot} /> : null}
             {focused ? (
               <Text
                 style={[
                   styles.label,
-                  isHubTab
+                  isHubTab || isReportsTab || isMapTab
                     ? styles.labelHubFocused
                     : isEventsTab
                       ? styles.labelEventsFocused

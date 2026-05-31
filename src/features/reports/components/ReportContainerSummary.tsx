@@ -1,7 +1,8 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { creviaAssets } from '@/core/assets/creviaAssets';
 import { GameCard } from '@/ui/components/GameCard';
+import { CreviaAssetImage } from '@/ui/components/CreviaAssetImage';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
 import { typography } from '@/ui/theme/typography';
@@ -18,7 +19,11 @@ export function ReportContainerSummary({ lines }: ReportContainerSummaryProps) {
   return (
     <GameCard padding="lg" style={styles.card}>
       <View style={styles.header}>
-        <Ionicons name="trash-outline" size={18} color={colors.primary} />
+        <CreviaAssetImage
+          source={creviaAssets.containers.serviceBins}
+          containerStyle={styles.headerAsset}
+          contentFit="contain"
+        />
         <Text style={typography.label}>Atık Operasyonu</Text>
       </View>
       <Text style={styles.hint}>Gün sonu saha özeti</Text>
@@ -41,6 +46,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  headerAsset: {
+    width: 28,
+    height: 28,
   },
   hint: {
     ...typography.caption,

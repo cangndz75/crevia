@@ -2,10 +2,15 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { creviaAssets } from '@/core/assets/creviaAssets';
 import { CreviaAnimatedPressable } from '@/core/animations/CreviaAnimatedPressable';
+import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
+import {
+  HUB_PREMIUM_COLORS,
+  HUB_PREMIUM_RADIUS,
+  hubPremiumShadowCard,
+} from '@/features/hub/utils/hubPremiumPresentation';
 import { colors } from '@/ui/theme/colors';
-import { radius } from '@/ui/theme/radius';
-import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
 type HubFooterActionRowProps = {
@@ -27,14 +32,22 @@ export function HubFooterActionRow({
         onPress={onEndDay}
         accessibilityRole="button"
         accessibilityLabel="Günü tamamla"
-        style={[styles.primaryBtn, shadows.soft]}>
+        style={[styles.primaryBtn, hubPremiumShadowCard()]}>
         <LinearGradient
-          colors={['#0F4A47', colors.headerTealDark, colors.primary]}
+          colors={[
+            HUB_PREMIUM_COLORS.tealDark,
+            HUB_PREMIUM_COLORS.tealCta,
+            HUB_PREMIUM_COLORS.teal,
+          ]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.primaryGradient}>
           <View style={styles.primaryIcon}>
-            <Ionicons name="flag" size={16} color="#FFFFFF" />
+            <HubAssetImage
+              source={creviaAssets.reports.endOfDay.clipboardStamp}
+              containerStyle={styles.footerAsset}
+              contentFit="contain"
+            />
           </View>
           <View style={styles.copy}>
             <Text style={styles.primaryTitle} numberOfLines={1}>
@@ -53,17 +66,21 @@ export function HubFooterActionRow({
           onPress={onContinueOperation}
           style={({ pressed }) => [
             styles.secondaryBtn,
-            shadows.soft,
+            hubPremiumShadowCard(),
             pressed && styles.pressed,
           ]}
           accessibilityRole="button"
-          accessibilityLabel="Operasyona devam et">
+          accessibilityLabel="Operasyonlar">
           <View style={styles.secondaryIcon}>
-            <Ionicons name="flash" size={16} color={colors.hubGoldDark} />
+            <HubAssetImage
+              source={creviaAssets.icons.signals.beaconTeal}
+              containerStyle={styles.footerAsset}
+              contentFit="contain"
+            />
           </View>
           <View style={styles.copy}>
             <Text style={styles.secondaryTitle} numberOfLines={1}>
-              Operasyona Devam
+              Operasyonlar
             </Text>
             <Text style={styles.secondarySubtitle} numberOfLines={1}>
               +{continueEventCount} olay
@@ -85,7 +102,7 @@ const styles = StyleSheet.create({
   },
   primaryBtn: {
     flex: 1,
-    borderRadius: radius.xl,
+    borderRadius: HUB_PREMIUM_RADIUS.card,
     overflow: 'hidden',
     minWidth: 0,
   },
@@ -95,16 +112,21 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    minHeight: 72,
+    minHeight: 76,
   },
   primaryIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 38,
+    height: 38,
+    borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    overflow: 'hidden',
+  },
+  footerAsset: {
+    width: 24,
+    height: 24,
   },
   copy: {
     flex: 1,
@@ -127,20 +149,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
+    backgroundColor: HUB_PREMIUM_COLORS.cardGold,
+    borderRadius: HUB_PREMIUM_RADIUS.card,
     borderWidth: 1.5,
-    borderColor: 'rgba(245, 183, 49, 0.45)',
+    borderColor: HUB_PREMIUM_COLORS.borderGold,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    minHeight: 72,
+    minHeight: 76,
     minWidth: 0,
   },
   secondaryIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: colors.hubGoldMuted,
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    backgroundColor: HUB_PREMIUM_COLORS.goldSoft,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,

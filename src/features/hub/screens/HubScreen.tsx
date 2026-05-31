@@ -5,14 +5,16 @@ import { StyleSheet, View } from 'react-native';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import { HubCriticalEventCard } from '@/features/hub/components/HubCriticalEventCard';
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
+import { HubDailyGoalHeroCard } from '@/features/hub/components/HubDailyGoalHeroCard';
 import { HubDailyPriorityCard } from '@/features/hub/components/HubDailyPriorityCard';
 import { HubFooterActionRow } from '@/features/hub/components/HubFooterActionRow';
 import { HubPersonnelStrip } from '@/features/hub/components/HubPersonnelStrip';
 import { HubPilotOperationPreviewStrip } from '@/features/hub/components/HubPilotOperationPreviewStrip';
+import { HubPremiumHeader } from '@/features/hub/components/HubPremiumHeader';
 import { PostPilotAgendaBanner } from '@/features/hub/components/PostPilotAgendaBanner';
 import { HubQuickActionsPanel } from '@/features/hub/components/HubQuickActionsPanel';
 import { HubRegionPulseSection } from '@/features/hub/components/HubRegionPulseSection';
-import { HubTaskTrackingHero } from '@/features/hub/components/HubTaskTrackingHero';
+import { hubAssets } from '@/features/hub/utils/hubAssets';
 import { HubSocialSignalCard } from '@/features/tutorial/HubSocialSignalCard';
 import {
   TutorialCoachOverlay,
@@ -23,6 +25,7 @@ import { OnboardingCoachBubble } from '@/features/onboarding/components/Onboardi
 import { useOnboardingHint } from '@/features/onboarding/hooks/useOnboardingHint';
 import { useOnboardingHubVisibility } from '@/features/onboarding/hooks/useOnboardingHubVisibility';
 import { buildHubScreenLayoutModel } from '@/features/hub/utils/hubScreenPresentation';
+import { HUB_PREMIUM_LAYOUT } from '@/features/hub/utils/hubPremiumPresentation';
 import {
   selectActiveTutorialStepForScreen,
   selectIsDay1TutorialActive,
@@ -38,8 +41,8 @@ import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
 
 /**
- * Merkez ekranı — referans dashboard hiyerarşisi:
- * Günlük hedef → Bugünkü plan → Hızlı hazırlıklar → Personel → Bölge nabzı → Alt CTA
+ * Merkez ekranı — premium mobil oyun merkezi hiyerarşisi:
+ * Header → Günlük hedef → Kritik olay → Öncelik → Hızlı aksiyonlar → Personel → Bölge nabzı → Alt CTA
  */
 export function HubScreen() {
   const router = useRouter();
@@ -88,13 +91,15 @@ export function HubScreen() {
 
   return (
     <GameScreenShell
-      headerVariant="dashboard"
+      headerVariant="none"
       backgroundColor={colors.hubCream}
       contentStyle={styles.content}>
+      <HubPremiumHeader />
+
       <View
         style={[styles.body, hubTutorialStep ? styles.bodyWithCoach : null]}>
         <TutorialTarget targetKey="hub_metrics" highlighted={metricsHighlight}>
-          <HubTaskTrackingHero variant="compact" />
+          <HubDailyGoalHeroCard imageSource={hubAssets.dailyGoalBadge} />
         </TutorialTarget>
 
         {hubLayout.showPostPilotAgendaInFocus ? (
@@ -144,7 +149,7 @@ export function HubScreen() {
           showContinue={eventCount > 0 || isDay1Layout}
         />
 
-        <HubDevTools />
+        {__DEV__ ? <HubDevTools /> : null}
       </View>
       <TutorialCoachOverlay screen="hub" />
       {coachHint && !hubTutorialStep ? (
@@ -162,16 +167,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     gap: 0,
     paddingTop: 0,
+    paddingBottom: HUB_PREMIUM_LAYOUT.scrollBottomMin,
   },
   body: {
-    gap: 14,
-    paddingBottom: spacing.xxxl,
+    gap: 12,
+    paddingBottom: spacing.xl,
   },
   bodyWithCoach: {
-    paddingBottom: spacing.xxxl + 120,
+    paddingBottom: spacing.xl + 120,
   },
   sectionPad: {
-    paddingHorizontal: spacing.lg,
     minWidth: 0,
   },
 });

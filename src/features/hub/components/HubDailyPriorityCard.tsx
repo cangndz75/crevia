@@ -21,6 +21,11 @@ import {
   DAY1_PLAN_STEPS,
   DAY1_PLAN_TITLE,
 } from '@/features/hub/hubUiPresentation';
+import {
+  HUB_PREMIUM_COLORS,
+  HUB_PREMIUM_RADIUS,
+  hubPremiumShadowCard,
+} from '@/features/hub/utils/hubPremiumPresentation';
 import { hubAssets } from '@/features/hub/utils/hubAssets';
 import { selectIsDay1TutorialEligible } from '@/features/tutorial/tutorialSelectors';
 import { useGameStore } from '@/store/useGameStore';
@@ -164,9 +169,9 @@ export function HubDailyPriorityCard() {
   if (needsSelection) {
     return (
       <View style={styles.wrap}>
-        <View style={[styles.selectionCard, shadows.soft]}>
+        <View style={[styles.selectionCard, hubPremiumShadowCard()]}>
           <Text style={styles.selectionTitle}>Bugünkü Önceliğini Seç</Text>
-          <Text style={styles.selectionSubtitle} numberOfLines={2}>
+          <Text style={styles.selectionSubtitle} numberOfLines={1} ellipsizeMode="tail">
             Günün kararlarını hangi dengeyle yöneteceğini belirle.
           </Text>
           <View style={styles.choiceList}>
@@ -281,7 +286,7 @@ function PriorityChoiceRow({
         <Text style={styles.choiceTitle} numberOfLines={1}>
           {title}
         </Text>
-        <Text style={styles.choicePromise} numberOfLines={1}>
+        <Text style={styles.choicePromise} numberOfLines={1} ellipsizeMode="tail">
           {promise}
         </Text>
       </View>
@@ -445,41 +450,43 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   selectionCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    padding: 14,
+    backgroundColor: HUB_PREMIUM_COLORS.card,
+    borderRadius: HUB_PREMIUM_RADIUS.card,
+    padding: 16,
     gap: 10,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: HUB_PREMIUM_COLORS.borderSoft,
   },
   selectionTitle: {
     fontSize: 15,
     fontWeight: '800',
-    color: colors.textPrimary,
+    color: HUB_PREMIUM_COLORS.textDark,
   },
   selectionSubtitle: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: HUB_PREMIUM_COLORS.textMuted,
+    lineHeight: 16,
   },
   choiceList: {
-    gap: 8,
+    gap: 10,
   },
   choiceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    minHeight: 56,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 8,
-    borderRadius: radius.lg,
-    borderWidth: 1,
+    minHeight: 62,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 18,
+    borderWidth: 1.5,
   },
   choiceIcon: {
     width: 36,
     height: 36,
-    borderRadius: radius.md,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   choiceBody: {
     flex: 1,
@@ -487,13 +494,13 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   choiceTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
-    color: colors.textPrimary,
+    color: HUB_PREMIUM_COLORS.textDark,
   },
   choicePromise: {
-    fontSize: 10,
-    color: colors.textSecondary,
+    fontSize: 11,
+    color: HUB_PREMIUM_COLORS.textMuted,
   },
   activeCard: {
     backgroundColor: colors.surface,

@@ -25,6 +25,11 @@ import { eventSeverity } from '@/core/utils/eventPriority';
 import { EventLifecycleBadge } from '@/features/events/components/EventLifecycleBadge';
 import { PostPilotEventContextChip } from '@/features/events/components/PostPilotEventContextChip';
 import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
+import {
+  HUB_PREMIUM_COLORS,
+  HUB_PREMIUM_RADIUS,
+  hubPremiumShadowCard,
+} from '@/features/hub/utils/hubPremiumPresentation';
 import { getEventHeroImage, hubAssets } from '@/features/hub/utils/hubAssets';
 import { selectIsDay1TutorialActive } from '@/features/tutorial/tutorialSelectors';
 import { useGameStore } from '@/store/useGameStore';
@@ -125,7 +130,7 @@ export function HubCriticalEventCard() {
       entering={cardEntranceEntering(30)}
       style={[
         styles.card,
-        shadows.card,
+        hubPremiumShadowCard(),
         isResolved
           ? {
               borderColor: resolvedPalette.border,
@@ -251,7 +256,10 @@ export function HubCriticalEventCard() {
             </View>
           ) : (
             <LinearGradient
-              colors={[colors.headerTealDark, colors.primary, '#24A89E']}
+              colors={[
+                HUB_PREMIUM_COLORS.tealCta,
+                HUB_PREMIUM_COLORS.tealCtaDark,
+              ]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.ctaGradient}>
@@ -270,17 +278,19 @@ export function HubCriticalEventCard() {
 const styles = StyleSheet.create({
   card: {
     marginHorizontal: spacing.lg,
-    backgroundColor: colors.surface,
-    borderRadius: 26,
+    backgroundColor: HUB_PREMIUM_COLORS.cardWarm,
+    borderRadius: HUB_PREMIUM_RADIUS.cardLg,
     borderWidth: 1,
     overflow: 'hidden',
     position: 'relative',
   },
   cardActive: {
-    borderColor: 'rgba(232, 155, 46, 0.35)',
+    borderColor: HUB_PREMIUM_COLORS.borderGold,
+    backgroundColor: HUB_PREMIUM_COLORS.cardGold,
   },
   cardUrgent: {
-    borderColor: 'rgba(232, 155, 46, 0.55)',
+    borderColor: 'rgba(216, 180, 74, 0.55)',
+    backgroundColor: HUB_PREMIUM_COLORS.cardGold,
   },
   accentBar: {
     position: 'absolute',
@@ -326,17 +336,17 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   flameBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 8,
-    backgroundColor: colors.warning,
+    width: 26,
+    height: 26,
+    borderRadius: 9,
+    backgroundColor: HUB_PREMIUM_COLORS.gold,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerText: {
     fontSize: 11,
     fontWeight: '800',
-    color: colors.warning,
+    color: '#9A7B28',
     letterSpacing: 0.3,
   },
   body: {
@@ -358,30 +368,34 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   neighborhoodChip: {
-    maxWidth: '55%',
-    backgroundColor: colors.primaryMuted,
+    maxWidth: '40%',
+    backgroundColor: 'rgba(15, 143, 134, 0.12)',
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: radius.full,
+    minHeight: 22,
+    justifyContent: 'center',
   },
   categoryChip: {
-    maxWidth: '45%',
-    backgroundColor: colors.backgroundAlt,
+    maxWidth: '40%',
+    backgroundColor: 'rgba(29, 78, 137, 0.1)',
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: radius.full,
+    minHeight: 22,
+    justifyContent: 'center',
   },
   chipText: {
     fontSize: 10,
     fontWeight: '700',
-    color: colors.textSecondary,
+    color: HUB_PREMIUM_COLORS.textDark,
   },
   title: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
-    color: colors.textPrimary,
+    color: HUB_PREMIUM_COLORS.textDark,
     letterSpacing: -0.3,
-    lineHeight: 20,
+    lineHeight: 19,
   },
   summary: {
     fontSize: 12,
@@ -400,12 +414,13 @@ const styles = StyleSheet.create({
     color: colors.warning,
   },
   thumbWrap: {
-    width: 64,
-    height: 58,
-    borderRadius: radius.lg,
+    width: 76,
+    height: 76,
+    borderRadius: 18,
     overflow: 'hidden',
-    backgroundColor: colors.backgroundAlt,
+    backgroundColor: HUB_PREMIUM_COLORS.mint,
     flexShrink: 0,
+    ...hubPremiumShadowCard(),
   },
   eventImage: {
     width: '100%',
@@ -426,9 +441,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    paddingVertical: 11,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    minHeight: 44,
+    minHeight: 47,
   },
   ctaResolved: {
     flexDirection: 'row',
@@ -447,7 +462,7 @@ const styles = StyleSheet.create({
   ctaText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#fff',
+    color: HUB_PREMIUM_COLORS.creamText,
     letterSpacing: -0.2,
   },
 });

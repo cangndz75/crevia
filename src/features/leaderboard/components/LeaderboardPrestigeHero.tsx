@@ -2,6 +2,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+/** Render başına yeni entering üretmek sonsuz güncelleme döngüsüne yol açar. */
+const PRESTIGE_HERO_ENTERING = FadeInDown.duration(400).springify();
+
 import type { LeaderboardHeroModel } from '@/features/leaderboard/utils/leaderboardPresentation';
 import { LEADERBOARD_UI_COPY } from '@/features/leaderboard/utils/leaderboardPresentation';
 import { colors } from '@/ui/theme/colors';
@@ -15,7 +18,7 @@ type Props = {
 
 export function LeaderboardPrestigeHero({ model }: Props) {
   return (
-    <Animated.View entering={FadeInDown.duration(400).springify()} style={styles.wrap}>
+    <Animated.View entering={PRESTIGE_HERO_ENTERING} style={styles.wrap}>
       <LinearGradient
         colors={['#FFFFFF', '#FAFFFE', '#F2FBF9']}
         start={{ x: 0, y: 0 }}

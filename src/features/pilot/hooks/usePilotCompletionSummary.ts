@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { useShallow } from 'zustand/react/shallow';
 
 import {
   buildPilotCompletionSummary,
@@ -12,30 +11,34 @@ import {
 } from '@/store/useGameStore';
 
 export function usePilotCompletionSummary(): PilotCompletionSummary {
-  const slice = useGameStore(
-    useShallow((s) => ({
-      gameState: s.gameState,
-      decisionHistory: s.decisionHistory,
-      dailyPriorityByDay: s.dailyPriorityByDay,
-      dailyGoalsByDay: s.dailyGoalsByDay,
-      lastDailyReport: s.lastDailyReport,
-      lastPilotScore: s.lastPilotScore,
-      snapshots: s.snapshots,
-    })),
-  );
+  const gameState = useGameStore((s) => s.gameState);
+  const decisionHistory = useGameStore(selectDecisionHistory);
+  const dailyPriorityByDay = useGameStore((s) => s.dailyPriorityByDay);
+  const dailyGoalsByDay = useGameStore((s) => s.dailyGoalsByDay);
+  const lastDailyReport = useGameStore(selectLastDailyReport);
+  const lastPilotScore = useGameStore((s) => s.lastPilotScore);
+  const snapshots = useGameStore((s) => s.snapshots);
 
   return useMemo(
     () =>
       buildPilotCompletionSummary({
-        gameState: slice.gameState,
-        decisionHistory: slice.decisionHistory,
-        dailyPriorityByDay: slice.dailyPriorityByDay,
-        dailyGoalsByDay: slice.dailyGoalsByDay,
-        lastDailyReport: slice.lastDailyReport,
-        lastPilotScore: slice.lastPilotScore,
-        snapshots: slice.snapshots,
+        gameState,
+        decisionHistory,
+        dailyPriorityByDay,
+        dailyGoalsByDay,
+        lastDailyReport,
+        lastPilotScore,
+        snapshots,
       }),
-    [slice],
+    [
+      gameState,
+      decisionHistory,
+      dailyPriorityByDay,
+      dailyGoalsByDay,
+      lastDailyReport,
+      lastPilotScore,
+      snapshots,
+    ],
   );
 }
 
@@ -43,17 +46,17 @@ export function useReportPilotCompletionSummary(
   reportDay: number,
 ): PilotCompletionSummary | null {
   const summary = usePilotCompletionSummary();
-  const gameState = useGameStore((s) => s.gameState);
+  const pilotStatus = useGameStore((s) => s.gameState.pilot.status);
 
   return useMemo(() => {
-    if (reportDay < 7 && gameState.pilot.status !== 'completed') {
+    if (reportDay < 7 && pilotStatus !== 'completed') {
       return null;
     }
     if (reportDay < 7) {
       return null;
     }
     return summary.isCompleted ? summary : null;
-  }, [reportDay, gameState.pilot.status, summary]);
+  }, [reportDay, pilotStatus, summary]);
 }
 
 export { selectLastDailyReport };

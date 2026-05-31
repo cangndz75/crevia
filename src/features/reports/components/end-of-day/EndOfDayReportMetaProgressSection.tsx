@@ -1,60 +1,55 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { buildReportBadgeSummaryModel } from '@/core/badges/badgePresentation';
 import type { BadgeEvaluationSnapshot } from '@/core/badges/badgeTypes';
+import { buildReportBadgeSummaryModel } from '@/core/badges/badgePresentation';
 import { ReportAuthoritySummary } from '@/features/reports/components/ReportAuthoritySummary';
-import { ReportBadgeSummary } from '@/features/reports/components/ReportBadgeSummary';
-import { colors } from '@/ui/theme/colors';
-import { spacing } from '@/ui/theme/spacing';
+import { ReportBadgeStatusCard } from '@/features/reports/components/ReportBadgeStatusCard';
 
 type Props = {
   authorityLines: string[];
   badgeEvaluation?: BadgeEvaluationSnapshot | null;
   compact?: boolean;
+  /** Yetki kartı ayrı premium bileşende; yalnızca rozet şeridi */
+  badgeOnly?: boolean;
 };
 
 export function EndOfDayReportMetaProgressSection({
   authorityLines,
   badgeEvaluation,
   compact = false,
+  badgeOnly = false,
 }: Props) {
-  const hasAuthority = authorityLines.length > 0;
-  const badgeVisible = buildReportBadgeSummaryModel(badgeEvaluation).visible;
+  const badgeModel = buildReportBadgeSummaryModel(badgeEvaluation);
+  const showAuthority = !badgeOnly;
+  const showBadge = badgeModel.visible || !compact;
 
-  if (!hasAuthority && !badgeVisible) {
+  if (!showAuthority && !showBadge) {
+    return null;
+  }
+
+  if (badgeOnly && !showBadge) {
     return null;
   }
 
   return (
-    <View style={styles.wrap}>
-      <Text style={styles.heading} numberOfLines={1}>
-        Yetki ve Rozet
-      </Text>
-      <View style={[styles.stack, compact && styles.stackCompact]}>
-        {hasAuthority ? (
-          <ReportAuthoritySummary lines={authorityLines} compact={compact} />
-        ) : null}
-        <ReportBadgeSummary evaluation={badgeEvaluation} compact={compact} />
-      </View>
+    <View style={badgeOnly ? styles.badgeOnly : styles.row}>
+      {showAuthority ? (
+        <ReportAuthoritySummary lines={authorityLines} compact={compact} />
+      ) : null}
+      {showBadge ? (
+        <ReportBadgeStatusCard evaluation={badgeEvaluation} />
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    gap: spacing.sm,
+  row: {
+    flexDirection: 'row',
+    gap: 10,
+    minWidth: 0,
   },
-  heading: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.textSecondary,
-    letterSpacing: 0.2,
-    paddingHorizontal: 2,
-  },
-  stack: {
-    gap: spacing.sm,
-  },
-  stackCompact: {
-    gap: 8,
+  badgeOnly: {
+    minWidth: 0,
   },
 });

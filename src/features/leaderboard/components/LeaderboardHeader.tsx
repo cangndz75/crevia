@@ -1,7 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { LEADERBOARD_TROPHY_SOURCE } from '@/features/leaderboard/utils/leaderboardAssets';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
 
@@ -30,7 +32,11 @@ export function LeaderboardHeader({ onBack }: LeaderboardHeaderProps) {
       </View>
 
       <View style={styles.trophyBadge}>
-        <Ionicons name="trophy" size={20} color={colors.hubGoldDark} />
+        <Image
+          source={LEADERBOARD_TROPHY_SOURCE}
+          style={styles.trophyImage}
+          contentFit="contain"
+        />
       </View>
     </View>
   );
@@ -79,5 +85,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(212,160,23,0.28)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  trophyImage: {
+    width: 22,
+    height: 22,
   },
 });

@@ -15,6 +15,7 @@ import { MAIN_OPERATION_PREVIEW_ROUTE } from '@/core/pilotCompletion';
 import { buildDailyXpReport } from '@/core/xp/xpReport';
 import { createInitialPlayerProgress } from '@/core/xp/levelProgress';
 import { EndOfDayReportView } from '@/features/reports/components/end-of-day/EndOfDayReportView';
+import { ReportReturnHubCta } from '@/features/reports/components/ReportReturnHubCta';
 import { getPilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
 import { OnboardingCoachBubble } from '@/features/onboarding/components/OnboardingCoachBubble';
 import { useOnboardingHint } from '@/features/onboarding/hooks/useOnboardingHint';
@@ -32,11 +33,9 @@ import {
   useGameStore,
 } from '@/store/useGameStore';
 import { GameScreenShell } from '@/ui/components/GameScreenShell';
-import { GameButton } from '@/ui/components/GameButton';
 import { colors } from '@/ui/theme/colors';
+import { reportAssets } from '@/features/reports/utils/reportAssets';
 import { spacing } from '@/ui/theme/spacing';
-
-const END_OF_DAY_REPORT_IMAGE = require('@/assets/badges/end_of_day_report.png');
 
 const previewToneStyles = {
   people: {
@@ -108,7 +107,7 @@ function ReportEmpty({ onGoHub }: ReportEmptyProps) {
       <View style={styles.emptyHeroWrap}>
         <View style={styles.emptyHeroGlow} pointerEvents="none" />
         <Image
-          source={END_OF_DAY_REPORT_IMAGE}
+          source={reportAssets.emptyStateHero}
           style={styles.emptyHeroImage}
           resizeMode="contain"
         />
@@ -184,9 +183,7 @@ export function ReportScreen() {
   const gameState = useGameStore((s) => s.gameState);
   const lastClosedDay = useGameStore((s) => s.lastClosedDay);
   const metrics = useGameMetrics();
-  const playerProgress = useGameStore(
-    (s) => s.playerProgress ?? createInitialPlayerProgress(),
-  );
+  const playerProgressFromStore = useGameStore((s) => s.playerProgress);
   const decisionHistory = useGameStore(selectDecisionHistory);
 
   const onGoHub = () => goToHub(router);
@@ -195,10 +192,10 @@ export function ReportScreen() {
     return <ReportEmpty onGoHub={onGoHub} />;
   }
 
-  const dailyXpReport = useMemo(
-    () => buildDailyXpReport(playerProgress.xpHistory, report.day),
-    [playerProgress.xpHistory, report.day],
-  );
+  const dailyXpReport = useMemo(() => {
+    const progress = playerProgressFromStore ?? createInitialPlayerProgress();
+    return buildDailyXpReport(progress.xpHistory, report.day);
+  }, [playerProgressFromStore, report.day]);
 
   const pilotReportContext = getPilotReportContext({
     gameState,
@@ -242,7 +239,10 @@ export function ReportScreen() {
   };
 
   return (
-    <GameScreenShell screenTitle="Raporlar" contentStyle={styles.content}>
+    <GameScreenShell
+      headerVariant="none"
+      backgroundColor="#F7F3EB"
+      contentStyle={styles.content}>
       <View style={styles.stack}>
         <EndOfDayReportView
           report={displayReport}
@@ -255,12 +255,7 @@ export function ReportScreen() {
         />
       </View>
 
-      <GameButton
-        title={continueTitle}
-        onPress={onContinue}
-        microPress
-        style={styles.primaryAction}
-      />
+      <ReportReturnHubCta title={continueTitle} onPress={onContinue} />
       <TutorialCoachOverlay screen="daily_report" />
       {coachHint && !legacyTutorialStep ? (
         <OnboardingCoachBubble
@@ -275,6 +270,8 @@ export function ReportScreen() {
 const styles = StyleSheet.create({
   content: {
     gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
   },
   stack: {
     gap: spacing.md,
@@ -473,9 +470,5 @@ const styles = StyleSheet.create({
   tipTextStrong: {
     fontWeight: '700',
     color: colors.textPrimary,
-  },
-  primaryAction: {
-    marginTop: spacing.md,
-    backgroundColor: colors.headerTealDark,
   },
 });

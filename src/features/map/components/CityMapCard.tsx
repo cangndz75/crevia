@@ -44,6 +44,8 @@ type Props = {
   onDistrictSelect: (districtId: MapDistrictId) => void;
   onBackToOverview: () => void;
   onPinPress?: (pinId: string) => void;
+  /** Shell içinde tam genişlik — yatay margin kaldırılır */
+  embedded?: boolean;
 };
 
 const MAP_HEIGHT = Math.min(
@@ -70,6 +72,7 @@ export function CityMapCard({
   onDistrictSelect,
   onBackToOverview,
   onPinPress,
+  embedded = false,
 }: Props) {
   const mapControlsRef = useRef<ZoomableMapControls>(null);
   const isDetail = viewMode === 'detail';
@@ -85,7 +88,7 @@ export function CityMapCard({
   );
 
   return (
-    <View style={[styles.card, shadows.card]}>
+    <View style={[styles.card, embedded && styles.cardEmbedded, shadows.card]}>
       <View style={styles.mapArea}>
         {isDetail ? (
           <DistrictDetailMap
@@ -147,7 +150,6 @@ export function CityMapCard({
 
         <Pressable style={styles.layersBtn} onPress={onLayersPress}>
           <Ionicons name="layers-outline" size={20} color={mapUi.textDark} />
-          <Text style={styles.layersBtnText}>Katmanlar</Text>
         </Pressable>
 
         <View style={styles.zoomControls}>
@@ -185,6 +187,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(6, 63, 59, 0.1)',
+  },
+  cardEmbedded: {
+    marginHorizontal: 0,
   },
   mapArea: {
     height: MAP_HEIGHT,
@@ -245,21 +250,15 @@ const styles = StyleSheet.create({
   },
   layersBtn: {
     position: 'absolute',
-    top: 18,
+    bottom: 18,
     right: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    height: 54,
-    paddingHorizontal: 16,
+    width: 48,
+    height: 48,
     borderRadius: 24,
     backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
     zIndex: 10,
     ...shadows.soft,
-  },
-  layersBtnText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: mapUi.textDark,
   },
 });

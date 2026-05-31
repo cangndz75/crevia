@@ -4,6 +4,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 
 import type { PilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
+
+const PILOT_SUMMARY_ENTERING = FadeInUp.duration(340).springify().damping(22);
+const PILOT_BUTTERFLY_ENTERING = FadeIn.delay(200).duration(300);
+const PILOT_REPORT_CTA_ENTERING = FadeInUp.delay(260)
+  .duration(360)
+  .springify()
+  .damping(22);
+const PILOT_COMPLETED_CTA_ENTERING = FadeIn.delay(340).duration(300);
 import { GameButton } from '@/ui/components/GameButton';
 import { GameCard } from '@/ui/components/GameCard';
 import { GameChip } from '@/ui/components/GameChip';
@@ -23,7 +31,7 @@ export function PilotReportSummaryCard({ context }: PilotReportSummaryCardProps)
 
   return (
     <Animated.View
-      entering={FadeInUp.duration(340).springify().damping(22)}
+      entering={PILOT_SUMMARY_ENTERING}
       style={styles.stack}>
       <GameCard padding="lg" style={styles.summaryCard}>
         <SectionHeader
@@ -67,7 +75,7 @@ export function PilotReportSummaryCard({ context }: PilotReportSummaryCardProps)
       </GameCard>
 
       {context.showButterflyCallback ? (
-        <Animated.View entering={FadeIn.delay(200).duration(300)}>
+        <Animated.View entering={PILOT_BUTTERFLY_ENTERING}>
           <GameCard padding="lg" style={styles.butterflyCard}>
             <View style={styles.butterflyHead}>
               <View style={styles.butterflyIcon}>
@@ -84,7 +92,7 @@ export function PilotReportSummaryCard({ context }: PilotReportSummaryCardProps)
 
       {context.showPilotReportCta ? (
         <Animated.View
-          entering={FadeInUp.delay(260).duration(360).springify().damping(22)}
+          entering={PILOT_REPORT_CTA_ENTERING}
           style={[styles.ctaCard, shadows.card]}>
           <View style={styles.ctaIcon}>
             <Ionicons name="document-text" size={22} color={colors.hubGoldDark} />
@@ -103,7 +111,7 @@ export function PilotReportSummaryCard({ context }: PilotReportSummaryCardProps)
       ) : null}
 
       {context.showCompletedReportCta ? (
-        <Animated.View entering={FadeIn.delay(340).duration(300)}>
+        <Animated.View entering={PILOT_COMPLETED_CTA_ENTERING}>
         <GameCard padding="lg" style={styles.completedCard}>
           <View style={styles.completedHead}>
             <Ionicons name="trophy" size={22} color={colors.hubGoldDark} />

@@ -14,6 +14,12 @@ type Props = {
   podium: LeaderboardPodiumModel[];
 };
 
+const PODIUM_CARD_ENTERING = [
+  cardEntranceEntering(0),
+  cardEntranceEntering(70),
+  cardEntranceEntering(140),
+] as const;
+
 const TONE_STYLES = {
   gold: {
     cardBg: '#FFFBF0',
@@ -43,16 +49,16 @@ const TONE_STYLES = {
 
 function PodiumCard({
   item,
-  delay,
+  entering,
 }: {
   item: LeaderboardPodiumModel;
-  delay: number;
+  entering: (typeof PODIUM_CARD_ENTERING)[number];
 }) {
   const tone = TONE_STYLES[item.tone];
 
   return (
     <Animated.View
-      entering={cardEntranceEntering(delay)}
+      entering={entering}
       style={[
         styles.card,
         shadows.soft,
@@ -110,7 +116,13 @@ export function LeaderboardPodiumStrip({ podium }: Props) {
       </Text>
       <View style={styles.row}>
         {layout.map((item, index) => (
-          <PodiumCard key={item.rank} item={item} delay={index * 70} />
+          <PodiumCard
+            key={item.rank}
+            item={item}
+            entering={
+              PODIUM_CARD_ENTERING[index] ?? PODIUM_CARD_ENTERING[0]
+            }
+          />
         ))}
       </View>
     </View>

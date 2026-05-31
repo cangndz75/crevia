@@ -41,7 +41,15 @@ export function LeaderboardScreen() {
         rank: data.rank,
         hasPlayerScore: data.hasPlayerScore,
       }),
-    [data],
+    [
+      data.entries,
+      data.listEntries,
+      data.topThree,
+      data.bestEntry,
+      data.currentEntry,
+      data.rank,
+      data.hasPlayerScore,
+    ],
   );
 
   const highlightRow = useMemo(() => {
@@ -59,7 +67,14 @@ export function LeaderboardScreen() {
         isCurrentPlayer: true,
       }
     );
-  }, [data, presentation.playerHighlight]);
+  }, [
+    data.showSeparateCurrentRow,
+    data.currentEntry,
+    data.rank,
+    data.entries,
+    presentation.playerHighlight.scoreLabel,
+    presentation.playerHighlight.avatar,
+  ]);
 
   const handleGoHub = () => {
     router.push('/');

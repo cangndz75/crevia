@@ -7,27 +7,23 @@ import {
   Text,
   View,
 } from 'react-native';
+
+import { getPersonnelTeamImage } from '@/core/assets/creviaAssetPresentation';
+import { HubAssetImage } from '@/features/hub/components/HubAssetImage';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { usePersonnelTeams } from '@/features/personnel/hooks/usePersonnelTeams';
 import type { RestActionType } from '@/core/personnel/personnelTypes';
 import type { PersonnelTeamCardView } from '@/core/personnel/personnelTypes';
 import { useGameStore } from '@/store/useGameStore';
+import {
+  HUB_PREMIUM_COLORS,
+  HUB_PREMIUM_RADIUS,
+  hubPremiumShadowCard,
+} from '@/features/hub/utils/hubPremiumPresentation';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
-import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
-
-function teamIcon(name: string): keyof typeof Ionicons.glyphMap {
-  const lower = name.toLowerCase();
-  if (lower.includes('sürücü') || lower.includes('surucu')) {
-    return 'car-outline';
-  }
-  if (lower.includes('temizlik') || lower.includes('atık')) {
-    return 'trash-outline';
-  }
-  return 'people-outline';
-}
 
 function HubPersonnelRow({
   team,
@@ -54,7 +50,11 @@ function HubPersonnelRow({
   return (
     <View style={styles.row}>
       <View style={styles.rowIcon}>
-        <Ionicons name={teamIcon(team.name)} size={18} color={colors.primary} />
+        <HubAssetImage
+          source={getPersonnelTeamImage(team.name)}
+          containerStyle={styles.rowIconAsset}
+          contentFit="contain"
+        />
       </View>
       <View style={styles.rowBody}>
         <Text style={styles.rowTitle} numberOfLines={1}>
@@ -187,7 +187,7 @@ export function HubPersonnelStrip() {
         </Pressable>
       </View>
 
-      <View style={[styles.card, shadows.soft]}>
+      <View style={[styles.card, hubPremiumShadowCard()]}>
         {teams.map((team, index) => (
           <View key={team.id}>
             {index > 0 ? <View style={styles.divider} /> : null}
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: '800',
-    color: colors.textPrimary,
+    color: HUB_PREMIUM_COLORS.textDark,
     letterSpacing: -0.2,
   },
   seeAllBtn: {
@@ -242,12 +242,12 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
+    backgroundColor: HUB_PREMIUM_COLORS.card,
+    borderRadius: HUB_PREMIUM_RADIUS.card,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    borderColor: HUB_PREMIUM_COLORS.borderSoft,
     paddingHorizontal: 14,
-    paddingTop: 12,
+    paddingTop: 10,
     overflow: 'hidden',
     minWidth: 0,
   },
@@ -255,17 +255,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingVertical: 10,
+    paddingVertical: 11,
+    minHeight: 60,
     minWidth: 0,
   },
   rowIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: colors.primaryMuted,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(189, 239, 231, 0.55)',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    overflow: 'hidden',
+  },
+  rowIconAsset: {
+    width: 28,
+    height: 28,
   },
   rowBody: {
     flex: 1,
@@ -275,7 +281,7 @@ const styles = StyleSheet.create({
   rowTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: colors.textPrimary,
+    color: HUB_PREMIUM_COLORS.textDark,
   },
   metricsRow: {
     flexDirection: 'row',
@@ -339,15 +345,16 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 4,
     marginHorizontal: -14,
-    paddingVertical: 12,
+    paddingVertical: 11,
+    minHeight: 44,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
-    backgroundColor: colors.backgroundAlt,
+    borderTopColor: HUB_PREMIUM_COLORS.borderSoft,
+    backgroundColor: 'rgba(189, 239, 231, 0.2)',
   },
   restFooterText: {
     fontSize: 13,
     fontWeight: '700',
-    color: colors.secondary,
+    color: HUB_PREMIUM_COLORS.teal,
   },
   pressed: {
     opacity: 0.85,

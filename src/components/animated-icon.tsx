@@ -4,6 +4,8 @@ import { Dimensions, StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { CREVIA_GAME_LOGO } from '@/core/brand/brandAssets';
+
 const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90;
 const DURATION = 600;
 
@@ -44,16 +46,6 @@ export function AnimatedSplashOverlay() {
   );
 }
 
-const keyframe = new Keyframe({
-  0: {
-    transform: [{ scale: INITIAL_SCALE_FACTOR }],
-  },
-  100: {
-    transform: [{ scale: 1 }],
-    easing: Easing.elastic(0.7),
-  },
-});
-
 const logoKeyframe = new Keyframe({
   0: {
     transform: [{ scale: 1.3 }],
@@ -87,9 +79,8 @@ export function AnimatedIcon() {
         <Image style={styles.glow} source={require('@/assets/images/logo-glow.png')} />
       </Animated.View>
 
-      <Animated.View entering={keyframe.duration(DURATION)} style={styles.background} />
       <Animated.View style={styles.imageContainer} entering={logoKeyframe.duration(DURATION)}>
-        <Image style={styles.image} source={require('@/assets/images/expo-logo.png')} />
+        <Image style={styles.image} source={CREVIA_GAME_LOGO} contentFit="contain" />
       </Animated.View>
     </View>
   );
@@ -113,20 +104,12 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   image: {
-    position: 'absolute',
-    width: 76,
-    height: 71,
-  },
-  background: {
-    borderRadius: 40,
-    experimental_backgroundImage: `linear-gradient(180deg, #3C9FFE, #0274DF)`,
-    width: 128,
-    height: 128,
-    position: 'absolute',
+    width: 120,
+    height: 146,
   },
   backgroundSolidColor: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#208AEF',
+    backgroundColor: '#FAFAFA',
     zIndex: 1000,
   },
 });

@@ -1,6 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+
+import { CreviaGameLogo } from '@/ui/components/CreviaGameLogo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
@@ -27,7 +29,7 @@ export function EventHeader({ showNotificationDot = true }: EventHeaderProps) {
         </Pressable>
 
         <View style={styles.logoWrap}>
-          <Text style={styles.logo}>CREVIA</Text>
+          <CreviaGameLogo width={96} />
         </View>
 
         <Pressable
@@ -70,12 +72,7 @@ const styles = StyleSheet.create({
   logoWrap: {
     flex: 1,
     alignItems: 'center',
-  },
-  logo: {
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: 2.4,
-    color: eventDetail.tealDark,
+    justifyContent: 'center',
   },
   dot: {
     position: 'absolute',

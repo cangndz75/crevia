@@ -13,6 +13,7 @@ export type RoadmapStep = {
 export type StatusChipItem = {
   id: string;
   label: string;
+  description?: string;
   icon: keyof typeof Ionicons.glyphMap;
   tone: 'success' | 'info' | 'warning';
 };
@@ -40,19 +41,22 @@ export const STATUS_CHIPS: StatusChipItem[] = [
   {
     id: 'pilot-done',
     label: 'Pilot Tamamlandı',
+    description: 'Pilot bölge başarıyla tamamlandı.',
     icon: 'flag',
     tone: 'success',
   },
   {
     id: 'report-ready',
     label: '7 Günlük Rapor Hazır',
+    description: 'Günlük operasyon raporu hazır.',
     icon: 'document-text',
     tone: 'info',
   },
   {
-    id: 'main-locked',
-    label: 'Ana Operasyon Kilitli',
-    icon: 'lock-closed',
+    id: 'authority-tracking',
+    label: 'Yetki İzleniyor',
+    description: 'Üst yönetim değerlendirmesi bekleniyor.',
+    icon: 'shield-checkmark',
     tone: 'warning',
   },
 ];
@@ -80,11 +84,11 @@ export const ROADMAP_STEPS: RoadmapStep[] = [
     icon: 'business',
   },
   {
-    id: 'main-op',
-    title: 'Ana Operasyon',
-    statusLabel: 'Geniş Mod',
-    state: 'goal',
-    icon: 'planet',
+    id: 'city-scale',
+    title: 'Şehir Ölçeği',
+    statusLabel: 'Yakında',
+    state: 'locked',
+    icon: 'lock-closed',
   },
 ];
 
@@ -92,9 +96,10 @@ export const SYSTEM_CARDS: SystemCardItem[] = [
   {
     id: 'city-map',
     title: 'Şehir Haritası',
-    description: 'Tek bölgeden tüm şehir ağına geç.',
+    description:
+      'Pilot tamamlandı; şehir haritası ana operasyon açılışında.',
     tag: 'Şehir',
-    statusTag: 'Kilitli',
+    statusTag: 'Önizleme',
     icon: 'map-outline',
     emphasis: true,
     locked: true,
@@ -112,37 +117,20 @@ export const SYSTEM_CARDS: SystemCardItem[] = [
   {
     id: 'butterfly',
     title: 'Kelebek Etkisi',
-    description: 'Küçük kararların uzun vadeli sonuçlarını takip et.',
+    description:
+      'Pilot kararlarının yankıları kayıt altında; ana operasyonla büyür.',
     tag: 'Etki',
-    statusTag: 'Kilitli',
+    statusTag: 'Pilotla hazırlandı',
     icon: 'git-branch-outline',
-    locked: true,
+    locked: false,
   },
   {
     id: 'vehicles',
     title: 'Araç ve Rota',
-    description: 'Filo, rota ve bakım kararlarını optimize et.',
+    description: 'Filo, rota ve bakım kararlarını optimize et. Pilot tamamlandı.',
     tag: 'Operasyon',
     statusTag: 'Kilitli',
     icon: 'car-outline',
-    locked: true,
-  },
-  {
-    id: 'staff',
-    title: 'Personel Yönetimi',
-    description: 'Moral, yorgunluk ve vardiya dengesini yönet.',
-    tag: 'Ekip',
-    statusTag: 'Kilitli',
-    icon: 'people-outline',
-    locked: true,
-  },
-  {
-    id: 'social',
-    title: 'Sosyal Medya Baskısı',
-    description: 'Krizleri yönet, halk algısını koru.',
-    tag: 'Algı',
-    statusTag: 'Kilitli',
-    icon: 'megaphone-outline',
     locked: true,
   },
 ];

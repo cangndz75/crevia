@@ -1,27 +1,22 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef } from 'react';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { buildPostPilotPreviewCtaLabel } from '@/core/postPilot';
-import {
-  buildPostPilotPreviewFooterNote,
-  buildPostPilotPreviewScreenCopyLines,
-} from '@/core/postPilot/postPilotOperationUxPresentation';
-import { getPilotDistrictHeroImage } from '@/features/hub/utils/hubAssets';
-import { OperationPreviewAuthorityCard } from '@/features/pilot/components/operation-preview/OperationPreviewAuthorityCard';
-import { ProgressionBridgeCard } from '@/features/pilot/components/ProgressionBridgeCard';
-import { OperationPreviewFooterCTA } from '@/features/pilot/components/operation-preview/OperationPreviewFooterCTA';
-import { OperationPreviewHeader } from '@/features/pilot/components/operation-preview/OperationPreviewHeader';
-import { OperationPreviewHero } from '@/features/pilot/components/operation-preview/OperationPreviewHero';
-import { OperationPreviewLegacyCard } from '@/features/pilot/components/operation-preview/OperationPreviewLegacyCard';
-import { OperationPreviewRoadmap } from '@/features/pilot/components/operation-preview/OperationPreviewRoadmap';
-import { OperationPreviewStatusChips } from '@/features/pilot/components/operation-preview/OperationPreviewStatusChips';
-import { OperationPreviewSystemsGrid } from '@/features/pilot/components/operation-preview/OperationPreviewSystemsGrid';
+import { MainOperationHeroUnlockCard } from '@/features/pilot/components/main-operation-preview/MainOperationHeroUnlockCard';
+import { MainOperationInsightColumns } from '@/features/pilot/components/main-operation-preview/MainOperationInsightColumns';
+import { MainOperationPreviewActions } from '@/features/pilot/components/main-operation-preview/MainOperationPreviewActions';
+import { MainOperationPreviewHeader } from '@/features/pilot/components/main-operation-preview/MainOperationPreviewHeader';
+import { MainOperationRoadmapStrip } from '@/features/pilot/components/main-operation-preview/MainOperationRoadmapStrip';
+import { MainOperationStatusCards } from '@/features/pilot/components/main-operation-preview/MainOperationStatusCards';
+import { MainOperationSystemsGrid } from '@/features/pilot/components/main-operation-preview/MainOperationSystemsGrid';
 import { useOperationPreviewState } from '@/features/pilot/hooks/useOperationPreviewState';
+import {
+  buildMainOperationPreviewUiModel,
+} from '@/features/pilot/utils/mainOperationPreviewUiModel';
+import { MAIN_OP_PREVIEW_COLORS } from '@/features/pilot/utils/mainOperationPreviewTheme';
 import { useGameStore } from '@/store/useGameStore';
-import { colors } from '@/ui/theme/colors';
-import { spacing } from '@/ui/theme/spacing';
+import { ANIMATED_TAB_BAR_HEIGHT } from '@/ui/components/AnimatedTabBar';
 
 /**
  * Anasayfa / pilot raporu → "Ana Operasyon Önizlemesi" (yakında açılacak).
@@ -35,14 +30,15 @@ export function MainOperationPreviewScreen() {
   const markMainOperationPreviewSeen = useGameStore(
     (s) => s.markMainOperationPreviewSeen,
   );
-  const startLightMainOperation = useGameStore((s) => s.startLightMainOperation);
   const preview = useOperationPreviewState({ forcePilotComplete: true });
   const previewMarkedRef = useRef(false);
 
-  const pilotCompleted = pilotStatus === 'completed';
-  const primaryLabel = buildPostPilotPreviewCtaLabel(
-    pilotCompleted ? 'completed' : 'active',
+  const ui = useMemo(
+    () => buildMainOperationPreviewUiModel(preview, districtId),
+    [preview, districtId],
   );
+
+  const pilotCompleted = pilotStatus === 'completed';
 
   useEffect(() => {
     if (!pilotCompleted || previewMarkedRef.current) {
@@ -67,75 +63,56 @@ export function MainOperationPreviewScreen() {
     );
   };
 
-  const handleStartLightOperation = () => {
-    if (!pilotCompleted) {
-      router.push('/events/pilot-final-report');
+  const handlePilotReport = () => {
+    if (router.canGoBack()) {
+      router.back();
       return;
     }
-    startLightMainOperation();
-    router.replace('/');
+    router.push('/reports');
   };
 
-  const copyLines = buildPostPilotPreviewScreenCopyLines();
+  const bottomPadding = insets.bottom + ANIMATED_TAB_BAR_HEIGHT + 24;
 
   return (
-    <View style={[styles.root, { paddingBottom: insets.bottom }]}>
-      <View style={styles.headerWrap}>
-        <OperationPreviewHeader
-          onBack={handleBack}
-          onInfo={handleInfo}
-          subtitle={preview.headerSubtitle}
-        />
-      </View>
-
+    <View style={styles.root}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: spacing.xxl + insets.bottom },
+          {
+            paddingTop: insets.top + 12,
+            paddingBottom: bottomPadding,
+          },
         ]}
         showsVerticalScrollIndicator={false}>
-        <OperationPreviewStatusChips
-          chips={preview.chips}
-          personalizedChips={preview.personalizedChips}
+        <MainOperationPreviewHeader
+          subtitle={ui.headerSubtitle}
+          onBack={handleBack}
+          onInfo={handleInfo}
         />
-        <OperationPreviewAuthorityCard summary={preview.authoritySummary} />
-        <ProgressionBridgeCard summary={preview.progressionBridgeSummary} />
 
-        <View style={styles.copyCard}>
-          {copyLines.map((line) => (
-            <Text key={line} style={styles.copyLine} numberOfLines={2}>
-              {line}
-            </Text>
-          ))}
-        </View>
+        <MainOperationStatusCards cards={ui.statusCards} />
 
-        <OperationPreviewRoadmap
-          steps={preview.roadmapSteps}
-          hint={preview.roadmapHint}
+        <MainOperationInsightColumns
+          authoritySummary={ui.authoritySummary}
+          scopeRows={ui.scopeRows}
+          authorityDecorImage={ui.authorityDecorImage}
+          scopeDecorImage={ui.scopeDecorImage}
         />
-        <OperationPreviewHero
-          districtImage={getPilotDistrictHeroImage(districtId)}
-          statusRows={preview.heroRows}
-          mainOperationLocked={preview.mainLocked}
-          personalizedSummary={preview.heroPersonalizedText}
+
+        <MainOperationHeroUnlockCard
+          cityImage={ui.heroCityImage}
+          badgeImage={ui.heroBadgeImage}
         />
-        <OperationPreviewLegacyCard values={preview.legacyValues} />
-        <OperationPreviewSystemsGrid cards={preview.systemCards} />
-        <OperationPreviewFooterCTA
-          primaryLabel={primaryLabel}
-          primaryEnabled={pilotCompleted}
-          onPrimaryPress={handleStartLightOperation}
-          onPilotReport={() => {
-            if (router.canGoBack()) {
-              router.back();
-              return;
-            }
-            router.push('/reports');
-          }}
-          onHub={() => router.replace('/')}
+
+        <MainOperationSystemsGrid cards={ui.systemCards} />
+
+        <MainOperationRoadmapStrip steps={ui.roadmapSteps} />
+
+        <MainOperationPreviewActions
           onLeaderboard={() => router.push('/leaderboard')}
-          footerNote={buildPostPilotPreviewFooterNote()}
+          onAchievements={() => router.push('/progression')}
+          onPilotReport={handlePilotReport}
         />
       </ScrollView>
     </View>
@@ -145,34 +122,13 @@ export function MainOperationPreviewScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  headerWrap: {
-    paddingHorizontal: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.background,
+    backgroundColor: MAIN_OP_PREVIEW_COLORS.bg,
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
-    gap: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-  },
-  copyCard: {
-    gap: spacing.xs,
-    padding: spacing.md,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  copyLine: {
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '500',
-    color: colors.textSecondary,
+    paddingHorizontal: 16,
+    gap: 14,
   },
 });

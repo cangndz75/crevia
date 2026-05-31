@@ -4,6 +4,11 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
+const PILOT_COMPLETION_CARD_ENTERING = FadeInUp.delay(160)
+  .duration(300)
+  .springify()
+  .damping(22);
+
 import {
   MAIN_OPERATION_PREVIEW_ROUTE,
   pilotCompletionGradeChipTone,
@@ -71,7 +76,7 @@ export function ReportPilotCompletionCard({
     summary.score > 0 ? `${summary.score}/100` : summary.gradeLabel;
 
   return (
-    <Animated.View entering={FadeInUp.delay(160).duration(300).springify().damping(22)}>
+    <Animated.View entering={PILOT_COMPLETION_CARD_ENTERING}>
       <GameCard padding={compact ? 'md' : 'lg'} style={styles.card}>
         <View style={styles.seasonBadge}>
           <Text style={styles.seasonBadgeText} numberOfLines={1}>

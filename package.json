@@ -96,6 +96,7 @@
     "verify:post-pilot-event-loop": "npx tsx scripts/verify-post-pilot-event-loop.ts",
     "verify:post-pilot-loop-balance": "npx tsx scripts/verify-post-pilot-loop-balance.ts",
     "verify:post-pilot-ux": "npx tsx scripts/verify-post-pilot-ux.ts",
+    "verify:main-operation-preview-ui": "npx tsx scripts/verify-main-operation-preview-ui.ts",
     "analyze:post-pilot": "npx tsx scripts/analyze-post-pilot-loop.ts",
     "verify:event-content": "npx tsx scripts/verify-event-content.ts",
     "verify:pilot-rhythm": "npx tsx scripts/verify-pilot-rhythm.ts",

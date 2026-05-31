@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { useShallow } from 'zustand/react/shallow';
 
 import type { LeaderboardCategory, LeaderboardEntry, LeaderboardPeriod } from '@/core/leaderboard/leaderboardTypes';
 import {
@@ -41,40 +40,33 @@ export function useLeaderboardScreenData(
   category: LeaderboardCategory,
   period: LeaderboardPeriod,
 ): LeaderboardScreenData {
-  const storeSlice = useGameStore(
-    useShallow((s) => ({
-      gameState: s.gameState,
-      personnelState: s.personnelState,
-      containerState: s.containerState,
-      decisionHistory: s.decisionHistory,
-      snapshots: s.snapshots,
-      economyState: s.economyState,
-      bestPilotScores: s.bestPilotScores,
-      lastPilotScore: s.lastPilotScore,
-      pilotStatus: s.gameState.pilot.status,
-      playerName: s.gameState.player.name,
-    })),
-  );
+  const gameState = useGameStore((s) => s.gameState);
+  const personnelState = useGameStore((s) => s.personnelState);
+  const containerState = useGameStore((s) => s.containerState);
+  const decisionHistory = useGameStore((s) => s.decisionHistory);
+  const snapshots = useGameStore((s) => s.snapshots);
+  const economyState = useGameStore((s) => s.economyState);
+  const bestPilotScores = useGameStore((s) => s.bestPilotScores);
+  const lastPilotScore = useGameStore((s) => s.lastPilotScore);
+  const pilotStatus = useGameStore((s) => s.gameState.pilot.status);
+  const playerName = useGameStore((s) => s.gameState.player.name);
 
   return useMemo(() => {
     const persistSlice: LeaderboardPersistSlice = {
-      bestPilotScores: storeSlice.bestPilotScores,
-      lastPilotScore: storeSlice.lastPilotScore,
+      bestPilotScores,
+      lastPilotScore,
     };
 
-    const hasPlayerScore = canShowPlayerScore(
-      storeSlice.pilotStatus,
-      storeSlice.lastPilotScore,
-    );
+    const hasPlayerScore = canShowPlayerScore(pilotStatus, lastPilotScore);
 
     const selectorParams = {
-      gameState: storeSlice.gameState,
-      personnelState: storeSlice.personnelState,
-      containerState: storeSlice.containerState,
-      decisionHistory: storeSlice.decisionHistory,
-      snapshots: storeSlice.snapshots,
-      economyState: storeSlice.economyState,
-      playerName: storeSlice.playerName,
+      gameState,
+      personnelState,
+      containerState,
+      decisionHistory,
+      snapshots,
+      economyState,
+      playerName,
       category,
       period,
     };
@@ -109,5 +101,18 @@ export function useLeaderboardScreenData(
       stats,
       showSeparateCurrentRow,
     };
-  }, [storeSlice, category, period]);
+  }, [
+    bestPilotScores,
+    category,
+    containerState,
+    decisionHistory,
+    economyState,
+    gameState,
+    lastPilotScore,
+    period,
+    personnelState,
+    pilotStatus,
+    playerName,
+    snapshots,
+  ]);
 }

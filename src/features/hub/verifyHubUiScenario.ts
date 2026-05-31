@@ -37,6 +37,7 @@ import {
   HUB_QUICK_ACTION_PREVIEW,
   resolveHubQuickActionsLayoutMode,
 } from '@/features/hub/hubUiPresentation';
+import { HUB_PREMIUM_LAYOUT } from '@/features/hub/utils/hubPremiumPresentation';
 import { selectHubQuickActionCards } from '@/core/hubQuickActions';
 import { createInitialHubQuickActionState } from '@/core/hubQuickActions/hubQuickActionSeed';
 
@@ -280,6 +281,23 @@ export function verifyHubUiScenario(): VerifyHubUiOutcome {
     HUB_QUICK_ACTION_COMPACT_CARD_MAX_HEIGHT <= 96,
     'Quick action compact max height guard',
     String(HUB_QUICK_ACTION_COMPACT_CARD_MAX_HEIGHT),
+  );
+  assert(
+    checks,
+    HUB_QUICK_ACTION_COMPACT_CARD_MAX_HEIGHT >= HUB_PREMIUM_LAYOUT.quickActionMinHeight,
+    'Quick action kart yüksekliği metin görünürlüğü için yeterli',
+    String(HUB_QUICK_ACTION_COMPACT_CARD_MAX_HEIGHT),
+  );
+  assert(
+    checks,
+    HUB_UI_LAYOUT_GUARDS.scrollBottomPaddingMin >= 96,
+    'Merkez scroll alt padding tab bar çakışmasını önler',
+    String(HUB_UI_LAYOUT_GUARDS.scrollBottomPaddingMin),
+  );
+  assert(
+    checks,
+    HUB_UI_LAYOUT_GUARDS.quickActionGridFlexBasis === '48%',
+    'Hızlı aksiyonlar 2x2 grid flexBasis guard',
   );
 
   const longTitleEvent = pilotEvents[0];

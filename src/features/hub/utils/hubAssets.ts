@@ -1,31 +1,32 @@
 import type { ImageSource } from 'expo-image';
 
+import { creviaAssets } from '@/core/assets/creviaAssets';
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import type { HubMetricCard } from '@/features/hub/utils/hubDerived';
 
 export const hubAssets = {
   playerAvatar: require('@/assets/characters/char_chief_operations_01.png'),
   advisorPortrait: require('@/assets/characters/char_operations_advisor_01.png'),
-  dailyGoalBadge: require('@/assets/badges/badge_daily_goal_01.png'),
-  regionCalm: require('@/assets/districts/status/district_safe_zone_01.png'),
-  regionBalanced: require('@/assets/districts/status/district_status_balanced_01.png'),
+  dailyGoalBadge: creviaAssets.icons.goals.targetTeal,
+  regionCalm: creviaAssets.badges.status.good,
+  regionBalanced: creviaAssets.districts.icons.cityPulse,
   metrics: {
-    operasyon: require('@/assets/districts/route/district_route_network_01.png'),
-    halk: require('@/assets/ui/ui_public_satisfaction_01.png'),
-    butce: require('@/assets/ui/ui_budget_reward_01.png'),
-    ekip: require('@/assets/characters/char_field_worker_maintenance_01.png'),
+    operasyon: creviaAssets.icons.resources.efficiencyGauge,
+    halk: creviaAssets.socialPulse.citizenGroup,
+    butce: creviaAssets.reports.icons.dailyTaskCoin,
+    ekip: creviaAssets.socialPulse.teamStatus,
   },
   quickActions: {
-    team: require('@/assets/icons/actions/ic_action_assign_team_01.png'),
-    route: require('@/assets/icons/actions/ic_action_route_plan_01.png'),
-    maint: require('@/assets/icons/actions/ic_action_maintenance_01.png'),
-    announce: require('@/assets/icons/actions/ic_action_announcement_01.png'),
+    team: creviaAssets.socialPulse.teamStatus,
+    route: creviaAssets.map.icons.routePath,
+    maint: creviaAssets.vehicles.fieldOperatorTruck,
+    announce: creviaAssets.icons.knowledge.operationGuide,
   },
   day1Plan: {
-    heroBuilding: require('@/assets/districts/central/district_central_overview_01.png'),
-    progressStar: require('@/assets/badges/badge_daily_goal_01.png'),
-    progressChest: require('@/assets/ui/ui_budget_reward_01.png'),
-    mahalleThumb: require('@/assets/districts/central/district_central_overview_02.png'),
+    heroBuilding: creviaAssets.buildings.municipalHall3d,
+    progressStar: creviaAssets.icons.goals.targetTeal,
+    progressChest: creviaAssets.icons.premium.diamondGold,
+    mahalleThumb: creviaAssets.buildings.statusSquare,
   },
 } as const;
 

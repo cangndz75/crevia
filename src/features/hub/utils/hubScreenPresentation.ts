@@ -8,6 +8,7 @@ import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventC
 
 import { buildHubAuthorityChipSummaryFromPilot } from './hubAuthorityModel';
 import { HUB_QUICK_ACTION_COMPACT_CARD_MAX_HEIGHT } from '../hubUiPresentation';
+import { HUB_PREMIUM_LAYOUT } from './hubPremiumPresentation';
 
 export const HUB_UI_FORBIDDEN_WORDS = [
   'xp',
@@ -33,6 +34,8 @@ export const HUB_UI_LAYOUT_GUARDS = {
   usesMinWidthZero: true,
   quickActionMaxVisibleTextLines: 2,
   quickActionCompactMaxHeight: HUB_QUICK_ACTION_COMPACT_CARD_MAX_HEIGHT,
+  scrollBottomPaddingMin: HUB_PREMIUM_LAYOUT.scrollBottomMin,
+  quickActionGridFlexBasis: '48%',
 } as const;
 
 export type HubFocusMode =
@@ -231,7 +234,7 @@ export function collectHubScreenPresentationStrings(
     'Haritayı İncele',
     'Hafif operasyon',
     'Hızlı aksiyonlar',
-    'Operasyona Devam',
+    'Operasyonlar',
     'Günü Tamamla',
     'Raporu Gör',
     'Bugünkü odak',

@@ -6,6 +6,7 @@ import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import { DEFAULT_PILOT_DISTRICT_ID } from '@/core/models/DistrictProfile';
 import { buildPostPilotMapContextLineForGameState } from '@/core/postPilot/postPilotOperationUxPresentation';
 import { selectIsDay1TutorialActive } from '@/features/tutorial/tutorialSelectors';
+import { useGameStatus } from '@/store/gameSelectors';
 import {
   selectActiveEvents,
   selectContainerState,
@@ -18,47 +19,34 @@ import { GameScreenShell } from '@/ui/components/GameScreenShell';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
 
-import { ActiveOperationCard } from '../components/ActiveOperationCard';
-import { CityMapCard } from '../components/CityMapCard';
-import { ContainerPanel } from '../components/ContainerPanel';
-import { CrewTrackingPanel } from '../components/CrewTrackingPanel';
 import { LayerPanel } from '../components/LayerPanel';
-import { MapFilterTabs } from '../components/MapFilterTabs';
+import { MapFilterChips } from '../components/MapFilterChips';
 import { MapGuideModal } from '../components/MapGuideModal';
-import { MapNeighborhoodStrip } from '../components/MapNeighborhoodStrip';
-import { MapOperationBottomPanel } from '../components/MapOperationBottomPanel';
-import { MapOperationHeader } from '../components/MapOperationHeader';
-import { MapSummaryCards } from '../components/MapSummaryCards';
-import { PilotAreaSummaryPanel } from '../components/PilotAreaSummaryPanel';
-import { RiskPanel } from '../components/RiskPanel';
-import { VehiclePanel } from '../components/VehiclePanel';
+import { MapHeroPanel } from '../components/MapHeroPanel';
+import { MapOperationSignalCard } from '../components/MapOperationSignalCard';
+import { MapPilotDistrictStatusCard } from '../components/MapPilotDistrictStatusCard';
+import { MapScreenHeader } from '../components/MapScreenHeader';
+import { MapScreenTitleRow } from '../components/MapScreenTitleRow';
 import { DEFAULT_MAP_DISTRICT_ID, type MapDistrictId } from '../data/mapAssets';
 import { mapDistrictFromPilot } from '../data/mapDistrictMapping';
 import { pilotAreaFromDistrict } from '../data/pilotAreaMapping';
 import {
-  buildContainerMapPins,
-  buildContainerPanelItems,
-  buildContainerSummaryFromPins,
-} from '../utils/containerMapAdapter';
-import {
   getActiveOperation,
-  getContainerSummary,
-  getContainers,
   getCrews,
   getDayEvent,
   getDefaultLayers,
-  getPilotPreset,
-  getRiskDensityLabel,
-  getRiskSummary,
-  getTasks,
-  getVehicles,
 } from '../data/mapSelectors';
 import {
-  buildMapActiveOperationOverlayModel,
   buildMapFilterChipModel,
-  buildMapNeighborhoodStripItems,
+  buildMapActiveOperationOverlayModel,
   buildMapOperationPanelModel,
 } from '../utils/mapUiPresentation';
+import {
+  buildMapFilterChipItems,
+  buildMapOperationSignalModel,
+  buildMapPilotDistrictStatusModel,
+  buildMapScreenHeaderModel,
+} from '../presentation/mapScreenPresentation';
 import type {
   ActiveLayers,
   LayerId,
@@ -75,9 +63,9 @@ export function MapScreen() {
   const containerState = useGameStore(selectContainerState);
   const vehicleState = useGameStore(selectVehicleStateFromStore);
   const hideMapFleetSignals = useGameStore(selectIsDay1TutorialActive);
+  const gameStatus = useGameStatus();
 
   const pilotAreaId: PilotAreaId = pilotAreaFromDistrict(selectedDistrictId);
-  const preset = useMemo(() => getPilotPreset(pilotAreaId), [pilotAreaId]);
   const dayEvent = useMemo(
     () => getDayEvent(pilotAreaId, gameDay),
     [pilotAreaId, gameDay],
@@ -109,7 +97,7 @@ export function MapScreen() {
     setSelectedPinId(null);
   }, []);
 
-  const handleBottomPanelCta = useCallback(() => {
+  const handleFocusDistrict = useCallback(() => {
     if (mapViewMode === 'detail') {
       handleBackToOverview();
       return;
@@ -122,45 +110,29 @@ export function MapScreen() {
   }, [pilotAreaId]);
 
   const crews = useMemo(() => getCrews(pilotAreaId), [pilotAreaId]);
-  const tasks = useMemo(() => getTasks(pilotAreaId), [pilotAreaId]);
-  const vehicles = useMemo(() => getVehicles(pilotAreaId), [pilotAreaId]);
-  const containers = useMemo(() => getContainers(pilotAreaId), [pilotAreaId]);
-  const containerSummary = useMemo(
-    () => getContainerSummary(pilotAreaId),
-    [pilotAreaId],
-  );
-
-  const liveContainerPins = useMemo(
-    () => (containerState ? buildContainerMapPins({ containerState }) : []),
-    [containerState],
-  );
-
-  const liveContainerPanelItems = useMemo(
-    () => buildContainerPanelItems(liveContainerPins),
-    [liveContainerPins],
-  );
-
-  const liveContainerSummary = useMemo(
-    () =>
-      liveContainerPins.length > 0
-        ? buildContainerSummaryFromPins(liveContainerPins)
-        : null,
-    [liveContainerPins],
-  );
-
-  const riskSummary = useMemo(() => getRiskSummary(pilotAreaId), [pilotAreaId]);
   const activeOperation = useMemo(
     () => getActiveOperation(pilotAreaId, gameDay),
     [pilotAreaId, gameDay],
   );
 
-  const pilotStatus = useGameStore((s) => s.gameState.pilot.status);
-  const postPilotOperation = useGameStore((s) => s.gameState.pilot.postPilotOperation);
-  const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
-
   const filterChips = useMemo(
     () => buildMapFilterChipModel({ gameDay, pilotAreaId }),
     [gameDay, pilotAreaId],
+  );
+
+  const headerModel = useMemo(
+    () => buildMapScreenHeaderModel(gameStatus, gameDay),
+    [gameStatus, gameDay],
+  );
+
+  const chipItems = useMemo(
+    () =>
+      buildMapFilterChipItems({
+        gameDay,
+        districtLabel: filterChips.districtLabel,
+        selectedFilter,
+      }),
+    [filterChips.districtLabel, gameDay, selectedFilter],
   );
 
   const activeOperationOverlay = useMemo(
@@ -173,28 +145,6 @@ export function MapScreen() {
           })
         : null,
     [activeEvents, gameDay, mapViewMode, pilotAreaId],
-  );
-
-  const neighborhoodStripItems = useMemo(
-    () =>
-      buildMapNeighborhoodStripItems({
-        pilotDistrictId: selectedDistrictId,
-        focusDistrictId,
-        gameDay,
-        postPilot: {
-          pilotStatus,
-          postPilotOperation,
-          authorityState,
-        },
-      }),
-    [
-      authorityState,
-      focusDistrictId,
-      gameDay,
-      pilotStatus,
-      postPilotOperation,
-      selectedDistrictId,
-    ],
   );
 
   const gameStateForMap = useGameStore((s) => s.gameState);
@@ -243,90 +193,48 @@ export function MapScreen() {
     ],
   );
 
+  const operationSignalModel = useMemo(
+    () =>
+      buildMapOperationSignalModel({
+        operation: activeOperation,
+        pilotAreaId,
+        gameDay,
+        crewNames: crews.map((crew) => crew.name),
+      }),
+    [activeOperation, crews, gameDay, pilotAreaId],
+  );
+
+  const pilotStatusModel = useMemo(
+    () =>
+      buildMapPilotDistrictStatusModel({
+        pilotAreaId,
+        gameDay,
+        riskMetrics: operationPanel.riskMetrics,
+      }),
+    [gameDay, operationPanel.riskMetrics, pilotAreaId],
+  );
+
   const handleToggleLayer = useCallback((id: LayerId) => {
     setActiveLayers((prev) => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
-  const renderFilterContent = () => {
-    switch (selectedFilter) {
-      case 'events':
-        return (
-          <>
-            <MapSummaryCards
-              cards={[
-                {
-                  icon: 'alert-circle',
-                  iconColor: colors.danger,
-                  value: preset.activeEventCount,
-                  label: 'Operasyon sinyali',
-                  sublabel: `${preset.shortName} pilot bölgede`,
-                },
-                {
-                  icon: 'speedometer',
-                  iconColor: colors.warning,
-                  value: `%${preset.riskDensity}`,
-                  label: 'Risk yoğunluğu',
-                  sublabel: getRiskDensityLabel(preset.riskDensity),
-                },
-                {
-                  icon: 'people',
-                  iconColor: colors.purple,
-                  value: preset.activeCrewCount,
-                  label: 'Ekip sahad',
-                  sublabel: 'Pilot bölgen',
-                },
-              ]}
-            />
-            <ActiveOperationCard operation={activeOperation} />
-          </>
-        );
-      case 'risk':
-        return <RiskPanel riskSummary={riskSummary} />;
-      case 'crews':
-        return (
-          <CrewTrackingPanel
-            crews={crews}
-            tasks={tasks}
-            routeInfo={preset.routeInfo}
-          />
-        );
-      case 'vehicles':
-        return (
-          <VehiclePanel
-            vehicles={vehicles}
-            vehiclePlanningUnlocked={pilotAreaId === 'sanayiPazar' && gameDay >= 3}
-          />
-        );
-      case 'containers':
-        return (
-          <ContainerPanel
-            summary={liveContainerSummary ?? containerSummary}
-            containers={containers}
-            liveItems={
-              liveContainerPanelItems.length > 0
-                ? liveContainerPanelItems
-                : undefined
-            }
-            emphasizeRouteCta={pilotAreaId === 'sanayiPazar'}
-          />
-        );
-      default:
-        return null;
-    }
-  };
+  const handleFilterChipSelect = useCallback((filterId: MapFilterId) => {
+    setSelectedFilter((current) => (current === filterId ? 'events' : filterId));
+  }, []);
 
   return (
     <GameScreenShell
-      screenTitle="Harita"
-      backgroundColor={colors.background}
-      contentStyle={styles.shellContent}>
+      headerVariant="none"
+      backgroundColor={colors.hubCream}
+      contentStyle={styles.content}>
       <View style={styles.stack}>
-        <MapOperationHeader
-          filter={filterChips}
-          onGuidePress={() => setGuideOpen(true)}
-        />
+        <MapScreenHeader model={headerModel} />
 
-        <CityMapCard
+        <MapScreenTitleRow onInfoPress={() => setGuideOpen(true)} />
+
+        <MapFilterChips chips={chipItems} onSelectFilter={handleFilterChipSelect} />
+
+        <MapHeroPanel
           viewMode={mapViewMode}
           detailDistrictId={detailDistrictId}
           pilotAreaId={pilotAreaId}
@@ -346,39 +254,22 @@ export function MapScreen() {
           onBackToOverview={handleBackToOverview}
           onPinPress={(pinId) => {
             setSelectedPinId((current) => (current === pinId ? null : pinId));
-            const linked = activeEvents.find((event) => event.id === pinId);
-            if (linked) {
-              // İleride: router.push(`/events/${pinId}`)
-            }
           }}
         />
 
-        <MapNeighborhoodStrip
-          items={neighborhoodStripItems}
-          selectedId={focusDistrictId}
-          onSelect={handleDistrictSelect}
-        />
+        <Animated.View entering={FadeIn.duration(220)} style={styles.lowerCards}>
+          <MapOperationSignalCard
+            model={operationSignalModel}
+            onActionPress={handleFocusDistrict}
+            onTrack={handleFocusDistrict}
+          />
 
-        <MapOperationBottomPanel
-          model={operationPanel}
-          onPressCta={handleBottomPanelCta}
-          onPressRecommended={handleBottomPanelCta}
-        />
-
-        <View style={styles.filterSection}>
-          <MapFilterTabs selected={selectedFilter} onSelect={setSelectedFilter} />
-
-          <Animated.View
-            key={`${selectedFilter}-${pilotAreaId}-${gameDay}`}
-            entering={FadeIn.duration(220)}
-            style={styles.filterContent}>
-            {renderFilterContent()}
-          </Animated.View>
-
-          {(gameDay >= 7 || selectedFilter === 'events') && (
-            <PilotAreaSummaryPanel pilotAreaId={pilotAreaId} gameDay={gameDay} />
-          )}
-        </View>
+          <MapPilotDistrictStatusCard
+            model={pilotStatusModel}
+            onSuggestionPress={handleFocusDistrict}
+            onMiniMapPress={handleFocusDistrict}
+          />
+        </Animated.View>
       </View>
 
       <LayerPanel
@@ -394,18 +285,17 @@ export function MapScreen() {
 }
 
 const styles = StyleSheet.create({
-  shellContent: {
-    paddingBottom: spacing.xl,
+  content: {
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
   },
   stack: {
-    gap: 14,
-    paddingBottom: spacing.md,
+    gap: 12,
+    minWidth: 0,
   },
-  filterSection: {
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  filterContent: {
-    gap: spacing.sm,
+  lowerCards: {
+    gap: 12,
+    minWidth: 0,
   },
 });

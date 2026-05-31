@@ -48,7 +48,8 @@ function buildEntryFromScore(
     'Sen';
   const runId = params.gameState.pilot.run?.id;
   const completedAt =
-    params.gameState.pilot.run?.completedAt ?? new Date().toISOString();
+    params.gameState.pilot.run?.completedAt ??
+    `day-${params.gameState.city.day}-local`;
 
   const categoryScore =
     category === 'overall'

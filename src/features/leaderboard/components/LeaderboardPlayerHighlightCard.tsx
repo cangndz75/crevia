@@ -9,6 +9,8 @@ import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
+const HIGHLIGHT_CARD_ENTERING = FadeInUp.delay(180).duration(320);
+
 type Props = {
   model: LeaderboardPlayerHighlightModel;
 };
@@ -20,7 +22,7 @@ export function LeaderboardPlayerHighlightCard({ model }: Props) {
 
   return (
     <Animated.View
-      entering={FadeInUp.delay(180).duration(320)}
+      entering={HIGHLIGHT_CARD_ENTERING}
       style={[styles.card, shadows.soft]}>
       <LeaderboardDynamicAvatar avatar={model.avatar} size={44} highlighted />
       <View style={styles.copy}>

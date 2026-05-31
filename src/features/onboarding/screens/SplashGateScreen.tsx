@@ -12,6 +12,7 @@ import { useEffect } from 'react';
 
 import { OFFLINE_COPY } from '@/features/onboarding/content/onboardingContent';
 import { OnboardingPrimaryButton } from '@/features/onboarding/components/OnboardingPrimaryButton';
+import { CreviaGameLogo } from '@/ui/components/CreviaGameLogo';
 import { colors } from '@/ui/theme/colors';
 import { spacing } from '@/ui/theme/spacing';
 
@@ -69,7 +70,7 @@ export function SplashGateScreen({
   return (
     <View style={styles.root}>
       <Animated.View entering={FadeIn.duration(500)} style={brandStyle}>
-        <Text style={styles.brand}>CREVIA</Text>
+        <CreviaGameLogo width={220} />
       </Animated.View>
       <Animated.Text entering={FadeIn.delay(200).duration(400)} style={styles.tagline}>
         Şehir operasyon merkezi
@@ -91,12 +92,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xxl,
     gap: spacing.lg,
-  },
-  brand: {
-    fontSize: 36,
-    fontWeight: '800',
-    letterSpacing: 6,
-    color: colors.primary,
   },
   tagline: {
     fontSize: 14,

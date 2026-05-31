@@ -131,8 +131,8 @@ export function useOperationPreviewState(
           return { ...chip, active: isCompleted };
         case 'report-ready':
           return { ...chip, active: reportReady };
-        case 'main-locked':
-          return { ...chip, active: mainLocked };
+        case 'authority-tracking':
+          return { ...chip, active: isCompleted };
         default:
           return { ...chip, active: false };
       }
@@ -149,26 +149,16 @@ export function useOperationPreviewState(
         case 'city-map':
           return {
             ...step,
-            state: unlock?.cityMapPreviewUnlocked
-              ? 'next'
-              : isCompleted
-                ? 'next'
-                : 'locked',
-            statusLabel: unlock?.cityMapPreviewUnlocked
-              ? 'Sıradaki Kilit'
-              : 'Kilitli',
+            state: isCompleted ? 'next' : 'locked',
+            statusLabel: 'Kilitli',
           };
         case 'neighborhoods':
           return { ...step, state: 'locked', statusLabel: 'Yakında' };
-        case 'main-op':
+        case 'city-scale':
           return {
             ...step,
-            state: unlock?.fullMainOperationUnlocked ? 'completed' : 'goal',
-            statusLabel: unlock?.fullMainOperationUnlocked
-              ? 'Açık'
-              : unlock?.mainOperationPreviewUnlocked
-                ? 'Önizleme'
-                : 'Geniş Mod',
+            state: unlock?.fullMainOperationUnlocked ? 'completed' : 'locked',
+            statusLabel: unlock?.fullMainOperationUnlocked ? 'Açık' : 'Yakında',
           };
         default:
           return step;
@@ -218,7 +208,7 @@ export function useOperationPreviewState(
       completionSummary.unlockedPreviewItems.map((item) => [item.id, item]),
     );
 
-    const systemCards: SystemCardItem[] = SYSTEM_CARDS.map((card) => {
+    const systemCards: SystemCardItem[] = SYSTEM_CARDS.slice(0, 4).map((card) => {
       const unlockItem = unlockItemsById.get(card.id);
       const statusTag = unlockItem?.tag ?? (card.locked ? 'Kilitli' : 'Önizleme');
       const locked =
@@ -234,10 +224,7 @@ export function useOperationPreviewState(
             ? unlock?.cityMapPreviewUnlocked
               ? 'Yakında'
               : 'Önizleme'
-            : 'Kilitli',
-          description: isCompleted
-            ? 'Pilot tamamlandı; şehir haritası ana operasyon açılışında sıradaki adım.'
-            : card.description,
+            : 'Önizleme',
         };
       }
 
@@ -246,8 +233,6 @@ export function useOperationPreviewState(
           ...card,
           locked: false,
           statusTag: 'Pilotla hazırlandı',
-          description:
-            'Pilot kararlarının yankıları kayıt altında; ana operasyonda genişleyecek.',
         };
       }
 
@@ -255,9 +240,6 @@ export function useOperationPreviewState(
         ...card,
         locked: locked && card.id !== 'butterfly',
         statusTag,
-        description: isCompleted
-          ? `${card.description} Pilot tamamlandı, ana operasyon açılışı yakında.`
-          : card.description,
       };
     });
 
