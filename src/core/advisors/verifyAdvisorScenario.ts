@@ -708,7 +708,7 @@ export function verifyAdvisorScenario(): VerifyAdvisorOutcome {
     snapshots: seed.snapshots,
   });
   const persistOk =
-    SAVE_VERSION === 17 &&
+    SAVE_VERSION === 20 &&
     hydrated != null &&
     hydrated.advisorState.advisorId === 'ece_operations_assistant' &&
     hydrated.advisorState.reliabilityScore === DEFAULT_RELIABILITY_SCORE;

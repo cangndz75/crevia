@@ -286,6 +286,8 @@ export function buildMapNeighborhoodStripItems(params: {
   focusDistrictId: MapDistrictId;
   gameDay: number;
   postPilot?: MapPostPilotPresentationContext;
+  mainOperationScopeBadges?: import('@/core/mainOperation/mainOperationTypes').MainOperationMapScopeBadge[];
+  crisisMapLines?: import('@/core/crisis/crisisTypes').CrisisMapLine[];
 }): MapNeighborhoodStripItem[] {
   const pilotMapDistrict = mapDistrictFromPilot(params.pilotDistrictId);
 
@@ -321,7 +323,17 @@ export function buildMapNeighborhoodStripItems(params: {
         ? resolvePostPilotScopeLabelForDistrict(districtId, postPilotScopes)
         : null;
 
+    const mainOpLabel = params.mainOperationScopeBadges?.find(
+      (b) => b.districtId === districtId && b.label.length > 0,
+    )?.label;
+
+    const crisisLabel = params.crisisMapLines?.find(
+      (l) => l.districtId === districtId,
+    )?.label;
+
     const stripStatusLabel =
+      crisisLabel ??
+      mainOpLabel ??
       postPilotLabel ??
       (status === 'preview'
         ? STATUS_LABELS.preview

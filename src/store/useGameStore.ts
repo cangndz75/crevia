@@ -222,6 +222,47 @@ import type {
   VehicleAssignmentType,
 } from '@/core/assignments/assignmentTypes';
 import {
+  applyFullAccessToGameState,
+  applyLimitedContinueToGameState,
+  buildDevJumpPilotCompletedGameState,
+  deriveMonetizationStateFromGameState,
+} from '@/core/monetization/monetizationEngine';
+import {
+  createInitialMonetizationState,
+  markMainOperationOfferSeen,
+  mockPurchaseMainOperationPack,
+  normalizeMonetizationState,
+  restoreMainOperationPlaceholder,
+  selectLimitedContinue,
+  syncMonetizationAfterPilotComplete,
+  syncMonetizationForActivePilot,
+} from '@/core/monetization/monetizationState';
+import type { MonetizationState } from '@/core/monetization/monetizationTypes';
+import {
+  buildMainOperationEngineInput,
+  processMainOperationEndOfDay,
+  syncMainOperationSeasonAfterFullUnlock,
+  syncMainOperationSeasonAfterLimitedContinue,
+} from '@/core/mainOperation/mainOperationEngine';
+import {
+  createInitialMainOperationSeasonState,
+  normalizeMainOperationSeasonState,
+  refreshMainOperationSeasonForDay,
+} from '@/core/mainOperation/mainOperationState';
+import type { MainOperationSeasonState } from '@/core/mainOperation/mainOperationTypes';
+import type { PostPilotEventGenerationContext } from '@/core/postPilot/postPilotEventTypes';
+import {
+  buildCrisisEngineInput,
+  deriveCrisisStateFromGameState,
+  processCrisisEndOfDay,
+} from '@/core/crisis/crisisEngine';
+import {
+  buildCrisisSignal,
+  createInitialCrisisState,
+  normalizeCrisisState,
+} from '@/core/crisis/crisisState';
+import type { CrisisState } from '@/core/crisis/crisisTypes';
+import {
   attachAdvisorPredictionAfterInsight,
   evaluateAdvisorPredictionsAgainstSignals,
 } from '@/core/advisors/advisorPrediction';
@@ -364,6 +405,9 @@ type GameStoreState = {
   operationSignals: OperationSignalsState;
   dailyOperationsPlan: DailyOperationsPlanState;
   assignments: AssignmentsState;
+  monetization: MonetizationState;
+  mainOperationSeason: MainOperationSeasonState;
+  crisisState: CrisisState;
   tutorialState: TutorialState;
   /** Oturum içi onboarding ipucu kapatmaları — persist edilmez. */
   onboardingDismissedHintIds: string[];
@@ -440,6 +484,18 @@ type GameStoreActions = {
   markAssignmentDispatched: (eventId: string) => void;
   processAssignmentsForEndOfDay: () => void;
   resetEventAssignmentToDefault: (eventId: string) => void;
+  markMainOperationOfferSeen: () => void;
+  continueWithLimitedAgenda: () => void;
+  mockPurchaseMainOperationPack: () => void;
+  restoreMainOperationAccessPlaceholder: () => void;
+  refreshMainOperationSeason: () => void;
+  processMainOperationSeasonForEndOfDay: () => void;
+  refreshCrisisState: () => void;
+  processCrisisForEndOfDay: () => void;
+  devRaiseCrisisRiskForTesting: () => void;
+  devJumpToFullMainOperationForTesting: () => void;
+  devJumpToPostPilotOfferForTesting: () => void;
+  devJumpToDay8LimitedForTesting: () => void;
   getOperationImpactPreview: (
     eventId: string,
     decisionId?: string,
@@ -678,6 +734,9 @@ function applySeedBundle(
   | 'operationSignals'
   | 'dailyOperationsPlan'
   | 'assignments'
+  | 'monetization'
+  | 'mainOperationSeason'
+  | 'crisisState'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -733,6 +792,9 @@ function applySeedBundle(
       bundle.gameState.city.day,
     ),
     assignments: createInitialAssignmentsState(),
+    monetization: createInitialMonetizationState(),
+    mainOperationSeason: createInitialMainOperationSeasonState(),
+    crisisState: createInitialCrisisState(),
     tutorialState: { ...INITIAL_TUTORIAL_STATE },
     bestPilotScores: [],
     lastPilotScore: undefined,
@@ -756,6 +818,72 @@ function buildDailyPlanningInput(state: GameStoreState) {
 
 function buildAssignmentInput(state: GameStoreState) {
   return buildAssignmentEngineInputFromGameStore(state as GameStore);
+}
+
+function buildPostPilotMainOperationContext(
+  state: Pick<
+    GameStoreState,
+    | 'monetization'
+    | 'mainOperationSeason'
+    | 'crisisState'
+    | 'operationSignals'
+    | 'assignments'
+  >,
+): PostPilotEventGenerationContext {
+  return {
+    monetization: state.monetization,
+    mainOperationSeason: state.mainOperationSeason,
+    crisisState: state.crisisState,
+    operationSignals: state.operationSignals,
+    assignments: state.assignments,
+  };
+}
+
+function buildCrisisEngineInputFromStore(
+  state: GameStoreState,
+  overrides?: Partial<ReturnType<typeof buildCrisisEngineInput>>,
+) {
+  return buildCrisisEngineInput({
+    gameState: state.gameState,
+    monetization: state.monetization,
+    crisisState: state.crisisState,
+    operationSignals: state.operationSignals,
+    assignments: state.assignments,
+    dailyOperationsPlan: state.dailyOperationsPlan,
+    mainOperationSeason: state.mainOperationSeason,
+    ...overrides,
+  });
+}
+
+function refreshPilotEventsForStore(
+  gameState: GameState,
+  eventPool: EventCard[],
+  storeSlice: Pick<
+    GameStoreState,
+    | 'monetization'
+    | 'mainOperationSeason'
+    | 'crisisState'
+    | 'operationSignals'
+    | 'assignments'
+  >,
+  options?: Parameters<typeof refreshPilotEventsFromGameState>[2],
+) {
+  return refreshPilotEventsFromGameState(gameState, eventPool, {
+    ...options,
+    mainOperationContext: buildPostPilotMainOperationContext(storeSlice),
+  });
+}
+
+function buildMainOperationEngineInputFromStore(
+  state: GameStoreState,
+): ReturnType<typeof buildMainOperationEngineInput> {
+  return buildMainOperationEngineInput({
+    gameState: state.gameState,
+    monetization: state.monetization,
+    mainOperationSeason: state.mainOperationSeason,
+    operationSignals: state.operationSignals,
+    assignments: state.assignments,
+  });
 }
 
 function findStoreEvent(
@@ -1916,6 +2044,237 @@ export const useGameStore = create<GameStore>()(
         });
       },
 
+      markMainOperationOfferSeen: () => {
+        const current = get();
+        const day = current.gameState.city.day;
+        set({
+          monetization: markMainOperationOfferSeen(current.monetization, day),
+        });
+      },
+
+      continueWithLimitedAgenda: () => {
+        const current = get();
+        const day = Math.max(
+          current.gameState.city.day,
+          current.gameState.pilot.currentPilotDay,
+        );
+        let nextGameState = applyLimitedContinueToGameState(current.gameState);
+        const nextMonetization = selectLimitedContinue(current.monetization, day);
+        const nextSeason = syncMainOperationSeasonAfterLimitedContinue(
+          day,
+          current.mainOperationSeason,
+        );
+        const postPilotRefresh = refreshPilotEventsForStore(
+          nextGameState,
+          current.eventPool,
+          {
+            ...current,
+            monetization: nextMonetization,
+            mainOperationSeason: nextSeason,
+          },
+        );
+        set({
+          gameState: withSyncedPulse(postPilotRefresh.gameState),
+          eventPool: postPilotRefresh.eventPool,
+          monetization: nextMonetization,
+          mainOperationSeason: nextSeason,
+        });
+      },
+
+      mockPurchaseMainOperationPack: () => {
+        const current = get();
+        const day = Math.max(
+          current.gameState.city.day,
+          current.gameState.pilot.currentPilotDay,
+        );
+        let nextGameState = applyFullAccessToGameState(current.gameState);
+        const nextMonetization = mockPurchaseMainOperationPack(
+          current.monetization,
+          day,
+        );
+        const nextSeason = syncMainOperationSeasonAfterFullUnlock(
+          nextGameState,
+          nextMonetization,
+          current.mainOperationSeason,
+        );
+        const postPilotRefresh = refreshPilotEventsForStore(
+          nextGameState,
+          current.eventPool,
+          {
+            ...current,
+            monetization: nextMonetization,
+            mainOperationSeason: nextSeason,
+          },
+        );
+        set({
+          gameState: withSyncedPulse(postPilotRefresh.gameState),
+          eventPool: postPilotRefresh.eventPool,
+          monetization: nextMonetization,
+          mainOperationSeason: nextSeason,
+        });
+      },
+
+      refreshMainOperationSeason: () => {
+        const current = get();
+        const day = current.gameState.city.day;
+        const accessMode =
+          current.monetization.mainOperationAccess === 'full'
+            ? 'full'
+            : current.monetization.mainOperationAccess === 'limited'
+              ? 'limited'
+              : 'none';
+        set({
+          mainOperationSeason: refreshMainOperationSeasonForDay(
+            normalizeMainOperationSeasonState(
+              current.mainOperationSeason,
+              day,
+              current.monetization,
+            ),
+            day,
+            accessMode,
+          ),
+        });
+      },
+
+      processMainOperationSeasonForEndOfDay: () => {
+        const current = get();
+        const closingDay = current.gameState.city.day;
+        const input = buildMainOperationEngineInputFromStore(current);
+        set({
+          mainOperationSeason: processMainOperationEndOfDay(input, closingDay),
+        });
+      },
+
+      refreshCrisisState: () => {
+        const current = get();
+        set({
+          crisisState: deriveCrisisStateFromGameState(
+            buildCrisisEngineInputFromStore(current),
+          ),
+        });
+      },
+
+      processCrisisForEndOfDay: () => {
+        const current = get();
+        const closingDay = current.gameState.city.day;
+        set({
+          crisisState: processCrisisEndOfDay(
+            buildCrisisEngineInputFromStore(current),
+            closingDay,
+          ),
+        });
+      },
+
+      devRaiseCrisisRiskForTesting: () => {
+        if (!__DEV__) {
+          return;
+        }
+        const current = get();
+        const base = deriveCrisisStateFromGameState(
+          buildCrisisEngineInputFromStore(current),
+        );
+        if (base.accessMode !== 'active') {
+          get().devJumpToFullMainOperationForTesting();
+        }
+        const after = get();
+        set({
+          crisisState: {
+            ...after.crisisState,
+            accessMode: 'active',
+            cityCrisisScore: 84,
+            riskLevel: 'critical',
+            trend: 'worsening',
+            recentSignals: [
+              buildCrisisSignal({
+                id: 'dev-crisis-test-signal',
+                domain: 'city',
+                score: 84,
+                trend: 'worsening',
+                title: 'Çoklu mahalle baskısı yükseliyor.',
+                summary: 'Dev test sinyali — şehir baskısı yükseldi.',
+                sourceTags: ['dev', 'crisis'],
+              }),
+              ...after.crisisState.recentSignals,
+            ].slice(0, 5),
+          },
+        });
+      },
+
+      devJumpToFullMainOperationForTesting: () => {
+        if (!__DEV__) {
+          return;
+        }
+        const current = get();
+        get().devJumpToPostPilotOfferForTesting();
+        get().mockPurchaseMainOperationPack();
+        const after = get();
+        const day = Math.max(8, after.gameState.city.day);
+        set({
+          mainOperationSeason: syncMainOperationSeasonAfterFullUnlock(
+            after.gameState,
+            after.monetization,
+            after.mainOperationSeason,
+          ),
+        });
+        const refreshed = refreshPilotEventsForStore(
+          get().gameState,
+          get().eventPool,
+          get(),
+        );
+        set({
+          gameState: withSyncedPulse(refreshed.gameState),
+          eventPool: refreshed.eventPool,
+        });
+      },
+
+      restoreMainOperationAccessPlaceholder: () => {
+        const current = get();
+        const day = current.gameState.city.day;
+        set({
+          monetization: restoreMainOperationPlaceholder(
+            current.monetization,
+            day,
+          ),
+        });
+      },
+
+      devJumpToPostPilotOfferForTesting: () => {
+        if (!__DEV__) {
+          return;
+        }
+        const current = get();
+        const jumpedGameState = buildDevJumpPilotCompletedGameState(
+          current.gameState,
+        );
+        const postPilotRefresh = refreshPilotEventsForStore(
+          jumpedGameState,
+          [],
+          current,
+        );
+        const day = postPilotRefresh.gameState.city.day;
+        set({
+          gameState: withSyncedPulse(
+            clearActiveEventsForGameState(postPilotRefresh.gameState),
+          ),
+          eventPool: postPilotRefresh.eventPool,
+          monetization: syncMonetizationAfterPilotComplete(
+            createInitialMonetizationState(),
+            day,
+          ),
+          mainOperationSeason: createInitialMainOperationSeasonState(),
+          crisisState: createInitialCrisisState(),
+          lastClosedDay: 7,
+        });
+      },
+
+      devJumpToDay8LimitedForTesting: () => {
+        if (!__DEV__) {
+          return;
+        }
+        get().devJumpToPostPilotOfferForTesting();
+        get().continueWithLimitedAgenda();
+      },
+
       processAssignmentsForEndOfDay: () => {
         const current = get();
         const closingDay = current.gameState.city.day;
@@ -2439,9 +2798,10 @@ export const useGameStore = create<GameStore>()(
             ...pilot,
             postPilotOperation: postPilotOp,
           }));
-          const postPilotRefresh = refreshPilotEventsFromGameState(
+          const postPilotRefresh = refreshPilotEventsForStore(
             nextGameState,
             [],
+            current,
           );
           nextGameState = withSyncedPulse(postPilotRefresh.gameState);
           nextEventPool = postPilotRefresh.eventPool;
@@ -2505,6 +2865,18 @@ export const useGameStore = create<GameStore>()(
           assignmentProcessed.effects,
         );
 
+        const mainOpInput = buildMainOperationEngineInput({
+          gameState: current.gameState,
+          monetization: current.monetization,
+          mainOperationSeason: current.mainOperationSeason,
+          operationSignals: operationSignalsAfterDay,
+          assignments: assignmentProcessed.state,
+        });
+        let mainOperationSeasonAfterDay = processMainOperationEndOfDay(
+          mainOpInput,
+          closingDay,
+        );
+
         const nextSignalsInput = buildOperationSignalsEngineInputFromStore({
           gameState: withSyncedPulse({
             ...nextGameState,
@@ -2546,6 +2918,36 @@ export const useGameStore = create<GameStore>()(
           nextDay,
           operationSignalsAfterDay,
         );
+
+        const nextAccessMode =
+          current.monetization.mainOperationAccess === 'full'
+            ? 'full'
+            : current.monetization.mainOperationAccess === 'limited'
+              ? 'limited'
+              : 'none';
+        mainOperationSeasonAfterDay = refreshMainOperationSeasonForDay(
+          mainOperationSeasonAfterDay,
+          nextDay,
+          nextAccessMode,
+        );
+
+        const crisisInput = buildCrisisEngineInput({
+          gameState: current.gameState,
+          monetization: current.monetization,
+          crisisState: current.crisisState,
+          operationSignals: operationSignalsAfterDay,
+          assignments: assignmentProcessed.state,
+          dailyOperationsPlan: planProcessed.plan,
+          mainOperationSeason: mainOperationSeasonAfterDay,
+        });
+        let crisisStateAfterDay = processCrisisEndOfDay(
+          crisisInput,
+          closingDay,
+        );
+        crisisStateAfterDay = deriveCrisisStateFromGameState({
+          ...crisisInput,
+          crisisState: crisisStateAfterDay,
+        });
 
         const syncedMoraleCity = {
           ...nextGameState.city,
@@ -2615,6 +3017,8 @@ export const useGameStore = create<GameStore>()(
           operationSignals: operationSignalsAfterDay,
           dailyOperationsPlan: dailyPlanAfterDay,
           assignments: assignmentProcessed.state,
+          mainOperationSeason: mainOperationSeasonAfterDay,
+          crisisState: crisisStateAfterDay,
         });
       },
 
@@ -2857,6 +3261,11 @@ export const useGameStore = create<GameStore>()(
           authorityResult.evaluationLines,
         );
 
+        const closingDayForMonetization = Math.max(
+          7,
+          gameState.pilot.currentPilotDay,
+        );
+
         set({
           gameState: withSyncedPulse(
             clearActiveEventsForGameState(withCompleted),
@@ -2864,6 +3273,10 @@ export const useGameStore = create<GameStore>()(
           eventPool: [],
           bestPilotScores: leaderboardUpdate.bestPilotScores,
           lastPilotScore: leaderboardUpdate.lastPilotScore,
+          monetization: syncMonetizationAfterPilotComplete(
+            current.monetization,
+            closingDayForMonetization,
+          ),
           ...(nextDailyReport ? { lastDailyReport: nextDailyReport } : {}),
         });
       },
@@ -3040,9 +3453,26 @@ export const useGameStore = create<GameStore>()(
           },
         );
 
-        const pilotRefresh = refreshPilotEventsFromGameState(
+        const hydratedMonetization = deriveMonetizationStateFromGameState(
+          withPilotRun,
+          normalizeMonetizationState(saved.monetization),
+        );
+        const hydratedMainOperationSeason = normalizeMainOperationSeasonState(
+          saved.mainOperationSeason,
+          withPilotRun.city.day,
+          hydratedMonetization,
+        );
+        const hydratedCrisisState = normalizeCrisisState(saved.crisisState);
+        const pilotRefresh = refreshPilotEventsForStore(
           withPilotRun,
           saved.eventPool,
+          {
+            monetization: hydratedMonetization,
+            mainOperationSeason: hydratedMainOperationSeason,
+            crisisState: hydratedCrisisState,
+            operationSignals: saved.operationSignals,
+            assignments: saved.assignments,
+          },
           {
             containerState: saved.containerState,
             vehicleState: saved.vehicleState,
@@ -3115,6 +3545,23 @@ export const useGameStore = create<GameStore>()(
             saved.operationSignals.priorityDistrictId,
           ),
           assignments: normalizeAssignmentsState(saved.assignments),
+          monetization: hydratedMonetization,
+          mainOperationSeason: hydratedMainOperationSeason,
+          crisisState: deriveCrisisStateFromGameState(
+            buildCrisisEngineInput({
+              gameState: withSyncedPulse(pilotRefresh.gameState),
+              monetization: hydratedMonetization,
+              crisisState: hydratedCrisisState,
+              operationSignals: saved.operationSignals,
+              assignments: saved.assignments,
+              dailyOperationsPlan: normalizeDailyOperationsPlan(
+                saved.dailyOperationsPlan,
+                withSyncedPulse(pilotRefresh.gameState).city.day,
+                saved.operationSignals.priorityDistrictId,
+              ),
+              mainOperationSeason: hydratedMainOperationSeason,
+            }),
+          ),
           tutorialState: saved.tutorialState ?? { ...INITIAL_TUTORIAL_STATE },
           bestPilotScores: saved.bestPilotScores ?? [],
           lastPilotScore: saved.lastPilotScore,

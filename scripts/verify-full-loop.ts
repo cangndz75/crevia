@@ -25,7 +25,7 @@ function assert(label: string, condition: boolean): void {
 
 const analysis = runFullLoopAnalysis();
 
-assert('SAVE_VERSION 17', SAVE_VERSION === 17 && analysis.saveVersionOk);
+assert('SAVE_VERSION 20', SAVE_VERSION === 20 && analysis.saveVersionOk);
 
 const balanced = analysis.scenarios.find((s) => s.scenario === 'balanced_player');
 assert('balanced_player 7 days', (balanced?.daysCompleted ?? 0) === 7);

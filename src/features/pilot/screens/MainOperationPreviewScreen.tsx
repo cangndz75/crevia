@@ -12,6 +12,10 @@ import { MainOperationStatusCards } from '@/features/pilot/components/main-opera
 import { MainOperationSystemsGrid } from '@/features/pilot/components/main-operation-preview/MainOperationSystemsGrid';
 import { useOperationPreviewState } from '@/features/pilot/hooks/useOperationPreviewState';
 import {
+  getMainOperationPreviewSubtitle,
+  isMainOperationPreviewActiveState,
+} from '@/core/mainOperation';
+import {
   buildMainOperationPreviewUiModel,
 } from '@/features/pilot/utils/mainOperationPreviewUiModel';
 import { MAIN_OP_PREVIEW_COLORS } from '@/features/pilot/utils/mainOperationPreviewTheme';
@@ -25,18 +29,35 @@ import { ANIMATED_TAB_BAR_HEIGHT } from '@/ui/components/AnimatedTabBar';
 export function MainOperationPreviewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const districtId = useGameStore((s) => s.gameState.pilot.selectedDistrictId);
-  const pilotStatus = useGameStore((s) => s.gameState.pilot.status);
+  const gameState = useGameStore((s) => s.gameState);
+  const monetization = useGameStore((s) => s.monetization);
+  const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
+  const districtId = gameState.pilot.selectedDistrictId;
+  const pilotStatus = gameState.pilot.status;
   const markMainOperationPreviewSeen = useGameStore(
     (s) => s.markMainOperationPreviewSeen,
   );
   const preview = useOperationPreviewState({ forcePilotComplete: true });
   const previewMarkedRef = useRef(false);
 
-  const ui = useMemo(
-    () => buildMainOperationPreviewUiModel(preview, districtId),
-    [preview, districtId],
-  );
+  const ui = useMemo(() => {
+    const base = buildMainOperationPreviewUiModel(preview, districtId);
+    if (!isMainOperationPreviewActiveState(gameState, monetization)) {
+      return base;
+    }
+    return {
+      ...base,
+      headerSubtitle: getMainOperationPreviewSubtitle(
+        gameState,
+        monetization,
+        mainOperationSeason,
+      ),
+      scopeRows: base.scopeRows.map((row) => ({
+        ...row,
+        pillLabel: 'Ana Operasyon aktif',
+      })),
+    };
+  }, [preview, districtId, gameState, monetization, mainOperationSeason]);
 
   const pilotCompleted = pilotStatus === 'completed';
 

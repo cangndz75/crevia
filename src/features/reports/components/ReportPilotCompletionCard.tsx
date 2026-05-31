@@ -9,8 +9,8 @@ const PILOT_COMPLETION_CARD_ENTERING = FadeInUp.delay(160)
   .springify()
   .damping(22);
 
+import { buildReportPilotCompletionCtaModel } from '@/core/monetization';
 import {
-  MAIN_OPERATION_PREVIEW_ROUTE,
   pilotCompletionGradeChipTone,
   type PilotCompletionSummary,
 } from '@/core/pilotCompletion';
@@ -53,6 +53,17 @@ export function ReportPilotCompletionCard({
   const router = useRouter();
   const pilot = useGameStore((s) => s.gameState.pilot);
   const lastPilotScore = useGameStore((s) => s.lastPilotScore);
+  const gameState = useGameStore((s) => s.gameState);
+  const monetization = useGameStore((s) => s.monetization);
+
+  const completionCta = useMemo(
+    () =>
+      buildReportPilotCompletionCtaModel({
+        gameState,
+        monetization,
+      }),
+    [gameState, monetization],
+  );
 
   const progressionLines = useMemo(
     () =>
@@ -170,8 +181,8 @@ export function ReportPilotCompletionCard({
         ) : null}
 
         <GameButton
-          title="Ana Operasyona Göz At"
-          onPress={() => router.push(MAIN_OPERATION_PREVIEW_ROUTE)}
+          title={completionCta.title}
+          onPress={() => router.push(completionCta.route as never)}
           style={styles.cta}
         />
       </GameCard>

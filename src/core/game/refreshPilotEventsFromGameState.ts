@@ -11,12 +11,14 @@ import type { EventCard } from '@/core/models/EventCard';
 import type { GameState } from '@/core/models/GameState';
 import type { CarryOverEvaluationInput } from '@/core/carryOver/carryOverTypes';
 import type { DailyPriorityKey } from '@/core/dailyPriority/dailyPriorityTypes';
+import type { PostPilotEventGenerationContext } from '@/core/postPilot/postPilotEventTypes';
 
 export type RefreshPilotEventsFromGameStateOptions = {
   containerState?: ContainerState | null;
   vehicleState?: VehicleState | null;
   dailyPriorityKey?: DailyPriorityKey;
   carryOverEvaluationInput?: CarryOverEvaluationInput;
+  mainOperationContext?: PostPilotEventGenerationContext;
 };
 
 export type RefreshPilotEventsFromGameStateResult = {
@@ -36,7 +38,11 @@ export function refreshPilotEventsFromGameState(
   options?: RefreshPilotEventsFromGameStateOptions,
 ): RefreshPilotEventsFromGameStateResult {
   if (isPostPilotLightEventLoopEligible(gameState)) {
-    return refreshPostPilotEventsFromGameState(gameState, currentEventPool);
+    return refreshPostPilotEventsFromGameState(
+      gameState,
+      currentEventPool,
+      options?.mainOperationContext,
+    );
   }
 
   if (shouldClearPilotActiveEvents(gameState)) {

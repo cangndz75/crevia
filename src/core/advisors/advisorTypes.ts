@@ -128,6 +128,7 @@ export type AdvisorEngineContext = {
   dailyOperationsPlan?: import('@/core/dailyPlanning/dailyPlanningTypes').DailyOperationsPlanState;
   isDay1Tutorial?: boolean;
   postPilotLightPhase?: boolean;
+  mainOperationAdvisorNote?: string | null;
 };
 
 export type OperationDomainForAdvisor = OperationSignalDomain;

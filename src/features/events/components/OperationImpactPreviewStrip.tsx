@@ -5,6 +5,7 @@ import {
   buildAssignmentEngineInputFromGameStore,
   buildAssignmentImpactPreviewModel,
 } from '@/core/assignments';
+import { buildCrisisImpactPreviewModel } from '@/core/crisis';
 import { buildDailyPlanImpactPreviewModel, buildDailyPlanningEngineInputFromStore } from '@/core/dailyPlanning';
 import {
   buildOperationImpactPreviewModel,
@@ -58,6 +59,9 @@ export function OperationImpactPreviewStrip({
   const advisorState = useGameStore((s) => s.advisorState);
   const dailyOperationsPlan = useGameStore((s) => s.dailyOperationsPlan);
   const assignments = useGameStore((s) => s.assignments);
+  const monetization = useGameStore((s) => s.monetization);
+  const crisisState = useGameStore((s) => s.crisisState);
+  const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
   const tutorialState = useGameStore((s) => s.tutorialState);
   const decisionHistory = useGameStore((s) => s.decisionHistory);
   const isDay1 = useGameStore(selectIsDay1TutorialEligible);
@@ -101,6 +105,35 @@ export function OperationImpactPreviewStrip({
     assignments,
     tutorialState,
     event,
+  ]);
+
+  const crisisPreview = useMemo(() => {
+    if (isDay1) return null;
+    return buildCrisisImpactPreviewModel(
+      gameState,
+      monetization,
+      crisisState,
+      {
+        gameState,
+        operationSignals,
+        assignments,
+        dailyOperationsPlan,
+        mainOperationSeason,
+        event,
+        decision,
+      },
+    );
+  }, [
+    gameState,
+    monetization,
+    crisisState,
+    operationSignals,
+    assignments,
+    dailyOperationsPlan,
+    mainOperationSeason,
+    isDay1,
+    event,
+    decision,
   ]);
 
   const model = useMemo(() => {
@@ -161,6 +194,11 @@ export function OperationImpactPreviewStrip({
       {assignmentPreview?.visible ? (
         <Text style={[styles.planLine, { color: tone.text }]} numberOfLines={2}>
           {assignmentPreview.summary}
+        </Text>
+      ) : null}
+      {crisisPreview?.visible ? (
+        <Text style={[styles.planLine, { color: tone.text }]} numberOfLines={2}>
+          {crisisPreview.summary}
         </Text>
       ) : null}
     </View>

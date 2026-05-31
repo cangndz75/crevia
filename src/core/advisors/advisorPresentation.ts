@@ -205,6 +205,7 @@ export function buildAdvisorPresentationContextFromStore(state: {
   operationSignals?: AdvisorEngineContext['operationSignals'];
   dailyOperationsPlan?: AdvisorEngineContext['dailyOperationsPlan'];
   isDay1Tutorial?: boolean;
+  mainOperationAdvisorNote?: string | null;
 }): AdvisorEngineContext {
   return buildAdvisorContextFromStore(state);
 }

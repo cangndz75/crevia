@@ -5,9 +5,18 @@ import { mapDistrictFromPilot } from '@/features/map/data/mapDistrictMapping';
 import type { MapDistrictId } from '@/features/map/data/mapDistrictConstants';
 import { getMapDistrictLabel } from '@/features/map/utils/mapDistrictLabels';
 
+import { buildMainOperationEngineInput } from '@/core/mainOperation/mainOperationEngine';
+import {
+  buildFullMainOperationDailySet,
+  filterMainOperationActiveEvents,
+  resolveFullMainOperationMaxEvents,
+  shouldUseFullMainOperationEvents,
+} from '@/core/mainOperation/mainOperationEventGeneration';
+import { createInitialMonetizationState } from '@/core/monetization/monetizationState';
+import { createInitialMainOperationSeasonState } from '@/core/mainOperation/mainOperationState';
+
 import {
   MAX_POST_PILOT_ACTIVE_EVENTS,
-  POST_PILOT_ANCHOR_COUNT,
   POST_PILOT_EVENT_FORBIDDEN_WORDS,
   POST_PILOT_FIRST_OPERATION_DAY,
   POST_PILOT_SIDE_COUNT,
@@ -44,7 +53,10 @@ export function isPostPilotLightEventLoopEligible(gameState: GameState): boolean
       currentPilotDay: gameState.pilot.currentPilotDay,
     },
   );
-  return postPilot.phase === 'main_operation_light';
+  return (
+    postPilot.phase === 'main_operation_light' ||
+    postPilot.phase === 'main_operation_full'
+  );
 }
 
 export function resolvePostPilotOperationDay(
@@ -125,12 +137,13 @@ function filterActiveEvents(
   allEventIds: string[],
   blockedIds: Set<string>,
   budget: number,
+  maxEvents: number = MAX_POST_PILOT_ACTIVE_EVENTS,
 ): EventCard[] {
   return allEventIds
     .filter((id) => !blockedIds.has(id))
     .map((id) => catalog.find((event) => event.id === id))
     .filter((event): event is EventCard => event != null)
-    .slice(0, MAX_POST_PILOT_ACTIVE_EVENTS)
+    .slice(0, maxEvents)
     .map((event) => ensureAtLeastOneAffordableDecision(event, budget));
 }
 
@@ -158,6 +171,7 @@ function syncFromExistingSet(
   postPilotOperation: PostPilotOperationState,
   existing: PostPilotDailyEventSet,
   reason: string,
+  maxEvents: number,
 ): PostPilotEventGenerationResult {
   const blockedIds = getBlockedEventIds(gameState);
   const budget = gameState.city.budget;
@@ -166,6 +180,7 @@ function syncFromExistingSet(
     existing.allEventIds,
     blockedIds,
     budget,
+    maxEvents,
   );
   const eventPool = cloneEventCards(existing.catalog);
   const anchorStillActive = activeEvents.some(
@@ -227,13 +242,72 @@ export function ensurePostPilotDailyEventsForDay(
     input.day ?? resolvePostPilotOperationDay(gameState, postPilotOperation);
   const existing = postPilotOperation.postPilotDailyEventSet;
 
+  const monetization =
+    input.mainOperationContext?.monetization ?? createInitialMonetizationState();
+  const mainOperationSeason =
+    input.mainOperationContext?.mainOperationSeason ??
+    createInitialMainOperationSeasonState();
+  const engineInput = buildMainOperationEngineInput({
+    gameState,
+    monetization,
+    mainOperationSeason,
+    operationSignals: input.mainOperationContext?.operationSignals,
+    assignments: input.mainOperationContext?.assignments,
+  });
+  const useFullEvents = shouldUseFullMainOperationEvents(gameState, monetization);
+  const maxEvents = useFullEvents
+    ? resolveFullMainOperationMaxEvents(gameState, monetization)
+    : MAX_POST_PILOT_ACTIVE_EVENTS;
+
   if (existing && existing.day === day) {
     return syncFromExistingSet(
       gameState,
       postPilotOperation,
       existing,
       'already_generated_for_day',
+      maxEvents,
     );
+  }
+
+  if (useFullEvents) {
+    const dailySet = buildFullMainOperationDailySet(
+      day,
+      engineInput,
+      input.mainOperationContext?.crisisState,
+    );
+    const blockedIds = getBlockedEventIds(gameState);
+    const activeEvents = filterMainOperationActiveEvents(
+      dailySet.catalog,
+      dailySet.allEventIds,
+      blockedIds,
+      gameState.city.budget,
+      maxEvents,
+    );
+
+    const nextPostPilot: PostPilotOperationState = {
+      ...postPilotOperation,
+      operationDay: day,
+      lastUpdatedDay: day,
+      postPilotDailyEventSet: dailySet,
+      scopes: derivePostPilotScopeStatuses({
+        postPilotOperation,
+        pilotStatus: gameState.pilot.status,
+        authorityState: authorityState ?? gameState.pilot.authorityState,
+      }),
+    };
+
+    const featuredEventId =
+      activeEvents.find((event) => event.id === dailySet.anchorEventId)?.id ??
+      activeEvents[0]?.id;
+
+    return {
+      events: activeEvents,
+      eventPool: cloneEventCards(dailySet.catalog),
+      featuredEventId,
+      generated: activeEvents.length > 0 || dailySet.allEventIds.length > 0,
+      reason: 'generated_full_main_operation_daily_set',
+      postPilotOperation: nextPostPilot,
+    };
   }
 
   const scope = resolvePostPilotEventScope(gameState, {
@@ -252,10 +326,11 @@ export function ensurePostPilotDailyEventsForDay(
     dailySet.allEventIds,
     blockedIds,
     gameState.city.budget,
+    maxEvents,
   );
 
-  if (activeEvents.length > MAX_POST_PILOT_ACTIVE_EVENTS) {
-    activeEvents.length = MAX_POST_PILOT_ACTIVE_EVENTS;
+  if (activeEvents.length > maxEvents) {
+    activeEvents.length = maxEvents;
   }
 
   const nextPostPilot: PostPilotOperationState = {
@@ -287,14 +362,21 @@ export function ensurePostPilotDailyEventsForDay(
 export function applyPostPilotEventGenerationToGameState(
   gameState: GameState,
   result: PostPilotEventGenerationResult,
+  options?: { monetization?: import('@/core/monetization/monetizationTypes').MonetizationState },
 ): GameState {
   if (!isPostPilotLightEventLoopEligible(gameState)) {
     return gameState;
   }
 
+  const monetization = options?.monetization;
+  const maxEvents =
+    monetization && shouldUseFullMainOperationEvents(gameState, monetization)
+      ? resolveFullMainOperationMaxEvents(gameState, monetization)
+      : MAX_POST_PILOT_ACTIVE_EVENTS;
+
   return {
     ...gameState,
-    events: cloneEventCards(result.events).slice(0, MAX_POST_PILOT_ACTIVE_EVENTS),
+    events: cloneEventCards(result.events).slice(0, maxEvents),
     featuredEventId: result.featuredEventId ?? result.events[0]?.id ?? '',
     pilot: {
       ...gameState.pilot,

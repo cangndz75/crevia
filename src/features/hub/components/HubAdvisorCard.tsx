@@ -9,6 +9,9 @@ import {
   buildAdvisorPresentationContextFromStore,
   getAdvisorAvatarInitials,
 } from '@/core/advisors/advisorPresentation';
+import { buildCrisisAdvisorNoteModel } from '@/core/crisis';
+import { buildMainOperationAdvisorNote } from '@/core/mainOperation';
+import { getAdvisorLevelFromExperience } from '@/core/advisors/advisorState';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import { AdvisorMissedSignalNote } from '@/features/hub/components/AdvisorMissedSignalNote';
 import {
@@ -36,6 +39,9 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
   const containerState = useGameStore((s) => s.containerState);
   const operationSignals = useGameStore((s) => s.operationSignals);
   const dailyOperationsPlan = useGameStore((s) => s.dailyOperationsPlan);
+  const monetization = useGameStore((s) => s.monetization);
+  const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
+  const crisisState = useGameStore((s) => s.crisisState);
   const isDay1 = useGameStore(selectIsDay1TutorialEligible);
   const askDaily = useGameStore((s) => s.askAdvisorForDailySummary);
   const acknowledgeMissed = useGameStore((s) => s.acknowledgeAdvisorMissedSignal);
@@ -52,6 +58,22 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
         operationSignals,
         dailyOperationsPlan,
         isDay1Tutorial: isDay1,
+        mainOperationAdvisorNote: (() => {
+          const crisisNote = buildCrisisAdvisorNoteModel(
+            gameState,
+            monetization,
+            crisisState,
+            getAdvisorLevelFromExperience(advisorState.experience),
+          );
+          if (crisisNote) {
+            return crisisNote.body;
+          }
+          return buildMainOperationAdvisorNote(
+            gameState,
+            monetization,
+            mainOperationSeason,
+          );
+        })(),
       }),
     [
       gameState,
@@ -61,6 +83,9 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
       containerState,
       operationSignals,
       dailyOperationsPlan,
+      monetization,
+      mainOperationSeason,
+      crisisState,
       isDay1,
     ],
   );

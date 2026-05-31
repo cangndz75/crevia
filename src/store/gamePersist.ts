@@ -64,6 +64,21 @@ import {
   normalizeAssignmentsState,
 } from '@/core/assignments/assignmentState';
 import type { AssignmentsState } from '@/core/assignments/assignmentTypes';
+import {
+  createInitialMonetizationState,
+  normalizeMonetizationState,
+} from '@/core/monetization/monetizationState';
+import type { MonetizationState } from '@/core/monetization/monetizationTypes';
+import {
+  createInitialMainOperationSeasonState,
+  normalizeMainOperationSeasonState,
+} from '@/core/mainOperation/mainOperationState';
+import type { MainOperationSeasonState } from '@/core/mainOperation/mainOperationTypes';
+import {
+  createInitialCrisisState,
+  normalizeCrisisState,
+} from '@/core/crisis/crisisState';
+import type { CrisisState } from '@/core/crisis/crisisTypes';
 
 import type { GameStore } from './useGameStore';
 
@@ -71,7 +86,10 @@ import type { GameStore } from './useGameStore';
 // Save version & storage key
 // ---------------------------------------------------------------------------
 
-export const SAVE_VERSION = 17;
+export const SAVE_VERSION = 20;
+const SAVE_VERSION_19 = 19;
+const SAVE_VERSION_18 = 18;
+const SAVE_VERSION_17 = 17;
 const SAVE_VERSION_16 = 16;
 const SAVE_VERSION_15 = 15;
 const SAVE_VERSION_14 = 14;
@@ -122,6 +140,9 @@ export type PersistedGameState = Pick<
   | 'operationSignals'
   | 'dailyOperationsPlan'
   | 'assignments'
+  | 'monetization'
+  | 'mainOperationSeason'
+  | 'crisisState'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -162,6 +183,9 @@ export function partialiseGameState(
     operationSignals: state.operationSignals,
     dailyOperationsPlan: state.dailyOperationsPlan,
     assignments: state.assignments,
+    monetization: state.monetization,
+    mainOperationSeason: state.mainOperationSeason,
+    crisisState: state.crisisState,
     tutorialState: state.tutorialState,
     bestPilotScores: state.bestPilotScores,
     lastPilotScore: state.lastPilotScore,
@@ -424,6 +448,9 @@ export function normalizePersistedSave(
     version !== SAVE_VERSION_14 &&
     version !== SAVE_VERSION_15 &&
     version !== SAVE_VERSION_16 &&
+    version !== SAVE_VERSION_17 &&
+    version !== SAVE_VERSION_18 &&
+    version !== SAVE_VERSION_19 &&
     version !== SAVE_VERSION
   ) {
     return null;
@@ -588,6 +615,36 @@ export function normalizePersistedSave(
         return normalizeAssignmentsState(raw.assignments);
       }
       return createInitialAssignmentsState();
+    })(),
+    monetization: ((): MonetizationState => {
+      if (raw.monetization != null) {
+        return normalizeMonetizationState(raw.monetization);
+      }
+      return createInitialMonetizationState();
+    })(),
+    mainOperationSeason: ((): MainOperationSeasonState => {
+      const monetization =
+        raw.monetization != null
+          ? normalizeMonetizationState(raw.monetization)
+          : createInitialMonetizationState();
+      if (raw.mainOperationSeason != null) {
+        return normalizeMainOperationSeasonState(
+          raw.mainOperationSeason,
+          currentDay,
+          monetization,
+        );
+      }
+      return normalizeMainOperationSeasonState(
+        createInitialMainOperationSeasonState(),
+        currentDay,
+        monetization,
+      );
+    })(),
+    crisisState: ((): CrisisState => {
+      if (raw.crisisState != null) {
+        return normalizeCrisisState(raw.crisisState);
+      }
+      return createInitialCrisisState();
     })(),
     tutorialState: isValidTutorialState(raw.tutorialState)
       ? raw.tutorialState

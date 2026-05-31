@@ -324,6 +324,23 @@ export function buildDailyAdvisorInsights(
     postPilotLightPhase: ctx.postPilotLightPhase,
   });
 
+  const mainOpNote = ctx.mainOperationAdvisorNote?.trim();
+  if (mainOpNote) {
+    insights.push(
+      makeInsight(
+        {
+          id: 'daily-main-operation',
+          type: 'daily_summary',
+          title: ADVISOR_COPY.hubTitle,
+          body: mainOpNote,
+          tone: 'neutral',
+          sourceTags: ['main_operation'],
+        },
+        ctx,
+      ),
+    );
+  }
+
   const signalInsight = signalInsightFromOperations(ctx);
   if (signalInsight) {
     const body =
@@ -579,6 +596,7 @@ export function buildAdvisorContextFromStore(state: {
   operationSignals?: OperationSignalsState;
   dailyOperationsPlan?: AdvisorEngineContext['dailyOperationsPlan'];
   isDay1Tutorial?: boolean;
+  mainOperationAdvisorNote?: string | null;
 }): AdvisorEngineContext {
   const postPilot = normalizePostPilotOperationState(
     state.gameState.pilot.postPilotOperation,
@@ -590,6 +608,7 @@ export function buildAdvisorContextFromStore(state: {
   return {
     ...state,
     postPilotLightPhase: postPilot.phase === 'main_operation_light',
+    mainOperationAdvisorNote: state.mainOperationAdvisorNote,
   };
 }
 

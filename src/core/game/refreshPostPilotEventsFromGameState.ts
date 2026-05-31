@@ -4,6 +4,7 @@ import {
   isPostPilotLightEventLoopEligible,
 } from '@/core/postPilot/postPilotEventEngine';
 import { normalizePostPilotOperationState } from '@/core/postPilot/postPilotOperationSeed';
+import type { PostPilotEventGenerationContext } from '@/core/postPilot/postPilotEventTypes';
 import type { EventCard } from '@/core/models/EventCard';
 import type { GameState } from '@/core/models/GameState';
 
@@ -19,6 +20,7 @@ export type RefreshPostPilotEventsFromGameStateResult = {
 export function refreshPostPilotEventsFromGameState(
   gameState: GameState,
   currentEventPool: EventCard[] = [],
+  mainOperationContext?: PostPilotEventGenerationContext,
 ): RefreshPostPilotEventsFromGameStateResult {
   if (!isPostPilotLightEventLoopEligible(gameState)) {
     return {
@@ -41,6 +43,7 @@ export function refreshPostPilotEventsFromGameState(
     postPilotOperation,
     authorityState: gameState.pilot.authorityState,
     badgeState: gameState.pilot.badgeState,
+    mainOperationContext,
   });
 
   if (
@@ -58,6 +61,7 @@ export function refreshPostPilotEventsFromGameState(
   const nextGameState = applyPostPilotEventGenerationToGameState(
     gameState,
     generation,
+    { monetization: mainOperationContext?.monetization },
   );
 
   return {

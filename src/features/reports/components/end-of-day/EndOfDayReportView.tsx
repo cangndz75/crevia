@@ -14,6 +14,8 @@ import { ReportPrimaryImpactSection } from '@/features/reports/components/end-of
 import { ReportTomorrowNotesCard } from '@/features/reports/components/end-of-day/premium/ReportTomorrowNotesCard';
 import { ReportAdvisorCommentCard } from '@/features/reports/components/ReportAdvisorCommentCard';
 import { ReportAssignmentBalanceCard } from '@/features/reports/components/ReportAssignmentBalanceCard';
+import { ReportCrisisDeskCard } from '@/features/reports/components/ReportCrisisDeskCard';
+import { ReportMainOperationSeasonCard } from '@/features/reports/components/ReportMainOperationSeasonCard';
 import { ReportDailyPlanImpactCard } from '@/features/reports/components/ReportDailyPlanImpactCard';
 import { ReportOperationSignalsCard } from '@/features/reports/components/ReportOperationSignalsCard';
 import { ReportHeaderCard } from '@/features/reports/components/ReportHeaderCard';
@@ -171,9 +173,13 @@ export function EndOfDayReportView({
 
       <ReportOperationSignalsCard report={report} compact={model.isDay1} />
 
+      <ReportCrisisDeskCard report={report} compact={model.isDay1} />
+
       <ReportDailyPlanImpactCard report={report} compact={model.isDay1} />
 
       <ReportAssignmentBalanceCard report={report} compact={model.isDay1} />
+
+      <ReportMainOperationSeasonCard report={report} compact={model.isDay1} />
 
       <ReportAdvisorCommentCard report={report} compact={model.isDay1} />
 

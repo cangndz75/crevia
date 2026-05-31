@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, DevSettings, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { PostPilotDevTools } from '@/features/devtools/components/PostPilotDevTools';
 import { resetOnboardingForDev } from '@/core/onboarding/onboardingStorage';
 import { useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
@@ -97,6 +98,7 @@ export function HubDevTools() {
           Onboarding + kayıt sıfırla
         </Text>
       </Pressable>
+      <PostPilotDevTools />
     </View>
   );
 }

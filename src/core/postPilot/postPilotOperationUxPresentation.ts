@@ -114,7 +114,7 @@ export function buildPostPilotEventContextLabel(
   event: EventCard,
   phase?: PostPilotPhase,
 ): string | null {
-  if (phase !== 'main_operation_light') {
+  if (phase !== 'main_operation_light' && phase !== 'main_operation_full') {
     return null;
   }
   if (!isPostPilotGeneratedEvent(event)) {
@@ -217,7 +217,10 @@ export function buildPostPilotMapContextLine(
   activeEvents: EventCard[],
   phase?: PostPilotPhase,
 ): string | null {
-  if (phase !== 'main_operation_light' || activeEvents.length === 0) {
+  if (
+    (phase !== 'main_operation_light' && phase !== 'main_operation_full') ||
+    activeEvents.length === 0
+  ) {
     return null;
   }
   return 'Gündem olayı — Bugünkü operasyon odağı';

@@ -20,12 +20,21 @@ export type PostPilotEventScopeContext = {
   districtLabel: string;
 };
 
+export type PostPilotEventGenerationContext = {
+  monetization?: import('@/core/monetization/monetizationTypes').MonetizationState;
+  mainOperationSeason?: import('@/core/mainOperation/mainOperationTypes').MainOperationSeasonState;
+  operationSignals?: import('@/core/operations/operationSignalTypes').OperationSignalsState;
+  assignments?: import('@/core/assignments/assignmentTypes').AssignmentsState;
+  crisisState?: import('@/core/crisis/crisisTypes').CrisisState;
+};
+
 export type EnsurePostPilotDailyEventsInput = {
   gameState: GameState;
   postPilotOperation: PostPilotOperationState;
   authorityState?: AuthorityState | unknown;
   badgeState?: BadgeState | unknown;
   day?: number;
+  mainOperationContext?: PostPilotEventGenerationContext;
 };
 
 export type PostPilotEventGenerationResult = {
