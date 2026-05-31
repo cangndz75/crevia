@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { EventAdvisorHintCard } from '@/features/events/components/EventAdvisorHintCard';
+import { OperationImpactPreviewStrip } from '@/features/events/components/OperationImpactPreviewStrip';
 import { PlanDetailsInspectSection } from '@/features/events/components/event-workflow/plan/PlanDetailsInspectSection';
 import { PlanEventSummaryCard } from '@/features/events/components/event-workflow/plan/PlanEventSummaryCard';
 import { PlanOptionPicker } from '@/features/events/components/event-workflow/plan/PlanOptionPicker';
@@ -66,6 +68,10 @@ export function EventPlanPhase({
         <View style={styles.stepperGap}>
           <EventWorkflowStepper activeStep="plan" compact />
         </View>
+
+        <EventAdvisorHintCard event={event} />
+
+        <OperationImpactPreviewStrip event={event} />
 
         <PlanOptionPicker
           options={displayOptions}

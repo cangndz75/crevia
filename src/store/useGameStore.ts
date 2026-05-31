@@ -173,6 +173,80 @@ import type {
   HubQuickActionState,
 } from '@/core/hubQuickActions';
 import {
+  ADVISOR_END_OF_DAY_EXPERIENCE,
+} from '@/core/advisors/advisorConstants';
+import {
+  buildAdvisorContextFromStore,
+  buildAssignmentAdvisorInsights,
+  buildDailyAdvisorInsights,
+  buildEventAdvisorInsights,
+} from '@/core/advisors/advisorEngine';
+import type { AdvisorInsight, AdvisorState } from '@/core/advisors/advisorTypes';
+import {
+  applyDailyPlanEffectsToOperationSignals,
+  processDailyPlanEndOfDay,
+} from '@/core/dailyPlanning/dailyPlanningEngine';
+import {
+  buildDailyPlanningEngineInputFromStore,
+} from '@/core/dailyPlanning/dailyPlanningPresentation';
+import {
+  confirmDailyOperationsPlan,
+  createDefaultSuggestedPlan,
+  createInitialDailyOperationsPlan,
+  normalizeDailyOperationsPlan,
+  refreshDailyOperationsPlanForDay,
+  updateDailyOperationsPlanFocus,
+} from '@/core/dailyPlanning/dailyPlanningState';
+import type { DailyOperationsPlanState } from '@/core/dailyPlanning/dailyPlanningTypes';
+import {
+  applyAssignmentEffectsToOperationSignals,
+  buildDefaultAssignmentForEvent,
+  calculateAssignmentCompatibility,
+  getAssignmentAdvisorComment,
+  processAssignmentsEndOfDay,
+} from '@/core/assignments/assignmentEngine';
+import { buildAssignmentEngineInputFromGameStore } from '@/core/assignments/assignmentPresentation';
+import {
+  confirmEventAssignment as confirmEventAssignmentState,
+  createInitialAssignmentsState,
+  getEventAssignment,
+  markEventAssignmentDispatched,
+  normalizeAssignmentsState,
+  upsertEventAssignment,
+} from '@/core/assignments/assignmentState';
+import type {
+  AssignmentsState,
+  EventAssignmentState,
+  PersonnelAssignmentType,
+  ResponseApproachType,
+  VehicleAssignmentType,
+} from '@/core/assignments/assignmentTypes';
+import {
+  attachAdvisorPredictionAfterInsight,
+  evaluateAdvisorPredictionsAgainstSignals,
+} from '@/core/advisors/advisorPrediction';
+import {
+  applyAcknowledgeMissedSignalRewards,
+  createInitialAdvisorState,
+  grantAdvisorEndOfDayExperience,
+  grantAdvisorExperience,
+  refreshAdvisorDailyUses,
+  spendAdvisorUse,
+} from '@/core/advisors/advisorState';
+import type { OperationImpactPreview } from '@/core/operations/operationSignalTypes';
+import {
+  buildOperationImpactPreviewForDecision,
+  buildOperationImpactPreviewForEvent,
+  buildOperationSignalsEngineInputFromStore,
+  deriveOperationSignalsFromGameState,
+  processOperationSignalsEndOfDay,
+} from '@/core/operations/operationSignalEngine';
+import {
+  createInitialOperationSignalsState,
+  refreshOperationSignalsForDay,
+} from '@/core/operations/operationSignalState';
+import type { OperationSignalsState } from '@/core/operations/operationSignalTypes';
+import {
   applyDailyAuthorityTrustGain,
   calculateDailyAuthorityTrustGain,
 } from '@/core/authority/authorityEngine';
@@ -286,6 +360,10 @@ type GameStoreState = {
   vehicleState: VehicleState;
   socialPulseState: SocialPulseState;
   hubQuickActionState: HubQuickActionState;
+  advisorState: AdvisorState;
+  operationSignals: OperationSignalsState;
+  dailyOperationsPlan: DailyOperationsPlanState;
+  assignments: AssignmentsState;
   tutorialState: TutorialState;
   /** Oturum içi onboarding ipucu kapatmaları — persist edilmez. */
   onboardingDismissedHintIds: string[];
@@ -308,6 +386,64 @@ type GameStoreActions = {
   clearDailyPriority: () => void;
   useQuickAction: (actionId: string) => void;
   endCurrentDay: () => void;
+  askAdvisorForDailySummary: () => AdvisorInsight[];
+  askAdvisorForEventHint: (eventId: string) => AdvisorInsight[];
+  grantAdvisorExperience: (amount: number, reason: string) => void;
+  acknowledgeAdvisorMissedSignal: () => void;
+  refreshAdvisorForCurrentDay: () => void;
+  refreshOperationSignals: () => void;
+  processOperationSignalsForEndOfDay: () => void;
+  refreshDailyOperationsPlan: () => void;
+  updateDailyOperationsPlan: (
+    updates: Partial<
+      Pick<
+        DailyOperationsPlanState,
+        | 'districtFocusId'
+        | 'personnelFocus'
+        | 'vehicleFocus'
+        | 'containerFocus'
+      >
+    >,
+  ) => void;
+  confirmDailyOperationsPlan: (
+    updates?: Partial<
+      Pick<
+        DailyOperationsPlanState,
+        | 'districtFocusId'
+        | 'personnelFocus'
+        | 'vehicleFocus'
+        | 'containerFocus'
+      >
+    >,
+  ) => void;
+  resetDailyOperationsPlanToSuggestion: () => void;
+  processDailyOperationsPlanForEndOfDay: () => void;
+  refreshAssignmentForEvent: (eventId: string) => void;
+  updateEventAssignment: (
+    eventId: string,
+    patch: Partial<
+      Pick<
+        EventAssignmentState,
+        'personnelType' | 'vehicleType' | 'approachType'
+      >
+    >,
+  ) => void;
+  confirmEventAssignment: (
+    eventId: string,
+    patch?: Partial<
+      Pick<
+        EventAssignmentState,
+        'personnelType' | 'vehicleType' | 'approachType'
+      >
+    >,
+  ) => void;
+  markAssignmentDispatched: (eventId: string) => void;
+  processAssignmentsForEndOfDay: () => void;
+  resetEventAssignmentToDefault: (eventId: string) => void;
+  getOperationImpactPreview: (
+    eventId: string,
+    decisionId?: string,
+  ) => OperationImpactPreview | undefined;
   resetGame: () => void;
   clearSaveAndReset: () => Promise<void>;
   addXp: (amount: number) => void;
@@ -538,6 +674,10 @@ function applySeedBundle(
   | 'vehicleState'
   | 'socialPulseState'
   | 'hubQuickActionState'
+  | 'advisorState'
+  | 'operationSignals'
+  | 'dailyOperationsPlan'
+  | 'assignments'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -587,10 +727,78 @@ function applySeedBundle(
     hubQuickActionState: createInitialHubQuickActionState(
       bundle.gameState.city.day,
     ),
+    advisorState: createInitialAdvisorState(bundle.gameState.city.day),
+    operationSignals: createInitialOperationSignalsState(bundle.gameState.city.day),
+    dailyOperationsPlan: createInitialDailyOperationsPlan(
+      bundle.gameState.city.day,
+    ),
+    assignments: createInitialAssignmentsState(),
     tutorialState: { ...INITIAL_TUTORIAL_STATE },
     bestPilotScores: [],
     lastPilotScore: undefined,
   };
+}
+
+function buildDailyPlanningInput(state: GameStoreState) {
+  return buildDailyPlanningEngineInputFromStore({
+    gameState: state.gameState,
+    operationSignals: state.operationSignals,
+    advisorState: state.advisorState,
+    dailyOperationsPlan: state.dailyOperationsPlan,
+    isDay1Tutorial: selectIsDay1TutorialEligible(state as GameStore),
+    postPilotLightPhase:
+      normalizePostPilotOperationState(state.gameState.pilot.postPilotOperation, {
+        pilotStatus: state.gameState.pilot.status,
+        currentPilotDay: state.gameState.pilot.currentPilotDay,
+      }).phase === 'main_operation_light',
+  });
+}
+
+function buildAssignmentInput(state: GameStoreState) {
+  return buildAssignmentEngineInputFromGameStore(state as GameStore);
+}
+
+function findStoreEvent(
+  state: GameStoreState,
+  eventId: string,
+): EventCard | undefined {
+  return (
+    state.gameState.events.find((e) => e.id === eventId) ??
+    state.eventPool.find((e) => e.id === eventId)
+  );
+}
+
+function reconcileEventAssignment(
+  state: GameStoreState,
+  event: EventCard,
+  assignment: EventAssignmentState,
+): EventAssignmentState {
+  const input = buildAssignmentInput(state);
+  const compat = calculateAssignmentCompatibility(input, event, assignment);
+  const next: EventAssignmentState = {
+    ...assignment,
+    compatibilityScore: compat.score,
+    compatibilityLabel: compat.label,
+    effects: compat.effects,
+  };
+  return {
+    ...next,
+    advisorNote: getAssignmentAdvisorComment(input, event, next),
+  };
+}
+
+function buildOperationSignalsInput(state: GameStoreState): ReturnType<
+  typeof buildOperationSignalsEngineInputFromStore
+> {
+  return buildOperationSignalsEngineInputFromStore({
+    gameState: state.gameState,
+    personnelState: state.personnelState,
+    vehicleState: state.vehicleState,
+    containerState: state.containerState,
+    decisionHistory: state.decisionHistory,
+    operationSignals: state.operationSignals,
+    isDay1Tutorial: selectIsDay1TutorialEligible(state as GameStore),
+  });
 }
 
 function buildDailyGoalStoreSlice(
@@ -1525,6 +1733,336 @@ export const useGameStore = create<GameStore>()(
         });
       },
 
+      refreshAdvisorForCurrentDay: () => {
+        const current = get();
+        const day = current.gameState.city.day;
+        set({
+          advisorState: refreshAdvisorDailyUses(current.advisorState, day),
+        });
+      },
+
+      refreshOperationSignals: () => {
+        const current = get();
+        const day = current.gameState.city.day;
+        const input = buildOperationSignalsInput(current);
+        set({
+          operationSignals: refreshOperationSignalsForDay(
+            deriveOperationSignalsFromGameState(input),
+            day,
+          ),
+        });
+      },
+
+      processOperationSignalsForEndOfDay: () => {
+        const current = get();
+        const input = buildOperationSignalsInput(current);
+        set({
+          operationSignals: processOperationSignalsEndOfDay(input),
+        });
+      },
+
+      refreshDailyOperationsPlan: () => {
+        const current = get();
+        const day = current.gameState.city.day;
+        set({
+          dailyOperationsPlan: refreshDailyOperationsPlanForDay(
+            current.dailyOperationsPlan,
+            day,
+            current.operationSignals,
+          ),
+        });
+      },
+
+      updateDailyOperationsPlan: (updates) => {
+        const current = get();
+        const day = current.gameState.city.day;
+        set({
+          dailyOperationsPlan: updateDailyOperationsPlanFocus(
+            current.dailyOperationsPlan,
+            updates,
+            day,
+          ),
+        });
+      },
+
+      confirmDailyOperationsPlan: (updates) => {
+        const current = get();
+        set({
+          dailyOperationsPlan: confirmDailyOperationsPlan(
+            current.dailyOperationsPlan,
+            updates,
+          ),
+        });
+      },
+
+      resetDailyOperationsPlanToSuggestion: () => {
+        const current = get();
+        const day = current.gameState.city.day;
+        set({
+          dailyOperationsPlan: createDefaultSuggestedPlan(
+            day,
+            current.operationSignals,
+          ),
+        });
+      },
+
+      processDailyOperationsPlanForEndOfDay: () => {
+        const current = get();
+        const closingDay = current.gameState.city.day;
+        const planningInput = buildDailyPlanningInput(current);
+        const { plan, effects } = processDailyPlanEndOfDay({
+          plan: current.dailyOperationsPlan,
+          closingDay,
+          engineInput: planningInput,
+        });
+        set({
+          dailyOperationsPlan: plan,
+          operationSignals: applyDailyPlanEffectsToOperationSignals(
+            current.operationSignals,
+            effects,
+          ),
+        });
+      },
+
+      refreshAssignmentForEvent: (eventId) => {
+        const current = get();
+        const event = findStoreEvent(current, eventId);
+        if (!event) return;
+        const input = buildAssignmentInput(current);
+        const existing = getEventAssignment(current.assignments, eventId);
+        const day = current.gameState.city.day;
+        const base =
+          existing ??
+          buildDefaultAssignmentForEvent(input, event);
+        const next = reconcileEventAssignment(current, event, {
+          ...base,
+          eventId,
+          day,
+        });
+        set({
+          assignments: upsertEventAssignment(current.assignments, next),
+        });
+      },
+
+      updateEventAssignment: (eventId, patch) => {
+        const current = get();
+        const event = findStoreEvent(current, eventId);
+        if (!event) return;
+        const existing = getEventAssignment(current.assignments, eventId);
+        if (!existing) {
+          get().refreshAssignmentForEvent(eventId);
+        }
+        const fresh = get();
+        const assignment = getEventAssignment(fresh.assignments, eventId);
+        if (!assignment || assignment.processedAtDay === fresh.gameState.city.day) {
+          return;
+        }
+        const next = reconcileEventAssignment(fresh, event, {
+          ...assignment,
+          ...patch,
+          status: 'draft',
+          source: 'player',
+        });
+        set({
+          assignments: upsertEventAssignment(fresh.assignments, next),
+        });
+      },
+
+      confirmEventAssignment: (eventId, patch) => {
+        const current = get();
+        const event = findStoreEvent(current, eventId);
+        if (!event) return;
+        if (!getEventAssignment(current.assignments, eventId)) {
+          get().refreshAssignmentForEvent(eventId);
+        }
+        const fresh = get();
+        const day = fresh.gameState.city.day;
+        let assignments = confirmEventAssignmentState(
+          fresh.assignments,
+          eventId,
+          patch ?? {},
+          day,
+        );
+        const assignment = getEventAssignment(assignments, eventId);
+        if (assignment) {
+          assignments = upsertEventAssignment(
+            assignments,
+            reconcileEventAssignment(fresh, event, assignment),
+          );
+        }
+        set({ assignments });
+      },
+
+      markAssignmentDispatched: (eventId) => {
+        const current = get();
+        const day = current.gameState.city.day;
+        set({
+          assignments: markEventAssignmentDispatched(
+            current.assignments,
+            eventId,
+            day,
+          ),
+        });
+      },
+
+      resetEventAssignmentToDefault: (eventId) => {
+        const current = get();
+        const event = findStoreEvent(current, eventId);
+        if (!event) return;
+        const input = buildAssignmentInput(current);
+        const next = buildDefaultAssignmentForEvent(input, event);
+        set({
+          assignments: upsertEventAssignment(current.assignments, next),
+        });
+      },
+
+      processAssignmentsForEndOfDay: () => {
+        const current = get();
+        const closingDay = current.gameState.city.day;
+        const input = buildAssignmentInput(current);
+        const events = Object.keys(current.assignments.assignmentsByEventId)
+          .map((id) => findStoreEvent(current, id))
+          .filter((e): e is EventCard => e != null);
+        const { state, effects } = processAssignmentsEndOfDay({
+          assignments: current.assignments,
+          closingDay,
+          engineInput: input,
+          events,
+        });
+        set({
+          assignments: state,
+          operationSignals: applyAssignmentEffectsToOperationSignals(
+            current.operationSignals,
+            effects,
+          ),
+        });
+      },
+
+      getOperationImpactPreview: (eventId, decisionId) => {
+        const current = get();
+        const input = buildOperationSignalsInput(current);
+        const event =
+          current.gameState.events.find((e) => e.id === eventId) ??
+          current.eventPool.find((e) => e.id === eventId);
+        if (!event) return undefined;
+        if (decisionId) {
+          const decision = event.decisions.find((d) => d.id === decisionId);
+          if (!decision) return undefined;
+          return buildOperationImpactPreviewForDecision(input, event, decision);
+        }
+        return buildOperationImpactPreviewForEvent(input, event);
+      },
+
+      grantAdvisorExperience: (amount, reason) => {
+        const current = get();
+        set({
+          advisorState: grantAdvisorExperience(
+            current.advisorState,
+            amount,
+            reason,
+          ),
+        });
+      },
+
+      acknowledgeAdvisorMissedSignal: () => {
+        const current = get();
+        const day = current.gameState.city.day;
+        set({
+          advisorState: applyAcknowledgeMissedSignalRewards(
+            current.advisorState,
+            day,
+          ),
+        });
+      },
+
+      askAdvisorForDailySummary: () => {
+        const current = get();
+        const day = current.gameState.city.day;
+        let advisorState = refreshAdvisorDailyUses(current.advisorState, day);
+        if (advisorState.dailyUsesRemaining <= 0) {
+          return buildDailyAdvisorInsights(
+            buildAdvisorContextFromStore({
+              gameState: current.gameState,
+              advisorState,
+              personnelState: current.personnelState,
+              vehicleState: current.vehicleState,
+              containerState: current.containerState,
+              operationSignals: current.operationSignals,
+              dailyOperationsPlan: current.dailyOperationsPlan,
+              isDay1Tutorial: selectIsDay1TutorialEligible(current),
+            }),
+          );
+        }
+        advisorState = spendAdvisorUse(advisorState);
+        advisorState = attachAdvisorPredictionAfterInsight({
+          state: advisorState,
+          signals: current.operationSignals,
+          gameState: current.gameState,
+          insightType: 'daily_summary',
+        });
+        set({ advisorState });
+        return buildDailyAdvisorInsights(
+          buildAdvisorContextFromStore({
+            gameState: current.gameState,
+            advisorState,
+            personnelState: current.personnelState,
+            vehicleState: current.vehicleState,
+            containerState: current.containerState,
+            operationSignals: current.operationSignals,
+            dailyOperationsPlan: current.dailyOperationsPlan,
+            isDay1Tutorial: selectIsDay1TutorialEligible(current),
+          }),
+        );
+      },
+
+      askAdvisorForEventHint: (eventId) => {
+        const current = get();
+        const day = current.gameState.city.day;
+        let advisorState = refreshAdvisorDailyUses(current.advisorState, day);
+        const event =
+          current.gameState.events.find((e) => e.id === eventId) ??
+          current.eventPool.find((e) => e.id === eventId);
+        const ctx = buildAdvisorContextFromStore({
+          gameState: current.gameState,
+          advisorState,
+          personnelState: current.personnelState,
+          vehicleState: current.vehicleState,
+          containerState: current.containerState,
+          operationSignals: current.operationSignals,
+          dailyOperationsPlan: current.dailyOperationsPlan,
+          isDay1Tutorial: selectIsDay1TutorialEligible(current),
+        });
+        if (!event) {
+          return buildDailyAdvisorInsights(ctx);
+        }
+        if (advisorState.dailyUsesRemaining <= 0) {
+          return buildEventAdvisorInsights(ctx, event);
+        }
+        advisorState = spendAdvisorUse(advisorState);
+        advisorState = attachAdvisorPredictionAfterInsight({
+          state: advisorState,
+          signals: current.operationSignals,
+          gameState: current.gameState,
+          insightType: 'event_plan_hint',
+          event,
+        });
+        set({ advisorState });
+        const detailedCtx = buildAdvisorContextFromStore({
+          gameState: current.gameState,
+          advisorState,
+          personnelState: current.personnelState,
+          vehicleState: current.vehicleState,
+          containerState: current.containerState,
+          operationSignals: current.operationSignals,
+          dailyOperationsPlan: current.dailyOperationsPlan,
+          isDay1Tutorial: selectIsDay1TutorialEligible(current),
+        });
+        return [
+          ...buildEventAdvisorInsights(detailedCtx, event),
+          ...buildAssignmentAdvisorInsights(detailedCtx, event),
+        ];
+      },
+
       endCurrentDay: () => {
         const current = get();
         const closingDay = current.gameState.city.day;
@@ -1911,6 +2449,104 @@ export const useGameStore = create<GameStore>()(
 
         const nextDay = nextGameState.city.day;
 
+        let advisorStateAfterDay = grantAdvisorEndOfDayExperience(
+          refreshAdvisorDailyUses(current.advisorState, closingDay),
+          closingDay,
+          ADVISOR_END_OF_DAY_EXPERIENCE,
+        );
+        advisorStateAfterDay = refreshAdvisorDailyUses(
+          advisorStateAfterDay,
+          nextDay,
+        );
+
+        const closingSignalsInput = buildOperationSignalsEngineInputFromStore({
+          gameState: current.gameState,
+          personnelState: personnelStateAfterNight,
+          vehicleState: vehicleStateAfterNight,
+          containerState: containerStateAfterNight,
+          decisionHistory: current.decisionHistory,
+          operationSignals: current.operationSignals,
+          isDay1Tutorial: selectIsDay1TutorialEligible(current),
+        });
+        let operationSignalsAfterDay = processOperationSignalsEndOfDay(
+          closingSignalsInput,
+        );
+
+        const planningInputClosing = buildDailyPlanningInput({
+          ...current,
+          gameState: current.gameState,
+          operationSignals: operationSignalsAfterDay,
+        });
+        const planProcessed = processDailyPlanEndOfDay({
+          plan: current.dailyOperationsPlan,
+          closingDay,
+          engineInput: planningInputClosing,
+        });
+        operationSignalsAfterDay = applyDailyPlanEffectsToOperationSignals(
+          operationSignalsAfterDay,
+          planProcessed.effects,
+        );
+
+        const assignmentInputClosing = buildAssignmentInput({
+          ...current,
+          operationSignals: operationSignalsAfterDay,
+        });
+        const assignmentEvents = Object.keys(current.assignments.assignmentsByEventId)
+          .map((id) => findStoreEvent(current, id))
+          .filter((e): e is EventCard => e != null);
+        const assignmentProcessed = processAssignmentsEndOfDay({
+          assignments: current.assignments,
+          closingDay,
+          engineInput: assignmentInputClosing,
+          events: assignmentEvents,
+        });
+        operationSignalsAfterDay = applyAssignmentEffectsToOperationSignals(
+          operationSignalsAfterDay,
+          assignmentProcessed.effects,
+        );
+
+        const nextSignalsInput = buildOperationSignalsEngineInputFromStore({
+          gameState: withSyncedPulse({
+            ...nextGameState,
+            city: { ...nextGameState.city },
+          }),
+          personnelState: personnelStateAfterNight,
+          vehicleState: vehicleStateAfterNight,
+          containerState: containerStateAfterNight,
+          decisionHistory: current.decisionHistory,
+          operationSignals: operationSignalsAfterDay,
+          isDay1Tutorial: selectIsDay1TutorialEligible(current),
+        });
+        operationSignalsAfterDay = refreshOperationSignalsForDay(
+          deriveOperationSignalsFromGameState(nextSignalsInput),
+          nextDay,
+        );
+
+        const hasCriticalEvent = nextGameState.events.some(
+          (e) => e.riskLevel === 'critical' || e.riskLevel === 'high',
+        );
+        const predictionEval = evaluateAdvisorPredictionsAgainstSignals({
+          state: advisorStateAfterDay,
+          signals: operationSignalsAfterDay,
+          evalDay: nextDay,
+          isDay1Tutorial: selectIsDay1TutorialEligible({
+            ...current,
+            gameState: nextGameState,
+          }),
+          hasCriticalEvent,
+        });
+        advisorStateAfterDay = predictionEval.state;
+
+        let dailyPlanAfterDay = refreshDailyOperationsPlanForDay(
+          planProcessed.plan,
+          nextDay,
+          operationSignalsAfterDay,
+        );
+        dailyPlanAfterDay = createDefaultSuggestedPlan(
+          nextDay,
+          operationSignalsAfterDay,
+        );
+
         const syncedMoraleCity = {
           ...nextGameState.city,
           morale: clampMetric(
@@ -1975,6 +2611,10 @@ export const useGameStore = create<GameStore>()(
           vehicleState: vehicleStateAfterNight,
           socialPulseState: socialPulseStateAfterNight,
           hubQuickActionState: createInitialHubQuickActionState(nextDay),
+          advisorState: advisorStateAfterDay,
+          operationSignals: operationSignalsAfterDay,
+          dailyOperationsPlan: dailyPlanAfterDay,
+          assignments: assignmentProcessed.state,
         });
       },
 
@@ -2464,6 +3104,17 @@ export const useGameStore = create<GameStore>()(
             saved.hubQuickActionState,
             withSyncedPulse(pilotRefresh.gameState).city.day,
           ),
+          advisorState: refreshAdvisorDailyUses(
+            saved.advisorState,
+            withSyncedPulse(pilotRefresh.gameState).city.day,
+          ),
+          operationSignals: saved.operationSignals,
+          dailyOperationsPlan: normalizeDailyOperationsPlan(
+            saved.dailyOperationsPlan,
+            withSyncedPulse(pilotRefresh.gameState).city.day,
+            saved.operationSignals.priorityDistrictId,
+          ),
+          assignments: normalizeAssignmentsState(saved.assignments),
           tutorialState: saved.tutorialState ?? { ...INITIAL_TUTORIAL_STATE },
           bestPilotScores: saved.bestPilotScores ?? [],
           lastPilotScore: saved.lastPilotScore,
@@ -2481,6 +3132,9 @@ export const useGameStore = create<GameStore>()(
         if (state) {
           state.ensureDailyPriorityForDay();
           state.ensureDay1TutorialStarted();
+          state.refreshAdvisorForCurrentDay();
+          state.refreshOperationSignals();
+          state.refreshDailyOperationsPlan();
         }
       },
     },
@@ -2557,6 +3211,8 @@ export const selectContainerState = (s: GameStore) => s.containerState;
 export const selectVehicleStateFromStore = (s: GameStore) => s.vehicleState;
 export const selectSocialPulseStateFromStore = (s: GameStore) =>
   s.socialPulseState;
+export const selectAdvisorState = (s: GameStore) => s.advisorState;
+export const selectOperationSignals = (s: GameStore) => s.operationSignals;
 
 export function getActiveEvent(eventId: string): EventCard | undefined {
   return useGameStore

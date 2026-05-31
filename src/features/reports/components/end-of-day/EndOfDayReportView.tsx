@@ -12,6 +12,10 @@ import { ReportAuthorityTrustCard } from '@/features/reports/components/end-of-d
 import { ReportPilotSummaryPremiumCard } from '@/features/reports/components/end-of-day/premium/ReportPilotSummaryPremiumCard';
 import { ReportPrimaryImpactSection } from '@/features/reports/components/end-of-day/premium/ReportPrimaryImpactSection';
 import { ReportTomorrowNotesCard } from '@/features/reports/components/end-of-day/premium/ReportTomorrowNotesCard';
+import { ReportAdvisorCommentCard } from '@/features/reports/components/ReportAdvisorCommentCard';
+import { ReportAssignmentBalanceCard } from '@/features/reports/components/ReportAssignmentBalanceCard';
+import { ReportDailyPlanImpactCard } from '@/features/reports/components/ReportDailyPlanImpactCard';
+import { ReportOperationSignalsCard } from '@/features/reports/components/ReportOperationSignalsCard';
 import { ReportHeaderCard } from '@/features/reports/components/ReportHeaderCard';
 import { ReportPilotCompletionCard } from '@/features/reports/components/ReportPilotCompletionCard';
 import {
@@ -164,6 +168,14 @@ export function EndOfDayReportView({
       <Animated.View entering={ENTER.impact}>
         <ReportPrimaryImpactSection model={impactModel} />
       </Animated.View>
+
+      <ReportOperationSignalsCard report={report} compact={model.isDay1} />
+
+      <ReportDailyPlanImpactCard report={report} compact={model.isDay1} />
+
+      <ReportAssignmentBalanceCard report={report} compact={model.isDay1} />
+
+      <ReportAdvisorCommentCard report={report} compact={model.isDay1} />
 
       <Animated.View entering={ENTER.authority}>
         <ReportAuthorityTrustCard model={authorityModel} />

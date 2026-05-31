@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import type { EventCard, EventDecision } from '@/core/models/EventCard';
 import type { PersonnelImpactPreview } from '@/core/personnel/personnelPresentation';
 import type { VehicleImpactPreview } from '@/core/vehicles/vehiclePresentation';
+import { EventFieldAssignmentSummary } from '@/features/events/components/assignment/EventFieldAssignmentSummary';
 import { FieldNoteCard } from '@/features/events/components/FieldNoteCard';
 import { EventWorkflowStepper } from '@/features/events/components/event-workflow/EventWorkflowStepper';
 import { FieldImpactMetricsRow } from '@/features/events/components/event-workflow/field/FieldImpactMetricsRow';
@@ -78,6 +79,8 @@ export function EventFieldPhase({
         </View>
 
         <LiveOperationCard model={model} />
+
+        <EventFieldAssignmentSummary event={event} />
 
         <FieldImpactMetricsRow metrics={model.impactMetrics} />
 

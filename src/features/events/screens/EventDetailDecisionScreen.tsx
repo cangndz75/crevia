@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   ScrollView,
@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ASSIGNMENT_COPY } from '@/core/assignments/assignmentConstants';
+import { getEventAssignment } from '@/core/assignments/assignmentState';
 import {
   checkDecisionAffordability,
   type DecisionAffordabilityCheck,
@@ -21,6 +23,8 @@ import {
   playWarningHaptic,
 } from '@/core/feedback/hapticFeedback';
 import { AdvisorRecommendationBar } from '@/features/events/components/AdvisorRecommendationBar';
+import { EventAdvisorHintCard } from '@/features/events/components/EventAdvisorHintCard';
+import { OperationImpactPreviewStrip } from '@/features/events/components/OperationImpactPreviewStrip';
 import { EventContainerContextCard } from '@/features/events/components/EventContainerContextCard';
 import { EventDetailsAccordion } from '@/features/events/components/EventDetailsAccordion';
 import { EventHeader } from '@/features/events/components/EventHeader';
@@ -115,6 +119,10 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
   const decisionHistory = useGameStore((s) => s.decisionHistory);
   const lastDecisionResult = useGameStore((s) => s.lastDecisionResult);
   const applyDecisionAction = useGameStore((s) => s.applyDecision);
+  const refreshAssignmentForEvent = useGameStore((s) => s.refreshAssignmentForEvent);
+  const confirmEventAssignment = useGameStore((s) => s.confirmEventAssignment);
+  const markAssignmentDispatched = useGameStore((s) => s.markAssignmentDispatched);
+  const assignments = useGameStore((s) => s.assignments);
   const economyState = useGameStore((s) => s.economyState);
   const personnelState = useGameStore(selectPersonnelState);
   const eventAdvisor = useGameStore((s) => s.gameState.eventAdvisor);
@@ -516,6 +524,32 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
     applySelectedDecision();
   }, [applySelectedDecision, effectiveSelectedId]);
 
+  const assignmentPrepRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!event || operationStep !== 'assign') return;
+    if (assignmentPrepRef.current === event.id) return;
+    assignmentPrepRef.current = event.id;
+    refreshAssignmentForEvent(event.id);
+    if (isDay1Tutorial) {
+      confirmEventAssignment(event.id);
+    }
+  }, [
+    event,
+    operationStep,
+    isDay1Tutorial,
+    refreshAssignmentForEvent,
+    confirmEventAssignment,
+  ]);
+
+  const eventAssignment = event
+    ? getEventAssignment(assignments, event.id)
+    : undefined;
+  const assignmentReady =
+    isDay1Tutorial ||
+    eventAssignment?.status === 'confirmed' ||
+    eventAssignment?.status === 'dispatched';
+
   const handleDispatchPress = useCallback(() => {
     if (!effectiveSelectedId) {
       Alert.alert('Kaynak seç', 'Sahaya yönlendirmek için bir karar seç.', [
@@ -528,10 +562,30 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
       showInsufficientSourceAlert(affordability);
       return;
     }
+    if (!isDay1Tutorial) {
+      const assignment = event
+        ? getEventAssignment(useGameStore.getState().assignments, event.id)
+        : undefined;
+      if (
+        !assignment ||
+        (assignment.status !== 'confirmed' && assignment.status !== 'dispatched')
+      ) {
+        Alert.alert('Atama gerekli', ASSIGNMENT_COPY.dispatchBlocked, [
+          { text: 'Tamam' },
+        ]);
+        return;
+      }
+    }
+    if (event) {
+      markAssignmentDispatched(event.id);
+    }
     setOperationStep('field');
   }, [
     decisionAffordability,
     effectiveSelectedId,
+    event,
+    isDay1Tutorial,
+    markAssignmentDispatched,
     showInsufficientSourceAlert,
   ]);
 
@@ -651,7 +705,7 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           onSelectDecision={setSelectedDecisionId}
           affordabilityByDecisionId={decisionAffordability}
           onDispatch={handleDispatchPress}
-          dispatchDisabled={!effectiveSelectedId}
+          dispatchDisabled={!effectiveSelectedId || !assignmentReady}
           decisionCardHint={decisionCardHint}
           onDismissHint={(id) => dismissHint(id)}
           resourcesHighlighted={resourcesHighlight}
@@ -816,6 +870,16 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           <OnboardingFocusHint
             hint={decisionCardHint}
             onDismiss={() => dismissHint(decisionCardHint.id)}
+          />
+        ) : null}
+
+        {event ? <EventAdvisorHintCard event={event} /> : null}
+
+        {event && selectedDecision ? (
+          <OperationImpactPreviewStrip
+            event={event}
+            decision={selectedDecision}
+            compact={isDay1Tutorial}
           />
         ) : null}
 

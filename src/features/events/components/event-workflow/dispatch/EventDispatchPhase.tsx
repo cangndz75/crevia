@@ -3,8 +3,11 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import type { DecisionAffordabilityCheck } from '@/core/economy/economyAffordability';
 import type { EventCard } from '@/core/models/EventCard';
+import { EventAdvisorHintCard } from '@/features/events/components/EventAdvisorHintCard';
+import { OperationImpactPreviewStrip } from '@/features/events/components/OperationImpactPreviewStrip';
 import { EventDecisionList } from '@/features/events/components/EventDecisionList';
 import { QuickDecisionActions } from '@/features/events/components/QuickDecisionActions';
+import { EventAssignmentPanel } from '@/features/events/components/assignment/EventAssignmentPanel';
 import { DispatchCommandCard } from '@/features/events/components/event-workflow/dispatch/DispatchCommandCard';
 import { DispatchWorkflowFooter } from '@/features/events/components/event-workflow/dispatch/DispatchWorkflowFooter';
 import { EventWorkflowStepper } from '@/features/events/components/event-workflow/EventWorkflowStepper';
@@ -101,6 +104,8 @@ export function EventDispatchPhase({
 
         <DispatchCommandCard model={model} />
 
+        <EventAssignmentPanel event={event} compactTutorial={compactTutorial} />
+
         <View style={styles.sectionGap}>
           <TutorialTarget
             targetKey="field_resources_card"
@@ -115,6 +120,14 @@ export function EventDispatchPhase({
             onDismiss={() => onDismissHint(decisionCardHint.id)}
           />
         ) : null}
+
+        <EventAdvisorHintCard event={event} />
+
+        {selectedDecision ? (
+          <OperationImpactPreviewStrip event={event} decision={selectedDecision} />
+        ) : (
+          <OperationImpactPreviewStrip event={event} />
+        )}
 
         <TutorialTarget targetKey="quick_decisions" highlighted={decisionsHighlighted}>
           <QuickDecisionActions

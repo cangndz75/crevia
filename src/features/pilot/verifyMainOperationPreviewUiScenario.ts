@@ -113,7 +113,7 @@ export function verifyMainOperationPreviewUiScenario(): VerifyMainOperationPrevi
       legacyHit.join(', '),
     ) && ok;
 
-  ok = assert(checks, SAVE_VERSION === 12, 'SAVE_VERSION değişmedi (12)') && ok;
+  ok = assert(checks, SAVE_VERSION === 17, 'SAVE_VERSION güncel (17)') && ok;
 
   return { ok, checks };
 }

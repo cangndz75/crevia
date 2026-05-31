@@ -3,6 +3,9 @@ import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
+import { HubAdvisorCard } from '@/features/hub/components/HubAdvisorCard';
+import { HubDailyOperationsPlanCard } from '@/features/hub/components/HubDailyOperationsPlanCard';
+import { HubOperationSignalsCard } from '@/features/hub/components/HubOperationSignalsCard';
 import { HubCriticalEventCard } from '@/features/hub/components/HubCriticalEventCard';
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
 import { HubDailyGoalHeroCard } from '@/features/hub/components/HubDailyGoalHeroCard';
@@ -117,6 +120,12 @@ export function HubScreen() {
             </TutorialTarget>
           </View>
         ) : null}
+
+        <HubOperationSignalsCard compact={isDay1Layout} />
+
+        <HubAdvisorCard compact={isDay1Layout} />
+
+        <HubDailyOperationsPlanCard compact={isDay1Layout} />
 
         <HubDailyPriorityCard />
 

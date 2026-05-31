@@ -46,6 +46,24 @@ import {
 } from '@/core/authority/authoritySeed';
 import { normalizePersistedBadgeState } from '@/core/badges/badgeSeed';
 import { normalizePostPilotOperationState } from '@/core/postPilot/postPilotOperationSeed';
+import {
+  normalizeAdvisorState,
+  refreshAdvisorDailyUses,
+} from '@/core/advisors/advisorState';
+import type { AdvisorState } from '@/core/advisors/advisorTypes';
+import {
+  createInitialOperationSignalsState,
+  normalizeOperationSignalsState,
+  refreshOperationSignalsForDay,
+} from '@/core/operations/operationSignalState';
+import type { OperationSignalsState } from '@/core/operations/operationSignalTypes';
+import { normalizeDailyOperationsPlan } from '@/core/dailyPlanning/dailyPlanningState';
+import type { DailyOperationsPlanState } from '@/core/dailyPlanning/dailyPlanningTypes';
+import {
+  createInitialAssignmentsState,
+  normalizeAssignmentsState,
+} from '@/core/assignments/assignmentState';
+import type { AssignmentsState } from '@/core/assignments/assignmentTypes';
 
 import type { GameStore } from './useGameStore';
 
@@ -53,7 +71,12 @@ import type { GameStore } from './useGameStore';
 // Save version & storage key
 // ---------------------------------------------------------------------------
 
-export const SAVE_VERSION = 12;
+export const SAVE_VERSION = 17;
+const SAVE_VERSION_16 = 16;
+const SAVE_VERSION_15 = 15;
+const SAVE_VERSION_14 = 14;
+const SAVE_VERSION_13 = 13;
+const SAVE_VERSION_12 = 12;
 const SAVE_VERSION_11 = 11;
 const SAVE_VERSION_10 = 10;
 const SAVE_VERSION_9 = 9;
@@ -95,6 +118,10 @@ export type PersistedGameState = Pick<
   | 'vehicleState'
   | 'socialPulseState'
   | 'hubQuickActionState'
+  | 'advisorState'
+  | 'operationSignals'
+  | 'dailyOperationsPlan'
+  | 'assignments'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -131,6 +158,10 @@ export function partialiseGameState(
     vehicleState: state.vehicleState,
     socialPulseState: state.socialPulseState,
     hubQuickActionState: state.hubQuickActionState,
+    advisorState: state.advisorState,
+    operationSignals: state.operationSignals,
+    dailyOperationsPlan: state.dailyOperationsPlan,
+    assignments: state.assignments,
     tutorialState: state.tutorialState,
     bestPilotScores: state.bestPilotScores,
     lastPilotScore: state.lastPilotScore,
@@ -388,6 +419,11 @@ export function normalizePersistedSave(
     version !== SAVE_VERSION_9 &&
     version !== SAVE_VERSION_10 &&
     version !== SAVE_VERSION_11 &&
+    version !== SAVE_VERSION_12 &&
+    version !== SAVE_VERSION_13 &&
+    version !== SAVE_VERSION_14 &&
+    version !== SAVE_VERSION_15 &&
+    version !== SAVE_VERSION_16 &&
     version !== SAVE_VERSION
   ) {
     return null;
@@ -525,6 +561,34 @@ export function normalizePersistedSave(
               : false,
         }
       : { ...INITIAL_DAILY_GOAL_RUNTIME },
+    advisorState: ((): AdvisorState => {
+      const normalized = normalizeAdvisorState(raw.advisorState, currentDay);
+      return refreshAdvisorDailyUses(normalized, currentDay);
+    })(),
+    operationSignals: ((): OperationSignalsState => {
+      const normalized = normalizeOperationSignalsState(
+        raw.operationSignals,
+        currentDay,
+      );
+      return refreshOperationSignalsForDay(normalized, currentDay);
+    })(),
+    dailyOperationsPlan: ((): DailyOperationsPlanState => {
+      const signals = normalizeOperationSignalsState(
+        raw.operationSignals,
+        currentDay,
+      );
+      return normalizeDailyOperationsPlan(
+        raw.dailyOperationsPlan,
+        currentDay,
+        signals.priorityDistrictId,
+      );
+    })(),
+    assignments: ((): AssignmentsState => {
+      if (raw.assignments != null) {
+        return normalizeAssignmentsState(raw.assignments);
+      }
+      return createInitialAssignmentsState();
+    })(),
     tutorialState: isValidTutorialState(raw.tutorialState)
       ? raw.tutorialState
       : { ...INITIAL_TUTORIAL_STATE },
