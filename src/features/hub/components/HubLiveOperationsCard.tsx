@@ -6,6 +6,7 @@ import {
   buildActiveMicroDecisionsModel,
   buildMicroDecisionPresentationInput,
 } from '@/core/microDecisions';
+import { shouldHideAdvancedSystemForFirstTenMinutes } from '@/core/onboarding/firstTenMinutesPresentation';
 import { deriveMicroDecisionAccessMode } from '@/core/microDecisions/microDecisionEngine';
 import { LiveOperationDecisionCard } from '@/features/hub/components/LiveOperationDecisionCard';
 import {
@@ -76,7 +77,11 @@ export function HubLiveOperationsCard({ compact = false }: HubLiveOperationsCard
     isDay1,
   ]);
 
-  if (!model || model.decisions.length === 0) {
+  if (
+    shouldHideAdvancedSystemForFirstTenMinutes(gameState, 'live_micro_decisions') ||
+    !model ||
+    model.decisions.length === 0
+  ) {
     return null;
   }
 

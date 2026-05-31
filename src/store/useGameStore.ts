@@ -286,6 +286,19 @@ import type {
   CrisisActionType,
 } from '@/core/crisisActions/crisisActionTypes';
 import {
+  buildOperationalResourceEngineInputFromStore,
+  deriveOperationalResourcesFromGameState,
+  processOperationalResourcesEndOfDay,
+} from '@/core/operationalResources/operationalResourceEngine';
+import {
+  createInitialOperationalResourcesState,
+  refreshOperationalResourcesForDay,
+} from '@/core/operationalResources/operationalResourceState';
+import type {
+  OperationalResourceEngineInput,
+  OperationalResourcesState,
+} from '@/core/operationalResources/operationalResourceTypes';
+import {
   attachAdvisorPredictionAfterInsight,
   evaluateAdvisorPredictionsAgainstSignals,
 } from '@/core/advisors/advisorPrediction';
@@ -433,6 +446,7 @@ type GameStoreState = {
   crisisState: CrisisState;
   crisisActionState: CrisisActionState;
   microDecisionState: MicroDecisionState;
+  operationalResources: OperationalResourcesState;
   tutorialState: TutorialState;
   /** Oturum içi onboarding ipucu kapatmaları — persist edilmez. */
   onboardingDismissedHintIds: string[];
@@ -524,6 +538,9 @@ type GameStoreActions = {
   refreshCrisisActionForCurrentDay: () => void;
   selectCrisisResolutionAction: (actionType: CrisisActionType) => void;
   processCrisisActionsForEndOfDay: () => void;
+  refreshOperationalResources: () => void;
+  processOperationalResourcesForEndOfDay: () => void;
+  devResetOperationalResourcesForTesting?: () => void;
   devGenerateCrisisActionForTesting?: () => void;
   devGenerateMicroDecisionForTesting?: () => void;
   devRaiseCrisisRiskForTesting: () => void;
@@ -773,6 +790,7 @@ function applySeedBundle(
   | 'crisisState'
   | 'crisisActionState'
   | 'microDecisionState'
+  | 'operationalResources'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -833,6 +851,9 @@ function applySeedBundle(
     crisisState: createInitialCrisisState(),
     crisisActionState: createInitialCrisisActionState(),
     microDecisionState: createInitialMicroDecisionState(),
+    operationalResources: createInitialOperationalResourcesState(
+      bundle.gameState.city.day,
+    ),
     tutorialState: { ...INITIAL_TUTORIAL_STATE },
     bestPilotScores: [],
     lastPilotScore: undefined,
@@ -855,6 +876,24 @@ function buildCrisisActionInputFromStore(
       overrides?.mainOperationSeason ?? state.mainOperationSeason,
     advisorState: overrides?.advisorState ?? state.advisorState,
     crisisActionState: overrides?.crisisActionState ?? state.crisisActionState,
+  });
+}
+
+function buildOperationalResourceInputFromStore(
+  state: GameStoreState,
+  overrides?: Partial<OperationalResourceEngineInput>,
+): OperationalResourceEngineInput {
+  return buildOperationalResourceEngineInputFromStore({
+    gameState: overrides?.gameState ?? state.gameState,
+    monetization: overrides?.monetization ?? state.monetization,
+    operationSignals: overrides?.operationSignals ?? state.operationSignals,
+    dailyOperationsPlan:
+      overrides?.dailyOperationsPlan ?? state.dailyOperationsPlan,
+    assignments: overrides?.assignments ?? state.assignments,
+    microDecisionState: overrides?.microDecisionState ?? state.microDecisionState,
+    crisisActionState: overrides?.crisisActionState ?? state.crisisActionState,
+    operationalResources:
+      overrides?.operationalResources ?? state.operationalResources,
   });
 }
 
@@ -2344,6 +2383,40 @@ export const useGameStore = create<GameStore>()(
         });
       },
 
+      refreshOperationalResources: () => {
+        const current = get();
+        const day = current.gameState.city.day;
+        const input = buildOperationalResourceInputFromStore(current);
+        const refreshed = refreshOperationalResourcesForDay(
+          input.operationalResources,
+          day,
+        );
+        const derived = deriveOperationalResourcesFromGameState({
+          ...input,
+          operationalResources: refreshed,
+        });
+        set({ operationalResources: derived });
+      },
+
+      processOperationalResourcesForEndOfDay: () => {
+        const current = get();
+        const closingDay = current.gameState.city.day;
+        const input = buildOperationalResourceInputFromStore(current);
+        if (input.operationalResources.lastProcessedDay === closingDay) {
+          return;
+        }
+        const next = processOperationalResourcesEndOfDay(input, closingDay);
+        set({ operationalResources: next });
+      },
+
+      devResetOperationalResourcesForTesting: () => {
+        if (!__DEV__) return;
+        const day = get().gameState.city.day;
+        set({
+          operationalResources: createInitialOperationalResourcesState(day),
+        });
+      },
+
       devGenerateCrisisActionForTesting: () => {
         if (!__DEV__) return;
         const current = get();
@@ -3141,6 +3214,23 @@ export const useGameStore = create<GameStore>()(
         mainOperationSeasonAfterDay =
           crisisActionEod.mainOperationSeason ?? mainOperationSeasonAfterDay;
 
+        // --- day pipeline: operational_resources_process ---
+        const operationalResourcesAfterDay =
+          current.operationalResources.lastProcessedDay === closingDay
+            ? current.operationalResources
+            : processOperationalResourcesEndOfDay(
+                buildOperationalResourceInputFromStore({
+                  ...current,
+                  operationSignals: operationSignalsAfterDay,
+                  crisisActionState: crisisActionEod.crisisActionState,
+                  crisisState: crisisStateBeforeDerive,
+                  assignments: assignmentProcessed.state,
+                  dailyOperationsPlan: planProcessed.plan,
+                  microDecisionState: microEodResult.microDecisionState,
+                }),
+                closingDay,
+              );
+
         const hasCriticalEvent = nextGameState.events.some(
           (e) => e.riskLevel === 'critical' || e.riskLevel === 'high',
         );
@@ -3302,6 +3392,7 @@ export const useGameStore = create<GameStore>()(
           crisisState: crisisStateAfterDay,
           crisisActionState: crisisActionStateForNextDay,
           microDecisionState: microStateForNextDay,
+          operationalResources: operationalResourcesAfterDay,
         });
       },
 
@@ -3849,6 +3940,11 @@ export const useGameStore = create<GameStore>()(
             saved.microDecisionState ?? createInitialMicroDecisionState(),
           crisisActionState:
             saved.crisisActionState ?? createInitialCrisisActionState(),
+          operationalResources:
+            saved.operationalResources ??
+            createInitialOperationalResourcesState(
+              withSyncedPulse(pilotRefresh.gameState).city.day,
+            ),
           tutorialState: saved.tutorialState ?? { ...INITIAL_TUTORIAL_STATE },
           bestPilotScores: saved.bestPilotScores ?? [],
           lastPilotScore: saved.lastPilotScore,
@@ -3871,6 +3967,7 @@ export const useGameStore = create<GameStore>()(
           state.refreshDailyOperationsPlan();
           state.refreshMicroDecisionsForCurrentDay();
           state.refreshCrisisActionForCurrentDay();
+          state.refreshOperationalResources();
         }
       },
     },

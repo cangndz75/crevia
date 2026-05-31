@@ -14,6 +14,10 @@ import {
 import type { EventCard } from '@/core/models/EventCard';
 import type { EventDecision } from '@/core/models/EventCard';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
+import {
+  DAY1_EVENT_PLAN_COPY,
+  shouldHideAdvancedSystemForFirstTenMinutes,
+} from '@/core/onboarding/firstTenMinutesPresentation';
 import { selectIsDay1TutorialEligible } from '@/features/tutorial/tutorialSelectors';
 import { useGameStore } from '@/store/useGameStore';
 
@@ -65,8 +69,13 @@ export function OperationImpactPreviewStrip({
   const tutorialState = useGameStore((s) => s.tutorialState);
   const decisionHistory = useGameStore((s) => s.decisionHistory);
   const isDay1 = useGameStore(selectIsDay1TutorialEligible);
+  const hideAdvancedImpacts = shouldHideAdvancedSystemForFirstTenMinutes(
+    gameState,
+    'advanced_operation_impacts',
+  );
 
   const planPreview = useMemo(() => {
+    if (hideAdvancedImpacts) return null;
     if (isDay1 && compact) return null;
     const input = buildDailyPlanningEngineInputFromStore({
       gameState,
@@ -88,6 +97,7 @@ export function OperationImpactPreviewStrip({
   ]);
 
   const assignmentPreview = useMemo(() => {
+    if (hideAdvancedImpacts) return null;
     const input = buildAssignmentEngineInputFromGameStore({
       gameState,
       operationSignals,
@@ -137,6 +147,7 @@ export function OperationImpactPreviewStrip({
   ]);
 
   const model = useMemo(() => {
+    if (hideAdvancedImpacts) return null;
     if (isDay1 && compact) return null;
     const engineInput = buildOperationSignalsEngineInput({
       gameState,
@@ -160,6 +171,18 @@ export function OperationImpactPreviewStrip({
     decision,
     compact,
   ]);
+
+  if (hideAdvancedImpacts) {
+    return (
+      <View
+        style={[styles.strip, styles.stripCompact, { backgroundColor: '#E8F7F2', borderColor: 'rgba(15, 143, 134, 0.2)' }]}
+        accessibilityRole="summary">
+        <Text style={[styles.body, { color: '#0F6B64' }]} numberOfLines={1}>
+          {DAY1_EVENT_PLAN_COPY.planSupport}
+        </Text>
+      </View>
+    );
+  }
 
   if (!model) {
     return null;

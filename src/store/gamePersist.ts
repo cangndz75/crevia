@@ -89,6 +89,11 @@ import {
   normalizeCrisisActionState,
 } from '@/core/crisisActions/crisisActionState';
 import type { CrisisActionState } from '@/core/crisisActions/crisisActionTypes';
+import {
+  createInitialOperationalResourcesState,
+  normalizeOperationalResourcesState,
+} from '@/core/operationalResources/operationalResourceState';
+import type { OperationalResourcesState } from '@/core/operationalResources/operationalResourceTypes';
 
 import type { GameStore } from './useGameStore';
 
@@ -96,7 +101,8 @@ import type { GameStore } from './useGameStore';
 // Save version & storage key
 // ---------------------------------------------------------------------------
 
-export const SAVE_VERSION = 22;
+export const SAVE_VERSION = 23;
+const SAVE_VERSION_22 = 22;
 const SAVE_VERSION_21 = 21;
 const SAVE_VERSION_20 = 20;
 const SAVE_VERSION_19 = 19;
@@ -157,6 +163,7 @@ export type PersistedGameState = Pick<
   | 'crisisState'
   | 'microDecisionState'
   | 'crisisActionState'
+  | 'operationalResources'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -202,6 +209,7 @@ export function partialiseGameState(
     crisisState: state.crisisState,
     microDecisionState: state.microDecisionState,
     crisisActionState: state.crisisActionState,
+    operationalResources: state.operationalResources,
     tutorialState: state.tutorialState,
     bestPilotScores: state.bestPilotScores,
     lastPilotScore: state.lastPilotScore,
@@ -469,6 +477,7 @@ export function normalizePersistedSave(
     version !== SAVE_VERSION_19 &&
     version !== SAVE_VERSION_20 &&
     version !== SAVE_VERSION_21 &&
+    version !== SAVE_VERSION_22 &&
     version !== SAVE_VERSION
   ) {
     return null;
@@ -675,6 +684,12 @@ export function normalizePersistedSave(
         return normalizeCrisisActionState(raw.crisisActionState);
       }
       return createInitialCrisisActionState();
+    })(),
+    operationalResources: ((): OperationalResourcesState => {
+      if (raw.operationalResources != null) {
+        return normalizeOperationalResourcesState(raw.operationalResources, currentDay);
+      }
+      return createInitialOperationalResourcesState(currentDay);
     })(),
     tutorialState: isValidTutorialState(raw.tutorialState)
       ? raw.tutorialState

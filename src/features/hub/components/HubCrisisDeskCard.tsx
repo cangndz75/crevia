@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { buildCrisisDeskHubModel } from '@/core/crisis';
+import { shouldHideAdvancedSystemForFirstTenMinutes } from '@/core/onboarding/firstTenMinutesPresentation';
 import {
   buildCrisisActionPresentationInputFromStore,
   buildCrisisActionHubModel,
@@ -31,6 +32,12 @@ export function HubCrisisDeskCard({ compact = false }: HubCrisisDeskCardProps) {
   const crisisState = useGameStore((s) => s.crisisState);
   const crisisActionState = useGameStore((s) => s.crisisActionState);
   const operationSignals = useGameStore((s) => s.operationSignals);
+
+  const hideForFirstTenMinutes = shouldHideAdvancedSystemForFirstTenMinutes(
+    gameState,
+    'crisis_desk',
+    monetization,
+  );
 
   const model = useMemo(
     () =>
@@ -63,7 +70,7 @@ export function HubCrisisDeskCard({ compact = false }: HubCrisisDeskCardProps) {
     operationSignals,
   ]);
 
-  if (!model?.visible) {
+  if (hideForFirstTenMinutes || !model?.visible) {
     return null;
   }
 

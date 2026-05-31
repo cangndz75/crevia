@@ -17,6 +17,49 @@ export const INTERACTION_CONTRACT_REGISTRY: InteractionContract[] = [
     notes: 'Signals summary is informational; no detail modal in MVP.',
   }),
   c({
+    id: 'hub_operational_resources_detail_cta',
+    componentName: 'HubOperationalResourcesCard',
+    surface: 'hub',
+    label: 'Kaynakları Gör',
+    visualAffordance: 'secondary_cta',
+    expectedAction: 'modal',
+    target: { type: 'modal', modalId: 'operational_resources_detail_sheet' },
+    notes: 'Day 2+ Saha Kaynakları özet kartından detay bottom sheet açar.',
+  }),
+  c({
+    id: 'operational_resources_detail_sheet_close',
+    componentName: 'OperationalResourcesDetailSheet',
+    surface: 'hub',
+    label: 'Kapat',
+    visualAffordance: 'primary_cta',
+    expectedAction: 'modal',
+    target: { type: 'modal', modalId: 'operational_resources_detail_sheet' },
+    notes: 'Detay sheet kapatma; tab değişimi yerel state.',
+  }),
+  c({
+    id: 'operational_resources_detail_tab',
+    componentName: 'OperationalResourcesDetailSheet',
+    surface: 'hub',
+    label: 'Kaynak sekmesi',
+    visualAffordance: 'inline_action',
+    expectedAction: 'state_update',
+    target: {
+      type: 'state_update',
+      actionName: 'localTabChange',
+      stateSlice: 'OperationalResourcesDetailSheet',
+    },
+    notes: 'Ekipler / Araçlar / Konteyner sekmeleri; persist yok.',
+  }),
+  c({
+    id: 'hub_first_ten_minutes_guide',
+    componentName: 'HubFirstTenMinutesGuideCard',
+    surface: 'hub',
+    label: 'İlk operasyon günü yönlendirme',
+    visualAffordance: 'static_card',
+    expectedAction: 'none',
+    notes: 'Day 1 guidance strip; no CTA — player follows advisor and daily plan cards.',
+  }),
+  c({
     id: 'hub_advisor_ask_daily',
     componentName: 'HubAdvisorCard',
     surface: 'hub',
@@ -77,7 +120,8 @@ export const INTERACTION_CONTRACT_REGISTRY: InteractionContract[] = [
     disabledBehavior: {
       hasDisabledState: true,
       explanationRequired: true,
-      explanation: 'İlk gün plan düzenlemesi kapalı; önerilen planı onaylayın.',
+      explanation:
+        'İlk gün düzenleme kapalı; önerilen planla temel akışı öğreniyorsun.',
     },
   }),
   c({
@@ -351,6 +395,8 @@ export const INTERACTION_CONTRACT_REGISTRY: InteractionContract[] = [
       actionName: 'confirmEventAssignment',
       stateSlice: 'assignments',
     },
+    notes:
+      'Day 1 first-ten-minutes mode shows Önerilen Atamayı Onayla; editor hidden with explanation.',
   }),
   c({
     id: 'event_assignment_edit',
@@ -458,6 +504,15 @@ export const INTERACTION_CONTRACT_REGISTRY: InteractionContract[] = [
     visualAffordance: 'static_card',
     expectedAction: 'none',
     notes: 'Mobile copy uses numberOfLines guards.',
+  }),
+  c({
+    id: 'report_operational_resources_static',
+    componentName: 'ReportOperationalResourcesCard',
+    surface: 'report',
+    label: 'Saha Kaynakları',
+    visualAffordance: 'static_card',
+    expectedAction: 'none',
+    notes: 'EOD resource summary; Day 1 educational line only.',
   }),
   c({
     id: 'report_daily_plan_static',

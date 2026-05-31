@@ -3,12 +3,14 @@ import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
+import { HubFirstTenMinutesGuideCard } from '@/features/hub/components/HubFirstTenMinutesGuideCard';
 import { HubAdvisorCard } from '@/features/hub/components/HubAdvisorCard';
 import { HubDailyOperationsPlanCard } from '@/features/hub/components/HubDailyOperationsPlanCard';
 import { HubCrisisActionCard } from '@/features/hub/components/HubCrisisActionCard';
 import { HubCrisisDeskCard } from '@/features/hub/components/HubCrisisDeskCard';
 import { HubMainOperationSeasonCard } from '@/features/hub/components/HubMainOperationSeasonCard';
 import { HubLiveOperationsCard } from '@/features/hub/components/HubLiveOperationsCard';
+import { HubOperationalResourcesCard } from '@/features/hub/components/HubOperationalResourcesCard';
 import { HubOperationSignalsCard } from '@/features/hub/components/HubOperationSignalsCard';
 import { HubCriticalEventCard } from '@/features/hub/components/HubCriticalEventCard';
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
@@ -31,6 +33,7 @@ import { TutorialTarget } from '@/features/tutorial/TutorialTarget';
 import { OnboardingCoachBubble } from '@/features/onboarding/components/OnboardingCoachBubble';
 import { useOnboardingHint } from '@/features/onboarding/hooks/useOnboardingHint';
 import { useOnboardingHubVisibility } from '@/features/onboarding/hooks/useOnboardingHubVisibility';
+import { buildHubCardVisibilityModel } from '@/core/onboarding/firstTenMinutesPresentation';
 import { buildHubScreenLayoutModel } from '@/features/hub/utils/hubScreenPresentation';
 import { HUB_PREMIUM_LAYOUT } from '@/features/hub/utils/hubPremiumPresentation';
 import {
@@ -55,6 +58,7 @@ export function HubScreen() {
   const router = useRouter();
   const endCurrentDay = useGameStore((s) => s.endCurrentDay);
   const gameState = useGameStore((s) => s.gameState);
+  const monetization = useGameStore((s) => s.monetization);
   const postPilotOperation = useGameStore(selectPostPilotOperation);
   const activeEvents = useGameStore(selectActiveEvents);
   const eventCount = activeEvents.length;
@@ -76,6 +80,11 @@ export function HubScreen() {
         postPilotOperation,
       }),
     [gameState, tutorialActive, isDay1Layout, eventCount, postPilotOperation],
+  );
+
+  const hubCardVisibility = useMemo(
+    () => buildHubCardVisibilityModel(gameState, monetization),
+    [gameState, monetization],
   );
 
   const { coachHint, dismissHint } = useOnboardingHint('hub');
@@ -109,10 +118,22 @@ export function HubScreen() {
           <HubDailyGoalHeroCard imageSource={hubAssets.dailyGoalBadge} />
         </TutorialTarget>
 
-        {hubLayout.showPostPilotAgendaInFocus ? (
-          <View style={styles.sectionPad}>
-            <PostPilotAgendaBanner compact />
-          </View>
+        {hubCardVisibility.showFirstDayGuide ? <HubFirstTenMinutesGuideCard /> : null}
+
+        {hubCardVisibility.showAdvisor !== 'hidden' ? (
+          <HubAdvisorCard
+            compact={
+              hubCardVisibility.showAdvisor === 'compact' || isDay1Layout
+            }
+          />
+        ) : null}
+
+        {hubCardVisibility.showDailyPlan !== 'hidden' ? (
+          <HubDailyOperationsPlanCard
+            compact={
+              hubCardVisibility.showDailyPlan === 'compact' || isDay1Layout
+            }
+          />
         ) : null}
 
         {hubLayout.showCriticalEventInFocus ? (
@@ -125,23 +146,41 @@ export function HubScreen() {
           </View>
         ) : null}
 
-        <HubOperationSignalsCard compact={isDay1Layout} />
+        {hubCardVisibility.showPostPilotPreview && hubLayout.showPostPilotAgendaInFocus ? (
+          <View style={styles.sectionPad}>
+            <PostPilotAgendaBanner compact />
+          </View>
+        ) : null}
 
-        <HubLiveOperationsCard compact={isDay1Layout} />
+        {hubCardVisibility.showOperationSignals !== 'hidden' ? (
+          <HubOperationSignalsCard
+            compact={hubCardVisibility.showOperationSignals === 'compact'}
+          />
+        ) : null}
 
-        <HubMainOperationSeasonCard compact={isDay1Layout} />
+        {hubCardVisibility.showOperationalResources ? (
+          <HubOperationalResourcesCard />
+        ) : null}
 
-        <HubCrisisDeskCard compact={isDay1Layout} />
+        {hubCardVisibility.showLiveOperations ? (
+          <HubLiveOperationsCard compact={isDay1Layout} />
+        ) : null}
 
-        <HubCrisisActionCard compact={isDay1Layout} />
+        {hubCardVisibility.showMainOperationSeason ? (
+          <HubMainOperationSeasonCard compact={isDay1Layout} />
+        ) : null}
 
-        <HubAdvisorCard compact={isDay1Layout} />
+        {hubCardVisibility.showCrisis ? (
+          <HubCrisisDeskCard compact={isDay1Layout} />
+        ) : null}
 
-        <HubDailyOperationsPlanCard compact={isDay1Layout} />
+        {hubCardVisibility.showCrisisActions ? (
+          <HubCrisisActionCard compact={isDay1Layout} />
+        ) : null}
 
         <HubDailyPriorityCard />
 
-        {hubLayout.showPilotPreviewStrip ? (
+        {hubCardVisibility.showPostPilotPreview && hubLayout.showPilotPreviewStrip ? (
           <View style={styles.sectionPad}>
             <HubPilotOperationPreviewStrip />
           </View>
@@ -149,7 +188,7 @@ export function HubScreen() {
 
         {hubVisibility.showQuickActionsPanel ? <HubQuickActionsPanel /> : null}
 
-        <HubPersonnelStrip />
+        {hubCardVisibility.showPersonnelStrip ? <HubPersonnelStrip /> : null}
 
         {showSocialCard ? (
           <View style={styles.sectionPad}>
@@ -161,7 +200,7 @@ export function HubScreen() {
           </View>
         ) : null}
 
-        <HubRegionPulseSection />
+        {hubCardVisibility.showRegionPulse ? <HubRegionPulseSection /> : null}
 
         <HubFooterActionRow
           onEndDay={handleEndDay}

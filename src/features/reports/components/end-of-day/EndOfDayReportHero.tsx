@@ -17,6 +17,7 @@ type Props = {
   statusTitle: string;
   successScore: number;
   subtitle: string;
+  hideScoreRing?: boolean;
 };
 
 function SuccessRing({ score, size = 92 }: { score: number; size?: number }) {
@@ -63,6 +64,7 @@ export function EndOfDayReportHero({
   statusTitle,
   successScore,
   subtitle,
+  hideScoreRing = false,
 }: Props) {
   return (
     <LinearGradient
@@ -104,7 +106,7 @@ export function EndOfDayReportHero({
             {subtitle}
           </Text>
         </View>
-        <SuccessRing score={successScore} />
+        {hideScoreRing ? null : <SuccessRing score={successScore} />}
       </View>
     </LinearGradient>
   );

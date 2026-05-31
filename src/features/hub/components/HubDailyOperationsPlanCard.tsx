@@ -26,6 +26,14 @@ import {
   HUB_PREMIUM_RADIUS,
   hubPremiumShadowCard,
 } from '@/features/hub/utils/hubPremiumPresentation';
+import {
+  DAY1_DAILY_PLAN_COPY,
+  shouldUseFirstTenMinutesDailyPlanMode,
+} from '@/core/onboarding/firstTenMinutesPresentation';
+import {
+  buildDailyPlanResourceHintLine,
+  buildOperationalResourceEngineInputFromStore,
+} from '@/core/operationalResources/operationalResourcePresentation';
 import { selectIsDay1TutorialEligible } from '@/features/tutorial/tutorialSelectors';
 import { useGameStore } from '@/store/useGameStore';
 import { getPressFeedbackStyle } from '@/ui/feedback/pressFeedback';
@@ -42,7 +50,13 @@ export function HubDailyOperationsPlanCard({
   const operationSignals = useGameStore((s) => s.operationSignals);
   const advisorState = useGameStore((s) => s.advisorState);
   const dailyOperationsPlan = useGameStore((s) => s.dailyOperationsPlan);
+  const assignments = useGameStore((s) => s.assignments);
+  const microDecisionState = useGameStore((s) => s.microDecisionState);
+  const crisisActionState = useGameStore((s) => s.crisisActionState);
+  const operationalResources = useGameStore((s) => s.operationalResources);
+  const monetization = useGameStore((s) => s.monetization);
   const isDay1 = useGameStore(selectIsDay1TutorialEligible);
+  const day1PlanMode = shouldUseFirstTenMinutesDailyPlanMode(gameState);
   const confirmPlan = useGameStore((s) => s.confirmDailyOperationsPlan);
   const updatePlan = useGameStore((s) => s.updateDailyOperationsPlan);
 
@@ -68,6 +82,32 @@ export function HubDailyOperationsPlanCard({
     () => buildDailyPlanHubModel(planningInput),
     [planningInput],
   );
+
+  const resourceHintLine = useMemo(() => {
+    if (day1PlanMode) return undefined;
+    return buildDailyPlanResourceHintLine(
+      buildOperationalResourceEngineInputFromStore({
+        gameState,
+        monetization,
+        operationSignals,
+        dailyOperationsPlan,
+        assignments,
+        microDecisionState,
+        crisisActionState,
+        operationalResources,
+      }),
+    );
+  }, [
+    day1PlanMode,
+    gameState,
+    monetization,
+    operationSignals,
+    dailyOperationsPlan,
+    assignments,
+    microDecisionState,
+    crisisActionState,
+    operationalResources,
+  ]);
 
   const editModel = useMemo(() => {
     const draftPlan = {
@@ -166,7 +206,7 @@ export function HubDailyOperationsPlanCard({
         <View style={styles.headerRow}>
           <View style={styles.titleCol}>
             <Text style={styles.title} numberOfLines={1}>
-              {hubModel.title}
+              {day1PlanMode ? DAY1_DAILY_PLAN_COPY.title : hubModel.title}
             </Text>
             {!compact ? (
               <Text style={styles.subtitle} numberOfLines={1}>
@@ -181,7 +221,10 @@ export function HubDailyOperationsPlanCard({
           </View>
         </View>
 
-        {hubModel.focusRows.map((row) => (
+        {(day1PlanMode
+          ? hubModel.focusRows.slice(0, 2)
+          : hubModel.focusRows
+        ).map((row) => (
           <View key={row.key} style={styles.focusRow}>
             <Text style={styles.focusLabel} numberOfLines={1}>
               {row.label}
@@ -192,16 +235,24 @@ export function HubDailyOperationsPlanCard({
           </View>
         ))}
 
-        <Text style={styles.metaLine} numberOfLines={1}>
-          {hubModel.focusPointsLabel}
-        </Text>
+        {!day1PlanMode ? (
+          <Text style={styles.metaLine} numberOfLines={1}>
+            {hubModel.focusPointsLabel}
+          </Text>
+        ) : null}
         <Text style={styles.advisorLine} numberOfLines={2} ellipsizeMode="tail">
           {hubModel.advisorLine}
         </Text>
 
-        {isDay1 ? (
+        {resourceHintLine ? (
+          <Text style={styles.resourceHint} numberOfLines={2}>
+            {resourceHintLine}
+          </Text>
+        ) : null}
+
+        {day1PlanMode ? (
           <Text style={styles.day1Hint} numberOfLines={2}>
-            İlk gün plan düzenlemesi kapalı; önerilen planı onaylayın.
+            {DAY1_DAILY_PLAN_COPY.editDisabledNote}
           </Text>
         ) : null}
 
@@ -215,7 +266,7 @@ export function HubDailyOperationsPlanCard({
               getPressFeedbackStyle({ pressed }),
             ]}>
             <Text style={styles.ctaPrimaryText} numberOfLines={1}>
-              {hubModel.ctaLabel}
+              {day1PlanMode ? DAY1_DAILY_PLAN_COPY.confirmCta : hubModel.ctaLabel}
             </Text>
           </Pressable>
           {!isDay1 && hubModel.secondaryCtaLabel ? (
@@ -405,6 +456,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     color: '#3D4F4C',
+    flexShrink: 1,
+  },
+  resourceHint: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#0F8F86',
+    fontWeight: '600',
     flexShrink: 1,
   },
   day1Hint: {

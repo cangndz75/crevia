@@ -10,6 +10,12 @@ import { buildPostPilotMapContextLineForGameState } from '@/core/postPilot/postP
 import { MapNeighborhoodStrip } from '@/features/map/components/MapNeighborhoodStrip';
 import { MapOperationBottomPanel } from '@/features/map/components/MapOperationBottomPanel';
 import { buildMapCrisisPresentationBundle } from '@/features/map/utils/mapCrisisPresentation';
+import {
+  buildMapResourcePresentationBundle,
+  buildMapResourceEngineInputFromStore,
+  mergeMapPanelCrisisAndResourceLines,
+  isMapDistrictId,
+} from '@/features/map/utils/mapResourcePresentation';
 import { selectIsDay1TutorialActive } from '@/features/tutorial/tutorialSelectors';
 import { useGameStatus } from '@/store/gameSelectors';
 import {
@@ -165,6 +171,11 @@ export function MapScreen() {
   const operationSignals = useGameStore((s) => s.operationSignals);
   const postPilotOperation = useGameStore((s) => s.gameState.pilot.postPilotOperation);
   const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
+  const dailyOperationsPlan = useGameStore((s) => s.dailyOperationsPlan);
+  const assignments = useGameStore((s) => s.assignments);
+  const microDecisionState = useGameStore((s) => s.microDecisionState);
+  const crisisActionState = useGameStore((s) => s.crisisActionState);
+  const operationalResources = useGameStore((s) => s.operationalResources);
   const pilotCompleted = gameStateForMap.pilot.status === 'completed';
   const showPostPilotMapChrome = shouldShowMapCrisisChrome(gameDay, pilotCompleted);
 
@@ -203,6 +214,35 @@ export function MapScreen() {
     ],
   );
 
+  const mapResourceInput = useMemo(
+    () =>
+      buildMapResourceEngineInputFromStore({
+        gameState: gameStateForMap,
+        monetization,
+        operationSignals,
+        dailyOperationsPlan,
+        assignments,
+        microDecisionState,
+        crisisActionState,
+        operationalResources,
+      }),
+    [
+      assignments,
+      crisisActionState,
+      dailyOperationsPlan,
+      gameStateForMap,
+      microDecisionState,
+      monetization,
+      operationSignals,
+      operationalResources,
+    ],
+  );
+
+  const mapResourcePresentation = useMemo(
+    () => buildMapResourcePresentationBundle(mapResourceInput),
+    [mapResourceInput],
+  );
+
   const crisisHighlightDistrictIds = useMemo(() => {
     if (!showPostPilotMapChrome || !mapCrisisPresentation.visible) {
       return undefined;
@@ -212,6 +252,22 @@ export function MapScreen() {
       allowed.has(id),
     );
   }, [mapCrisisPresentation, showPostPilotMapChrome]);
+
+  const resourceHighlightDistrictIds = useMemo(() => {
+    if (!showPostPilotMapChrome || !mapResourcePresentation.visible) {
+      return undefined;
+    }
+    const crisisSet = new Set(crisisHighlightDistrictIds ?? []);
+    const ids = mapResourcePresentation.highlightedDistrictIds.filter(
+      (id): id is MapDistrictId => isMapDistrictId(id) && !crisisSet.has(id),
+    );
+    return ids.length > 0 ? ids : undefined;
+  }, [
+    crisisHighlightDistrictIds,
+    mapResourcePresentation.highlightedDistrictIds,
+    mapResourcePresentation.visible,
+    showPostPilotMapChrome,
+  ]);
 
   const neighborhoodStripItems = useMemo(
     () =>
@@ -230,6 +286,7 @@ export function MapScreen() {
         mainOperationScopeBadges,
         crisisDistrictBadges: mapCrisisPresentation.districtBadges,
         crisisAccessMode: crisisState.accessMode,
+        resourceDistrictBadges: mapResourcePresentation.districtBadges,
       }),
     [
       authorityState,
@@ -239,6 +296,7 @@ export function MapScreen() {
       gameStateForMap.pilot.status,
       mainOperationScopeBadges,
       mapCrisisPresentation.districtBadges,
+      mapResourcePresentation.districtBadges,
       postPilotOperation,
       selectedDistrictId,
     ],
@@ -258,40 +316,48 @@ export function MapScreen() {
     return buildPostPilotMapContextLineForGameState(gameStateForMap, districtEvents);
   }, [activeEvents, focusDistrictId, gameStateForMap]);
 
-  const operationPanel = useMemo(
-    () =>
-      buildMapOperationPanelModel({
-        viewMode: mapViewMode,
-        focusDistrictId,
-        pilotAreaId,
-        pilotDistrictId: selectedDistrictId,
-        gameDay,
-        activeEvents,
-        containerState,
-        vehicleState,
-        hideFleetSignals: hideMapFleetSignals,
-        dayEventTitle: dayEvent.mainEventTitle,
-        postPilotMapContextLine: postPilotMapContextLine ?? undefined,
-        crisisLines: mapCrisisPresentation.visible
-          ? mapCrisisPresentation.panelLines
-          : undefined,
-      }),
-    [
+  const operationPanel = useMemo(() => {
+    const merged = mergeMapPanelCrisisAndResourceLines({
+      crisisLines: mapCrisisPresentation.visible
+        ? mapCrisisPresentation.panelLines
+        : undefined,
+      resourceLines: mapResourcePresentation.visible
+        ? mapResourcePresentation.panelLines
+        : undefined,
+      maxTotal: 2,
+    });
+    return buildMapOperationPanelModel({
+      viewMode: mapViewMode,
+      focusDistrictId,
+      pilotAreaId,
+      pilotDistrictId: selectedDistrictId,
+      gameDay,
       activeEvents,
       containerState,
-      dayEvent.mainEventTitle,
-      focusDistrictId,
-      gameDay,
-      hideMapFleetSignals,
-      mapCrisisPresentation.panelLines,
-      mapCrisisPresentation.visible,
-      mapViewMode,
-      pilotAreaId,
-      postPilotMapContextLine,
-      selectedDistrictId,
       vehicleState,
-    ],
-  );
+      hideFleetSignals: hideMapFleetSignals,
+      dayEventTitle: dayEvent.mainEventTitle,
+      postPilotMapContextLine: postPilotMapContextLine ?? undefined,
+      crisisLines: merged.crisisLines,
+      resourceLines: merged.resourceLines,
+    });
+  }, [
+    activeEvents,
+    containerState,
+    dayEvent.mainEventTitle,
+    focusDistrictId,
+    gameDay,
+    hideMapFleetSignals,
+    mapCrisisPresentation.panelLines,
+    mapCrisisPresentation.visible,
+    mapResourcePresentation.panelLines,
+    mapResourcePresentation.visible,
+    mapViewMode,
+    pilotAreaId,
+    postPilotMapContextLine,
+    selectedDistrictId,
+    vehicleState,
+  ]);
 
   const operationSignalModel = useMemo(
     () =>
@@ -357,6 +423,7 @@ export function MapScreen() {
           hideVehicleSignals={hideMapFleetSignals}
           selectedPinId={selectedPinId}
           crisisHighlightDistrictIds={crisisHighlightDistrictIds}
+          resourceHighlightDistrictIds={resourceHighlightDistrictIds}
           activeOperationOverlay={activeOperationOverlay}
           onLayersPress={() => setLayerPanelOpen(true)}
           onDistrictSelect={handleDistrictSelect}

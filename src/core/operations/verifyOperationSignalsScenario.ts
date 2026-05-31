@@ -392,7 +392,7 @@ export function verifyOperationSignalsScenario(): VerifyOperationSignalsOutcome 
     snapshots: createDay1Seed().snapshots,
   });
   const persistOk =
-    SAVE_VERSION === 22 &&
+    SAVE_VERSION === 23 &&
     hydrated != null &&
     hydrated.operationSignals != null &&
     hydrated.operationSignals.personnel.domain === 'personnel';
@@ -409,7 +409,7 @@ export function verifyOperationSignalsScenario(): VerifyOperationSignalsOutcome 
   }
 
   if (
-    !warn(checks, SAVE_VERSION === 22, 'SAVE_VERSION 22', `SAVE_VERSION=${SAVE_VERSION}`)
+    !warn(checks, SAVE_VERSION === 23, 'SAVE_VERSION 22', `SAVE_VERSION=${SAVE_VERSION}`)
   ) {
     hasWarn = true;
   }

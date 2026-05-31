@@ -6,6 +6,7 @@ import {
   buildMicroDecisionCardModel,
   buildMicroDecisionPresentationInput,
 } from '@/core/microDecisions';
+import { shouldHideAdvancedSystemForFirstTenMinutes } from '@/core/onboarding/firstTenMinutesPresentation';
 import { getActiveMicroDecisions } from '@/core/microDecisions/microDecisionState';
 import { LiveOperationDecisionCard } from '@/features/hub/components/LiveOperationDecisionCard';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
@@ -58,7 +59,12 @@ export function EventFieldMicroDecisionCard({ event }: Props) {
     microDecisionState,
   ]);
 
-  if (!cardModel) return null;
+  if (
+    shouldHideAdvancedSystemForFirstTenMinutes(gameState, 'live_micro_decisions') ||
+    !cardModel
+  ) {
+    return null;
+  }
 
   return (
     <View style={styles.wrap}>

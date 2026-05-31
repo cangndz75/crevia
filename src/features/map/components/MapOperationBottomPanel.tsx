@@ -6,6 +6,7 @@ import type {
   DistrictRiskSummaryMetric,
   MapCrisisPanelLine,
   MapOperationPanelModel,
+  MapResourcePanelLine,
 } from '@/features/map/utils/mapUiPresentation';
 import { mapUi } from '@/features/map/utils/mapUiTokens';
 import { colors } from '@/ui/theme/colors';
@@ -50,6 +51,41 @@ const CRISIS_LINE_COLORS: Record<
 
 function CrisisMapLineRow({ line }: { line: MapCrisisPanelLine }) {
   const palette = CRISIS_LINE_COLORS[line.tone];
+  const iconName = resolveIoniconForRegistryKey(line.iconKey);
+  return (
+    <View
+      style={[
+        styles.crisisRow,
+        { backgroundColor: palette.bg, borderColor: palette.border },
+      ]}>
+      <Ionicons name={iconName} size={14} color={palette.icon} />
+      <View style={styles.crisisCopy}>
+        <Text style={[styles.crisisTitle, { color: palette.text }]} numberOfLines={1}>
+          {line.title}
+        </Text>
+        <Text style={[styles.crisisSummary, { color: palette.text }]} numberOfLines={2}>
+          {line.summary}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const RESOURCE_LINE_COLORS = {
+  neutral: CRISIS_LINE_COLORS.neutral,
+  warning: CRISIS_LINE_COLORS.warning,
+  critical: CRISIS_LINE_COLORS.warning,
+  positive: {
+    bg: mapUi.mint,
+    border: 'rgba(15, 143, 134, 0.18)',
+    text: mapUi.teal,
+    icon: mapUi.teal,
+  },
+} as const;
+
+function ResourceMapLineRow({ line }: { line: MapResourcePanelLine }) {
+  const palette =
+    RESOURCE_LINE_COLORS[line.tone] ?? RESOURCE_LINE_COLORS.neutral;
   const iconName = resolveIoniconForRegistryKey(line.iconKey);
   return (
     <View
@@ -157,6 +193,10 @@ export function MapOperationBottomPanel({
 
       {model.crisisLines?.map((line) => (
         <CrisisMapLineRow key={line.id} line={line} />
+      ))}
+
+      {model.resourceLines?.map((line) => (
+        <ResourceMapLineRow key={line.id} line={line} />
       ))}
 
       {model.sahaNote ? (

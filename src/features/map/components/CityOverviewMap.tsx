@@ -51,6 +51,7 @@ export type CityOverviewMapProps = {
   hideVehicleSignals?: boolean;
   selectedPinId?: string | null;
   crisisHighlightDistrictIds?: MapDistrictId[];
+  resourceHighlightDistrictIds?: MapDistrictId[];
   onDistrictPress?: (districtId: MapDistrictId) => void;
   onPinPress?: (pinId: string) => void;
 };
@@ -70,6 +71,7 @@ export function CityOverviewMap({
   hideVehicleSignals = false,
   selectedPinId = null,
   crisisHighlightDistrictIds,
+  resourceHighlightDistrictIds,
   onDistrictPress,
   onPinPress,
 }: CityOverviewMapProps) {
@@ -141,6 +143,7 @@ export function CityOverviewMap({
         vehicleBadges={vehicleBadges}
         selectedPinId={selectedPinId}
         crisisHighlightDistrictIds={crisisHighlightDistrictIds}
+        resourceHighlightDistrictIds={resourceHighlightDistrictIds}
         onDistrictPress={onDistrictPress}
         onPinPress={onPinPress}
       />
@@ -155,6 +158,7 @@ type OverlayProps = {
   vehicleBadges: NeighborhoodVehicleBadge[];
   selectedPinId?: string | null;
   crisisHighlightDistrictIds?: MapDistrictId[];
+  resourceHighlightDistrictIds?: MapDistrictId[];
   showHeat: boolean;
   showRoutes: boolean;
   onDistrictPress?: (districtId: MapDistrictId) => void;
@@ -168,6 +172,7 @@ function CityOverviewOverlay({
   vehicleBadges,
   selectedPinId = null,
   crisisHighlightDistrictIds,
+  resourceHighlightDistrictIds,
   showHeat,
   showRoutes,
   onDistrictPress,
@@ -175,6 +180,10 @@ function CityOverviewOverlay({
 }: OverlayProps) {
   const { width: mapWidth, height: mapHeight } = useMapDisplaySize();
   const vb = `0 0 ${CITY_OVERVIEW_VIEWBOX.width} ${CITY_OVERVIEW_VIEWBOX.height}`;
+  const resourceDistrictSet = useMemo(
+    () => new Set(resourceHighlightDistrictIds ?? []),
+    [resourceHighlightDistrictIds],
+  );
 
   if (mapWidth <= 0 || mapHeight <= 0) return null;
 
@@ -197,6 +206,8 @@ function CityOverviewOverlay({
       {CITY_DISTRICT_REGIONS.map((region) => {
         const isActive = region.id === activeMapDistrict;
         const isCrisisDistrict = crisisHighlightDistrictIds?.includes(region.id);
+        const isResourceDistrict =
+          !isCrisisDistrict && resourceDistrictSet.has(region.id);
         const signal = containerSignals.find(
           (entry) => entry.neighborhoodId === region.id,
         );
@@ -228,10 +239,18 @@ function CityOverviewOverlay({
             <Path
               d={region.path}
               fill={region.color}
-              fillOpacity={isActive ? 0.2 : isCrisisDistrict ? 0.12 : 0.06}
-              stroke={isCrisisDistrict ? '#E59A22' : region.color}
-              strokeWidth={isCrisisDistrict ? 0.007 : isActive ? 0.006 : 0.003}
-              strokeOpacity={isCrisisDistrict ? 0.7 : isActive ? 0.95 : 0.35}
+              fillOpacity={
+                isActive ? 0.2 : isCrisisDistrict ? 0.12 : isResourceDistrict ? 0.1 : 0.06
+              }
+              stroke={
+                isCrisisDistrict ? '#E59A22' : isResourceDistrict ? '#7BC4B8' : region.color
+              }
+              strokeWidth={
+                isCrisisDistrict ? 0.007 : isResourceDistrict ? 0.006 : isActive ? 0.006 : 0.003
+              }
+              strokeOpacity={
+                isCrisisDistrict ? 0.7 : isResourceDistrict ? 0.65 : isActive ? 0.95 : 0.35
+              }
               onPress={() => onDistrictPress?.(region.id)}
             />
 

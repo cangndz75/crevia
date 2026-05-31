@@ -13,7 +13,11 @@ import {
 import { createFullMainOperationSeasonState } from '@/core/mainOperation/mainOperationState';
 import { buildMainOperationMapScopeBadges } from '@/core/mainOperation/mainOperationPresentation';
 import { DEFAULT_PILOT_DISTRICT_ID } from '@/core/models/DistrictProfile';
+import { createInitialAssignmentsState } from '@/core/assignments/assignmentState';
 import { createInitialContainerState } from '@/core/containers/containerSeed';
+import { createInitialDailyOperationsPlan } from '@/core/dailyPlanning/dailyPlanningState';
+import { createInitialMicroDecisionState } from '@/core/microDecisions/microDecisionState';
+import { createInitialOperationSignalsState } from '@/core/operations/operationSignalState';
 import { createInitialVehicleState } from '@/core/vehicles/vehicleSeed';
 
 import { DEFAULT_MAP_DISTRICT_ID } from './data/mapDistrictConstants';
@@ -31,6 +35,13 @@ import {
   type MapOperationPanelModel,
 } from './utils/mapUiPresentation';
 import { buildMapCrisisPresentationBundle } from './utils/mapCrisisPresentation';
+import {
+  buildMapResourcePresentationBundle,
+  shouldShowMapResourceOverlay,
+} from './utils/mapResourcePresentation';
+import { buildOperationalResourceEngineInputFromStore } from '@/core/operationalResources/operationalResourceEngine';
+import { createInitialOperationalResourcesState } from '@/core/operationalResources/operationalResourceState';
+import { applyOperationalResourceEffects } from '@/core/operationalResources/operationalResourceEngine';
 
 export type VerifyMapUiOutcome = {
   ok: boolean;
@@ -348,8 +359,75 @@ export function verifyMapUiScenario(): VerifyMapUiOutcome {
       pilotDistrictId: DEFAULT_PILOT_DISTRICT_ID,
       gameDay: 8,
       activeEvents: [],
+      resourceLines: undefined,
     }).visible === true,
     'Type model optional crisis fields ile crash etmiyor',
+  );
+
+  const resourceInput = buildOperationalResourceEngineInputFromStore({
+    gameState: { ...fullGsDay8, city: { ...fullGsDay8.city, day: 1 } },
+    monetization: fullMon,
+    operationSignals: createInitialOperationSignalsState(1),
+    dailyOperationsPlan: createInitialDailyOperationsPlan(1),
+    assignments: createInitialAssignmentsState(),
+    microDecisionState: createInitialMicroDecisionState(),
+    crisisActionState: { actionsById: {} },
+    operationalResources: createInitialOperationalResourcesState(1),
+  });
+  assert(
+    checks,
+    !shouldShowMapResourceOverlay(resourceInput),
+    'Map resource overlay Day 1 hidden',
+  );
+
+  const strainedResources = applyOperationalResourceEffects(
+    createInitialOperationalResourcesState(10),
+    [
+      {
+        domain: 'containers',
+        targetId: 'sanayi',
+        delta: 40,
+        metric: 'fill_pressure',
+        reason: 'test',
+        sourceTags: [],
+      },
+    ],
+    10,
+  );
+  const resourceDay10 = buildMapResourcePresentationBundle(
+    buildOperationalResourceEngineInputFromStore({
+      gameState: fullGsDay8,
+      monetization: fullMon,
+      operationSignals: createInitialOperationSignalsState(8),
+      dailyOperationsPlan: createInitialDailyOperationsPlan(8),
+      assignments: createInitialAssignmentsState(),
+      microDecisionState: createInitialMicroDecisionState(),
+      crisisActionState: { actionsById: {} },
+      operationalResources: strainedResources,
+    }),
+  );
+  assert(
+    checks,
+    resourceDay10.panelLines.length <= 2,
+    'Map resource panel max 2 lines',
+    `lines=${resourceDay10.panelLines.length}`,
+  );
+
+  const resourceStrip = buildMapNeighborhoodStripItems({
+    pilotDistrictId: DEFAULT_PILOT_DISTRICT_ID,
+    focusDistrictId: mapDistrictFromPilot(DEFAULT_PILOT_DISTRICT_ID),
+    gameDay: 10,
+    crisisDistrictBadges: [{ districtId: 'sanayi', label: 'Kriz', tone: 'critical' }],
+    crisisAccessMode: 'active',
+    resourceDistrictBadges: {
+      sanayi: { districtId: 'sanayi', label: 'Konteyner baskısı', tone: 'warning', iconKey: 'factory' },
+    },
+  });
+  assert(
+    checks,
+    resourceStrip.find((i) => i.id === 'sanayi')?.statusLabel === 'Kriz',
+    'Crisis priority over resource strip badge',
+    resourceStrip.find((i) => i.id === 'sanayi')?.statusLabel ?? '',
   );
 
   const failCount = checks.filter((c) => !c.ok).length;

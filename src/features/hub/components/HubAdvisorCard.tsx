@@ -23,6 +23,14 @@ import {
   HUB_PREMIUM_RADIUS,
   hubPremiumShadowCard,
 } from '@/features/hub/utils/hubPremiumPresentation';
+import {
+  DAY1_ADVISOR_SHORT_COPY,
+  shouldUseFirstTenMinutesAdvisorShortMode,
+} from '@/core/onboarding/firstTenMinutesPresentation';
+import {
+  buildOperationalResourceAdvisorLine,
+  buildOperationalResourceEngineInputFromStore,
+} from '@/core/operationalResources/operationalResourcePresentation';
 import { selectIsDay1TutorialEligible } from '@/features/tutorial/tutorialSelectors';
 import {
   selectAdvisorState,
@@ -49,7 +57,9 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
   const microDecisionState = useGameStore((s) => s.microDecisionState);
   const crisisState = useGameStore((s) => s.crisisState);
   const crisisActionState = useGameStore((s) => s.crisisActionState);
+  const operationalResources = useGameStore((s) => s.operationalResources);
   const isDay1 = useGameStore(selectIsDay1TutorialEligible);
+  const advisorShortMode = shouldUseFirstTenMinutesAdvisorShortMode(gameState);
   const askDaily = useGameStore((s) => s.askAdvisorForDailySummary);
   const acknowledgeMissed = useGameStore((s) => s.acknowledgeAdvisorMissedSignal);
   const [expanded, setExpanded] = useState(false);
@@ -66,6 +76,9 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
         dailyOperationsPlan,
         isDay1Tutorial: isDay1,
         mainOperationAdvisorNote: (() => {
+          if (advisorShortMode) {
+            return DAY1_ADVISOR_SHORT_COPY.body;
+          }
           const crisisActionInput = buildCrisisActionPresentationInputFromStore({
             gameState,
             monetization,
@@ -121,6 +134,7 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
       microDecisionState,
       crisisState,
       crisisActionState,
+      advisorShortMode,
       isDay1,
       compact,
     ],
@@ -138,11 +152,39 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
 
   const missedNote = useMemo(
     () =>
-      isDay1
+      isDay1 || advisorShortMode
         ? undefined
         : buildAdvisorMissedSignalNoteModel(advisorState, { showCta: true }),
-    [advisorState, isDay1],
+    [advisorState, isDay1, advisorShortMode],
   );
+
+  const resourceAdvisorLine = useMemo(() => {
+    if (advisorShortMode) return undefined;
+    return buildOperationalResourceAdvisorLine(
+      buildOperationalResourceEngineInputFromStore({
+        gameState,
+        monetization,
+        operationSignals,
+        dailyOperationsPlan,
+        assignments,
+        microDecisionState,
+        crisisActionState,
+        operationalResources,
+      }),
+      getAdvisorLevelFromExperience(advisorState.experience),
+    );
+  }, [
+    advisorShortMode,
+    gameState,
+    monetization,
+    operationSignals,
+    dailyOperationsPlan,
+    assignments,
+    microDecisionState,
+    crisisActionState,
+    operationalResources,
+    advisorState.experience,
+  ]);
 
   const usesLeft = advisorState.dailyUsesRemaining > 0;
   const canAsk = usesLeft;
@@ -193,6 +235,12 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
           </Text>
         ) : null}
 
+        {resourceAdvisorLine ? (
+          <Text style={styles.resourceLine} numberOfLines={2}>
+            {resourceAdvisorLine}
+          </Text>
+        ) : null}
+
         {missedNote ? (
           <AdvisorMissedSignalNote
             model={missedNote}
@@ -231,7 +279,13 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
           onPress={handleAsk}
           disabled={!canAsk}
           accessibilityRole="button"
-          accessibilityLabel={canAsk ? model.ctaLabel : ADVISOR_COPY.usesExhausted}
+          accessibilityLabel={
+            canAsk
+              ? advisorShortMode
+                ? DAY1_ADVISOR_SHORT_COPY.cta
+                : model.ctaLabel
+              : ADVISOR_COPY.usesExhausted
+          }
           accessibilityState={{ disabled: !canAsk }}
           style={({ pressed }) => [
             styles.cta,
@@ -239,7 +293,11 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
             getPressFeedbackStyle({ pressed: pressed && canAsk, disabled: !canAsk }),
           ]}>
           <Text style={[styles.ctaText, !canAsk && styles.ctaTextDisabled]} numberOfLines={1}>
-            {canAsk ? model.ctaLabel : ADVISOR_COPY.usesExhausted}
+            {canAsk
+              ? advisorShortMode
+                ? DAY1_ADVISOR_SHORT_COPY.cta
+                : model.ctaLabel
+              : ADVISOR_COPY.usesExhausted}
           </Text>
         </Pressable>
       </LinearGradient>
@@ -329,6 +387,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: '#3D4F4C',
+    flexShrink: 1,
+  },
+  resourceLine: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#0F8F86',
+    fontWeight: '600',
     flexShrink: 1,
   },
   metaRow: {

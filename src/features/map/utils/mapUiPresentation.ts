@@ -103,6 +103,15 @@ export type DistrictRiskSummaryMetric = {
   progressColor: string;
 };
 
+export type MapResourcePanelLine = MapCrisisPanelLine;
+
+export type MapResourceDistrictBadge = {
+  districtId: string;
+  label: string;
+  tone: 'neutral' | 'warning' | 'critical' | 'positive';
+  iconKey: string;
+};
+
 export type MapOperationPanelModel = {
   visible: boolean;
   districtId: MapDistrictId;
@@ -123,6 +132,7 @@ export type MapOperationPanelModel = {
   ctaLabel: string;
   isDetailView: boolean;
   crisisLines?: MapCrisisPanelLine[];
+  resourceLines?: MapResourcePanelLine[];
 };
 
 const STATUS_LABELS: Record<MapNeighborhoodStripStatus, string> = {
@@ -319,6 +329,20 @@ function crisisOverridesMainOperationLabel(
   return crisisTone === 'critical' || crisisTone === 'warning';
 }
 
+function resolveResourceStripLabel(
+  districtId: MapDistrictId,
+  resourceDistrictBadges: Record<string, MapResourceDistrictBadge> | undefined,
+): { label: string | null; tone?: MapNeighborhoodStripItem['crisisStripTone'] } {
+  const badge = resourceDistrictBadges?.[districtId];
+  if (!badge || badge.tone === 'neutral' || badge.tone === 'positive') {
+    return { label: null };
+  }
+  return {
+    label: badge.label,
+    tone: badge.tone === 'critical' ? 'critical' : 'warning',
+  };
+}
+
 export function buildMapNeighborhoodStripItems(params: {
   pilotDistrictId: PilotDistrictId;
   focusDistrictId: MapDistrictId;
@@ -327,6 +351,7 @@ export function buildMapNeighborhoodStripItems(params: {
   mainOperationScopeBadges?: import('@/core/mainOperation/mainOperationTypes').MainOperationMapScopeBadge[];
   crisisDistrictBadges?: CrisisMapDistrictBadge[];
   crisisAccessMode?: 'inactive' | 'limited_preview' | 'active';
+  resourceDistrictBadges?: Record<string, MapResourceDistrictBadge>;
   /** @deprecated crisisDistrictBadges kullanın */
   crisisMapLines?: CrisisMapDistrictBadge[];
 }): MapNeighborhoodStripItem[] {
@@ -376,20 +401,36 @@ export function buildMapNeighborhoodStripItems(params: {
       params.crisisAccessMode,
     );
 
+    const resourceStrip = resolveResourceStripLabel(
+      districtId,
+      params.resourceDistrictBadges,
+    );
+
     const useCrisisLabel =
       crisisStrip.label != null &&
       (crisisOverridesMainOperationLabel(crisisStrip.tone) ||
         !mainOpLabel ||
         crisisStrip.tone === 'critical');
 
+    const useResourceLabel =
+      !useCrisisLabel && resourceStrip.label != null;
+
     const stripStatusLabel = useCrisisLabel
       ? crisisStrip.label!
-      : (mainOpLabel ??
-        crisisStrip.label ??
-        postPilotLabel ??
-        (status === 'preview'
-          ? STATUS_LABELS.preview
-          : resolveStripRiskStatusLabel(districtId, pilotMapDistrict)));
+      : useResourceLabel
+        ? resourceStrip.label!
+        : (mainOpLabel ??
+          crisisStrip.label ??
+          postPilotLabel ??
+          (status === 'preview'
+            ? STATUS_LABELS.preview
+            : resolveStripRiskStatusLabel(districtId, pilotMapDistrict)));
+
+    const stripTone = useCrisisLabel
+      ? crisisStrip.tone
+      : useResourceLabel
+        ? resourceStrip.tone
+        : crisisStrip.tone;
 
     return {
       id: districtId,
@@ -402,7 +443,7 @@ export function buildMapNeighborhoodStripItems(params: {
           : resolveDistrictAccentColor(districtId),
       identityIconKey:
         status === 'preview' ? undefined : resolveDistrictIconKey(districtId),
-      crisisStripTone: crisisStrip.tone,
+      crisisStripTone: stripTone,
     };
   });
 }
@@ -440,6 +481,7 @@ export function buildMapOperationPanelModel(params: {
   dayEventTitle?: string;
   postPilotMapContextLine?: string;
   crisisLines?: MapCrisisPanelLine[];
+  resourceLines?: MapResourcePanelLine[];
 }): MapOperationPanelModel {
   const preset = getPilotPreset(params.pilotAreaId);
   const isDetailView = params.viewMode === 'detail';
@@ -545,6 +587,10 @@ export function buildMapOperationPanelModel(params: {
     crisisLines:
       params.crisisLines && params.crisisLines.length > 0
         ? params.crisisLines.slice(0, 2)
+        : undefined,
+    resourceLines:
+      params.resourceLines && params.resourceLines.length > 0
+        ? params.resourceLines.slice(0, 2)
         : undefined,
   };
 }

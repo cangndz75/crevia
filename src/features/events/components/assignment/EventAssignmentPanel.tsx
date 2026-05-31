@@ -8,6 +8,11 @@ import {
   getCompatibilityTone,
 } from '@/core/assignments';
 import { ASSIGNMENT_COPY } from '@/core/assignments/assignmentConstants';
+import {
+  DAY1_ASSIGNMENT_COPY,
+  shouldUseFirstTenMinutesAssignmentSimpleMode,
+} from '@/core/onboarding/firstTenMinutesPresentation';
+import { buildAssignmentResourceFitLine } from '@/core/operationalResources/operationalResourcePresentation';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import type { EventCard } from '@/core/models/EventCard';
 import { AssignmentEditorModal } from '@/features/events/components/assignment/AssignmentEditorModal';
@@ -35,15 +40,29 @@ export function EventAssignmentPanel({ event, compactTutorial = false }: Props) 
     dailyOperationsPlan: s.dailyOperationsPlan,
     assignments: s.assignments,
     tutorialState: s.tutorialState,
+    operationalResources: s.operationalResources,
   }));
   const assignment = useGameStore((s) => s.assignments.assignmentsByEventId[event.id]);
   const confirmAssignment = useGameStore((s) => s.confirmEventAssignment);
+  const assignmentSimpleMode = shouldUseFirstTenMinutesAssignmentSimpleMode(
+    storeSlice.gameState,
+  );
   const [editorOpen, setEditorOpen] = useState(false);
 
   const panel = useMemo(() => {
     if (!assignment) return null;
     const input = buildAssignmentEngineInputFromGameStore(storeSlice);
     return buildAssignmentPanelModel(input, event, assignment);
+  }, [assignment, event, storeSlice]);
+
+  const resourceFit = useMemo(() => {
+    if (!assignment) return null;
+    return buildAssignmentResourceFitLine(
+      storeSlice.gameState,
+      event,
+      assignment,
+      storeSlice.operationalResources,
+    );
   }, [assignment, event, storeSlice]);
 
   if (!panel || !assignment) {
@@ -59,7 +78,7 @@ export function EventAssignmentPanel({ event, compactTutorial = false }: Props) 
   };
 
   const isProcessed = assignment.status === 'processed';
-  const canEdit = !compactTutorial && !isProcessed;
+  const canEdit = !compactTutorial && !isProcessed && !assignmentSimpleMode;
 
   return (
     <View style={[styles.card, compactTutorial && styles.cardCompact]}>
@@ -116,11 +135,28 @@ export function EventAssignmentPanel({ event, compactTutorial = false }: Props) 
         {panel.compatibilitySummary}
       </Text>
 
-      <View style={styles.advisorBox}>
-        <Text style={styles.advisorLine} numberOfLines={3}>
-          {panel.advisorLine}
+      {resourceFit?.visible && resourceFit.line ? (
+        <Text
+          style={[
+            styles.resourceFit,
+            resourceFit.tone === 'warning' && styles.resourceFitWarning,
+          ]}
+          numberOfLines={2}>
+          {resourceFit.line}
         </Text>
-      </View>
+      ) : null}
+
+      {assignmentSimpleMode ? (
+        <Text style={styles.simpleNote} numberOfLines={2}>
+          {DAY1_ASSIGNMENT_COPY.explanation}
+        </Text>
+      ) : (
+        <View style={styles.advisorBox}>
+          <Text style={styles.advisorLine} numberOfLines={3}>
+            {panel.advisorLine}
+          </Text>
+        </View>
+      )}
 
       <View style={styles.actions}>
         {!panel.isConfirmed ? (
@@ -131,7 +167,9 @@ export function EventAssignmentPanel({ event, compactTutorial = false }: Props) 
               getPressFeedbackStyle({ pressed }),
             ]}>
             <Text style={styles.primaryLabel} numberOfLines={1}>
-              {panel.ctaLabel}
+              {assignmentSimpleMode
+                ? DAY1_ASSIGNMENT_COPY.confirmCta
+                : panel.ctaLabel}
             </Text>
           </Pressable>
         ) : (
@@ -327,5 +365,22 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     flex: 1,
     minWidth: 0,
+  },
+  simpleNote: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#5F7A75',
+    fontStyle: 'italic',
+    flexShrink: 1,
+  },
+  resourceFit: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#3F5C57',
+    flexShrink: 1,
+  },
+  resourceFitWarning: {
+    color: '#9A6B12',
+    fontWeight: '600',
   },
 });

@@ -524,7 +524,7 @@ function verifySocialQuickActionIsolation(): void {
 }
 
 function verifyPersistHydrate(): void {
-  if (SAVE_VERSION === 22) {
+  if (SAVE_VERSION === 23) {
     pass('SAVE_VERSION is current (21)');
   } else {
     fail('SAVE_VERSION', `expected 21, got ${SAVE_VERSION}`);

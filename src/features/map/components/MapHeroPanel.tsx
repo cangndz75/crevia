@@ -25,6 +25,7 @@ type Props = {
   hideVehicleSignals?: boolean;
   selectedPinId?: string | null;
   crisisHighlightDistrictIds?: MapDistrictId[];
+  resourceHighlightDistrictIds?: MapDistrictId[];
   activeOperationOverlay?: MapActiveOperationOverlayModel | null;
   onLayersPress: () => void;
   onDistrictSelect: (districtId: MapDistrictId) => void;

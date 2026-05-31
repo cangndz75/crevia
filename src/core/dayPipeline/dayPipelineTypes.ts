@@ -17,6 +17,7 @@ export type DayPipelinePhase =
   | 'assignments'
   | 'micro_decisions'
   | 'crisis_actions'
+  | 'operational_resources'
   | 'main_operation'
   | 'crisis'
   | 'advisor'

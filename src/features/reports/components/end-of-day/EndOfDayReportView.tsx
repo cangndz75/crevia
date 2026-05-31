@@ -1,5 +1,5 @@
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useMemo } from 'react';
 
 import { normalizeAuthorityState } from '@/core/authority/authoritySeed';
@@ -20,6 +20,7 @@ import { ReportMainOperationSeasonCard } from '@/features/reports/components/Rep
 import { ReportMicroDecisionsCard } from '@/features/reports/components/ReportMicroDecisionsCard';
 import { ReportDailyPlanImpactCard } from '@/features/reports/components/ReportDailyPlanImpactCard';
 import { ReportOperationSignalsCard } from '@/features/reports/components/ReportOperationSignalsCard';
+import { ReportOperationalResourcesCard } from '@/features/reports/components/ReportOperationalResourcesCard';
 import { ReportHeaderCard } from '@/features/reports/components/ReportHeaderCard';
 import { ReportPilotCompletionCard } from '@/features/reports/components/ReportPilotCompletionCard';
 import {
@@ -34,6 +35,11 @@ import {
 import type { PilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
 import { buildEndOfDayReportViewModel } from '@/features/reports/utils/endOfDayReportPresentation';
 import type { useReportPilotCompletionSummary } from '@/features/pilot/hooks/usePilotCompletionSummary';
+import {
+  buildFirstTenMinutesReportGuard,
+  DAY1_REPORT_EDUCATIONAL_LINES,
+  resolveFirstTenMinutesDay,
+} from '@/core/onboarding/firstTenMinutesPresentation';
 import { normalizePostPilotOperationState } from '@/core/postPilot';
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 import {
@@ -83,6 +89,18 @@ export function EndOfDayReportView({
     (s) => s.gameState.pilot.postPilotOperation,
   );
   const currentPilotDay = useGameStore((s) => s.gameState.pilot.currentPilotDay);
+  const gameState = useGameStore((s) => s.gameState);
+
+  const reportGuard = useMemo(
+    () => buildFirstTenMinutesReportGuard(gameState),
+    [gameState],
+  );
+  const firstTenMinutesDay = resolveFirstTenMinutesDay(gameState);
+  const educationalLines = useMemo(() => {
+    if (firstTenMinutesDay > 2) return [];
+    const cap = reportGuard.educationalLineCap;
+    return DAY1_REPORT_EDUCATIONAL_LINES.slice(0, cap);
+  }, [firstTenMinutesDay, reportGuard.educationalLineCap]);
 
   const postPilotLightDay = useMemo(() => {
     if (pilotStatus !== 'completed') {
@@ -164,43 +182,83 @@ export function EndOfDayReportView({
         <EndOfDayReportHero
           day={model.day}
           statusTitle={model.statusTitle}
-          successScore={model.successScore}
+          successScore={reportGuard.hideMetaProgressHeavy ? 0 : model.successScore}
           subtitle={model.heroSubtitle}
+          hideScoreRing={reportGuard.hideMetaProgressHeavy}
         />
       </Animated.View>
+
+      {educationalLines.length > 0 ? (
+        <View style={styles.educationalBlock}>
+          {educationalLines.map((line) => (
+            <Text key={line} style={styles.educationalLine} numberOfLines={2}>
+              {line}
+            </Text>
+          ))}
+        </View>
+      ) : null}
 
       <Animated.View entering={ENTER.impact}>
         <ReportPrimaryImpactSection model={impactModel} />
       </Animated.View>
 
-      <ReportOperationSignalsCard report={report} compact={model.isDay1} />
+      <ReportOperationSignalsCard
+        report={report}
+        compact={model.isDay1 || reportGuard.compactPrimaryImpact}
+      />
 
-      <ReportCrisisDeskCard report={report} compact={model.isDay1} />
+      <ReportOperationalResourcesCard
+        report={report}
+        compact={model.isDay1 || reportGuard.compactPrimaryImpact}
+      />
 
-      <ReportCrisisActionCard report={report} compact={model.isDay1} />
+      {!reportGuard.hideCrisis ? (
+        <ReportCrisisDeskCard report={report} compact={model.isDay1} />
+      ) : null}
 
-      <ReportDailyPlanImpactCard report={report} compact={model.isDay1} />
+      {!reportGuard.hideCrisisActions ? (
+        <ReportCrisisActionCard report={report} compact={model.isDay1} />
+      ) : null}
 
-      <ReportAssignmentBalanceCard report={report} compact={model.isDay1} />
+      <ReportDailyPlanImpactCard
+        report={report}
+        compact={model.isDay1 || reportGuard.compactPrimaryImpact}
+      />
 
-      <ReportMicroDecisionsCard report={report} compact={model.isDay1} />
+      <ReportAssignmentBalanceCard
+        report={report}
+        compact={model.isDay1 || reportGuard.compactPrimaryImpact}
+      />
 
-      <ReportMainOperationSeasonCard report={report} compact={model.isDay1} />
+      {!reportGuard.hideMicroDecisions ? (
+        <ReportMicroDecisionsCard report={report} compact={model.isDay1} />
+      ) : null}
 
-      <ReportAdvisorCommentCard report={report} compact={model.isDay1} />
+      {!reportGuard.hideMainOperation ? (
+        <ReportMainOperationSeasonCard report={report} compact={model.isDay1} />
+      ) : null}
 
-      <Animated.View entering={ENTER.authority}>
-        <ReportAuthorityTrustCard model={authorityModel} />
-      </Animated.View>
+      <ReportAdvisorCommentCard
+        report={report}
+        compact={model.isDay1 || reportGuard.shortAdvisor}
+      />
 
-      <Animated.View entering={ENTER.badge}>
-        <EndOfDayReportMetaProgressSection
-          authorityLines={[]}
-          badgeEvaluation={report.badgeEvaluation}
-          compact={model.isDay1}
-          badgeOnly
-        />
-      </Animated.View>
+      {!reportGuard.hideMetaProgressHeavy ? (
+        <Animated.View entering={ENTER.authority}>
+          <ReportAuthorityTrustCard model={authorityModel} />
+        </Animated.View>
+      ) : null}
+
+      {!reportGuard.hideMetaProgressHeavy ? (
+        <Animated.View entering={ENTER.badge}>
+          <EndOfDayReportMetaProgressSection
+            authorityLines={[]}
+            badgeEvaluation={report.badgeEvaluation}
+            compact={model.isDay1}
+            badgeOnly
+          />
+        </Animated.View>
+      ) : null}
 
       {model.showTomorrowNotes ? (
         <Animated.View entering={ENTER.notes}>
@@ -228,5 +286,16 @@ const styles = StyleSheet.create({
     gap: PREMIUM_SECTION_GAP,
     backgroundColor: '#F7F3EB',
     minWidth: 0,
+  },
+  educationalBlock: {
+    gap: 6,
+    paddingHorizontal: 4,
+    minWidth: 0,
+  },
+  educationalLine: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#3D4F4C',
+    flexShrink: 1,
   },
 });
