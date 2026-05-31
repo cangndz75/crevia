@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
@@ -92,16 +92,16 @@ export function HubScreen() {
   const criticalHighlight = useTutorialHighlight('hub', 'critical_event_card');
   const socialHighlight = useTutorialHighlight('hub', 'social_signal_card');
 
-  const handleEndDay = () => {
+  const handleEndDay = useCallback(() => {
     playLightImpactHaptic();
     endCurrentDay();
     router.push('/reports');
-  };
+  }, [endCurrentDay, router]);
 
-  const handleContinueOperation = () => {
+  const handleContinueOperation = useCallback(() => {
     playLightImpactHaptic();
     router.push('/events');
-  };
+  }, [router]);
 
   const continueCount = Math.max(1, eventCount);
 

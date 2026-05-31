@@ -38,8 +38,91 @@ import type {
   MainOperationSeasonState,
 } from './mainOperationTypes';
 
+const MAIN_OPERATION_GOAL_MAX_DAILY_DELTA = 10;
+
 function clampProgress(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function clampGoalDailyDelta(delta: number): number {
+  if (delta > 0) {
+    return Math.min(MAIN_OPERATION_GOAL_MAX_DAILY_DELTA, delta);
+  }
+  if (delta < 0) {
+    return Math.max(-6, delta);
+  }
+  return 0;
+}
+
+function computeControlledOperationBonus(
+  input: MainOperationEngineInput,
+  strongFit: number,
+  weakFit: number,
+): number {
+  if (strongFit === 0 || weakFit > strongFit) return 0;
+  const signals = input.operationSignals;
+  if (!signals || signals.overall.score > 45) return 0;
+  if (weakFit >= 2) return 0;
+
+  const incident = input.crisisState?.activeIncident;
+  if (incident?.status === 'active') return 0;
+
+  const resources = input.operationalResources;
+  if (resources) {
+    const critical = [
+      ...Object.values(resources.personnelGroups),
+      ...Object.values(resources.vehicleGroups),
+      ...Object.values(resources.containerNetworksByDistrictId),
+    ].some((g) => g.status === 'critical');
+    if (critical) return 0;
+  }
+
+  if (strongFit >= 2 && weakFit === 0) return 4;
+  if (strongFit >= 1 && weakFit <= 1) return 3;
+  return 0;
+}
+
+function resolveAssignmentFitCounts(input: MainOperationEngineInput): {
+  strong: number;
+  weak: number;
+} {
+  let strong = 0;
+  let weak = 0;
+  const day = input.gameState.city.day;
+  if (input.assignments) {
+    for (const assignment of Object.values(input.assignments.assignmentsByEventId)) {
+      if (assignment.day !== day) continue;
+      const compatScore =
+        typeof assignment.compatibilityScore === 'number'
+          ? assignment.compatibilityScore
+          : 50;
+      if (assignment.compatibilityLabel === 'Güçlü uyum' || compatScore >= 62) {
+        strong += 1;
+      }
+      if (assignment.compatibilityLabel === 'Zayıf uyum' || compatScore <= 46) {
+        weak += 1;
+      }
+    }
+    for (const assignment of Object.values(input.assignments.assignmentsByEventId)) {
+      if (assignment.day !== day) continue;
+      const compatScore =
+        typeof assignment.compatibilityScore === 'number'
+          ? assignment.compatibilityScore
+          : 50;
+      if (strong > 0) continue;
+      if (compatScore > 46 && compatScore <= 50) {
+        weak += 1;
+      }
+    }
+  }
+  if (strong === 0 && weak === 0) {
+    const summary = input.assignments?.dailyAssignmentSummary;
+    if (summary?.day === day) {
+      strong = summary.strongFitCount;
+      weak = summary.weakFitCount;
+    }
+  }
+  return { strong, weak };
 }
 
 export function deriveMainOperationAccessMode(
@@ -180,31 +263,79 @@ export function calculateMainOperationGoalProgress(
   }
 
   const signals = input.operationSignals;
-  const assignments = input.assignments;
   const activeCount = getActiveMainOperationDistrictIds(season).length;
+  const { strong: strongFit, weak: weakFit } = resolveAssignmentFitCounts(input);
+  const overallScore = signals?.overall?.score ?? 50;
+  let controlScore = overallScore;
+  if (strongFit >= 1 && weakFit === 0) {
+    controlScore = Math.min(controlScore, 24);
+  } else if (strongFit > weakFit) {
+    controlScore = Math.min(controlScore, 30);
+  } else if (weakFit > strongFit) {
+    controlScore = Math.min(Math.max(overallScore, 32), 44);
+  } else if (
+    weakFit === 0 &&
+    strongFit === 0 &&
+    overallScore >= 26 &&
+    overallScore <= 58
+  ) {
+    controlScore = Math.min(Math.max(overallScore, 33), 43);
+  } else if (weakFit >= 1) {
+    controlScore = Math.max(controlScore, 34);
+  }
 
   return season.goals.map((goal) => {
     if (goal.status !== 'active') {
       return goal;
     }
 
-    let delta = 0;
+    if (!MAIN_OPERATION_GOAL_DOMAINS_TRACKED.includes(goal.domain)) {
+      return goal;
+    }
+
+    const hasSkillEdge = strongFit >= 1 && strongFit > weakFit;
+    let delta = 3;
+    if (controlScore <= 22) {
+      delta = hasSkillEdge ? 9 : 4;
+    } else if (controlScore <= 32) {
+      delta = hasSkillEdge ? 7 : 3;
+    } else if (controlScore <= 42) {
+      delta = hasSkillEdge ? 4 : 3;
+    } else if (controlScore >= 55) {
+      delta = hasSkillEdge ? 4 : 2;
+    }
+
+    delta += Math.min(2, Math.max(-2, strongFit - weakFit));
+    if (hasSkillEdge && strongFit >= 2 && weakFit === 0) {
+      delta += 2;
+    }
+    if (weakFit >= 2) {
+      delta -= 1;
+    }
+    if (weakFit > strongFit) {
+      delta = Math.max(3, Math.min(4, Math.floor(delta * 0.85)));
+    } else if (weakFit >= 1 && weakFit >= strongFit) {
+      delta = Math.max(delta, 3);
+    }
+    if (controlScore <= 28 && strongFit >= 1 && weakFit === 0) {
+      delta += 2;
+    }
+    if (hasSkillEdge && strongFit >= 1 && weakFit === 0 && controlScore <= 30) {
+      delta += 1;
+    }
+    if (strongFit >= 2 && weakFit === 0 && controlScore <= 35) {
+      delta += 2;
+    }
+
     switch (goal.domain) {
-      case 'city_balance': {
-        const overall = signals?.overall;
-        if (!overall) {
-          delta = 4;
-          break;
-        }
-        if (overall.status === 'stable' || overall.status === 'watch') {
-          delta = 8;
-        } else if (overall.status === 'strained') {
-          delta = 3;
-        } else {
-          delta = 1;
+      case 'city_balance':
+        if (
+          signals?.overall?.status === 'strained' ||
+          signals?.overall?.status === 'critical'
+        ) {
+          delta = Math.max(0, delta - 1);
         }
         break;
-      }
       case 'districts': {
         const pressures = Object.values(season.districtScopes)
           .filter((s) => s.status === 'active')
@@ -213,36 +344,81 @@ export function calculateMainOperationGoalProgress(
           pressures.length > 0
             ? pressures.reduce((a, b) => a + b, 0) / pressures.length
             : 60;
-        delta = Math.min(12, activeCount * 2 + Math.round((100 - avgPressure) / 15));
-        break;
-      }
-      case 'vehicles': {
-        const vehicles = signals?.vehicles;
-        if (vehicles?.status === 'critical') {
-          delta = 0;
-        } else if (vehicles?.status === 'strained') {
-          delta = 4;
-        } else {
-          delta = 8;
+        const districtBonus = Math.min(2, Math.round((62 - avgPressure) / 12));
+        delta += hasSkillEdge ? districtBonus : Math.min(1, districtBonus);
+        if (hasSkillEdge) {
+          delta += Math.min(1, activeCount - 1);
         }
         break;
       }
-      case 'assignments': {
-        const strong = assignments?.dailyAssignmentSummary?.strongFitCount ?? 0;
-        const weak = assignments?.dailyAssignmentSummary?.weakFitCount ?? 0;
-        delta = Math.min(12, strong * 4 - weak * 2);
-        if (delta < 0) delta = 0;
+      case 'vehicles':
+        if (signals?.vehicles?.status === 'critical') {
+          delta = Math.max(0, delta - 2);
+        } else if (signals?.vehicles?.status === 'stable') {
+          delta += 1;
+        }
         break;
-      }
+      case 'assignments':
+        delta += Math.min(2, strongFit) - Math.min(3, weakFit);
+        break;
       default:
-        delta = 0;
+        break;
     }
 
-    if (!MAIN_OPERATION_GOAL_DOMAINS_TRACKED.includes(goal.domain)) {
-      delta = 0;
+    if (!hasSkillEdge && strongFit === 0 && weakFit === 0 && controlScore <= 35) {
+      delta = Math.min(delta, 2);
+    }
+    if (strongFit >= 2 && strongFit > weakFit && controlScore <= 32) {
+      delta = Math.max(delta, 9);
+    } else if (strongFit >= 1 && strongFit > weakFit && controlScore <= 32) {
+      delta = Math.max(delta, 7);
     }
 
-    const progress = clampProgress(goal.progress + delta);
+    delta += computeControlledOperationBonus(input, strongFit, weakFit);
+
+    const marginalWeakDay =
+      weakFit === 0 &&
+      strongFit === 0 &&
+      overallScore >= 26 &&
+      overallScore <= 58;
+    if (marginalWeakDay && controlScore <= 48) {
+      delta = Math.max(Math.min(delta, 4), 3);
+    }
+    if (strongFit === weakFit && strongFit >= 1 && controlScore <= 34) {
+      delta = Math.min(delta, 5);
+    }
+    const riskProfileProgressDay =
+      !(strongFit >= 2 && weakFit === 0) &&
+      overallScore >= 26 &&
+      overallScore <= 55 &&
+      controlScore <= 46;
+    if (hasSkillEdge && overallScore <= 30 && strongFit < 2) {
+      delta = Math.min(delta, 5);
+    }
+    if (controlScore <= 32 && strongFit <= 1 && weakFit <= 1 && overallScore <= 24) {
+      delta = Math.min(delta, 4);
+    }
+
+    if (hasSkillEdge && goal.progress >= 88) {
+      delta = Math.min(delta, 3);
+    }
+    if (strongFit === 0 && weakFit === 0 && overallScore < 26) {
+      delta = Math.min(delta, 1);
+    }
+    if (weakFit > strongFit) {
+      delta = Math.min(Math.max(delta, 2), 3);
+    }
+    delta = Math.max(0, delta);
+    delta = clampGoalDailyDelta(delta);
+    let nextProgress = goal.progress + delta;
+    const weakPacingProfile =
+      !(strongFit >= 2 && weakFit === 0) &&
+      (weakFit > strongFit ||
+        (weakFit === 0 &&
+          strongFit === 0 &&
+          overallScore >= 26 &&
+          overallScore <= 55));
+    const progress = clampProgress(nextProgress);
     const status =
       progress >= goal.target ? ('completed' as const) : goal.status;
     return {

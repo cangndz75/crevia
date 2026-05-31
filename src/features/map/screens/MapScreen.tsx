@@ -22,6 +22,8 @@ import {
   selectActiveEvents,
   selectContainerState,
   selectCurrentPilotDay,
+  selectPilotState,
+  selectPostPilotOperation,
   selectSelectedPilotDistrictId,
   selectVehicleStateFromStore,
   useGameStore,
@@ -169,8 +171,8 @@ export function MapScreen() {
   const crisisState = useGameStore((s) => s.crisisState);
   const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
   const operationSignals = useGameStore((s) => s.operationSignals);
-  const postPilotOperation = useGameStore((s) => s.gameState.pilot.postPilotOperation);
-  const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
+  const postPilotOperation = useGameStore(selectPostPilotOperation);
+  const authorityState = useGameStore(selectPilotState).authorityState;
   const dailyOperationsPlan = useGameStore((s) => s.dailyOperationsPlan);
   const assignments = useGameStore((s) => s.assignments);
   const microDecisionState = useGameStore((s) => s.microDecisionState);

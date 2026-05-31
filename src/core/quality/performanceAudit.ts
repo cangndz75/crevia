@@ -168,12 +168,19 @@ function scanRenderRisks(): QualityWarning[] {
   const warnings: QualityWarning[] = [];
   const hubScreen = readRepoFile('src/features/hub/screens/HubScreen.tsx');
   if (hubScreen.includes('useGameStore((s) => s.gameState)')) {
+    const mitigated =
+      hubScreen.includes('buildHubScreenLayoutModel') &&
+      hubScreen.includes('useMemo');
     warnings.push({
       id: 'hub_full_game_state',
-      severity: 'medium',
+      severity: mitigated ? 'low' : 'medium',
       area: 'store',
-      message: 'HubScreen tüm gameState’i okuyor; sık re-render riski.',
-      recommendation: 'Layout model için dar selector + useShallow kullan.',
+      message: mitigated
+        ? 'HubScreen gameState okur; hubLayout/hubCardVisibility useMemo ile sınırlı.'
+        : 'HubScreen tüm gameState’i okuyor; sık re-render riski.',
+      recommendation: mitigated
+        ? 'Alt kartlar dar selector kullanmaya devam et.'
+        : 'Layout model için dar selector + useShallow kullan.',
     });
   }
 

@@ -3,7 +3,7 @@ import type { CrisisActionType } from './crisisActionTypes';
 export const CRISIS_ACTION_DAILY_LIMIT = 1;
 export const CRISIS_ACTION_EXPIRE_AFTER_DAYS = 1;
 export const CRISIS_ACTION_MAX_HISTORY = 20;
-export const CRISIS_ACTION_PREVENTIVE_SCORE_THRESHOLD = 60;
+export const CRISIS_ACTION_PREVENTIVE_SCORE_THRESHOLD = 55;
 
 export const CRISIS_ACTION_ACCESS_COPY = {
   inactive: 'Kriz aksiyonları pilotta aktif değil.',

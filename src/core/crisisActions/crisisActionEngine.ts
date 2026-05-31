@@ -102,6 +102,17 @@ export function shouldGenerateCrisisAction(input: CrisisActionEngineInput): bool
   if (input.crisisState.cityCrisisScore >= CRISIS_ACTION_PREVENTIVE_SCORE_THRESHOLD) {
     return true;
   }
+  const weakFit = input.assignments?.dailyAssignmentSummary?.weakFitCount ?? 0;
+  if (weakFit >= 1 && input.crisisState.cityCrisisScore >= 42) {
+    return true;
+  }
+  if (
+    input.crisisState.riskLevel === 'watch' &&
+    input.crisisState.cityCrisisScore >= 50 &&
+    weakFit >= 1
+  ) {
+    return true;
+  }
   if (
     input.crisisState.riskLevel === 'elevated' ||
     input.crisisState.riskLevel === 'critical'

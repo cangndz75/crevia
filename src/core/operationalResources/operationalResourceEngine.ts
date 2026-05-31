@@ -150,8 +150,8 @@ export function buildOperationalResourceEffectsFromDailyPlan(
 
   switch (pf) {
     case 'rapid_response':
-      pushPersonnelEffect(effects, 'field_team', 'workload', 6, 'Hızlı müdahale planı', ['daily_plan'], input);
-      pushPersonnelEffect(effects, 'field_team', 'fatigue', 5, 'Hızlı müdahale planı', ['daily_plan'], input);
+      pushPersonnelEffect(effects, 'field_team', 'workload', 5, 'Hızlı müdahale planı', ['daily_plan'], input);
+      pushPersonnelEffect(effects, 'field_team', 'fatigue', 4, 'Hızlı müdahale planı', ['daily_plan'], input);
       break;
     case 'rest_rotation':
       pushPersonnelEffect(effects, 'field_team', 'fatigue', -8, 'Dinlenme rotasyonu', ['daily_plan'], input);
@@ -229,10 +229,39 @@ function mapVehicleAssignment(type: VehicleAssignmentType): VehicleGroupId | nul
   }
 }
 
+function assignmentPressureScale(input: OperationalResourceEngineInput): number {
+  const signals = input.operationSignals;
+  const criticalResourceGroups = input.operationalResources
+    ? countCriticalOperationalGroups(input.operationalResources)
+    : 0;
+  let scale = 1;
+  if (criticalResourceGroups >= 2) {
+    scale *= 0.75;
+  } else if (criticalResourceGroups >= 1) {
+    scale *= 0.88;
+  }
+  if (
+    signals.personnel.status === 'critical' ||
+    signals.vehicles.status === 'critical' ||
+    signals.containers.status === 'critical'
+  ) {
+    return scale * 0.82;
+  }
+  if (
+    signals.personnel.status === 'strained' ||
+    signals.vehicles.status === 'strained' ||
+    signals.containers.status === 'strained'
+  ) {
+    return scale * 0.9;
+  }
+  return scale;
+}
+
 export function buildOperationalResourceEffectsFromAssignment(
   input: OperationalResourceEngineInput,
 ): OperationalResourceEffect[] {
   const effects: OperationalResourceEffect[] = [];
+  const pressureScale = assignmentPressureScale(input);
   for (const assignment of Object.values(input.assignments.assignmentsByEventId)) {
     if (assignment.status !== 'confirmed' && assignment.status !== 'processed') continue;
     const district = planDistrictId(input);
@@ -262,6 +291,12 @@ export function buildOperationalResourceEffectsFromAssignment(
 
     applyApproachEffects(effects, assignment.approachType, personnel, district, input);
   }
+  if (pressureScale < 1 && effects.length > 0) {
+    return effects.map((e) => ({
+      ...e,
+      delta: Math.round(e.delta * pressureScale),
+    })).filter((e) => e.delta !== 0);
+  }
   return effects;
 }
 
@@ -282,9 +317,9 @@ function applyApproachEffects(
       pushContainerEffect(effects, district, 'maintenance_pressure', -4, 'Kalıcı çözüm', ['assignment', 'approach'], input);
       break;
     case 'low_resource':
-      pushPersonnelEffect(effects, personnel ?? 'field_team', 'workload', -3, 'Düşük kaynak', ['assignment', 'approach'], input);
-      pushContainerEffect(effects, district, 'fill_pressure', 3, 'Yarına taşınan risk', ['assignment', 'approach', 'carry_over'], input);
-      pushContainerEffect(effects, district, 'social_pressure', 2, 'Yarına taşınan risk', ['assignment', 'approach', 'carry_over'], input);
+      pushPersonnelEffect(effects, personnel ?? 'field_team', 'workload', -2, 'Düşük kaynak', ['assignment', 'approach'], input);
+      pushContainerEffect(effects, district, 'fill_pressure', 2, 'Yarına taşınan risk', ['assignment', 'approach', 'carry_over'], input);
+      pushContainerEffect(effects, district, 'social_pressure', 1, 'Yarına taşınan risk', ['assignment', 'approach', 'carry_over'], input);
       break;
     case 'public_first':
       pushPersonnelEffect(effects, 'public_relations_team', 'workload', 5, 'Halk önceliği', ['assignment', 'approach'], input);
@@ -345,17 +380,24 @@ function crisisActionResourceEffects(
       }
       break;
     case 'field_rebalance':
-      pushPersonnelEffect(effects, 'field_team', 'workload', 3, 'Saha dengeleme', ['crisis_action'], input);
-      pushPersonnelEffect(effects, 'technical_team', 'workload', 2, 'Saha dengeleme', ['crisis_action'], input);
+      pushPersonnelEffect(effects, 'field_team', 'workload', 2, 'Saha dengeleme', ['crisis_action'], input);
+      pushPersonnelEffect(effects, 'field_team', 'fatigue', -4, 'Saha dengeleme', ['crisis_action'], input);
+      pushPersonnelEffect(effects, 'technical_team', 'workload', 1, 'Saha dengeleme', ['crisis_action'], input);
+      pushVehicleEffect(effects, 'route_support_vehicle', 'route', -4, 'Saha dengeleme', ['crisis_action'], input);
       break;
     case 'preventive_maintenance':
-      pushVehicleEffect(effects, 'maintenance_vehicle', 'maintenance', -9, 'Önleyici bakım hamlesi', ['crisis_action'], input);
-      pushPersonnelEffect(effects, 'technical_team', 'workload', 4, 'Önleyici bakım hamlesi', ['crisis_action'], input);
+      pushVehicleEffect(effects, 'maintenance_vehicle', 'maintenance', -11, 'Önleyici bakım hamlesi', ['crisis_action'], input);
+      pushVehicleEffect(effects, 'standard_truck', 'capacity', -4, 'Önleyici bakım hamlesi', ['crisis_action'], input);
+      pushPersonnelEffect(effects, 'technical_team', 'workload', 3, 'Önleyici bakım hamlesi', ['crisis_action'], input);
+      for (const d of affectedDistricts.slice(0, 2)) {
+        pushContainerEffect(effects, d, 'fill_pressure', -5, 'Önleyici bakım hamlesi', ['crisis_action'], input);
+        pushContainerEffect(effects, d, 'maintenance_pressure', -4, 'Önleyici bakım hamlesi', ['crisis_action'], input);
+      }
       break;
     case 'monitor_only':
       for (const d of affectedDistricts.slice(0, 2)) {
-        pushContainerEffect(effects, d, 'fill_pressure', 3, 'İzlemeye alındı', ['crisis_action', 'carry_over'], input);
-        pushContainerEffect(effects, d, 'maintenance_pressure', 2, 'İzlemeye alındı', ['crisis_action', 'carry_over'], input);
+        pushContainerEffect(effects, d, 'fill_pressure', 2, 'İzlemeye alındı', ['crisis_action', 'carry_over'], input);
+        pushContainerEffect(effects, d, 'maintenance_pressure', 1, 'İzlemeye alındı', ['crisis_action', 'carry_over'], input);
       }
       break;
     default:
@@ -580,8 +622,231 @@ export function processOperationalResourcesEndOfDay(
   ];
 
   state = applyOperationalResourceEffects(state, effects, closingDay);
+  state = applyNightlyOperationalResourceRecovery(state, input);
   const summary = calculateOperationalResourceDailySummary(state, closingDay);
   return markOperationalResourcesProcessed(state, closingDay, summary);
+}
+
+function crisisActionNightlyRecoveryBonus(
+  actionType: CrisisActionType | undefined,
+): number {
+  switch (actionType) {
+    case 'preventive_maintenance':
+      return 8;
+    case 'field_rebalance':
+      return 6;
+    case 'public_briefing':
+      return 5;
+    case 'crisis_coordination':
+      return 5;
+    default:
+      return 0;
+  }
+}
+
+function countCriticalOperationalGroups(state: OperationalResourcesState): number {
+  let count = 0;
+  for (const g of Object.values(state.personnelGroups)) {
+    if (g.status === 'critical') count += 1;
+  }
+  for (const g of Object.values(state.vehicleGroups)) {
+    if (g.status === 'critical') count += 1;
+  }
+  for (const n of Object.values(state.containerNetworksByDistrictId)) {
+    if (n.status === 'critical') count += 1;
+  }
+  return count;
+}
+
+function applyNightlyOperationalResourceRecovery(
+  state: OperationalResourcesState,
+  input: OperationalResourceEngineInput,
+): OperationalResourcesState {
+  const plan = input.dailyOperationsPlan;
+  const day = input.gameState.city.day;
+  const selectedCrisisAction = getSelectedCrisisActionForDay(
+    input.crisisActionState,
+    day,
+  );
+  const crisisRecoveryBonus =
+    selectedCrisisAction?.status === 'selected'
+      ? crisisActionNightlyRecoveryBonus(selectedCrisisAction.type)
+      : 0;
+  const criticalGroupCount = countCriticalOperationalGroups(state);
+  const streakRecoveryBonus =
+    criticalGroupCount >= 3 ? 8 : criticalGroupCount >= 2 ? 6 : criticalGroupCount >= 1 ? 2 : 0;
+  let next = { ...state, personnelGroups: { ...state.personnelGroups } };
+
+  for (const id of Object.keys(next.personnelGroups) as PersonnelGroupId[]) {
+    const g = { ...next.personnelGroups[id]! };
+    let recovery =
+      (g.usedToday ? 4 : 6) + crisisRecoveryBonus + streakRecoveryBonus;
+    if (plan?.personnelFocus === 'rest_rotation') recovery += 5;
+    if (plan?.vehicleFocus === 'preventive_maintenance' && id === 'technical_team') {
+      recovery += 5;
+    }
+    if (selectedCrisisAction?.type === 'field_rebalance') recovery += 4;
+    if (selectedCrisisAction?.type === 'crisis_coordination') recovery += 3;
+    if (selectedCrisisAction?.type === 'public_briefing') recovery += 2;
+    if (g.status === 'critical') {
+      recovery += criticalGroupCount >= 2 ? 7 : 6;
+      g.workloadScore = clampResourceScore(Math.min(g.workloadScore, 90));
+      g.fatigueScore = clampResourceScore(Math.min(g.fatigueScore, 90));
+    }
+    g.workloadScore = clampResourceScore(g.workloadScore - recovery);
+    g.fatigueScore = clampResourceScore(g.fatigueScore - Math.ceil(recovery / 2));
+    next.personnelGroups[id] = g;
+  }
+
+  const vehicleGroups = { ...next.vehicleGroups };
+  for (const id of Object.keys(vehicleGroups) as VehicleGroupId[]) {
+    const g = { ...vehicleGroups[id]! };
+    let recovery =
+      (g.usedToday ? 4 : 6) + crisisRecoveryBonus + streakRecoveryBonus;
+    if (plan?.vehicleFocus === 'preventive_maintenance') recovery += 6;
+    if (plan?.vehicleFocus === 'route_check') recovery += 4;
+    if (selectedCrisisAction?.type === 'preventive_maintenance') recovery += 4;
+    if (g.status === 'critical') {
+      recovery += 5;
+    }
+    g.capacityPressure = clampResourceScore(g.capacityPressure - recovery);
+    g.maintenanceRisk = clampResourceScore(g.maintenanceRisk - Math.ceil(recovery / 2));
+    g.routePressure = clampResourceScore(g.routePressure - Math.ceil(recovery / 2));
+    vehicleGroups[id] = g;
+  }
+  next.vehicleGroups = vehicleGroups;
+
+  const containerNetworksByDistrictId = { ...next.containerNetworksByDistrictId };
+  for (const districtId of Object.keys(containerNetworksByDistrictId)) {
+    const n = { ...containerNetworksByDistrictId[districtId]! };
+    let recovery =
+      (plan?.containerFocus === 'cleanliness_maintenance' ||
+      plan?.containerFocus === 'risk_inspection'
+        ? 5
+        : 3) +
+      streakRecoveryBonus;
+    if (selectedCrisisAction?.type === 'public_briefing') recovery += 5;
+    if (selectedCrisisAction?.type === 'preventive_maintenance') recovery += 4;
+    if (n.status === 'critical') {
+      recovery += 4;
+    }
+    n.fillPressure = clampResourceScore(n.fillPressure - recovery);
+    n.cleanlinessPressure = clampResourceScore(n.cleanlinessPressure - recovery);
+    n.socialPressure = clampResourceScore(
+      n.socialPressure - Math.ceil(recovery / 2),
+    );
+    containerNetworksByDistrictId[districtId] = n;
+  }
+  next.containerNetworksByDistrictId = containerNetworksByDistrictId;
+
+  let nextWithStatus = recomputeGroupSummaries(next);
+  const criticalAfterRecovery = countCriticalOperationalGroups(nextWithStatus);
+  nextWithStatus = applyCriticalRecoveryFloor(nextWithStatus, criticalAfterRecovery);
+  nextWithStatus = softenStuckCriticalGroups(nextWithStatus, criticalAfterRecovery);
+  return recomputeGroupSummaries(nextWithStatus);
+}
+
+function softenStuckCriticalGroups(
+  state: OperationalResourcesState,
+  criticalGroupCount: number,
+): OperationalResourcesState {
+  if (criticalGroupCount < 2) return state;
+
+  let next = {
+    ...state,
+    personnelGroups: { ...state.personnelGroups },
+    vehicleGroups: { ...state.vehicleGroups },
+    containerNetworksByDistrictId: { ...state.containerNetworksByDistrictId },
+  };
+
+  for (const id of Object.keys(next.personnelGroups) as PersonnelGroupId[]) {
+    const g = { ...next.personnelGroups[id]! };
+    if (g.status === 'critical') {
+      g.workloadScore = clampResourceScore(Math.min(g.workloadScore, 79));
+      g.fatigueScore = clampResourceScore(Math.min(g.fatigueScore, 79));
+    }
+    next.personnelGroups[id] = g;
+  }
+
+  for (const id of Object.keys(next.vehicleGroups) as VehicleGroupId[]) {
+    const g = { ...next.vehicleGroups[id]! };
+    if (g.status === 'critical') {
+      g.capacityPressure = clampResourceScore(Math.min(g.capacityPressure, 79));
+      g.maintenanceRisk = clampResourceScore(Math.min(g.maintenanceRisk, 79));
+      g.routePressure = clampResourceScore(Math.min(g.routePressure, 79));
+    }
+    next.vehicleGroups[id] = g;
+  }
+
+  for (const districtId of Object.keys(next.containerNetworksByDistrictId)) {
+    const n = { ...next.containerNetworksByDistrictId[districtId]! };
+    if (n.status === 'critical') {
+      n.fillPressure = clampResourceScore(Math.min(n.fillPressure, 79));
+      n.cleanlinessPressure = clampResourceScore(Math.min(n.cleanlinessPressure, 79));
+      n.socialPressure = clampResourceScore(Math.min(n.socialPressure, 79));
+    }
+    next.containerNetworksByDistrictId[districtId] = n;
+  }
+
+  return next;
+}
+
+function applyCriticalRecoveryFloor(
+  state: OperationalResourcesState,
+  criticalGroupCount: number,
+): OperationalResourcesState {
+  if (criticalGroupCount < 2) return state;
+
+  let next = {
+    ...state,
+    personnelGroups: { ...state.personnelGroups },
+    vehicleGroups: { ...state.vehicleGroups },
+    containerNetworksByDistrictId: { ...state.containerNetworksByDistrictId },
+  };
+
+  const floorPull =
+    criticalGroupCount >= 4 ? 10 : criticalGroupCount >= 3 ? 8 : criticalGroupCount >= 2 ? 7 : 0;
+  if (floorPull === 0) return state;
+
+  for (const id of Object.keys(next.personnelGroups) as PersonnelGroupId[]) {
+    const g = { ...next.personnelGroups[id]! };
+    const pressure = g.workloadScore * 0.55 + g.fatigueScore * 0.45;
+    if (g.status === 'critical' || pressure >= 76) {
+      g.workloadScore = clampResourceScore(g.workloadScore - floorPull);
+      g.fatigueScore = clampResourceScore(g.fatigueScore - Math.ceil(floorPull * 0.7));
+    }
+    next.personnelGroups[id] = g;
+  }
+
+  for (const id of Object.keys(next.vehicleGroups) as VehicleGroupId[]) {
+    const g = { ...next.vehicleGroups[id]! };
+    const pressure =
+      g.capacityPressure * 0.4 + g.maintenanceRisk * 0.35 + g.routePressure * 0.25;
+    if (g.status === 'critical' || pressure >= 76) {
+      g.capacityPressure = clampResourceScore(g.capacityPressure - floorPull);
+      g.maintenanceRisk = clampResourceScore(g.maintenanceRisk - Math.ceil(floorPull * 0.6));
+      g.routePressure = clampResourceScore(g.routePressure - Math.ceil(floorPull * 0.5));
+    }
+    next.vehicleGroups[id] = g;
+  }
+
+  for (const districtId of Object.keys(next.containerNetworksByDistrictId)) {
+    const n = { ...next.containerNetworksByDistrictId[districtId]! };
+    const pressure =
+      n.fillPressure * 0.35 +
+      n.cleanlinessPressure * 0.25 +
+      n.maintenancePressure * 0.2 +
+      n.socialPressure * 0.2;
+    if (n.status === 'critical' || pressure >= 76) {
+      n.fillPressure = clampResourceScore(n.fillPressure - floorPull);
+      n.cleanlinessPressure = clampResourceScore(n.cleanlinessPressure - Math.ceil(floorPull * 0.8));
+      n.maintenancePressure = clampResourceScore(n.maintenancePressure - Math.ceil(floorPull * 0.6));
+      n.socialPressure = clampResourceScore(n.socialPressure - Math.ceil(floorPull * 0.5));
+    }
+    next.containerNetworksByDistrictId[districtId] = n;
+  }
+
+  return next;
 }
 
 export function getRecommendedResourceForEvent(

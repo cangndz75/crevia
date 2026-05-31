@@ -122,6 +122,9 @@ export function OperationalResourcesDetailSheet({ visible, onClose }: Props) {
   const operationalResources = useGameStore((s) => s.operationalResources);
 
   const sheetModel = useMemo(() => {
+    if (!visible) {
+      return undefined;
+    }
     const input = buildOperationalResourceEngineInputFromStore({
       gameState,
       monetization,
@@ -134,6 +137,7 @@ export function OperationalResourcesDetailSheet({ visible, onClose }: Props) {
     });
     return buildOperationalResourceDetailSheetModel(input);
   }, [
+    visible,
     assignments,
     crisisActionState,
     dailyOperationsPlan,
@@ -152,7 +156,7 @@ export function OperationalResourcesDetailSheet({ visible, onClose }: Props) {
     }
   }, [visible, sheetModel]);
 
-  if (!sheetModel) {
+  if (!visible || !sheetModel) {
     return null;
   }
 

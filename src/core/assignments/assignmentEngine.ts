@@ -86,14 +86,14 @@ function applyCompatibilityModifiers(
     const boosted = effects.map((e) => {
       if (e.delta >= 0) return e;
       const boostedDelta = scaleGameplayDelta(
-        Math.round(e.delta * 1.25),
+        Math.round(e.delta * 1.2),
         buildAssignmentScaleContext(input),
       );
       return { ...e, delta: boostedDelta, reason: e.reason };
     });
     boosted.push({
       domain: 'overall',
-      delta: scaleGameplayDelta(-2, buildAssignmentScaleContext(input)),
+      delta: scaleGameplayDelta(-3, buildAssignmentScaleContext(input)),
       reason: BALANCE_COPY.strongFitReport,
       sourceTags: ['assignment', 'strong_fit'],
     });
@@ -106,7 +106,7 @@ function applyCompatibilityModifiers(
       ...effects,
       {
         domain: related,
-        delta: scaleGameplayDelta(4, buildAssignmentScaleContext(input)),
+        delta: scaleGameplayDelta(5, buildAssignmentScaleContext(input)),
         reason: BALANCE_COPY.weakFitReport,
         sourceTags: ['assignment', 'weak_fit', 'carry_over'],
       },
@@ -438,7 +438,7 @@ export function calculateAssignmentEffects(
 
   if (assignment.approachType === 'low_resource') {
     pushEffect(effects, 'overall', -1, BALANCE_COPY.lowResourceReport, input);
-    pushEffect(effects, related, 6, 'Sorun yarına taşınabilir', input);
+    pushEffect(effects, related, 4, 'Sorun yarına taşınabilir', input);
   }
 
   if (assignment.approachType === 'lasting_fix') {

@@ -144,6 +144,8 @@ export type MainOperationEngineInput = {
   mainOperationSeason: MainOperationSeasonState;
   operationSignals?: import('@/core/operations/operationSignalTypes').OperationSignalsState;
   assignments?: import('@/core/assignments/assignmentTypes').AssignmentsState;
+  crisisState?: import('@/core/crisis/crisisTypes').CrisisState;
+  operationalResources?: import('@/core/operationalResources/operationalResourceTypes').OperationalResourcesState;
 };
 
 export type PostPilotMainOperationEventContext = {

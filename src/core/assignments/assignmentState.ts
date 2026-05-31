@@ -290,8 +290,14 @@ export function buildDailyAssignmentSummary(
     if (a.status === 'confirmed' || a.status === 'dispatched' || a.status === 'processed') {
       confirmedCount += 1;
     }
-    if (a.compatibilityLabel === 'Güçlü uyum') strongFitCount += 1;
-    if (a.compatibilityLabel === 'Zayıf uyum') weakFitCount += 1;
+    const compatScore =
+      typeof a.compatibilityScore === 'number' ? a.compatibilityScore : 50;
+    if (a.compatibilityLabel === 'Güçlü uyum' || compatScore >= 62) {
+      strongFitCount += 1;
+    }
+    if (a.compatibilityLabel === 'Zayıf uyum' || compatScore <= 46) {
+      weakFitCount += 1;
+    }
     for (const e of a.effects) {
       domainCounts[e.domain] = (domainCounts[e.domain] ?? 0) + 1;
     }

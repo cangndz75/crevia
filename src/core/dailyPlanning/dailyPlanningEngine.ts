@@ -108,6 +108,9 @@ export function calculateDailyPlanEffects(
       break;
     case 'preventive_maintenance':
       pushEffect(effects, 'vehicles', -9, BALANCE_COPY.preventiveMaintenanceReport, input);
+      if (vehiclesStrained) {
+        pushEffect(effects, 'overall', -3, 'Önleyici bakım filo baskısını belirgin düşürür', input);
+      }
       if (containersHigh) {
         pushEffect(effects, 'containers', 2, 'Önleyici bakım konteyner gecikmesi riski', input);
       }
@@ -121,8 +124,11 @@ export function calculateDailyPlanEffects(
       }
       break;
     case 'route_check':
-      pushEffect(effects, 'vehicles', -4, 'Rota kontrolü gecikme riskini azaltır', input);
-      pushEffect(effects, 'districts', -4, 'Mahalle rotaları dengelenir', input);
+      pushEffect(effects, 'vehicles', -5, 'Rota kontrolü gecikme riskini azaltır', input);
+      pushEffect(effects, 'districts', -5, 'Mahalle rotaları dengelenir', input);
+      if (vehiclesStrained) {
+        pushEffect(effects, 'overall', -2, 'Rota kontrolü araç baskısını yumuşatır', input);
+      }
       break;
     default:
       break;
@@ -138,9 +144,12 @@ export function calculateDailyPlanEffects(
       pushEffect(effects, 'personnel', 3, 'Yoğun toplama personel yükünü artırır', input);
       break;
     case 'cleanliness_maintenance':
-      pushEffect(effects, 'containers', -6, 'Temizlik bakımı konteyner riskini düşürür', input);
-      pushEffect(effects, 'districts', -5, 'Mahalle ve sosyal baskı yumuşar', input);
+      pushEffect(effects, 'containers', -7, 'Temizlik bakımı konteyner riskini düşürür', input);
+      pushEffect(effects, 'districts', -6, 'Mahalle ve sosyal baskı yumuşar', input);
       pushEffect(effects, 'vehicles', 1, 'Temizlik rotası araç yükünü hafif artırır', input);
+      if (containersHigh) {
+        pushEffect(effects, 'overall', -2, 'Temizlik bakımı konteyner baskısını net düşürür', input);
+      }
       break;
     case 'risk_inspection':
       pushEffect(effects, 'containers', -4, 'Risk incelemesi gizli sorunları erken gösterir', input);

@@ -103,6 +103,7 @@ export type CrisisEngineInput = {
   assignments?: import('@/core/assignments/assignmentTypes').AssignmentsState;
   dailyOperationsPlan?: import('@/core/dailyPlanning/dailyPlanningTypes').DailyOperationsPlanState;
   mainOperationSeason?: import('@/core/mainOperation/mainOperationTypes').MainOperationSeasonState;
+  operationalResources?: import('@/core/operationalResources/operationalResourceTypes').OperationalResourcesState;
 };
 
 /** Mahalle strip / harita rozeti */

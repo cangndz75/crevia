@@ -36,6 +36,7 @@ import {
 } from './mainOperationEngine';
 import { ensureMainOperationSeasonForGameState } from './mainOperationEngine';
 import type { MainOperationEngineInput } from './mainOperationTypes';
+import { MAIN_OPERATION_FIRST_CITY_DAY } from './mainOperationConstants';
 import { getActiveMainOperationDistrictIds } from './mainOperationState';
 
 function cloneEventCards(events: EventCard[]): EventCard[] {
@@ -43,6 +44,43 @@ function cloneEventCards(events: EventCard[]): EventCard[] {
     ...event,
     decisions: event.decisions.map((decision) => ({ ...decision })),
   }));
+}
+
+/** Full mode: third event / second side only on controlled days — not every day 9+. */
+export function shouldAllowThirdFullMainOperationEvent(
+  day: number,
+  input: MainOperationEngineInput,
+  crisisState?: CrisisState,
+): boolean {
+  if (day <= MAIN_OPERATION_FIRST_CITY_DAY) {
+    return false;
+  }
+  const signals = input.operationSignals;
+  const resourceStressed =
+    signals != null &&
+    (signals.overall.status === 'critical' ||
+      signals.personnel.status === 'critical' ||
+      signals.vehicles.status === 'critical' ||
+      signals.containers.status === 'critical');
+  const resourceChainStressed =
+    signals != null &&
+    signals.overall.status !== 'stable' &&
+    (signals.vehicles.status === 'strained' ||
+      signals.vehicles.status === 'critical') &&
+    (signals.containers.status === 'strained' ||
+      signals.containers.status === 'critical');
+  if (resourceStressed || resourceChainStressed) {
+    return false;
+  }
+  const crisisBusy =
+    crisisState != null &&
+    (crisisState.activeIncident != null ||
+      crisisState.riskLevel === 'elevated' ||
+      crisisState.riskLevel === 'critical');
+  if (crisisBusy) {
+    return day % 3 === 0;
+  }
+  return day >= 9 && (day % 2 === 0 || day % 5 === 0);
 }
 
 function districtEventKeysFor(districtId: MapDistrictId): string[] {
@@ -144,9 +182,13 @@ export function buildFullMainOperationDailySet(
     false,
   );
 
+  const allowThird = shouldAllowThirdFullMainOperationEvent(day, input, crisisState);
+  const effectiveMaxEvents = allowThird
+    ? density.maxDailyEvents
+    : Math.min(2, density.maxDailyEvents);
   const sideCount = Math.min(
-    density.side,
-    density.maxDailyEvents - density.anchor,
+    allowThird ? density.side : 1,
+    effectiveMaxEvents - density.anchor,
   );
 
   for (let i = 0; i < sideCount; i += 1) {
@@ -188,7 +230,7 @@ export function buildFullMainOperationDailySet(
   if (
     crisisElevated &&
     !hasCrisisEvent &&
-    catalog.length < density.maxDailyEvents
+    catalog.length < effectiveMaxEvents
   ) {
     const crisisDistrict = pickMainOperationEventDistrict(
       season,
@@ -211,7 +253,7 @@ export function buildFullMainOperationDailySet(
           crisisScope,
         );
 
-    if (catalog.length >= density.maxDailyEvents) {
+    if (catalog.length >= effectiveMaxEvents) {
       const replaceIdx = catalog.findIndex((e) => e.id.includes('_side_'));
       if (replaceIdx >= 0) {
         const removed = catalog[replaceIdx]!;
@@ -239,7 +281,7 @@ export function buildFullMainOperationDailySet(
     crisisState &&
     shouldAddCrisisRelatedEvent(crisisState) &&
     !hasCrisisEvent &&
-    catalog.length < density.maxDailyEvents
+    catalog.length < effectiveMaxEvents
   ) {
     const crisisKey = pickCrisisEventTemplateKey(
       crisisState.recentSignals,
@@ -252,7 +294,7 @@ export function buildFullMainOperationDailySet(
     );
     const crisisScope = buildMainOperationEventScope(crisisDistrict);
     const crisisEvent = buildCrisisSideEvent(crisisKey, day, crisisScope);
-    if (catalog.length >= density.maxDailyEvents) {
+    if (catalog.length >= effectiveMaxEvents) {
       const replaceIdx = catalog.findIndex((e) => e.id.includes('_side_'));
       if (replaceIdx >= 0) {
         const removed = catalog[replaceIdx]!;
@@ -278,9 +320,9 @@ export function buildFullMainOperationDailySet(
 
   const activeDistricts = getActiveMainOperationDistrictIds(season);
   if (
-    catalog.length < density.maxDailyEvents &&
-    activeDistricts.length > 0 &&
-    day % 3 === 0
+    allowThird &&
+    catalog.length < effectiveMaxEvents &&
+    activeDistricts.length > 0
   ) {
     const extraDistrict = activeDistricts[day % activeDistricts.length] as MapDistrictId;
     const extraKey = pickContentPackKey(

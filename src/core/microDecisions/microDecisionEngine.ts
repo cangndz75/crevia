@@ -697,7 +697,28 @@ export function resolveMicroDecisionEffects(
 ): MicroDecisionEffect[] {
   const isCrisis =
     decision.type === 'crisis_threshold' || option.effects.some((e) => e.domain === 'crisis');
-  return scaleMicroEffects(option.effects, input, isCrisis);
+  let effects = scaleMicroEffects(option.effects, input, isCrisis);
+  const overallWorsening =
+    input.operationSignals.overall.status === 'strained' ||
+    input.operationSignals.overall.status === 'critical' ||
+    input.operationSignals.overall.score >= 52;
+  if (
+    overallWorsening &&
+    (option.id === 'keep_plan' || option.id === 'monitor')
+  ) {
+    effects = [
+      ...effects,
+      {
+        domain: 'planning',
+        delta: scaleGameplayDelta(1, buildMicroScaleContext(input)),
+        reason: getCarryOverRiskLine(
+          option.id === 'keep_plan' ? 'plan_keep' : 'monitor',
+        ),
+        sourceTags: ['micro', 'carry_over'],
+      },
+    ];
+  }
+  return effects.filter((e) => e.delta !== 0);
 }
 
 export function applyMicroDecisionEffectsToOperationSignals(

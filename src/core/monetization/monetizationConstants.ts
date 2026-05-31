@@ -75,7 +75,7 @@ export const MONETIZATION_COPY = {
     'Pilot boyunca planlama, saha ataması, operasyon sinyalleri ve rapor akışını tamamladın.',
   primaryCta: 'Ana Operasyonu Aç',
   secondaryCta: 'Sınırlı Gündemle Devam Et',
-  restoreCta: 'Erişimi Kontrol Et',
+  restoreCta: 'Erişimi Geri Yükle',
   playerFooter:
     'Sınırlı gündemle devam edersen şehir kapsamı dar kalır.',
   devFooterNote:

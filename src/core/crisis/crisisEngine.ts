@@ -23,8 +23,10 @@ import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventC
 
 import {
   CRISIS_INCIDENT_ACTIVE_THRESHOLD,
+  CRISIS_INCIDENT_COMBINED_RISK_THRESHOLD,
   CRISIS_INCIDENT_FORMING_THRESHOLD,
   CRISIS_SCORE_DAILY_DECAY,
+  CRISIS_SCORE_GOOD_DAY_EXTRA_DECAY,
   CRISIS_SCORE_ELEVATED_MAX,
   CRISIS_SEASON_DAY1_SCORE_CAP,
   CRISIS_SIGNAL_COPY,
@@ -116,17 +118,35 @@ export function calculateCityCrisisScore(input: CrisisEngineInput): number {
     0.25;
   const personnel = domainPressure(signals.personnel) * 0.1;
 
-  const weakFit = input.assignments?.dailyAssignmentSummary?.weakFitCount ?? 0;
-  const strongFit =
-    input.assignments?.dailyAssignmentSummary?.strongFitCount ?? 0;
-  const assignmentPart = clampCrisisScore(
-    weakFit * 12 - strongFit * 3 + 10,
-  ) * 0.1;
+  let weakFit = input.assignments?.dailyAssignmentSummary?.weakFitCount ?? 0;
+  let strongFit = input.assignments?.dailyAssignmentSummary?.strongFitCount ?? 0;
+  if (input.assignments && input.assignments.dailyAssignmentSummary?.day !== input.gameState.city.day) {
+    for (const assignment of Object.values(input.assignments.assignmentsByEventId)) {
+      if (assignment.day !== input.gameState.city.day) continue;
+      const compatScore =
+        typeof assignment.compatibilityScore === 'number'
+          ? assignment.compatibilityScore
+          : 50;
+      if (assignment.compatibilityLabel === 'Zayıf uyum' || compatScore <= 46) {
+        weakFit += 1;
+      }
+      if (assignment.compatibilityLabel === 'Güçlü uyum' || compatScore >= 62) {
+        strongFit += 1;
+      }
+    }
+  }
+  const assignmentPart =
+    clampCrisisScore(weakFit * 14 - strongFit * 4 + 10) * 0.2;
 
   const criticalEvents = input.gameState.events.filter(
     (e) => e.riskLevel === 'critical' || e.riskLevel === 'high',
   ).length;
-  const eventPart = clampCrisisScore(criticalEvents * 10) * 0.1;
+  let eventPart = clampCrisisScore(criticalEvents * 10) * 0.1;
+  if (strongFit >= 2 && weakFit === 0) {
+    eventPart *= 0.35;
+  } else if (strongFit >= 1 && weakFit === 0) {
+    eventPart *= 0.55;
+  }
 
   let raw = overall + districts + vehiclesContainers + personnel + assignmentPart + eventPart;
 
@@ -149,8 +169,45 @@ export function calculateCityCrisisScore(input: CrisisEngineInput): number {
       raw = Math.min(CRISIS_SEASON_DAY1_SCORE_CAP, raw);
     }
     const activeDistricts = getActiveMainOperationDistrictIds(season).length;
-    if (activeDistricts >= 3) {
-      raw += 4;
+    const overallStressed =
+      signals.overall.status === 'strained' || signals.overall.status === 'critical';
+    if (activeDistricts >= 3 && overallStressed) {
+      raw += 3;
+    }
+    if (overallStressed) {
+      raw += 5;
+    }
+    if (
+      signals.vehicles.status === 'strained' ||
+      signals.vehicles.status === 'critical'
+    ) {
+      raw += 5;
+    }
+    if (
+      signals.containers.status === 'strained' ||
+      signals.containers.status === 'critical'
+    ) {
+      raw += 5;
+    }
+    raw += weakFit * 5;
+    if (strongFit >= 2 && weakFit === 0) {
+      raw -= 14;
+    } else if (strongFit >= 1 && weakFit === 0) {
+      raw -= 10;
+    } else if (strongFit > weakFit) {
+      raw -= 5;
+    }
+    const resources = input.operationalResources;
+    if (resources) {
+      const resourceCritical = [
+        ...Object.values(resources.personnelGroups),
+        ...Object.values(resources.vehicleGroups),
+      ].some((g) => g.status === 'critical');
+      if (resourceCritical) {
+        const controlledOps =
+          strongFit >= 2 && weakFit === 0 && signals.overall.score <= 35;
+        raw += controlledOps ? 2 : 6;
+      }
     }
   }
 
@@ -194,11 +251,16 @@ export function applyGameplayCrisisModifiers(
   const plan = input.dailyOperationsPlan;
 
   if (summary) {
-    if (summary.strongFitCount > summary.weakFitCount) {
-      score -= scaleGameplayDelta(4, ctx);
+    if (summary.strongFitCount > summary.weakFitCount && summary.weakFitCount === 0) {
+      score -= scaleGameplayDelta(8, ctx);
+    } else if (summary.strongFitCount > summary.weakFitCount) {
+      score -= scaleGameplayDelta(5, ctx);
     }
     if (summary.weakFitCount > 0) {
-      score += scaleGameplayDelta(5, ctx);
+      score += scaleGameplayDelta(6, ctx);
+    }
+    if (summary.weakFitCount >= 2) {
+      score += scaleGameplayDelta(4, ctx);
     }
   }
 
@@ -207,8 +269,20 @@ export function applyGameplayCrisisModifiers(
   const containerStrained =
     signals.containers.status === 'strained' || signals.containers.status === 'critical';
 
-  if (plan?.vehicleFocus === 'preventive_maintenance' && vehicleStrained && containerStrained) {
-    score -= scaleGameplayDelta(4, ctx);
+  if (plan?.vehicleFocus === 'preventive_maintenance') {
+    score -= scaleGameplayDelta(vehicleStrained ? 4 : 6, ctx);
+  }
+  if (plan?.vehicleFocus === 'route_check' && !vehicleStrained) {
+    score -= scaleGameplayDelta(3, ctx);
+  }
+  if (
+    plan?.containerFocus === 'cleanliness_maintenance' ||
+    plan?.containerFocus === 'risk_inspection'
+  ) {
+    score -= scaleGameplayDelta(2, ctx);
+  }
+  if (plan?.personnelFocus === 'rest_rotation') {
+    score -= scaleGameplayDelta(2, ctx);
   }
 
   if (
@@ -219,7 +293,30 @@ export function applyGameplayCrisisModifiers(
     score += scaleGameplayDelta(3, ctx);
   }
 
+  if (
+    summary &&
+    summary.weakFitCount > 0 &&
+    plan?.personnelFocus === 'balanced_shift' &&
+    signals.overall.status !== 'stable'
+  ) {
+    score += scaleGameplayDelta(3, ctx);
+  }
+
   return clampCrisisScore(score);
+}
+
+function hasCombinedOperationalCrisisRisk(
+  signals: OperationSignalsState,
+): boolean {
+  const vehicleStrained =
+    signals.vehicles.status === 'strained' || signals.vehicles.status === 'critical';
+  const containerStrained =
+    signals.containers.status === 'strained' || signals.containers.status === 'critical';
+  const districtsWorsening =
+    signals.districts.status === 'strained' ||
+    signals.districts.status === 'critical' ||
+    signals.districts.score >= 58;
+  return vehicleStrained && containerStrained && districtsWorsening;
 }
 
 export function buildCrisisSignals(input: CrisisEngineInput): CrisisSignal[] {
@@ -314,7 +411,7 @@ export function buildCrisisSignals(input: CrisisEngineInput): CrisisSignal[] {
   if (
     plan?.status === 'confirmed' &&
     vehicleStrained &&
-    plan.vehicleFocus === 'preventive_maintenance'
+    (plan.vehicleFocus === 'high_capacity' || plan.personnelFocus === 'rapid_response')
   ) {
     signals.push(
       buildCrisisSignal({
@@ -363,6 +460,41 @@ function pickIncidentTemplate(
   return CRISIS_INCIDENT_TEMPLATES.multi_district_pressure;
 }
 
+function isPreventiveControlDailyPlan(
+  plan: CrisisEngineInput['dailyOperationsPlan'],
+): boolean {
+  if (!plan || (plan.status !== 'confirmed' && plan.status !== 'processed')) {
+    return false;
+  }
+  const vehicleOk =
+    plan.vehicleFocus === 'preventive_maintenance' || plan.vehicleFocus === 'route_check';
+  const containerOk =
+    plan.containerFocus === 'cleanliness_maintenance' ||
+    plan.containerFocus === 'risk_inspection';
+  const personnelOk =
+    plan.personnelFocus === 'rest_rotation' || plan.personnelFocus === 'field_inspection';
+  return vehicleOk && (containerOk || personnelOk);
+}
+
+function hasConsecutiveElevatedCrisisRisk(crisisState: CrisisState): boolean {
+  const prev = crisisState.previousCityCrisisScore ?? crisisState.cityCrisisScore;
+  return (
+    prev >= 58 &&
+    crisisState.cityCrisisScore >= CRISIS_INCIDENT_FORMING_THRESHOLD
+  );
+}
+
+function hasOperationalResourceCritical(
+  resources: CrisisEngineInput['operationalResources'],
+): boolean {
+  if (!resources) return false;
+  return [
+    ...Object.values(resources.personnelGroups),
+    ...Object.values(resources.vehicleGroups),
+    ...Object.values(resources.containerNetworksByDistrictId),
+  ].some((g) => g.status === 'critical');
+}
+
 export function shouldCreateCrisisIncident(
   input: CrisisEngineInput,
   crisisState: CrisisState,
@@ -384,18 +516,182 @@ export function shouldCreateCrisisIncident(
     return false;
   }
   const score = crisisState.cityCrisisScore;
-  const mainInput = buildMainOperationEngineInput({
-    gameState: input.gameState,
-    monetization: input.monetization,
-    mainOperationSeason:
-      input.mainOperationSeason ?? createInitialMainOperationSeasonState(),
-  });
-  const season = ensureMainOperationSeasonForGameState(mainInput);
-  const seasonDay = getMainOperationSeasonDay(season, day);
-  if (seasonDay < 2 && score < CRISIS_INCIDENT_ACTIVE_THRESHOLD) {
+  const signals = resolveSignals(input);
+  const calmControlledDay =
+    signals.overall.status === 'stable' &&
+    signals.overall.score <= 32 &&
+    signals.vehicles.status !== 'critical' &&
+    signals.containers.status !== 'critical' &&
+    signals.districts.status !== 'critical';
+  let weakFit = input.assignments?.dailyAssignmentSummary?.weakFitCount ?? 0;
+  let strongFit = input.assignments?.dailyAssignmentSummary?.strongFitCount ?? 0;
+  if (
+    input.assignments &&
+    input.assignments.dailyAssignmentSummary?.day !== input.gameState.city.day
+  ) {
+    for (const assignment of Object.values(input.assignments.assignmentsByEventId)) {
+      if (assignment.day !== input.gameState.city.day) continue;
+      const compatScore =
+        typeof assignment.compatibilityScore === 'number'
+          ? assignment.compatibilityScore
+          : 50;
+      if (assignment.compatibilityLabel === 'Zayıf uyum' || compatScore <= 46) {
+        weakFit += 1;
+      }
+      if (assignment.compatibilityLabel === 'Güçlü uyum' || compatScore >= 62) {
+        strongFit += 1;
+      }
+    }
+  }
+  const skilledControl = strongFit >= 1 && strongFit >= weakFit;
+  const mostlySkilled = strongFit >= 2 && strongFit >= weakFit;
+  const wellRunStableDay =
+    score < 50 &&
+    signals.overall.status === 'stable' &&
+    signals.overall.score <= 35 &&
+    signals.vehicles.status !== 'critical' &&
+    signals.containers.status !== 'critical' &&
+    !hasOperationalResourceCritical(input.operationalResources);
+
+  if (
+    calmControlledDay &&
+    score < CRISIS_INCIDENT_ACTIVE_THRESHOLD &&
+    !hasConsecutiveElevatedCrisisRisk(crisisState) &&
+    skilledControl
+  ) {
     return false;
   }
-  return score >= CRISIS_INCIDENT_FORMING_THRESHOLD;
+  const wellControlled =
+    skilledControl &&
+    signals.overall.status === 'stable' &&
+    signals.vehicles.status !== 'critical' &&
+    signals.containers.status !== 'critical';
+
+  if (wellControlled && score < 74) {
+    return false;
+  }
+  if (skilledControl && weakFit === 0 && score < CRISIS_INCIDENT_ACTIVE_THRESHOLD) {
+    return false;
+  }
+
+  const controlledStrongPlay =
+    mostlySkilled &&
+    weakFit === 0 &&
+    isPreventiveControlDailyPlan(input.dailyOperationsPlan) &&
+    signals.overall.score <= 42 &&
+    !hasOperationalResourceCritical(input.operationalResources);
+
+  let trigger = false;
+  if (score >= CRISIS_INCIDENT_FORMING_THRESHOLD) {
+    if (skilledControl) {
+      trigger =
+        score >= CRISIS_INCIDENT_ACTIVE_THRESHOLD ||
+        (hasConsecutiveElevatedCrisisRisk(crisisState) &&
+          score >= CRISIS_INCIDENT_FORMING_THRESHOLD + 6);
+    } else {
+      trigger = true;
+    }
+  } else if (weakFit >= 2) {
+    trigger = wellRunStableDay
+      ? score >= CRISIS_INCIDENT_ACTIVE_THRESHOLD ||
+        hasConsecutiveElevatedCrisisRisk(crisisState)
+      : skilledControl
+        ? score >= CRISIS_INCIDENT_ACTIVE_THRESHOLD ||
+          hasConsecutiveElevatedCrisisRisk(crisisState)
+        : true;
+  } else if (weakFit >= 1 && score >= 18) {
+    trigger = wellRunStableDay
+      ? score >= CRISIS_INCIDENT_ACTIVE_THRESHOLD
+      : skilledControl
+        ? score >= CRISIS_INCIDENT_ACTIVE_THRESHOLD
+        : true;
+  } else if (
+    weakFit >= 1 &&
+    score >= 42 &&
+    (signals.vehicles.status === 'critical' ||
+      signals.containers.status === 'critical' ||
+      signals.overall.status === 'critical')
+  ) {
+    trigger =
+      wellRunStableDay
+        ? score >= CRISIS_INCIDENT_ACTIVE_THRESHOLD
+        : !skilledControl || score >= CRISIS_INCIDENT_ACTIVE_THRESHOLD;
+  } else if (
+    score >= CRISIS_INCIDENT_COMBINED_RISK_THRESHOLD &&
+    hasCombinedOperationalCrisisRisk(signals)
+  ) {
+    trigger = !skilledControl || score >= CRISIS_INCIDENT_ACTIVE_THRESHOLD;
+  }
+
+  if (trigger && controlledStrongPlay) {
+    if (
+      score < CRISIS_INCIDENT_ACTIVE_THRESHOLD ||
+      !hasConsecutiveElevatedCrisisRisk(crisisState)
+    ) {
+      trigger = false;
+    }
+  }
+  if (
+    trigger &&
+    score >= CRISIS_INCIDENT_FORMING_THRESHOLD &&
+    score < CRISIS_INCIDENT_ACTIVE_THRESHOLD &&
+    mostlySkilled &&
+    isPreventiveControlDailyPlan(input.dailyOperationsPlan) &&
+    !hasConsecutiveElevatedCrisisRisk(crisisState)
+  ) {
+    trigger = false;
+  }
+  if (
+    trigger &&
+    strongFit >= 1 &&
+    weakFit <= strongFit &&
+    score < CRISIS_INCIDENT_ACTIVE_THRESHOLD + 10
+  ) {
+    trigger = false;
+  }
+  if (
+    trigger &&
+    signals.overall.status === 'stable' &&
+    strongFit >= 1 &&
+    weakFit <= 1 &&
+    score < CRISIS_INCIDENT_ACTIVE_THRESHOLD + 8
+  ) {
+    trigger = false;
+  }
+  if (
+    trigger &&
+    score >= CRISIS_INCIDENT_COMBINED_RISK_THRESHOLD &&
+    skilledControl &&
+    !hasConsecutiveElevatedCrisisRisk(crisisState) &&
+    score < CRISIS_INCIDENT_ACTIVE_THRESHOLD
+  ) {
+    trigger = false;
+  }
+  if (
+    trigger &&
+    skilledControl &&
+    weakFit <= strongFit + 1 &&
+    signals.overall.score <= 42 &&
+    score < CRISIS_INCIDENT_ACTIVE_THRESHOLD + 4
+  ) {
+    trigger = false;
+  }
+  if (
+    trigger &&
+    mostlySkilled &&
+    score < CRISIS_INCIDENT_ACTIVE_THRESHOLD
+  ) {
+    trigger = false;
+  }
+  if (
+    trigger &&
+    mostlySkilled &&
+    !hasConsecutiveElevatedCrisisRisk(crisisState) &&
+    score < CRISIS_INCIDENT_ACTIVE_THRESHOLD + 2
+  ) {
+    trigger = false;
+  }
+  return trigger;
 }
 
 export function createCrisisIncidentFromSignals(
@@ -528,9 +824,25 @@ export function processCrisisEndOfDay(
     return state;
   }
 
-  const decayed = clampCrisisScore(
-    Math.max(0, state.cityCrisisScore - CRISIS_SCORE_DAILY_DECAY),
-  );
+  let decay = CRISIS_SCORE_DAILY_DECAY;
+  const fitSummary = input.assignments?.dailyAssignmentSummary;
+  const preventivePlan = isPreventiveControlDailyPlan(input.dailyOperationsPlan);
+  if (
+    fitSummary &&
+    fitSummary.strongFitCount >= 2 &&
+    fitSummary.weakFitCount === 0
+  ) {
+    decay += preventivePlan
+      ? CRISIS_SCORE_GOOD_DAY_EXTRA_DECAY
+      : Math.ceil(CRISIS_SCORE_GOOD_DAY_EXTRA_DECAY * 0.75);
+  } else if (
+    fitSummary &&
+    fitSummary.strongFitCount >= 1 &&
+    fitSummary.strongFitCount > fitSummary.weakFitCount
+  ) {
+    decay += Math.ceil(CRISIS_SCORE_GOOD_DAY_EXTRA_DECAY / 2);
+  }
+  const decayed = clampCrisisScore(Math.max(0, state.cityCrisisScore - decay));
   state = {
     ...state,
     cityCrisisScore: Math.max(decayed, calculateCityCrisisScore(input)),
