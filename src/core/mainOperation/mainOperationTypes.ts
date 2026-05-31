@@ -80,21 +80,34 @@ export type MainOperationReportSummary = {
   tone: 'positive' | 'neutral' | 'warning';
 };
 
+export type MainOperationHubGoalRowTone =
+  | 'positive'
+  | 'neutral'
+  | 'warning'
+  | 'critical';
+
+export type MainOperationHubGoalRow = {
+  id: string;
+  title: string;
+  progressLabel: string;
+  progressRatio: number;
+  tone: MainOperationHubGoalRowTone;
+  iconKey: string;
+  statusLabel: string;
+};
+
 export type MainOperationHubModel = {
   title: string;
   subtitle: string;
   accessLabel: string;
   seasonProgressLabel: string;
+  topInsightLine: string;
   activeDistrictLine: string;
-  goalRows: Array<{
-    id: string;
-    title: string;
-    progressLabel: string;
-    progressRatio: number;
-    tone: string;
-  }>;
+  goalRows: MainOperationHubGoalRow[];
   footerNote: string;
   ctaLabel: string;
+  showGoalsDetailCta: boolean;
+  isFullAccess: boolean;
   compact: boolean;
   visible: boolean;
 };

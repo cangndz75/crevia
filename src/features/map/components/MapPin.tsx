@@ -71,8 +71,25 @@ export function MapPin({
       : (PIN_ICON[pin.type] ?? '•');
   const fontSize = normalized ? 0.02 : 7;
 
-  const glowColor = selected ? colors.primary : pin.color;
-  const glowR = r + (normalized ? (selected ? 0.012 : 0.008) : selected ? 6 : 4);
+  const crisisAccent = pin.crisisHighlight && !selected;
+  const glowColor = selected
+    ? colors.primary
+    : crisisAccent
+      ? '#E59A22'
+      : pin.color;
+  const glowR =
+    r +
+    (normalized
+      ? selected
+        ? 0.012
+        : crisisAccent
+          ? 0.01
+          : 0.008
+      : selected
+        ? 6
+        : crisisAccent
+          ? 5
+          : 4);
   const isSelected = Boolean(selected);
   const { glowAnimatedProps } = usePulseAnimation(isSelected);
 

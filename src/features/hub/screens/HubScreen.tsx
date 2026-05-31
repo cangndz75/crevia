@@ -7,6 +7,7 @@ import { HubAdvisorCard } from '@/features/hub/components/HubAdvisorCard';
 import { HubDailyOperationsPlanCard } from '@/features/hub/components/HubDailyOperationsPlanCard';
 import { HubCrisisDeskCard } from '@/features/hub/components/HubCrisisDeskCard';
 import { HubMainOperationSeasonCard } from '@/features/hub/components/HubMainOperationSeasonCard';
+import { HubLiveOperationsCard } from '@/features/hub/components/HubLiveOperationsCard';
 import { HubOperationSignalsCard } from '@/features/hub/components/HubOperationSignalsCard';
 import { HubCriticalEventCard } from '@/features/hub/components/HubCriticalEventCard';
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
@@ -124,6 +125,8 @@ export function HubScreen() {
         ) : null}
 
         <HubOperationSignalsCard compact={isDay1Layout} />
+
+        <HubLiveOperationsCard compact={isDay1Layout} />
 
         <HubMainOperationSeasonCard compact={isDay1Layout} />
 

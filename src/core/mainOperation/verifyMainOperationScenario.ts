@@ -20,6 +20,8 @@ import { normalizePostPilotOperationState } from '@/core/postPilot/postPilotOper
 import { SAVE_VERSION } from '@/store/gamePersist';
 import { isPostPilotDevToolsEnabled } from '@/features/devtools/postPilotDevToolsGuard';
 
+import { createInitialCrisisState } from '@/core/crisis/crisisState';
+import { countDefsByKind } from './mainOperationContentPack';
 import { MAIN_OPERATION_FORBIDDEN_WORDS, MAIN_OPERATION_UI_COPY } from './mainOperationConstants';
 import {
   buildMainOperationDailyContext,
@@ -467,8 +469,8 @@ export function verifyMainOperationScenario(): VerifyMainOperationOutcome {
   ok =
     assert(
       checks,
-      SAVE_VERSION === 20,
-      'Full loop SAVE_VERSION 20 ile çalışıyor',
+      SAVE_VERSION === 21,
+      'Full loop SAVE_VERSION 21 ile çalışıyor',
       `SAVE_VERSION=${SAVE_VERSION}`,
     ) && ok;
 
@@ -493,21 +495,23 @@ export function verifyMainOperationScenario(): VerifyMainOperationOutcome {
       'dev guard',
     ) && ok;
 
-  hasWarn =
-    warn(
+  ok =
+    assert(
       checks,
-      true,
-      'Kriz Masası foundation pending',
-      'Kriz Masası foundation pending',
-    ) || hasWarn;
+      createInitialCrisisState() != null,
+      'Crisis Desk MVP contract (crisisState seed)',
+      'crisisState',
+    ) && ok;
 
-  hasWarn =
-    warn(
+  ok =
+    assert(
       checks,
-      true,
-      'Full content pack expansion pending',
-      'Full content pack expansion pending',
-    ) || hasWarn;
+      countDefsByKind('anchor') >= 8 &&
+        countDefsByKind('side') >= 14 &&
+        countDefsByKind('district') >= 15,
+      'Full content pack expansion Aşama 1 yüklü',
+      `anchors=${countDefsByKind('anchor')} sides=${countDefsByKind('side')}`,
+    ) && ok;
 
   return { ok, warn: hasWarn, checks };
 }

@@ -4,7 +4,12 @@ import { StyleSheet, View } from 'react-native';
 
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import { DEFAULT_PILOT_DISTRICT_ID } from '@/core/models/DistrictProfile';
+import { buildMainOperationMapScopeBadges } from '@/core/mainOperation/mainOperationPresentation';
+import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 import { buildPostPilotMapContextLineForGameState } from '@/core/postPilot/postPilotOperationUxPresentation';
+import { MapNeighborhoodStrip } from '@/features/map/components/MapNeighborhoodStrip';
+import { MapOperationBottomPanel } from '@/features/map/components/MapOperationBottomPanel';
+import { buildMapCrisisPresentationBundle } from '@/features/map/utils/mapCrisisPresentation';
 import { selectIsDay1TutorialActive } from '@/features/tutorial/tutorialSelectors';
 import { useGameStatus } from '@/store/gameSelectors';
 import {
@@ -27,7 +32,11 @@ import { MapOperationSignalCard } from '../components/MapOperationSignalCard';
 import { MapPilotDistrictStatusCard } from '../components/MapPilotDistrictStatusCard';
 import { MapScreenHeader } from '../components/MapScreenHeader';
 import { MapScreenTitleRow } from '../components/MapScreenTitleRow';
-import { DEFAULT_MAP_DISTRICT_ID, type MapDistrictId } from '../data/mapAssets';
+import {
+  DEFAULT_MAP_DISTRICT_ID,
+  MAP_DISTRICT_IDS,
+  type MapDistrictId,
+} from '../data/mapAssets';
 import { mapDistrictFromPilot } from '../data/mapDistrictMapping';
 import { pilotAreaFromDistrict } from '../data/pilotAreaMapping';
 import {
@@ -39,7 +48,9 @@ import {
 import {
   buildMapFilterChipModel,
   buildMapActiveOperationOverlayModel,
+  buildMapNeighborhoodStripItems,
   buildMapOperationPanelModel,
+  shouldShowMapCrisisChrome,
 } from '../utils/mapUiPresentation';
 import {
   buildMapFilterChipItems,
@@ -148,6 +159,90 @@ export function MapScreen() {
   );
 
   const gameStateForMap = useGameStore((s) => s.gameState);
+  const monetization = useGameStore((s) => s.monetization);
+  const crisisState = useGameStore((s) => s.crisisState);
+  const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
+  const operationSignals = useGameStore((s) => s.operationSignals);
+  const postPilotOperation = useGameStore((s) => s.gameState.pilot.postPilotOperation);
+  const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
+  const pilotCompleted = gameStateForMap.pilot.status === 'completed';
+  const showPostPilotMapChrome = shouldShowMapCrisisChrome(gameDay, pilotCompleted);
+
+  const mapCrisisPresentation = useMemo(
+    () =>
+      buildMapCrisisPresentationBundle({
+        gameState: gameStateForMap,
+        monetization,
+        crisisState,
+        mainOperationSeason,
+        operationSignals,
+      }),
+    [
+      crisisState,
+      gameStateForMap,
+      mainOperationSeason,
+      monetization,
+      operationSignals,
+    ],
+  );
+
+  const mainOperationScopeBadges = useMemo(
+    () =>
+      showPostPilotMapChrome
+        ? buildMainOperationMapScopeBadges(
+            gameStateForMap,
+            monetization,
+            mainOperationSeason,
+          )
+        : [],
+    [
+      gameStateForMap,
+      mainOperationSeason,
+      monetization,
+      showPostPilotMapChrome,
+    ],
+  );
+
+  const crisisHighlightDistrictIds = useMemo(() => {
+    if (!showPostPilotMapChrome || !mapCrisisPresentation.visible) {
+      return undefined;
+    }
+    const allowed = new Set<string>(MAP_DISTRICT_IDS);
+    return mapCrisisPresentation.crisisDistrictIds.filter((id): id is MapDistrictId =>
+      allowed.has(id),
+    );
+  }, [mapCrisisPresentation, showPostPilotMapChrome]);
+
+  const neighborhoodStripItems = useMemo(
+    () =>
+      buildMapNeighborhoodStripItems({
+        pilotDistrictId: selectedDistrictId,
+        focusDistrictId,
+        gameDay,
+        postPilot:
+          gameDay >= POST_PILOT_FIRST_OPERATION_DAY
+            ? {
+                pilotStatus: gameStateForMap.pilot.status,
+                postPilotOperation,
+                authorityState,
+              }
+            : undefined,
+        mainOperationScopeBadges,
+        crisisDistrictBadges: mapCrisisPresentation.districtBadges,
+        crisisAccessMode: crisisState.accessMode,
+      }),
+    [
+      authorityState,
+      crisisState.accessMode,
+      focusDistrictId,
+      gameDay,
+      gameStateForMap.pilot.status,
+      mainOperationScopeBadges,
+      mapCrisisPresentation.districtBadges,
+      postPilotOperation,
+      selectedDistrictId,
+    ],
+  );
 
   const postPilotMapContextLine = useMemo(() => {
     const districtEvents = activeEvents.filter((event) => {
@@ -177,6 +272,9 @@ export function MapScreen() {
         hideFleetSignals: hideMapFleetSignals,
         dayEventTitle: dayEvent.mainEventTitle,
         postPilotMapContextLine: postPilotMapContextLine ?? undefined,
+        crisisLines: mapCrisisPresentation.visible
+          ? mapCrisisPresentation.panelLines
+          : undefined,
       }),
     [
       activeEvents,
@@ -185,6 +283,8 @@ export function MapScreen() {
       focusDistrictId,
       gameDay,
       hideMapFleetSignals,
+      mapCrisisPresentation.panelLines,
+      mapCrisisPresentation.visible,
       mapViewMode,
       pilotAreaId,
       postPilotMapContextLine,
@@ -234,6 +334,14 @@ export function MapScreen() {
 
         <MapFilterChips chips={chipItems} onSelectFilter={handleFilterChipSelect} />
 
+        {showPostPilotMapChrome ? (
+          <MapNeighborhoodStrip
+            items={neighborhoodStripItems}
+            selectedId={focusDistrictId}
+            onSelect={handleDistrictSelect}
+          />
+        ) : null}
+
         <MapHeroPanel
           viewMode={mapViewMode}
           detailDistrictId={detailDistrictId}
@@ -248,6 +356,7 @@ export function MapScreen() {
           hideContainerSignals={hideMapFleetSignals}
           hideVehicleSignals={hideMapFleetSignals}
           selectedPinId={selectedPinId}
+          crisisHighlightDistrictIds={crisisHighlightDistrictIds}
           activeOperationOverlay={activeOperationOverlay}
           onLayersPress={() => setLayerPanelOpen(true)}
           onDistrictSelect={handleDistrictSelect}
@@ -258,17 +367,27 @@ export function MapScreen() {
         />
 
         <Animated.View entering={FadeIn.duration(220)} style={styles.lowerCards}>
+          {showPostPilotMapChrome ? (
+            <MapOperationBottomPanel
+              model={operationPanel}
+              onPressCta={handleFocusDistrict}
+              onPressRecommended={handleFocusDistrict}
+            />
+          ) : null}
+
           <MapOperationSignalCard
             model={operationSignalModel}
             onActionPress={handleFocusDistrict}
             onTrack={handleFocusDistrict}
           />
 
-          <MapPilotDistrictStatusCard
-            model={pilotStatusModel}
-            onSuggestionPress={handleFocusDistrict}
-            onMiniMapPress={handleFocusDistrict}
-          />
+          {!showPostPilotMapChrome ? (
+            <MapPilotDistrictStatusCard
+              model={pilotStatusModel}
+              onSuggestionPress={handleFocusDistrict}
+              onMiniMapPress={handleFocusDistrict}
+            />
+          ) : null}
         </Animated.View>
       </View>
 

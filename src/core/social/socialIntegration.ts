@@ -1,3 +1,6 @@
+import { buildMainOperationSocialMentionsForDay } from '@/core/mainOperation/mainOperationSocialContent';
+import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
+
 import {
   SOCIAL_DEFAULT_LAST_PROCESSED_DAY,
   SOCIAL_NEIGHBORHOOD_IDS,
@@ -373,12 +376,26 @@ export function processSocialPulseAfterDecisionForStore(
   }
 }
 
+export type SocialPulseEndOfDayContext = {
+  enrichMainOperation?: boolean;
+};
+
 /** Store gün kapanışı — bozuk state normalize edilir, ardından günlük drift uygulanır. */
 export function processSocialPulseEndOfDayForStore(
   state: SocialPulseState | null | undefined,
   day: number,
+  context?: SocialPulseEndOfDayContext,
 ): SocialPulseState {
   const resolvedDay = Math.max(1, day);
-  const normalized = normalizeSocialPulseState(state ?? {}, resolvedDay);
+  let normalized = normalizeSocialPulseState(state ?? {}, resolvedDay);
+  if (context?.enrichMainOperation && resolvedDay >= POST_PILOT_FIRST_OPERATION_DAY) {
+    const fresh = buildMainOperationSocialMentionsForDay(resolvedDay, 2);
+    const existingIds = new Set(normalized.mentionFeed.map((m) => m.id));
+    const merged = [
+      ...fresh.filter((m) => !existingIds.has(m.id)),
+      ...normalized.mentionFeed,
+    ].slice(0, 12);
+    normalized = { ...normalized, mentionFeed: merged };
+  }
   return processSocialPulseEndOfDay(normalized, resolvedDay);
 }

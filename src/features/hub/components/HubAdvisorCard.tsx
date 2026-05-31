@@ -41,6 +41,8 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
   const dailyOperationsPlan = useGameStore((s) => s.dailyOperationsPlan);
   const monetization = useGameStore((s) => s.monetization);
   const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
+  const assignments = useGameStore((s) => s.assignments);
+  const microDecisionState = useGameStore((s) => s.microDecisionState);
   const crisisState = useGameStore((s) => s.crisisState);
   const isDay1 = useGameStore(selectIsDay1TutorialEligible);
   const askDaily = useGameStore((s) => s.askAdvisorForDailySummary);
@@ -72,6 +74,14 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
             gameState,
             monetization,
             mainOperationSeason,
+            {
+              operationSignals,
+              dailyOperationsPlan,
+              assignments,
+              crisisState,
+              microDecisionState,
+            },
+            advisorState,
           );
         })(),
       }),
@@ -85,6 +95,8 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
       dailyOperationsPlan,
       monetization,
       mainOperationSeason,
+      assignments,
+      microDecisionState,
       crisisState,
       isDay1,
     ],
@@ -185,11 +197,17 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
           </Text>
         ) : null}
 
+        {!canAsk && !isDay1 ? (
+          <Text style={styles.disabledHint} numberOfLines={2}>
+            Günlük danışman hakkın doldu. Yarın yeni analiz alabilirsin.
+          </Text>
+        ) : null}
+
         <Pressable
           onPress={handleAsk}
           disabled={!canAsk}
           accessibilityRole="button"
-          accessibilityLabel={canAsk ? model.ctaLabel : model.usesLabel}
+          accessibilityLabel={canAsk ? model.ctaLabel : ADVISOR_COPY.usesExhausted}
           accessibilityState={{ disabled: !canAsk }}
           style={({ pressed }) => [
             styles.cta,
@@ -316,6 +334,13 @@ const styles = StyleSheet.create({
   progressLabel: {
     fontSize: 11,
     color: '#6B7F7B',
+    flexShrink: 1,
+  },
+  disabledHint: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#6B7F7B',
+    fontStyle: 'italic',
     flexShrink: 1,
   },
   cta: {

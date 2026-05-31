@@ -23,7 +23,11 @@ import { SAVE_VERSION } from '@/store/gamePersist';
 import { CRISIS_FORBIDDEN_WORDS } from './crisisConstants';
 import {
   buildCrisisEngineInput,
+  buildCrisisDistrictBadges,
   buildCrisisMapLines,
+  buildCrisisMapPanelLines,
+  buildCrisisMapPresentation,
+  shouldShowCrisisMapLines,
   buildCrisisSignals,
   calculateCityCrisisScore,
   calculateCrisisImpactPreview,
@@ -576,6 +580,117 @@ export function verifyCrisisScenario(): VerifyCrisisOutcome {
       'duplicate events',
     ) && ok;
 
+  const pilotMapIn = crisisInput(
+    { ...fullGs, city: { ...fullGs.city, day: 3 } },
+    fullMon,
+    createInitialCrisisState(),
+  );
+  ok =
+    assert(
+      checks,
+      buildCrisisMapPresentation(pilotMapIn).panelLines.length === 0,
+      'buildCrisisMapLines pilot Day 1-7’de boş döner',
+      'map pilot empty',
+    ) && ok;
+
+  const limitedMapIn = crisisInput(limitedGs, selectLimitedContinue(createInitialMonetizationState(), 8), {
+    ...limitedProcess,
+    riskLevel: 'elevated',
+    cityCrisisScore: 70,
+  });
+  const limitedMap = buildCrisisMapPresentation(limitedMapIn);
+  ok =
+    assert(
+      checks,
+      limitedMap.panelLines.length <= 1,
+      'limited_preview max 1 compact line üretir',
+      'map limited lines',
+    ) && ok;
+
+  const fullMap = buildCrisisMapPresentation(crisisInput(fullGs, fullMon, elevatedState));
+  ok =
+    assert(
+      checks,
+      fullMap.visible && fullMap.panelLines.length > 0,
+      'full active risk watch/elevated/critical line üretir',
+      'map full lines',
+    ) && ok;
+
+  const incidentState = {
+    ...elevatedState,
+    activeIncident: {
+      id: 'inc-map',
+      day: 8,
+      status: 'active' as const,
+      title: 'Çoklu Mahalle Baskısı',
+      summary: 'Birden fazla mahallede operasyon sinyalleri yükseldi.',
+      affectedDistrictIds: ['istasyon', 'yesilvadi'],
+      primaryDomain: 'districts' as const,
+      severity: 'high' as const,
+      sourceSignalIds: [],
+    },
+  };
+  const incidentMap = buildCrisisMapPresentation(
+    crisisInput(fullGs, fullMon, incidentState),
+  );
+  ok =
+    assert(
+      checks,
+      incidentMap.panelLines[0]?.summary.includes('mahalle'),
+      'activeIncident varsa incident line önceliklidir',
+      'map incident priority',
+    ) && ok;
+
+  ok =
+    assert(
+      checks,
+      buildCrisisMapPanelLines(crisisInput(fullGs, fullMon, elevatedState)).length <= 2,
+      'recentSignals max 2 line verir',
+      'map max panel lines',
+    ) && ok;
+
+  const emptyDistrictMap = buildCrisisDistrictBadges(
+    crisisInput(fullGs, fullMon, { ...createInitialCrisisState(), accessMode: 'active', riskLevel: 'elevated', cityCrisisScore: 75 }),
+  );
+  ok =
+    assert(
+      checks,
+      Array.isArray(emptyDistrictMap),
+      'affectedDistrictIds boşsa fallback crash etmez',
+      'map badge fallback',
+    ) && ok;
+
+  const criticalMap = buildCrisisMapPresentation(
+    crisisInput(fullGs, fullMon, {
+      ...elevatedState,
+      riskLevel: 'critical',
+      cityCrisisScore: 90,
+    }),
+  );
+  ok =
+    assert(
+      checks,
+      criticalMap.districtBadges.some((b) => b.label === 'Kritik eşik'),
+      'critical risk “Kritik eşik” label üretir',
+      'map critical label',
+    ) && ok;
+
+  const mapUiText = [
+    ...fullMap.panelLines.map((l) => l.summary),
+    ...fullMap.districtBadges.map((b) => b.label),
+  ]
+    .join(' ')
+    .toLowerCase();
+  ok =
+    assert(
+      checks,
+      !CRISIS_FORBIDDEN_WORDS.some((w) =>
+        w === 'xp' ? /\bxp\b/.test(mapUiText) : mapUiText.includes(w),
+      ),
+      'Map crisis forbidden words yok',
+      'map forbidden',
+    ) && ok;
+
   ok =
     assert(
       checks,
@@ -595,8 +710,8 @@ export function verifyCrisisScenario(): VerifyCrisisOutcome {
   ok =
     assert(
       checks,
-      SAVE_VERSION === 20,
-      'Full loop SAVE_VERSION 20 ile çalışıyor',
+      SAVE_VERSION === 21,
+      'Full loop SAVE_VERSION 21 ile çalışıyor',
       `SAVE_VERSION=${SAVE_VERSION}`,
     ) && ok;
 

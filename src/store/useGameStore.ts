@@ -263,6 +263,18 @@ import {
 } from '@/core/crisis/crisisState';
 import type { CrisisState } from '@/core/crisis/crisisTypes';
 import {
+  buildMicroDecisionEngineInputFromStore,
+  createDevFallbackMicroDecision,
+  processMicroDecisionsEndOfDay,
+  refreshMicroDecisionsForDay,
+} from '@/core/microDecisions/microDecisionEngine';
+import {
+  createInitialMicroDecisionState,
+  resolveMicroDecision as resolveMicroDecisionState,
+  skipMicroDecision as skipMicroDecisionState,
+} from '@/core/microDecisions/microDecisionState';
+import type { MicroDecisionState } from '@/core/microDecisions/microDecisionTypes';
+import {
   attachAdvisorPredictionAfterInsight,
   evaluateAdvisorPredictionsAgainstSignals,
 } from '@/core/advisors/advisorPrediction';
@@ -408,6 +420,7 @@ type GameStoreState = {
   monetization: MonetizationState;
   mainOperationSeason: MainOperationSeasonState;
   crisisState: CrisisState;
+  microDecisionState: MicroDecisionState;
   tutorialState: TutorialState;
   /** Oturum içi onboarding ipucu kapatmaları — persist edilmez. */
   onboardingDismissedHintIds: string[];
@@ -492,6 +505,11 @@ type GameStoreActions = {
   processMainOperationSeasonForEndOfDay: () => void;
   refreshCrisisState: () => void;
   processCrisisForEndOfDay: () => void;
+  refreshMicroDecisionsForCurrentDay: () => void;
+  resolveMicroDecision: (decisionId: string, optionId: string) => void;
+  skipMicroDecision: (decisionId: string) => void;
+  processMicroDecisionsForEndOfDay: () => void;
+  devGenerateMicroDecisionForTesting?: () => void;
   devRaiseCrisisRiskForTesting: () => void;
   devJumpToFullMainOperationForTesting: () => void;
   devJumpToPostPilotOfferForTesting: () => void;
@@ -737,6 +755,7 @@ function applySeedBundle(
   | 'monetization'
   | 'mainOperationSeason'
   | 'crisisState'
+  | 'microDecisionState'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -795,10 +814,32 @@ function applySeedBundle(
     monetization: createInitialMonetizationState(),
     mainOperationSeason: createInitialMainOperationSeasonState(),
     crisisState: createInitialCrisisState(),
+    microDecisionState: createInitialMicroDecisionState(),
     tutorialState: { ...INITIAL_TUTORIAL_STATE },
     bestPilotScores: [],
     lastPilotScore: undefined,
   };
+}
+
+function buildMicroDecisionInputFromStore(
+  state: GameStoreState,
+  overrides?: Partial<ReturnType<typeof buildMicroDecisionEngineInputFromStore>>,
+) {
+  const day = overrides?.day ?? state.gameState.city.day;
+  return buildMicroDecisionEngineInputFromStore({
+    day,
+    gameState: state.gameState,
+    monetization: state.monetization,
+    operationSignals: state.operationSignals,
+    crisisState: state.crisisState,
+    dailyOperationsPlan: state.dailyOperationsPlan,
+    assignments: state.assignments,
+    mainOperationSeason: state.mainOperationSeason,
+    advisorState: state.advisorState,
+    microDecisionState: state.microDecisionState,
+    activeEvents: state.gameState.events,
+    ...overrides,
+  });
 }
 
 function buildDailyPlanningInput(state: GameStoreState) {
@@ -2165,6 +2206,69 @@ export const useGameStore = create<GameStore>()(
         });
       },
 
+      refreshMicroDecisionsForCurrentDay: () => {
+        const current = get();
+        const day = current.gameState.city.day;
+        const input = buildMicroDecisionInputFromStore(current);
+        set({
+          microDecisionState: refreshMicroDecisionsForDay(input),
+        });
+      },
+
+      resolveMicroDecision: (decisionId, optionId) => {
+        const current = get();
+        const day = current.gameState.city.day;
+        set({
+          microDecisionState: resolveMicroDecisionState(
+            current.microDecisionState,
+            decisionId,
+            optionId,
+            day,
+          ),
+        });
+      },
+
+      skipMicroDecision: (decisionId) => {
+        const current = get();
+        const day = current.gameState.city.day;
+        set({
+          microDecisionState: skipMicroDecisionState(
+            current.microDecisionState,
+            decisionId,
+            day,
+          ),
+        });
+      },
+
+      processMicroDecisionsForEndOfDay: () => {
+        const current = get();
+        const closingDay = current.gameState.city.day;
+        const input = buildMicroDecisionInputFromStore(current);
+        const result = processMicroDecisionsEndOfDay(input, closingDay);
+        set({
+          microDecisionState: result.microDecisionState,
+          operationSignals: result.operationSignals,
+          crisisState: result.crisisState,
+        });
+      },
+
+      devGenerateMicroDecisionForTesting: () => {
+        if (!__DEV__) return;
+        const current = get();
+        const day = current.gameState.city.day;
+        const input = buildMicroDecisionInputFromStore(current);
+        let next = refreshMicroDecisionsForDay(input);
+        if (next.activeDecisionIds.length === 0) {
+          const fallback = createDevFallbackMicroDecision(day);
+          next = {
+            ...next,
+            decisionsById: { ...next.decisionsById, [fallback.id]: fallback },
+            activeDecisionIds: [fallback.id],
+          };
+        }
+        set({ microDecisionState: next });
+      },
+
       devRaiseCrisisRiskForTesting: () => {
         if (!__DEV__) {
           return;
@@ -2474,6 +2578,11 @@ export const useGameStore = create<GameStore>()(
         const socialPulseStateAfterNight = processSocialPulseEndOfDayForStore(
           current.socialPulseState,
           closingDay,
+          {
+            enrichMainOperation:
+              current.gameState.pilot.postPilotOperation?.phase ===
+              'main_operation_full',
+          },
         );
 
         const personnelStateAfterNight = processPersonnelEndOfDay(
@@ -2894,6 +3003,18 @@ export const useGameStore = create<GameStore>()(
           nextDay,
         );
 
+        const microEodResult = processMicroDecisionsEndOfDay(
+          buildMicroDecisionInputFromStore({
+            ...current,
+            gameState: current.gameState,
+            operationSignals: operationSignalsAfterDay,
+            crisisState: current.crisisState,
+          }),
+          closingDay,
+        );
+        operationSignalsAfterDay = microEodResult.operationSignals;
+        let crisisStateBeforeDerive = microEodResult.crisisState;
+
         const hasCriticalEvent = nextGameState.events.some(
           (e) => e.riskLevel === 'critical' || e.riskLevel === 'high',
         );
@@ -2934,7 +3055,7 @@ export const useGameStore = create<GameStore>()(
         const crisisInput = buildCrisisEngineInput({
           gameState: current.gameState,
           monetization: current.monetization,
-          crisisState: current.crisisState,
+          crisisState: crisisStateBeforeDerive,
           operationSignals: operationSignalsAfterDay,
           assignments: assignmentProcessed.state,
           dailyOperationsPlan: planProcessed.plan,
@@ -2948,6 +3069,22 @@ export const useGameStore = create<GameStore>()(
           ...crisisInput,
           crisisState: crisisStateAfterDay,
         });
+
+        const microStateForNextDay = refreshMicroDecisionsForDay(
+          buildMicroDecisionInputFromStore(
+            {
+              ...current,
+              gameState: withSyncedPulse({
+                ...nextGameState,
+                city: { ...nextGameState.city },
+              }),
+              operationSignals: operationSignalsAfterDay,
+              crisisState: crisisStateAfterDay,
+              microDecisionState: microEodResult.microDecisionState,
+            },
+            { day: nextDay },
+          ),
+        );
 
         const syncedMoraleCity = {
           ...nextGameState.city,
@@ -3019,6 +3156,7 @@ export const useGameStore = create<GameStore>()(
           assignments: assignmentProcessed.state,
           mainOperationSeason: mainOperationSeasonAfterDay,
           crisisState: crisisStateAfterDay,
+          microDecisionState: microStateForNextDay,
         });
       },
 
@@ -3562,6 +3700,8 @@ export const useGameStore = create<GameStore>()(
               mainOperationSeason: hydratedMainOperationSeason,
             }),
           ),
+          microDecisionState:
+            saved.microDecisionState ?? createInitialMicroDecisionState(),
           tutorialState: saved.tutorialState ?? { ...INITIAL_TUTORIAL_STATE },
           bestPilotScores: saved.bestPilotScores ?? [],
           lastPilotScore: saved.lastPilotScore,
@@ -3582,6 +3722,7 @@ export const useGameStore = create<GameStore>()(
           state.refreshAdvisorForCurrentDay();
           state.refreshOperationSignals();
           state.refreshDailyOperationsPlan();
+          state.refreshMicroDecisionsForCurrentDay();
         }
       },
     },

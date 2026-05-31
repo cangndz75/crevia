@@ -33,8 +33,12 @@ function segmentFill(level: number): string {
 
 function resolveSegmentLevel(item: MapNeighborhoodStripItem, selected: boolean): number {
   if (selected) return 3;
+  if (item.crisisStripTone === 'critical') return 3;
+  if (item.crisisStripTone === 'warning') return 2;
   const label = item.statusLabel.toLowerCase();
-  if (label.includes('yüksek') || label.includes('kritik')) return 3;
+  if (label.includes('yüksek') || label.includes('kritik') || label.includes('kriz')) {
+    return 3;
+  }
   if (label.includes('orta') || label.includes('izlen')) return 2;
   if (label.includes('önizleme')) return 0;
   return 1;
@@ -62,11 +66,18 @@ export function MapNeighborhoodStrip({ items, selectedId, onSelect }: Props) {
           ? resolveIoniconForRegistryKey(item.identityIconKey)
           : STRIP_ICON_MAP.factory;
         const segmentLevel = resolveSegmentLevel(item, selected);
+        const crisisTone = item.crisisStripTone;
         const statusColor = selected
           ? mapUi.gold
-          : item.statusLabel.toLowerCase().includes('yüksek')
-            ? mapUi.riskHigh
-            : mapUi.teal;
+          : crisisTone === 'critical'
+            ? mapUi.gold
+            : crisisTone === 'warning'
+              ? mapUi.riskHigh
+              : item.statusLabel.toLowerCase().includes('yüksek') ||
+                  item.statusLabel.toLowerCase().includes('kritik') ||
+                  item.statusLabel.toLowerCase().includes('kriz')
+                ? mapUi.riskHigh
+                : mapUi.teal;
 
         return (
           <Pressable

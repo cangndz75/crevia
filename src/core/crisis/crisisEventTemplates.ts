@@ -80,7 +80,9 @@ export type CrisisEventTemplateKey =
   | 'multi_district_warning'
   | 'vehicle_container_chain'
   | 'social_response_gap'
-  | 'assignment_coordination';
+  | 'assignment_coordination'
+  | 'yesilvadi_sensitivity'
+  | 'station_delay_chain';
 
 export function buildCrisisSideEvent(
   templateKey: CrisisEventTemplateKey,
@@ -164,6 +166,54 @@ export function buildCrisisSideEvent(
           },
         }),
       });
+    case 'yesilvadi_sensitivity':
+      return baseCard(id, day, scope, {
+        title: 'Kriz Masası: Yeşilvadi Hassasiyet Uyarısı',
+        category: 'Kriz / Çevre',
+        description:
+          'Yeşilvadi çevre hassasiyeti yükseliyor; sessiz operasyon ve konteyner konumu birlikte izlenmeli.',
+        decisions: threeDecisions(prefix, {
+          a: {
+            title: 'Sessiz toplama penceresi',
+            description: 'Gürültü ve koku riskini düşürür; kapasite daha yavaş kullanılır.',
+            effects: crisisEffects({ publicSatisfaction: 3, risk: -2 }),
+          },
+          b: {
+            title: 'Halk bilgilendirmesi',
+            description: 'Çevre hassasiyetini yumuşatır; ek saha turu gerekebilir.',
+            effects: crisisEffects({ publicSatisfaction: 4, risk: -1 }),
+          },
+          c: {
+            title: 'Yarına planla',
+            description: 'Bugün hafif müdahale; baskı sürebilir.',
+            effects: crisisEffects({ risk: 2 }),
+          },
+        }),
+      });
+    case 'station_delay_chain':
+      return baseCard(id, day, scope, {
+        title: 'Kriz Masası: İstasyon Gecikme Zinciri',
+        category: 'Kriz / Rota',
+        description:
+          'İstasyon aktarma hattında gecikme zinciri oluşuyor; rota ve atama uyumu birlikte zorlanabilir.',
+        decisions: threeDecisions(prefix, {
+          a: {
+            title: 'Sabah rotasını yeniden sırala',
+            description: 'Gecikme zincirini kırar; diğer hat kısa süre geri planda kalır.',
+            effects: crisisEffects({ risk: -3, staffMorale: 1 }),
+          },
+          b: {
+            title: 'Koordinasyon turu',
+            description: 'Atama uyumunu güçlendirir; filo yükü artabilir.',
+            effects: crisisEffects({ risk: -2, budget: -1 }),
+          },
+          c: {
+            title: 'İzleme modu',
+            description: 'Veri topla; akşam değerlendir.',
+            effects: crisisEffects({ risk: 1 }),
+          },
+        }),
+      });
     default:
       return baseCard(id, day, scope, {
         title: 'Kriz Masası: Saha Koordinasyon Riski',
@@ -210,6 +260,8 @@ export function pickCrisisEventTemplateKey(
     'vehicle_container_chain',
     'social_response_gap',
     'assignment_coordination',
+    'yesilvadi_sensitivity',
+    'station_delay_chain',
   ];
   return keys[day % keys.length]!;
 }

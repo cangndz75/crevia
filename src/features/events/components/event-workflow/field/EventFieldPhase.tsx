@@ -9,6 +9,7 @@ import { FieldNoteCard } from '@/features/events/components/FieldNoteCard';
 import { EventWorkflowStepper } from '@/features/events/components/event-workflow/EventWorkflowStepper';
 import { FieldImpactMetricsRow } from '@/features/events/components/event-workflow/field/FieldImpactMetricsRow';
 import { FieldWorkflowFooter } from '@/features/events/components/event-workflow/field/FieldWorkflowFooter';
+import { EventFieldMicroDecisionCard } from '@/features/events/components/event-workflow/field/EventFieldMicroDecisionCard';
 import { LiveOperationCard } from '@/features/events/components/event-workflow/field/LiveOperationCard';
 import { PlanEventSummaryCard } from '@/features/events/components/event-workflow/plan/PlanEventSummaryCard';
 import { OnboardingPhaseHint } from '@/features/onboarding/components/OnboardingPhaseHint';
@@ -79,6 +80,8 @@ export function EventFieldPhase({
         </View>
 
         <LiveOperationCard model={model} />
+
+        <EventFieldMicroDecisionCard event={event} />
 
         <EventFieldAssignmentSummary event={event} />
 

@@ -17,6 +17,9 @@ export function HubDevTools() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const clearSaveAndReset = useGameStore((s) => s.clearSaveAndReset);
+  const devGenerateMicroDecision = useGameStore(
+    (s) => s.devGenerateMicroDecisionForTesting,
+  );
 
   const reloadApp = useCallback(() => {
     if (typeof DevSettings.reload === 'function') {
@@ -97,6 +100,12 @@ export function HubDevTools() {
         <Text style={[styles.btnText, styles.btnTextDanger]}>
           Onboarding + kayıt sıfırla
         </Text>
+      </Pressable>
+      <Pressable
+        style={[styles.btn, styles.btnPreview]}
+        onPress={() => devGenerateMicroDecision?.()}>
+        <Ionicons name="flash-outline" size={16} color={colors.primary} />
+        <Text style={styles.btnText}>Dev: Canlı Karar Üret</Text>
       </Pressable>
       <PostPilotDevTools />
     </View>

@@ -44,7 +44,7 @@ export const MAIN_OPERATION_UI_COPY = {
   reportTitle: 'Ana Operasyon Sezonu',
   reportFooter:
     'Yarınki plan sezon hedeflerine göre yeniden şekillenir.',
-  hubCtaFull: 'Sezon Hedeflerini İncele',
+  hubCtaFull: 'Hedefleri Gör',
   hubCtaLimited: 'Ana Operasyon Kapsamını Gör',
   previewActive: 'Ana Operasyon aktif',
   previewGoalsLine: 'Sezon hedefleri ve mahalle kapsamı izleniyor.',

@@ -199,6 +199,12 @@ export function HubDailyOperationsPlanCard({
           {hubModel.advisorLine}
         </Text>
 
+        {isDay1 ? (
+          <Text style={styles.day1Hint} numberOfLines={2}>
+            İlk gün plan düzenlemesi kapalı; önerilen planı onaylayın.
+          </Text>
+        ) : null}
+
         <View style={styles.ctaRow}>
           <Pressable
             onPress={handleConfirm}
@@ -399,6 +405,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     color: '#3D4F4C',
+    flexShrink: 1,
+  },
+  day1Hint: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#6B7F7B',
+    fontStyle: 'italic',
     flexShrink: 1,
   },
   ctaRow: {

@@ -1,8 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { resolveIoniconForRegistryKey } from '@/core/presentation/creviaIconPresentation';
 import type {
   DistrictRiskSummaryMetric,
+  MapCrisisPanelLine,
   MapOperationPanelModel,
 } from '@/features/map/utils/mapUiPresentation';
 import { mapUi } from '@/features/map/utils/mapUiTokens';
@@ -21,6 +23,52 @@ const RISK_COLORS = {
   warn: mapUi.riskHigh,
   danger: mapUi.riskCritical,
 } as const;
+
+const CRISIS_LINE_COLORS: Record<
+  MapCrisisPanelLine['tone'],
+  { bg: string; border: string; text: string; icon: string }
+> = {
+  neutral: {
+    bg: mapUi.mint,
+    border: 'rgba(15, 143, 134, 0.12)',
+    text: mapUi.teal,
+    icon: mapUi.teal,
+  },
+  warning: {
+    bg: mapUi.goldSoft,
+    border: mapUi.goldBorder,
+    text: '#8A6510',
+    icon: mapUi.gold,
+  },
+  critical: {
+    bg: '#FFF6EE',
+    border: 'rgba(229, 154, 34, 0.35)',
+    text: '#9A5B12',
+    icon: mapUi.gold,
+  },
+};
+
+function CrisisMapLineRow({ line }: { line: MapCrisisPanelLine }) {
+  const palette = CRISIS_LINE_COLORS[line.tone];
+  const iconName = resolveIoniconForRegistryKey(line.iconKey);
+  return (
+    <View
+      style={[
+        styles.crisisRow,
+        { backgroundColor: palette.bg, borderColor: palette.border },
+      ]}>
+      <Ionicons name={iconName} size={14} color={palette.icon} />
+      <View style={styles.crisisCopy}>
+        <Text style={[styles.crisisTitle, { color: palette.text }]} numberOfLines={1}>
+          {line.title}
+        </Text>
+        <Text style={[styles.crisisSummary, { color: palette.text }]} numberOfLines={2}>
+          {line.summary}
+        </Text>
+      </View>
+    </View>
+  );
+}
 
 function DistrictRiskMetricCard({ metric }: { metric: DistrictRiskSummaryMetric }) {
   return (
@@ -107,6 +155,10 @@ export function MapOperationBottomPanel({
         </View>
       ) : null}
 
+      {model.crisisLines?.map((line) => (
+        <CrisisMapLineRow key={line.id} line={line} />
+      ))}
+
       {model.sahaNote ? (
         <View style={styles.noteRow}>
           <Ionicons name="document-text-outline" size={13} color={mapUi.teal} />
@@ -135,12 +187,24 @@ export function MapOperationBottomPanel({
         </Pressable>
       ) : null}
 
-      <Pressable style={styles.cta} onPress={onPressCta}>
-        <Text style={styles.ctaText} numberOfLines={1}>
-          {model.ctaLabel}
-        </Text>
-        <Ionicons name="chevron-forward" size={18} color={colors.textInverse} />
-      </Pressable>
+      {onPressCta ? (
+        <Pressable
+          style={styles.cta}
+          onPress={onPressCta}
+          accessibilityRole="button"
+          accessibilityLabel={model.ctaLabel}>
+          <Text style={styles.ctaText} numberOfLines={1}>
+            {model.ctaLabel}
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textInverse} />
+        </Pressable>
+      ) : (
+        <View style={styles.ctaStatic}>
+          <Text style={styles.ctaTextStatic} numberOfLines={1}>
+            {model.ctaLabel}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -233,6 +297,32 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     fontWeight: '700',
     color: mapUi.teal,
+  },
+  crisisRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    minWidth: 0,
+  },
+  crisisCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  crisisTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  crisisSummary: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '600',
+    flexShrink: 1,
   },
   noteRow: {
     flexDirection: 'row',
@@ -337,5 +427,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: colors.textInverse,
+  },
+  ctaStatic: {
+    borderRadius: 999,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(6, 63, 59, 0.08)',
+    alignItems: 'center',
+  },
+  ctaTextStatic: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: mapUi.teal,
   },
 });

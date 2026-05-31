@@ -59,6 +59,8 @@ export type MapPin = {
   regionId?: PilotDistrictId;
   /** Şehir haritası mahalle kimliği */
   mapDistrictId?: MapDistrictId;
+  /** Kriz etkilenen mahalle — seçili teal glow’u ezmez */
+  crisisHighlight?: boolean;
 };
 
 export type MapRegion = {

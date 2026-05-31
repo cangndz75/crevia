@@ -58,6 +58,9 @@ export function EventAssignmentPanel({ event, compactTutorial = false }: Props) 
     confirmAssignment(event.id);
   };
 
+  const isProcessed = assignment.status === 'processed';
+  const canEdit = !compactTutorial && !isProcessed;
+
   return (
     <View style={[styles.card, compactTutorial && styles.cardCompact]}>
       <View style={styles.headerRow}>
@@ -140,7 +143,7 @@ export function EventAssignmentPanel({ event, compactTutorial = false }: Props) 
           </View>
         )}
 
-        {!compactTutorial ? (
+        {!compactTutorial && canEdit ? (
           <Pressable
             onPress={() => {
               playLightImpactHaptic();
@@ -154,6 +157,11 @@ export function EventAssignmentPanel({ event, compactTutorial = false }: Props) 
               {panel.editLabel}
             </Text>
           </Pressable>
+        ) : null}
+        {isProcessed ? (
+          <Text style={styles.disabledHint} numberOfLines={2}>
+            Saha işlendikten sonra atama düzenlenemez.
+          </Text>
         ) : null}
       </View>
 
@@ -310,5 +318,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: eventDetail.tealDark,
     flexShrink: 1,
+  },
+  disabledHint: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#6B8480',
+    fontStyle: 'italic',
+    flexShrink: 1,
+    flex: 1,
+    minWidth: 0,
   },
 });

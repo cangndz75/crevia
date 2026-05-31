@@ -26,6 +26,7 @@ import {
   CRISIS_SEASON_DAY1_SCORE_CAP,
   CRISIS_SIGNAL_COPY,
   CRISIS_INCIDENT_TEMPLATES,
+  CRISIS_UI_COPY,
   MIN_DAYS_BETWEEN_CRISIS_INCIDENTS,
 } from './crisisConstants';
 import {
@@ -34,6 +35,7 @@ import {
   clampCrisisScore,
   createInitialCrisisState,
   deriveCrisisAccessModeFromGame,
+  getCrisisRiskLabel,
   getCrisisRiskLevel,
   getCrisisTrend,
   markCrisisIncidentContained,
@@ -46,7 +48,9 @@ import type {
   CrisisEngineInput,
   CrisisImpactPreview,
   CrisisIncident,
-  CrisisMapLine,
+  CrisisMapDistrictBadge,
+  CrisisMapPanelLine,
+  CrisisMapPresentation,
   CrisisSignal,
   CrisisState,
 } from './crisisTypes';
@@ -680,9 +684,72 @@ export function shouldAddCrisisRelatedEvent(
   return true;
 }
 
-export function buildCrisisMapLines(
+export function getCrisisMapTone(
+  crisisState: CrisisState,
+): 'neutral' | 'warning' | 'critical' {
+  if (crisisState.riskLevel === 'critical') {
+    return 'critical';
+  }
+  if (
+    crisisState.riskLevel === 'elevated' ||
+    crisisState.riskLevel === 'watch'
+  ) {
+    return 'warning';
+  }
+  return 'neutral';
+}
+
+export function shouldShowCrisisMapLines(input: CrisisEngineInput): boolean {
+  const accessMode = deriveCrisisAccessMode(
+    input.gameState,
+    input.monetization,
+  );
+  if (accessMode === 'inactive') {
+    return false;
+  }
+  if (accessMode === 'limited_preview') {
+    return input.crisisState.riskLevel !== 'stable';
+  }
+  return (
+    input.crisisState.riskLevel !== 'stable' ||
+    input.crisisState.activeIncident != null ||
+    input.crisisState.recentSignals.length > 0
+  );
+}
+
+function resolveCrisisMapDistrictIds(input: CrisisEngineInput): string[] {
+  const ids = new Set<string>();
+  const incident = input.crisisState.activeIncident;
+  for (const id of incident?.affectedDistrictIds ?? []) {
+    if (id) ids.add(id);
+  }
+  for (const id of pickAffectedDistrictIds(input)) {
+    ids.add(id);
+  }
+  const priority = resolveSignals(input).priorityDistrictId;
+  if (priority) ids.add(priority);
+  return [...ids].slice(0, 3);
+}
+
+function districtBadgeLabelForRisk(
+  riskLevel: CrisisState['riskLevel'],
+  hasIncident: boolean,
+): string {
+  if (riskLevel === 'critical') {
+    return 'Kritik eşik';
+  }
+  if (hasIncident) {
+    return 'Kriz sinyali';
+  }
+  if (riskLevel === 'elevated' || riskLevel === 'watch') {
+    return 'İzlemede';
+  }
+  return 'Kriz sinyali';
+}
+
+export function buildCrisisDistrictBadges(
   input: CrisisEngineInput,
-): CrisisMapLine[] {
+): CrisisMapDistrictBadge[] {
   const accessMode = deriveCrisisAccessMode(
     input.gameState,
     input.monetization,
@@ -690,29 +757,194 @@ export function buildCrisisMapLines(
   if (accessMode === 'inactive') {
     return [];
   }
-  const incident = input.crisisState.activeIncident;
-  if (accessMode === 'limited_preview' && input.crisisState.riskLevel === 'stable') {
+  const { crisisState } = input;
+  if (
+    accessMode === 'limited_preview' &&
+    crisisState.riskLevel === 'stable'
+  ) {
     return [];
   }
-  const lines: CrisisMapLine[] = [];
-  const affected = incident?.affectedDistrictIds ?? [];
-  for (const districtId of affected) {
+
+  const incident = crisisState.activeIncident;
+  const badges: CrisisMapDistrictBadge[] = [];
+  const seen = new Set<string>();
+
+  const pushBadge = (districtId: string, label: string, tone: CrisisMapDistrictBadge['tone']) => {
+    if (!districtId || seen.has(districtId)) return;
+    seen.add(districtId);
+    badges.push({ districtId, label, tone });
+  };
+
+  if (incident) {
+    for (const districtId of incident.affectedDistrictIds) {
+      pushBadge(
+        districtId,
+        incident.severity === 'critical' ? 'Kritik eşik' : 'Kriz sinyali',
+        incident.severity === 'critical' ? 'critical' : 'warning',
+      );
+    }
+  }
+
+  if (crisisState.riskLevel === 'critical') {
+    for (const districtId of resolveCrisisMapDistrictIds(input)) {
+      pushBadge(districtId, 'Kritik eşik', 'critical');
+    }
+  } else if (
+    crisisState.riskLevel === 'elevated' ||
+    crisisState.riskLevel === 'watch'
+  ) {
+    for (const districtId of resolveCrisisMapDistrictIds(input)) {
+      if (!seen.has(districtId)) {
+        pushBadge(
+          districtId,
+          districtBadgeLabelForRisk(crisisState.riskLevel, Boolean(incident)),
+          'warning',
+        );
+      }
+    }
+  }
+
+  if (badges.length === 0 && crisisState.riskLevel !== 'stable') {
+    const fallbackId = resolveSignals(input).priorityDistrictId;
+    if (fallbackId) {
+      pushBadge(
+        fallbackId,
+        districtBadgeLabelForRisk(crisisState.riskLevel, Boolean(incident)),
+        crisisState.riskLevel === 'critical' ? 'critical' : 'warning',
+      );
+    }
+  }
+
+  const maxBadges = accessMode === 'limited_preview' ? 1 : 3;
+  return badges.slice(0, maxBadges);
+}
+
+/** @deprecated buildCrisisDistrictBadges kullanın */
+export function buildCrisisMapLines(
+  input: CrisisEngineInput,
+): CrisisMapDistrictBadge[] {
+  return buildCrisisDistrictBadges(input);
+}
+
+export function buildCrisisMapPanelLines(
+  input: CrisisEngineInput,
+): CrisisMapPanelLine[] {
+  const accessMode = deriveCrisisAccessMode(
+    input.gameState,
+    input.monetization,
+  );
+  if (accessMode === 'inactive') {
+    return [];
+  }
+
+  const { crisisState } = input;
+  if (
+    accessMode === 'limited_preview' &&
+    crisisState.riskLevel === 'stable'
+  ) {
+    return [];
+  }
+
+  if (accessMode === 'limited_preview') {
+    return [
+      {
+        id: 'crisis-map-limited',
+        title: 'Kriz sinyali',
+        summary: CRISIS_UI_COPY.limitedImpactLine,
+        tone: 'neutral',
+        iconKey: 'pulse',
+        affectedDistrictIds: resolveCrisisMapDistrictIds(input).slice(0, 1),
+      },
+    ];
+  }
+
+  const lines: CrisisMapPanelLine[] = [];
+  const incident = crisisState.activeIncident;
+
+  if (incident) {
     lines.push({
-      districtId,
-      label: 'Kriz sinyali',
-      tone: incident?.severity === 'critical' ? 'critical' : 'warning',
+      id: `crisis-map-incident-${incident.id}`,
+      title: 'Kriz sinyali',
+      summary: incident.summary || incident.title,
+      tone: incident.severity === 'critical' ? 'critical' : 'warning',
+      iconKey: 'warning',
+      affectedDistrictIds: incident.affectedDistrictIds,
     });
   }
-  if (lines.length === 0 && input.crisisState.riskLevel !== 'stable') {
+
+  const signalSlots = incident ? 1 : 2;
+  for (const sig of crisisState.recentSignals.slice(0, signalSlots)) {
+    if (lines.length >= 2) break;
     lines.push({
-      districtId: resolveSignals(input).priorityDistrictId,
-      label:
-        input.crisisState.riskLevel === 'critical'
-          ? 'Kriz eşiği'
-          : 'Kritik eşik',
+      id: `crisis-map-signal-${sig.id}`,
+      title: 'Kriz sinyali',
+      summary: sig.summary || sig.title,
       tone:
-        input.crisisState.riskLevel === 'critical' ? 'critical' : 'warning',
+        sig.riskLevel === 'critical' || sig.riskLevel === 'elevated'
+          ? 'warning'
+          : 'neutral',
+      iconKey: getCrisisDomainIconKeyForMap(sig.domain),
+      affectedDistrictIds: resolveCrisisMapDistrictIds(input),
     });
   }
-  return lines.slice(0, 3);
+
+  if (
+    lines.length === 0 &&
+    (crisisState.riskLevel === 'watch' ||
+      crisisState.riskLevel === 'elevated' ||
+      crisisState.riskLevel === 'critical')
+  ) {
+    const topSignal = crisisState.recentSignals[0];
+    lines.push({
+      id: 'crisis-map-city-pressure',
+      title: 'Kriz sinyali',
+      summary:
+        topSignal?.summary ??
+        `Şehir baskısı ${getCrisisRiskLabel(crisisState.riskLevel)}.`,
+      tone: getCrisisMapTone(crisisState),
+      iconKey: 'pulse',
+      affectedDistrictIds: resolveCrisisMapDistrictIds(input),
+    });
+  }
+
+  return lines.slice(0, 2);
+}
+
+function getCrisisDomainIconKeyForMap(domain: CrisisSignal['domain']): string {
+  switch (domain) {
+    case 'districts':
+      return 'location';
+    case 'vehicles':
+      return 'car';
+    case 'containers':
+      return 'trash';
+    case 'assignments':
+      return 'people';
+    case 'social':
+      return 'chatbubble';
+    default:
+      return 'pulse';
+  }
+}
+
+export function buildCrisisMapPresentation(
+  input: CrisisEngineInput,
+): CrisisMapPresentation {
+  const visible = shouldShowCrisisMapLines(input);
+  const districtBadges = visible ? buildCrisisDistrictBadges(input) : [];
+  const panelLines = visible ? buildCrisisMapPanelLines(input) : [];
+  const crisisDistrictIds = [
+    ...new Set([
+      ...districtBadges.map((b) => b.districtId),
+      ...panelLines.flatMap((l) => l.affectedDistrictIds),
+    ]),
+  ].slice(0, 3);
+
+  return {
+    visible,
+    panelLines,
+    districtBadges,
+    mapTone: getCrisisMapTone(input.crisisState),
+    crisisDistrictIds,
+  };
 }

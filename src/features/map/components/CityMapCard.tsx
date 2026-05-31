@@ -39,6 +39,7 @@ type Props = {
   hideContainerSignals?: boolean;
   hideVehicleSignals?: boolean;
   selectedPinId?: string | null;
+  crisisHighlightDistrictIds?: MapDistrictId[];
   activeOperationOverlay?: MapActiveOperationOverlayModel | null;
   onLayersPress: () => void;
   onDistrictSelect: (districtId: MapDistrictId) => void;
@@ -67,6 +68,7 @@ export function CityMapCard({
   hideContainerSignals = false,
   hideVehicleSignals = false,
   selectedPinId = null,
+  crisisHighlightDistrictIds,
   activeOperationOverlay = null,
   onLayersPress,
   onDistrictSelect,
@@ -122,6 +124,7 @@ export function CityMapCard({
             hideContainerSignals={hideContainerSignals}
             hideVehicleSignals={hideVehicleSignals}
             selectedPinId={selectedPinId}
+            crisisHighlightDistrictIds={crisisHighlightDistrictIds}
             onDistrictPress={handleDistrictPress}
             onPinPress={onPinPress}
           />

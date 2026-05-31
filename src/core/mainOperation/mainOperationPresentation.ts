@@ -5,7 +5,16 @@ import { getNeighborhoodDisplayName } from '@/core/neighborhoodIdentity/neighbor
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 import type { MapDistrictId } from '@/features/map/data/mapDistrictConstants';
 
+import { pickMainOperationAdvisorCopy } from './mainOperationAdvisorCopy';
 import { MAIN_OPERATION_UI_COPY } from './mainOperationConstants';
+import {
+  buildMainOperationGoalAdvisorLine,
+  buildMainOperationGoalInsights,
+  buildReportMainOperationSeasonModel,
+  pickTopSeasonInsightLine,
+  sortInsightsForHub,
+  type MainOperationGoalPresentationInput,
+} from './mainOperationGoalPresentation';
 import {
   buildMainOperationDailyContext,
   deriveMainOperationAccessMode,
@@ -24,6 +33,11 @@ import type {
   MainOperationSeasonCardModel,
 } from './mainOperationTypes';
 import type { MainOperationEngineInput } from './mainOperationTypes';
+
+export type MainOperationPresentationExtras = Omit<
+  MainOperationGoalPresentationInput,
+  'gameState' | 'monetization' | 'mainOperationSeason'
+>;
 
 export function getMainOperationDistrictStatusLabel(
   status: string,
@@ -86,13 +100,14 @@ export function buildMainOperationHubModel(
   gameState: GameState,
   monetization: MonetizationState,
   mainOperationSeason: MainOperationEngineInput['mainOperationSeason'],
-  options?: { compact?: boolean },
+  options?: { compact?: boolean; extras?: MainOperationPresentationExtras },
 ): MainOperationHubModel {
-  const input = buildEngineInput(
+  const input: MainOperationGoalPresentationInput = {
     gameState,
     monetization,
     mainOperationSeason,
-  );
+    ...options?.extras,
+  };
   const season = ensureMainOperationSeasonForGameState(input);
   const accessMode = season.accessMode;
   const visible = shouldShowMainOperationHubCard(gameState, monetization);
@@ -103,10 +118,13 @@ export function buildMainOperationHubModel(
       subtitle: MAIN_OPERATION_UI_COPY.seasonSubtitle,
       accessLabel: '',
       seasonProgressLabel: '',
+      topInsightLine: '',
       activeDistrictLine: '',
       goalRows: [],
       footerNote: '',
       ctaLabel: '',
+      showGoalsDetailCta: false,
+      isFullAccess: false,
       compact: options?.compact ?? false,
       visible: false,
     };
@@ -119,15 +137,17 @@ export function buildMainOperationHubModel(
     .map((id) => getNeighborhoodDisplayName(id))
     .join(', ');
 
-  const goalRows = isFull
-    ? season.goals.slice(0, 3).map((g) => ({
-        id: g.id,
-        title: g.title,
-        progressLabel: `%${g.progress}`,
-        progressRatio: g.progress / 100,
-        tone: getMainOperationGoalTone(g.progress, g.status),
-      }))
-    : [];
+  const insights = isFull ? buildMainOperationGoalInsights(input) : [];
+  const sortedInsights = sortInsightsForHub(insights);
+  const goalRows = sortedInsights.slice(0, 3).map((i) => ({
+    id: i.goalId,
+    title: i.title,
+    progressLabel: i.progressLabel,
+    progressRatio: i.progressRatio,
+    tone: i.tone,
+    iconKey: i.iconKey,
+    statusLabel: i.statusLabel,
+  }));
 
   return {
     title: MAIN_OPERATION_UI_COPY.hubTitle,
@@ -138,6 +158,9 @@ export function buildMainOperationHubModel(
     seasonProgressLabel: isFull
       ? `Sezon günü ${season.currentSeasonDay} / ${season.seasonLengthDays}`
       : 'Sınırlı gündem aktif',
+    topInsightLine: isFull
+      ? pickTopSeasonInsightLine(sortedInsights)
+      : MAIN_OPERATION_UI_COPY.accessLimited,
     activeDistrictLine: activeNames
       ? `${activeIds.length} mahalle aktif · ${activeNames}`
       : 'Mahalle kapsamı daraltılmış',
@@ -148,6 +171,8 @@ export function buildMainOperationHubModel(
     ctaLabel: isFull
       ? MAIN_OPERATION_UI_COPY.hubCtaFull
       : MAIN_OPERATION_UI_COPY.hubCtaLimited,
+    showGoalsDetailCta: isFull,
+    isFullAccess: isFull,
     compact: options?.compact ?? false,
     visible: true,
   };
@@ -206,53 +231,36 @@ export function buildMainOperationReportModel(
   monetization: MonetizationState,
   mainOperationSeason: MainOperationEngineInput['mainOperationSeason'],
   _report?: DailyReport,
+  extras?: MainOperationPresentationExtras,
 ): MainOperationReportSummary {
-  const input = buildEngineInput(
+  const seasonModel = buildReportMainOperationSeasonModel(
     gameState,
     monetization,
     mainOperationSeason,
+    extras,
   );
-  const season = ensureMainOperationSeasonForGameState(input);
-  const isFull = season.accessMode === 'full' && season.status === 'active';
 
-  if (gameState.city.day < POST_PILOT_FIRST_OPERATION_DAY) {
+  if (!seasonModel.visible) {
     return {
-      title: MAIN_OPERATION_UI_COPY.reportTitle,
+      title: seasonModel.title,
       lines: [],
       footerNote: '',
       tone: 'neutral',
     };
   }
 
-  if (!isFull) {
-    return {
-      title: MAIN_OPERATION_UI_COPY.reportTitle,
-      lines: [MAIN_OPERATION_UI_COPY.limitedFooter],
-      footerNote: '',
-      tone: 'neutral',
-    };
-  }
-
-  const activeNames = getActiveMainOperationDistrictIds(season)
-    .map((id) => getNeighborhoodDisplayName(id))
-    .join(', ');
-  const balanceGoal = season.goals.find((g) => g.domain === 'city_balance');
-
   const lines = [
-    `Sezon günü ${season.currentSeasonDay} / ${season.seasonLengthDays}`,
-    activeNames
-      ? `Aktif mahalle kapsamı: ${activeNames}`
-      : 'Aktif mahalle kapsamı genişliyor',
-    balanceGoal
-      ? `Şehir dengesi hedefi %${balanceGoal.progress}`
-      : 'Sezon hedefleri izleniyor',
-  ].slice(0, 3);
+    seasonModel.seasonDayLabel || seasonModel.topLine,
+    ...seasonModel.lines,
+  ]
+    .filter(Boolean)
+    .slice(0, 3);
 
   return {
-    title: MAIN_OPERATION_UI_COPY.reportTitle,
-    lines,
-    footerNote: MAIN_OPERATION_UI_COPY.reportFooter,
-    tone: 'positive',
+    title: seasonModel.title,
+    lines: lines.length > 0 ? lines : [seasonModel.topLine].filter(Boolean),
+    footerNote: seasonModel.footerNote,
+    tone: seasonModel.tone === 'critical' ? 'warning' : seasonModel.tone,
   };
 }
 
@@ -317,7 +325,20 @@ export function buildMainOperationAdvisorNote(
   gameState: GameState,
   monetization: MonetizationState,
   mainOperationSeason: MainOperationEngineInput['mainOperationSeason'],
+  extras?: MainOperationPresentationExtras,
+  advisorState?: import('@/core/advisors/advisorTypes').AdvisorState,
 ): string | null {
+  if (advisorState) {
+    const goalLine = buildMainOperationGoalAdvisorLine(gameState, advisorState, {
+      gameState,
+      monetization,
+      mainOperationSeason,
+      ...extras,
+    });
+    if (goalLine) {
+      return goalLine;
+    }
+  }
   if (gameState.city.day < POST_PILOT_FIRST_OPERATION_DAY) {
     return null;
   }
@@ -329,26 +350,19 @@ export function buildMainOperationAdvisorNote(
   const ctx = buildMainOperationDailyContext(input);
   const season = ensureMainOperationSeasonForGameState(input);
 
+  const laggingGoal = season.goals.find((g) => g.progress < 45);
+  const copy = pickMainOperationAdvisorCopy({
+    level: 2,
+    accessMode: ctx.accessMode === 'full' ? 'full' : 'limited',
+    focusDomain: laggingGoal?.domain,
+    day: gameState.city.day,
+  });
+  if (copy) {
+    return copy;
+  }
+
   if (ctx.accessMode === 'limited') {
     return 'Sınırlı gündemde kapsam dar, ama operasyon sinyalleri takip ediliyor.';
-  }
-
-  if (ctx.accessMode !== 'full') {
-    return null;
-  }
-
-  const activeLabels = ctx.activeDistrictIds
-    .slice(0, 2)
-    .map((id) => getNeighborhoodDisplayName(id))
-    .join(' ve ');
-
-  const vehicleGoal = season.goals.find((g) => g.domain === 'vehicles');
-  if (vehicleGoal && vehicleGoal.progress < 50) {
-    return `Ana Operasyon aktif. Sezon hedeflerinde filo dengesi öne çıkıyor. Araç odağını dikkatli seçmek iyi olur.`;
-  }
-
-  if (activeLabels) {
-    return `Ana Operasyon aktif. Bugün ${activeLabels} sinyalleri birlikte izlenmeli.`;
   }
 
   return 'Ana Operasyon aktif. Sezon hedefleri ve mahalle kapsamı izleniyor.';

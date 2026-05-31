@@ -105,8 +105,29 @@ export type CrisisEngineInput = {
   mainOperationSeason?: import('@/core/mainOperation/mainOperationTypes').MainOperationSeasonState;
 };
 
-export type CrisisMapLine = {
+/** Mahalle strip / harita rozeti */
+export type CrisisMapDistrictBadge = {
   districtId: string;
   label: string;
   tone: 'neutral' | 'warning' | 'critical';
+};
+
+/** @deprecated CrisisMapDistrictBadge ile aynı — strip uyumluluğu */
+export type CrisisMapLine = CrisisMapDistrictBadge;
+
+export type CrisisMapPanelLine = {
+  id: string;
+  title: string;
+  summary: string;
+  tone: 'neutral' | 'warning' | 'critical';
+  iconKey: string;
+  affectedDistrictIds: string[];
+};
+
+export type CrisisMapPresentation = {
+  visible: boolean;
+  panelLines: CrisisMapPanelLine[];
+  districtBadges: CrisisMapDistrictBadge[];
+  mapTone: 'neutral' | 'warning' | 'critical';
+  crisisDistrictIds: string[];
 };

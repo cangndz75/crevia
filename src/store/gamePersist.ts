@@ -79,6 +79,11 @@ import {
   normalizeCrisisState,
 } from '@/core/crisis/crisisState';
 import type { CrisisState } from '@/core/crisis/crisisTypes';
+import {
+  createInitialMicroDecisionState,
+  normalizeMicroDecisionState,
+} from '@/core/microDecisions/microDecisionState';
+import type { MicroDecisionState } from '@/core/microDecisions/microDecisionTypes';
 
 import type { GameStore } from './useGameStore';
 
@@ -86,7 +91,8 @@ import type { GameStore } from './useGameStore';
 // Save version & storage key
 // ---------------------------------------------------------------------------
 
-export const SAVE_VERSION = 20;
+export const SAVE_VERSION = 21;
+const SAVE_VERSION_20 = 20;
 const SAVE_VERSION_19 = 19;
 const SAVE_VERSION_18 = 18;
 const SAVE_VERSION_17 = 17;
@@ -143,6 +149,7 @@ export type PersistedGameState = Pick<
   | 'monetization'
   | 'mainOperationSeason'
   | 'crisisState'
+  | 'microDecisionState'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -186,6 +193,7 @@ export function partialiseGameState(
     monetization: state.monetization,
     mainOperationSeason: state.mainOperationSeason,
     crisisState: state.crisisState,
+    microDecisionState: state.microDecisionState,
     tutorialState: state.tutorialState,
     bestPilotScores: state.bestPilotScores,
     lastPilotScore: state.lastPilotScore,
@@ -451,6 +459,7 @@ export function normalizePersistedSave(
     version !== SAVE_VERSION_17 &&
     version !== SAVE_VERSION_18 &&
     version !== SAVE_VERSION_19 &&
+    version !== SAVE_VERSION_20 &&
     version !== SAVE_VERSION
   ) {
     return null;
@@ -645,6 +654,12 @@ export function normalizePersistedSave(
         return normalizeCrisisState(raw.crisisState);
       }
       return createInitialCrisisState();
+    })(),
+    microDecisionState: ((): MicroDecisionState => {
+      if (raw.microDecisionState != null) {
+        return normalizeMicroDecisionState(raw.microDecisionState);
+      }
+      return createInitialMicroDecisionState();
     })(),
     tutorialState: isValidTutorialState(raw.tutorialState)
       ? raw.tutorialState

@@ -1,3 +1,17 @@
+import { createDay1Seed } from '@/core/content/day1Seed';
+import { createInitialCrisisState } from '@/core/crisis/crisisState';
+import {
+  applyFullAccessToGameState,
+  applyLimitedContinueToGameState,
+  buildDevJumpPilotCompletedGameState,
+} from '@/core/monetization/monetizationEngine';
+import {
+  createInitialMonetizationState,
+  mockPurchaseMainOperationPack,
+  selectLimitedContinue,
+} from '@/core/monetization/monetizationState';
+import { createFullMainOperationSeasonState } from '@/core/mainOperation/mainOperationState';
+import { buildMainOperationMapScopeBadges } from '@/core/mainOperation/mainOperationPresentation';
 import { DEFAULT_PILOT_DISTRICT_ID } from '@/core/models/DistrictProfile';
 import { createInitialContainerState } from '@/core/containers/containerSeed';
 import { createInitialVehicleState } from '@/core/vehicles/vehicleSeed';
@@ -12,9 +26,11 @@ import {
   MAP_UI_BANNED_WORDS,
   MAP_UI_LAYOUT_GUARDS,
   mapUiTextContainsBannedWords,
+  shouldShowMapCrisisChrome,
   type MapNeighborhoodStripItem,
   type MapOperationPanelModel,
 } from './utils/mapUiPresentation';
+import { buildMapCrisisPresentationBundle } from './utils/mapCrisisPresentation';
 
 export type VerifyMapUiOutcome = {
   ok: boolean;
@@ -194,6 +210,146 @@ export function verifyMapUiScenario(): VerifyMapUiOutcome {
     checks,
     vehicleMetric == null,
     'Day 1 fleet sinyalleri tutorial modunda gizlenir',
+  );
+
+  const fullGs = applyFullAccessToGameState(
+    buildDevJumpPilotCompletedGameState(createDay1Seed().gameState),
+  );
+  const fullGsDay8 = { ...fullGs, city: { ...fullGs.city, day: 8 } };
+  const fullMon = mockPurchaseMainOperationPack(createInitialMonetizationState(), 8);
+  const elevatedCrisis = {
+    ...createInitialCrisisState(),
+    accessMode: 'active' as const,
+    riskLevel: 'elevated' as const,
+    cityCrisisScore: 78,
+    recentSignals: [
+      {
+        id: 'sig-map',
+        domain: 'vehicles' as const,
+        riskLevel: 'elevated' as const,
+        score: 78,
+        trend: 'worsening' as const,
+        title: 'Araç ve konteyner sinyalleri aynı anda zorlanıyor.',
+        summary: 'Araç ve konteyner baskısı aynı hatta yükseliyor.',
+        sourceTags: ['crisis'],
+      },
+    ],
+  };
+  const mapCrisis = buildMapCrisisPresentationBundle({
+    gameState: fullGsDay8,
+    monetization: fullMon,
+    crisisState: elevatedCrisis,
+    mainOperationSeason: createFullMainOperationSeasonState(8),
+  });
+  const crisisPanel = buildMapOperationPanelModel({
+    viewMode: 'overview',
+    focusDistrictId: mapDistrictFromPilot(DEFAULT_PILOT_DISTRICT_ID),
+    pilotAreaId: pilotAreaFromDistrict(DEFAULT_PILOT_DISTRICT_ID),
+    pilotDistrictId: DEFAULT_PILOT_DISTRICT_ID,
+    gameDay: 8,
+    activeEvents: [],
+    crisisLines: mapCrisis.panelLines,
+  });
+  assert(
+    checks,
+    (crisisPanel.crisisLines?.length ?? 0) <= 2,
+    'Map model crisisLines alanını güvenli taşır',
+    `crisisLines=${crisisPanel.crisisLines?.length ?? 0}`,
+  );
+  assert(
+    checks,
+    buildMapOperationPanelModel({
+      viewMode: 'overview',
+      focusDistrictId: mapDistrictFromPilot(DEFAULT_PILOT_DISTRICT_ID),
+      pilotAreaId: pilotAreaFromDistrict(DEFAULT_PILOT_DISTRICT_ID),
+      pilotDistrictId: DEFAULT_PILOT_DISTRICT_ID,
+      gameDay: 1,
+      activeEvents: [],
+    }).crisisLines == null,
+    'MapOperationBottomPanel crisis line render modelini boşken gizler',
+  );
+  assert(
+    checks,
+    (crisisPanel.crisisLines?.length ?? 0) <= 2,
+    'Full active crisis bottom panelde max 2 satır gösterir',
+  );
+
+  const mainOpBadges = buildMainOperationMapScopeBadges(
+    fullGsDay8,
+    fullMon,
+    createFullMainOperationSeasonState(8),
+  );
+  const crisisStrip = buildMapNeighborhoodStripItems({
+    pilotDistrictId: DEFAULT_PILOT_DISTRICT_ID,
+    focusDistrictId: 'istasyon',
+    gameDay: 8,
+    mainOperationScopeBadges: mainOpBadges,
+    crisisDistrictBadges: mapCrisis.districtBadges,
+    crisisAccessMode: 'active',
+  });
+  assert(
+    checks,
+    crisisStrip.some((item) => item.crisisStripTone != null),
+    'District strip crisis badge/tone üretir',
+  );
+  const conflictDistrict = crisisStrip.find((item) => item.id === 'istasyon');
+  assert(
+    checks,
+    conflictDistrict != null &&
+      (conflictDistrict.statusLabel.includes('Kriz') ||
+        conflictDistrict.statusLabel.includes('Kritik') ||
+        conflictDistrict.statusLabel.includes('İzlemede') ||
+        conflictDistrict.crisisStripTone != null),
+    'MainOperation scope badge ile crisis badge çakışma guard’ı çalışır',
+    conflictDistrict?.statusLabel ?? 'missing',
+  );
+
+  const pilotCrisis = buildMapCrisisPresentationBundle({
+    gameState: { ...fullGs, city: { ...fullGs.city, day: 3 } },
+    monetization: fullMon,
+    crisisState: elevatedCrisis,
+  });
+  assert(
+    checks,
+    !shouldShowMapCrisisChrome(3, true) && pilotCrisis.panelLines.length === 0,
+    'Pilot map UI crisis göstermiyor',
+  );
+
+  const limitedGs = applyLimitedContinueToGameState(fullGsDay8);
+  const limitedCrisis = buildMapCrisisPresentationBundle({
+    gameState: limitedGs,
+    monetization: selectLimitedContinue(createInitialMonetizationState(), 8),
+    crisisState: {
+      ...elevatedCrisis,
+      accessMode: 'limited_preview',
+    },
+  });
+  assert(
+    checks,
+    limitedCrisis.panelLines.length <= 1,
+    'Limited map UI compact crisis preview gösteriyor veya güvenli gizliyor',
+    `limitedLines=${limitedCrisis.panelLines.length}`,
+  );
+
+  assert(
+    checks,
+    MAP_UI_LAYOUT_GUARDS.bottomPanelNumberOfLines >= 2 &&
+      MAP_UI_LAYOUT_GUARDS.usesFlexShrink &&
+      MAP_UI_LAYOUT_GUARDS.usesMinWidthZero,
+    'numberOfLines/flexShrink/minWidth guard’ları mevcut',
+  );
+
+  assert(
+    checks,
+    buildMapOperationPanelModel({
+      viewMode: 'overview',
+      focusDistrictId: mapDistrictFromPilot(DEFAULT_PILOT_DISTRICT_ID),
+      pilotAreaId: pilotAreaFromDistrict(DEFAULT_PILOT_DISTRICT_ID),
+      pilotDistrictId: DEFAULT_PILOT_DISTRICT_ID,
+      gameDay: 8,
+      activeEvents: [],
+    }).visible === true,
+    'Type model optional crisis fields ile crash etmiyor',
   );
 
   const failCount = checks.filter((c) => !c.ok).length;

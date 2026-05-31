@@ -37,6 +37,12 @@ import {
 } from '../data/mapSelectors';
 import type { MapViewMode, PilotAreaId } from '../types/map';
 import { getMapDistrictLabel } from './mapDistrictLabels';
+import type {
+  CrisisMapDistrictBadge,
+  CrisisMapPanelLine,
+} from '@/core/crisis/crisisTypes';
+import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
+
 import { buildNeighborhoodContainerMapSignals } from './containerMapAdapter';
 import { buildNeighborhoodVehicleBadges } from './vehicleMapAdapter';
 
@@ -55,6 +61,8 @@ export type MapNeighborhoodStripStatus =
   | 'approaching'
   | 'preview';
 
+export type MapCrisisPanelLine = CrisisMapPanelLine;
+
 export type MapNeighborhoodStripItem = {
   id: MapDistrictId;
   label: string;
@@ -62,6 +70,8 @@ export type MapNeighborhoodStripItem = {
   statusLabel: string;
   accentColor: string;
   identityIconKey?: string;
+  /** Kriz strip vurgusu — seçili pin teal glow’u ezmez */
+  crisisStripTone?: 'neutral' | 'warning' | 'critical';
 };
 
 export type MapOperationMetric = {
@@ -112,6 +122,7 @@ export type MapOperationPanelModel = {
   recommendedAction?: string;
   ctaLabel: string;
   isDetailView: boolean;
+  crisisLines?: MapCrisisPanelLine[];
 };
 
 const STATUS_LABELS: Record<MapNeighborhoodStripStatus, string> = {
@@ -281,14 +292,46 @@ function shouldApplyPostPilotStripLabels(
   );
 }
 
+function resolveCrisisStripLabel(
+  districtId: MapDistrictId,
+  crisisDistrictBadges: CrisisMapDistrictBadge[] | undefined,
+  crisisAccessMode: 'inactive' | 'limited_preview' | 'active' | undefined,
+): { label: string | null; tone?: MapNeighborhoodStripItem['crisisStripTone'] } {
+  if (!crisisDistrictBadges?.length || crisisAccessMode === 'inactive') {
+    return { label: null };
+  }
+  const badge = crisisDistrictBadges.find((b) => b.districtId === districtId);
+  if (!badge) {
+    return { label: null };
+  }
+  if (crisisAccessMode === 'limited_preview') {
+    return { label: badge.label, tone: badge.tone };
+  }
+  if (badge.tone === 'critical') {
+    return { label: badge.label, tone: 'critical' };
+  }
+  return { label: badge.label, tone: badge.tone };
+}
+
+function crisisOverridesMainOperationLabel(
+  crisisTone: MapNeighborhoodStripItem['crisisStripTone'] | undefined,
+): boolean {
+  return crisisTone === 'critical' || crisisTone === 'warning';
+}
+
 export function buildMapNeighborhoodStripItems(params: {
   pilotDistrictId: PilotDistrictId;
   focusDistrictId: MapDistrictId;
   gameDay: number;
   postPilot?: MapPostPilotPresentationContext;
   mainOperationScopeBadges?: import('@/core/mainOperation/mainOperationTypes').MainOperationMapScopeBadge[];
-  crisisMapLines?: import('@/core/crisis/crisisTypes').CrisisMapLine[];
+  crisisDistrictBadges?: CrisisMapDistrictBadge[];
+  crisisAccessMode?: 'inactive' | 'limited_preview' | 'active';
+  /** @deprecated crisisDistrictBadges kullanın */
+  crisisMapLines?: CrisisMapDistrictBadge[];
 }): MapNeighborhoodStripItem[] {
+  const crisisDistrictBadges =
+    params.crisisDistrictBadges ?? params.crisisMapLines;
   const pilotMapDistrict = mapDistrictFromPilot(params.pilotDistrictId);
 
   const postPilotNormalized = params.postPilot
@@ -327,17 +370,26 @@ export function buildMapNeighborhoodStripItems(params: {
       (b) => b.districtId === districtId && b.label.length > 0,
     )?.label;
 
-    const crisisLabel = params.crisisMapLines?.find(
-      (l) => l.districtId === districtId,
-    )?.label;
+    const crisisStrip = resolveCrisisStripLabel(
+      districtId,
+      crisisDistrictBadges,
+      params.crisisAccessMode,
+    );
 
-    const stripStatusLabel =
-      crisisLabel ??
-      mainOpLabel ??
-      postPilotLabel ??
-      (status === 'preview'
-        ? STATUS_LABELS.preview
-        : resolveStripRiskStatusLabel(districtId, pilotMapDistrict));
+    const useCrisisLabel =
+      crisisStrip.label != null &&
+      (crisisOverridesMainOperationLabel(crisisStrip.tone) ||
+        !mainOpLabel ||
+        crisisStrip.tone === 'critical');
+
+    const stripStatusLabel = useCrisisLabel
+      ? crisisStrip.label!
+      : (mainOpLabel ??
+        crisisStrip.label ??
+        postPilotLabel ??
+        (status === 'preview'
+          ? STATUS_LABELS.preview
+          : resolveStripRiskStatusLabel(districtId, pilotMapDistrict)));
 
     return {
       id: districtId,
@@ -350,6 +402,7 @@ export function buildMapNeighborhoodStripItems(params: {
           : resolveDistrictAccentColor(districtId),
       identityIconKey:
         status === 'preview' ? undefined : resolveDistrictIconKey(districtId),
+      crisisStripTone: crisisStrip.tone,
     };
   });
 }
@@ -386,6 +439,7 @@ export function buildMapOperationPanelModel(params: {
   hideFleetSignals?: boolean;
   dayEventTitle?: string;
   postPilotMapContextLine?: string;
+  crisisLines?: MapCrisisPanelLine[];
 }): MapOperationPanelModel {
   const preset = getPilotPreset(params.pilotAreaId);
   const isDetailView = params.viewMode === 'detail';
@@ -488,7 +542,15 @@ export function buildMapOperationPanelModel(params: {
       : undefined,
     ctaLabel: isDetailView ? 'Şehir Haritasına Dön' : 'Detayı Gör',
     isDetailView,
+    crisisLines:
+      params.crisisLines && params.crisisLines.length > 0
+        ? params.crisisLines.slice(0, 2)
+        : undefined,
   };
+}
+
+export function shouldShowMapCrisisChrome(gameDay: number, pilotCompleted: boolean): boolean {
+  return gameDay >= POST_PILOT_FIRST_OPERATION_DAY && pilotCompleted;
 }
 
 export function collectMapUiPresentationStrings(
@@ -509,6 +571,7 @@ export function collectMapUiPresentationStrings(
     panel.summaryDescription ?? '',
     panel.recommendedAction ?? '',
     panel.activeEventsPillLabel,
+    ...(panel.crisisLines?.map((line) => `${line.title} ${line.summary}`) ?? []),
     ...panel.riskMetrics.map(
       (metric) => `${metric.label} ${metric.value} ${metric.sublabel}`,
     ),
