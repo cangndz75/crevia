@@ -16,7 +16,10 @@ import { pilotDistrictFromMapDistrict } from '../data/mapDistrictMapping';
 import type { ContainerState } from '@/core/containers/containerTypes';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 
+import type { MapPresenceViewModel } from '@/core/mapPresence/mapPresenceTypes';
+
 import type { ActiveLayers, MapFilterId, MapPin, PilotAreaId } from '../types/map';
+import { MapPresenceSvgLayer } from './MapPresenceSvgLayer';
 import {
   buildContainerMapPins,
   containerMapPinToMapPin,
@@ -45,6 +48,7 @@ export type DistrictDetailMapProps = {
   vehicleState?: VehicleState;
   hideVehicleSignals?: boolean;
   selectedPinId?: string | null;
+  mapPresenceViewModel?: MapPresenceViewModel | null;
   onPinPress?: (pinId: string) => void;
 };
 
@@ -62,6 +66,7 @@ export function DistrictDetailMap({
   vehicleState,
   hideVehicleSignals = false,
   selectedPinId = null,
+  mapPresenceViewModel = null,
   onPinPress,
 }: DistrictDetailMapProps) {
   const asset = getDistrictMapAsset(districtId);
@@ -166,6 +171,7 @@ export function DistrictDetailMap({
         showHeat={showHeat}
         showRoutes={showRoutes}
         selectedPinId={selectedPinId}
+        mapPresenceViewModel={mapPresenceViewModel}
         onPinPress={onPinPress}
       />
     </ZoomableMapCanvas>
@@ -178,6 +184,7 @@ type OverlayProps = {
   showHeat: boolean;
   showRoutes: boolean;
   selectedPinId?: string | null;
+  mapPresenceViewModel?: MapPresenceViewModel | null;
   onPinPress?: (pinId: string) => void;
 };
 
@@ -187,6 +194,7 @@ function DistrictDetailOverlay({
   showHeat,
   showRoutes,
   selectedPinId = null,
+  mapPresenceViewModel = null,
   onPinPress,
 }: OverlayProps) {
   const { width: mapWidth, height: mapHeight } = useMapDisplaySize();
@@ -229,6 +237,8 @@ function DistrictDetailOverlay({
       >
         {districtLabel}
       </SvgText>
+
+      <MapPresenceSvgLayer viewModel={mapPresenceViewModel} />
 
       <G>
         {pins.map((pin) => (

@@ -40,8 +40,16 @@ import {
   buildEventDomainResultFocus,
   shouldShowEventDomainFocus,
 } from '@/core/events/eventDomainPresentation';
+import {
+  buildResourceFatiguePanelLine,
+  buildResourceFatigueVisualSummary,
+  inferResourceDomainFromEventFocus,
+} from '@/core/resources';
+import { ResourceFatigueStateChip } from '@/features/resources/components/ResourceFatigueStateChip';
 import { buildFirstResultGuidanceModel } from '@/core/onboarding/onboardingPresentation';
 import { EventCarryOverHintCard } from '@/features/events/components/EventCarryOverHintCard';
+import { EventMapImpactSummaryCard } from '@/features/events/components/EventMapImpactSummaryCard';
+import { buildMapBeforeAfterSummary } from '@/core/mapPresence';
 import { EventDomainFocusStrip } from '@/features/events/components/EventDomainFocusStrip';
 import { OnboardingPhaseHint } from '@/features/onboarding/components/OnboardingPhaseHint';
 import { selectIsDay1TutorialEligible } from '@/features/tutorial/tutorialSelectors';
@@ -97,6 +105,8 @@ export function DecisionResultScreen() {
   const activeEvents = gameState.events;
   const solvedEvents = gameState.solvedEvents;
   const dailyGoalState = useGameStore((s) => s.dailyGoalState);
+  const operationalResources = useGameStore((s) => s.operationalResources);
+  const operationSignals = useGameStore((s) => s.operationSignals);
 
   const result = snapshot ?? createEmptyDecisionResultFallback();
   const isMissing = snapshot == null;
@@ -245,6 +255,88 @@ export function DecisionResultScreen() {
       suppressEchoDuplicate: Boolean(showDomainResult && domainResultFocus?.echoLine),
     });
 
+  const mapBeforeAfterSummary = useMemo(() => {
+    if (isMissing) return null;
+    const day = result.day ?? currentDay;
+    const existingLines: string[] = [];
+    if (domainResultFocus?.echoLine) existingLines.push(domainResultFocus.echoLine);
+    if (resultCarryOver?.summary) existingLines.push(resultCarryOver.summary);
+    if (result.summaryText) existingLines.push(result.summaryText);
+
+    return buildMapBeforeAfterSummary({
+      day,
+      surface: 'result',
+      activeEvent: relatedEvent ?? undefined,
+      eventResult: {
+        summaryText: result.summaryText,
+        summaryTitle: result.summaryTitle,
+        resultTone: result.resultTone,
+        neighborhoodName: result.neighborhoodName,
+        eventId: result.eventId,
+      },
+      eventDomainFocus: domainResultFocus?.model
+        ? {
+            focus: domainResultFocus.model.focus,
+            reportEchoLine: domainResultFocus.echoLine ?? undefined,
+            summary: domainResultFocus.model.summary,
+          }
+        : null,
+      carryOverMemory: resultCarryOver
+        ? {
+            domain: resultCarryOver.domain,
+            summary: resultCarryOver.summary,
+            resolved: resultCarryOver.direction === 'positive_memory',
+          }
+        : null,
+    });
+  }, [
+    currentDay,
+    domainResultFocus?.echoLine,
+    domainResultFocus?.model,
+    isMissing,
+    relatedEvent,
+    result,
+    resultCarryOver,
+  ]);
+
+  const showMapBeforeAfter =
+    (result.day ?? currentDay) > 1 &&
+    mapBeforeAfterSummary?.impact?.visible === true;
+
+  const resultFatigueState = useMemo(() => {
+    if (!relatedEvent || isMissing) return null;
+    const domain = inferResourceDomainFromEventFocus(domainResultFocus?.model.focus);
+    const primary = buildResourceFatigueVisualSummary({
+      day: result.day ?? currentDay,
+      surface: 'result',
+      domain,
+      operationalResources,
+      operationSignals: {
+        dailyFocus: operationSignals.dailyFocus,
+        overall: { status: operationSignals.overall.status },
+      },
+      activeEvent: relatedEvent,
+      eventDomainFocus: domainResultFocus?.model,
+    }).primaryState;
+    if (!primary) return null;
+    const line = buildResourceFatiguePanelLine(primary);
+    if (resultCarryOver?.summary && resultCarryOver.summary.length > 12) {
+      if (line.toLowerCase().includes(resultCarryOver.summary.slice(0, 18).toLowerCase())) {
+        return null;
+      }
+    }
+    return primary;
+  }, [
+    currentDay,
+    domainResultFocus?.model,
+    isMissing,
+    operationalResources,
+    operationSignals,
+    relatedEvent,
+    result.day,
+    resultCarryOver?.summary,
+  ]);
+
   const scrollBottomPadding = tabBarHeight + Math.max(insets.bottom, 8) + spacing.md;
 
   return (
@@ -307,6 +399,21 @@ export function DecisionResultScreen() {
             {showResultCarryOver && !showDomainResult ? (
               <Animated.View entering={FadeInUp.delay(110).duration(260)} style={styles.domainResult}>
                 <EventCarryOverHintCard memory={resultCarryOver} compact />
+              </Animated.View>
+            ) : null}
+
+            {resultFatigueState ? (
+              <Animated.View entering={FadeInUp.delay(115).duration(260)} style={styles.fatigueChip}>
+                <ResourceFatigueStateChip model={resultFatigueState} />
+              </Animated.View>
+            ) : null}
+
+            {showMapBeforeAfter && mapBeforeAfterSummary?.impact ? (
+              <Animated.View entering={FadeInUp.delay(118).duration(260)} style={styles.mapImpactCard}>
+                <EventMapImpactSummaryCard
+                  impact={mapBeforeAfterSummary.impact}
+                  compact={(result.day ?? currentDay) <= 2}
+                />
               </Animated.View>
             ) : null}
 
@@ -408,6 +515,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: eventDetail.textMuted,
     lineHeight: 20,
+  },
+  mapImpactCard: {
+    marginHorizontal: 18,
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  fatigueChip: {
+    marginBottom: spacing.sm,
+    minWidth: 0,
   },
   domainResult: {
     marginTop: spacing.sm,

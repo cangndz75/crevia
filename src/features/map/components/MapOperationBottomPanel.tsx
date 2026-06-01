@@ -2,6 +2,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { resolveIoniconForRegistryKey } from '@/core/presentation/creviaIconPresentation';
+import type { MapBeforeAfterImpactModel } from '@/core/mapPresence/mapBeforeAfterTypes';
+import { MapBeforeAfterImpactStrip } from '@/features/map/components/MapBeforeAfterImpactStrip';
 import type {
   DistrictRiskSummaryMetric,
   MapCrisisPanelLine,
@@ -14,6 +16,7 @@ import { shadows } from '@/ui/theme/shadows';
 
 type Props = {
   model: MapOperationPanelModel;
+  mapBeforeAfterImpact?: MapBeforeAfterImpactModel | null;
   onPressCta?: () => void;
   onPressRecommended?: () => void;
 };
@@ -138,6 +141,7 @@ function DistrictRiskMetricCard({ metric }: { metric: DistrictRiskSummaryMetric 
 
 export function MapOperationBottomPanel({
   model,
+  mapBeforeAfterImpact,
   onPressCta,
   onPressRecommended,
 }: Props) {
@@ -198,6 +202,19 @@ export function MapOperationBottomPanel({
       {model.resourceLines?.map((line) => (
         <ResourceMapLineRow key={line.id} line={line} />
       ))}
+
+      {model.presenceLines?.map((line, index) => (
+        <View key={`presence-${index}`} style={styles.presenceRow}>
+          <Ionicons name="location-outline" size={13} color={mapUi.teal} />
+          <Text style={styles.presenceText} numberOfLines={2}>
+            {line}
+          </Text>
+        </View>
+      ))}
+
+      {!model.crisisLines?.length && mapBeforeAfterImpact?.visible ? (
+        <MapBeforeAfterImpactStrip impact={mapBeforeAfterImpact} compact />
+      ) : null}
 
       {model.sahaNote ? (
         <View style={styles.noteRow}>
@@ -432,6 +449,27 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 3,
+  },
+  presenceRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    minWidth: 0,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    backgroundColor: mapUi.mint,
+    borderWidth: 1,
+    borderColor: 'rgba(15, 143, 134, 0.12)',
+  },
+  presenceText: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    color: mapUi.teal,
   },
   recommendedStrip: {
     flexDirection: 'row',

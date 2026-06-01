@@ -12,9 +12,12 @@ import {
   buildCommonAnalyticsBase,
   trackOncePerRuntime,
 } from '@/core/analytics/analyticsRuntime';
+import { buildMapBeforeAfterSummary, buildMapPresenceViewModel } from '@/core/mapPresence';
 import { buildMainOperationMapScopeBadges } from '@/core/mainOperation/mainOperationPresentation';
+import { buildEventDomainFocusModel } from '@/core/events/eventDomainPresentation';
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 import { buildPostPilotMapContextLineForGameState } from '@/core/postPilot/postPilotOperationUxPresentation';
+import { buildReportTomorrowPreview } from '@/core/reports/reportTomorrowPreviewPresentation';
 import { MapNeighborhoodStrip } from '@/features/map/components/MapNeighborhoodStrip';
 import { MapOperationBottomPanel } from '@/features/map/components/MapOperationBottomPanel';
 import { buildMapCrisisPresentationBundle } from '@/features/map/utils/mapCrisisPresentation';
@@ -344,6 +347,109 @@ export function MapScreen() {
     ],
   );
 
+  const primaryMapEvent = activeEvents[0];
+
+  const mapBeforeAfterSummary = useMemo(() => {
+    if (gameDay <= 1) return null;
+    return buildMapBeforeAfterSummary({
+      day: gameDay,
+      surface: 'map_panel',
+      activeEvent: primaryMapEvent,
+      eventDomainFocus: primaryMapEvent
+        ? buildEventDomainFocusModel({
+            event: primaryMapEvent,
+            day: gameDay,
+            surface: 'inspect',
+          })
+        : null,
+      crisisState:
+        crisisState.accessMode === 'active' || Boolean(crisisState.activeIncident)
+          ? { active: true }
+          : null,
+      operationSignals: { dominantDomain: operationSignals.dailyFocus },
+      hasRealPostPilotData:
+        gameDay > 7 &&
+        (activeEvents.length > 0 ||
+          postPilotOperation?.phase === 'main_operation_light' ||
+          postPilotOperation?.phase === 'main_operation_full'),
+    });
+  }, [
+    activeEvents.length,
+    crisisState.accessMode,
+    crisisState.activeIncident,
+    gameDay,
+    operationSignals.dailyFocus,
+    postPilotOperation?.phase,
+    primaryMapEvent,
+  ]);
+
+  const mapPresenceViewModel = useMemo(() => {
+    const tomorrowPreview = buildReportTomorrowPreview({
+      day: gameDay,
+      lastEventResult: primaryMapEvent
+        ? {
+            eventId: primaryMapEvent.id,
+            summaryTitle: primaryMapEvent.title,
+          }
+        : undefined,
+      operationSignals,
+    });
+
+    return buildMapPresenceViewModel({
+      day: gameDay,
+      surface: mapViewMode === 'detail' ? 'district_detail' : 'overview',
+      selectedDistrictId: focusDistrictId,
+      activeEvent: primaryMapEvent,
+      eventDomainFocus: primaryMapEvent
+        ? buildEventDomainFocusModel({
+            event: primaryMapEvent,
+            day: gameDay,
+            surface: 'inspect',
+          })
+        : null,
+      reportTomorrowPreview: tomorrowPreview
+        ? {
+            domain: tomorrowPreview.domain,
+            visible: tomorrowPreview.visibility !== 'hidden',
+          }
+        : null,
+      operationSignals: {
+        dominantDomain: operationSignals.dailyFocus,
+        pressureLevel: operationSignals.overall?.status,
+      },
+      operationalResources,
+      assignmentState: {
+        activeDistrictId: operationSignals.priorityDistrictId,
+      },
+      crisisState,
+      postPilotOperation: postPilotOperation
+        ? {
+            active:
+              postPilotOperation.phase === 'main_operation_light' ||
+              postPilotOperation.phase === 'main_operation_full',
+          }
+        : null,
+      hasRealPostPilotData:
+        gameDay > 7 &&
+        (activeEvents.length > 0 ||
+          postPilotOperation?.phase === 'main_operation_light' ||
+          postPilotOperation?.phase === 'main_operation_full'),
+      mapBeforeAfterSummary: mapBeforeAfterSummary ?? undefined,
+    });
+  }, [
+    activeEvents.length,
+    assignments,
+    crisisState,
+    mapBeforeAfterSummary,
+    focusDistrictId,
+    gameDay,
+    mapViewMode,
+    operationalResources,
+    operationSignals,
+    postPilotOperation,
+    primaryMapEvent,
+  ]);
+
   const postPilotMapContextLine = useMemo(() => {
     const districtEvents = activeEvents.filter((event) => {
       const neighborhoodId = event.neighborhoodId?.toLowerCase() ?? '';
@@ -368,6 +474,14 @@ export function MapScreen() {
         : undefined,
       maxTotal: 2,
     });
+    const panelSlotsUsed =
+      (merged.crisisLines?.length ?? 0) + (merged.resourceLines?.length ?? 0);
+    const presenceLines =
+      gameDay > 1 &&
+      mapPresenceViewModel.visible &&
+      panelSlotsUsed < 2
+        ? mapPresenceViewModel.panelLines.slice(0, 2 - panelSlotsUsed)
+        : undefined;
     return buildMapOperationPanelModel({
       viewMode: mapViewMode,
       focusDistrictId,
@@ -382,6 +496,7 @@ export function MapScreen() {
       postPilotMapContextLine: postPilotMapContextLine ?? undefined,
       crisisLines: merged.crisisLines,
       resourceLines: merged.resourceLines,
+      presenceLines,
     });
   }, [
     activeEvents,
@@ -392,6 +507,8 @@ export function MapScreen() {
     hideMapFleetSignals,
     mapCrisisPresentation.panelLines,
     mapCrisisPresentation.visible,
+    mapPresenceViewModel.panelLines,
+    mapPresenceViewModel.visible,
     mapResourcePresentation.panelLines,
     mapResourcePresentation.visible,
     mapViewMode,
@@ -466,6 +583,7 @@ export function MapScreen() {
           selectedPinId={selectedPinId}
           crisisHighlightDistrictIds={crisisHighlightDistrictIds}
           resourceHighlightDistrictIds={resourceHighlightDistrictIds}
+          mapPresenceViewModel={mapPresenceViewModel}
           activeOperationOverlay={activeOperationOverlay}
           onLayersPress={() => setLayerPanelOpen(true)}
           onDistrictSelect={handleDistrictSelect}
@@ -479,6 +597,13 @@ export function MapScreen() {
           {showPostPilotMapChrome ? (
             <MapOperationBottomPanel
               model={operationPanel}
+              mapBeforeAfterImpact={
+                gameDay > 1 &&
+                !mapCrisisPresentation.visible &&
+                mapBeforeAfterSummary?.impact?.visible
+                  ? mapBeforeAfterSummary.impact
+                  : null
+              }
               onPressCta={handleFocusDistrict}
               onPressRecommended={handleFocusDistrict}
             />

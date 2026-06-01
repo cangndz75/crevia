@@ -8,6 +8,8 @@ import type { EventCard } from '@/core/models/EventCard';
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 
 import { type MapDistrictId } from '../data/mapAssets';
+import type { MapPresenceViewModel } from '@/core/mapPresence/mapPresenceTypes';
+
 import type { ActiveLayers, MapFilterId, MapViewMode, PilotAreaId } from '../types/map';
 
 type Props = {
@@ -26,6 +28,7 @@ type Props = {
   selectedPinId?: string | null;
   crisisHighlightDistrictIds?: MapDistrictId[];
   resourceHighlightDistrictIds?: MapDistrictId[];
+  mapPresenceViewModel?: MapPresenceViewModel | null;
   activeOperationOverlay?: MapActiveOperationOverlayModel | null;
   onLayersPress: () => void;
   onDistrictSelect: (districtId: MapDistrictId) => void;

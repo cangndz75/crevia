@@ -7,5 +7,3 @@ export * from './carryOverMemoryTypes';
 export * from './carryOverMemorySelectors';
 export * from './carryOverMemoryPresentation';
 export * from './carryOverMemoryValidation';
-export { verifyCarryOverScenario } from './verifyCarryOverScenario';
-export { verifyCarryOverMemoryScenario } from './verifyCarryOverMemoryScenario';

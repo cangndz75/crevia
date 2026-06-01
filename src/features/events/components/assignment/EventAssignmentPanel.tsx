@@ -13,6 +13,11 @@ import {
   shouldUseFirstTenMinutesAssignmentSimpleMode,
 } from '@/core/onboarding/firstTenMinutesPresentation';
 import { buildEventDomainDispatchFocus } from '@/core/events/eventDomainPresentation';
+import {
+  buildResourceFatigueVisualSummary,
+  inferResourceDomainFromEventFocus,
+} from '@/core/resources';
+import { ResourceFatigueSummaryStrip } from '@/features/resources/components/ResourceFatigueSummaryStrip';
 import { buildAssignmentResourceFitLine } from '@/core/operationalResources/operationalResourcePresentation';
 import { buildAssignmentAnalyticsPayload } from '@/core/analytics/analyticsPayloadBuilders';
 import { trackCreviaEvent } from '@/core/analytics/analyticsRuntime';
@@ -74,6 +79,26 @@ export function EventAssignmentPanel({ event, compactTutorial = false }: Props) 
     return buildEventDomainDispatchFocus(event, assignment, day);
   }, [assignment, event, storeSlice.gameState.city.day]);
 
+  const fatigueSummary = useMemo(() => {
+    const day = storeSlice.gameState.city.day;
+    const domain = inferResourceDomainFromEventFocus(domainDispatchFocus.model.focus);
+    return buildResourceFatigueVisualSummary({
+      day,
+      surface: 'dispatch',
+      domain,
+      operationalResources: storeSlice.operationalResources,
+      operationSignals: {
+        dailyFocus: storeSlice.operationSignals.dailyFocus,
+        overall: { status: storeSlice.operationSignals.overall.status },
+      },
+      activeEvent: event,
+      eventDomainFocus: domainDispatchFocus.model,
+      assignmentState: {
+        dominantDomain: assignment?.compatibilityLabel,
+      },
+    });
+  }, [assignment, domainDispatchFocus.model, event, storeSlice]);
+
   if (!panel || !assignment) {
     return null;
   }
@@ -125,6 +150,14 @@ export function EventAssignmentPanel({ event, compactTutorial = false }: Props) 
         <Text style={styles.domainWarning} numberOfLines={2}>
           {domainDispatchFocus.warningLine}
         </Text>
+      ) : null}
+
+      {!assignmentSimpleMode ? (
+        <ResourceFatigueSummaryStrip
+          summary={fatigueSummary}
+          compact={compactTutorial}
+          maxItems={2}
+        />
       ) : null}
 
       {panel.rows.map((row) => (

@@ -2,7 +2,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { buildResourceFatigueVisualSummary } from '@/core/resources';
 import { buildResourceAnalyticsPayload } from '@/core/analytics/analyticsPayloadBuilders';
+import { ResourceFatigueSummaryStrip } from '@/features/resources/components/ResourceFatigueSummaryStrip';
 import {
   buildCommonAnalyticsBase,
   trackCreviaEvent,
@@ -63,6 +65,24 @@ export function HubOperationalResourcesCard() {
     operationalResources,
   ]);
 
+  const fatigueSummary = useMemo(
+    () =>
+      buildResourceFatigueVisualSummary({
+        day: gameState.city.day,
+        surface: 'hub',
+        operationalResources,
+        operationSignals: {
+          dailyFocus: operationSignals.dailyFocus,
+          overall: { status: operationSignals.overall.status },
+          vehicles: { status: operationSignals.vehicles.status },
+          personnel: { status: operationSignals.personnel.status },
+          containers: { status: operationSignals.containers.status },
+        },
+        hasRealPostPilotData: gameState.city.day > 7,
+      }),
+    [gameState.city.day, operationalResources, operationSignals],
+  );
+
   if (!model.visible) {
     return null;
   }
@@ -102,6 +122,13 @@ export function HubOperationalResourcesCard() {
               </View>
             );
           })}
+          {gameState.city.day >= 3 ? (
+            <ResourceFatigueSummaryStrip
+              summary={fatigueSummary}
+              compact={model.compact}
+              maxItems={model.compact ? 1 : 2}
+            />
+          ) : null}
           {showCta ? (
             <Pressable
               style={({ pressed }) => [

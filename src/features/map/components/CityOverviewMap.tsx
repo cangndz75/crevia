@@ -15,7 +15,10 @@ import {
 } from '../data/cityOverviewGeometry';
 import { mapAssets, MAP_ZOOM_LIMITS, type MapDistrictId } from '../data/mapAssets';
 import { mapDistrictFromPilot } from '../data/mapDistrictMapping';
+import type { MapPresenceViewModel } from '@/core/mapPresence/mapPresenceTypes';
+
 import type { ActiveLayers, MapFilterId, MapPin, PilotAreaId } from '../types/map';
+import { MapPresenceSvgLayer } from './MapPresenceSvgLayer';
 import {
   buildNeighborhoodContainerMapSignals,
   getContainerSignalTone,
@@ -52,6 +55,7 @@ export type CityOverviewMapProps = {
   selectedPinId?: string | null;
   crisisHighlightDistrictIds?: MapDistrictId[];
   resourceHighlightDistrictIds?: MapDistrictId[];
+  mapPresenceViewModel?: MapPresenceViewModel | null;
   onDistrictPress?: (districtId: MapDistrictId) => void;
   onPinPress?: (pinId: string) => void;
 };
@@ -72,6 +76,7 @@ export function CityOverviewMap({
   selectedPinId = null,
   crisisHighlightDistrictIds,
   resourceHighlightDistrictIds,
+  mapPresenceViewModel = null,
   onDistrictPress,
   onPinPress,
 }: CityOverviewMapProps) {
@@ -144,6 +149,7 @@ export function CityOverviewMap({
         selectedPinId={selectedPinId}
         crisisHighlightDistrictIds={crisisHighlightDistrictIds}
         resourceHighlightDistrictIds={resourceHighlightDistrictIds}
+        mapPresenceViewModel={mapPresenceViewModel}
         onDistrictPress={onDistrictPress}
         onPinPress={onPinPress}
       />
@@ -159,6 +165,7 @@ type OverlayProps = {
   selectedPinId?: string | null;
   crisisHighlightDistrictIds?: MapDistrictId[];
   resourceHighlightDistrictIds?: MapDistrictId[];
+  mapPresenceViewModel?: MapPresenceViewModel | null;
   showHeat: boolean;
   showRoutes: boolean;
   onDistrictPress?: (districtId: MapDistrictId) => void;
@@ -173,6 +180,7 @@ function CityOverviewOverlay({
   selectedPinId = null,
   crisisHighlightDistrictIds,
   resourceHighlightDistrictIds,
+  mapPresenceViewModel = null,
   showHeat,
   showRoutes,
   onDistrictPress,
@@ -342,6 +350,8 @@ function CityOverviewOverlay({
           </G>
         );
       })}
+
+      <MapPresenceSvgLayer viewModel={mapPresenceViewModel} />
 
       <G>
         {pins.map((pin) => (

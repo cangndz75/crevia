@@ -23,7 +23,21 @@ import { ReportAuthorityTrustCard } from '@/features/reports/components/end-of-d
 import { ReportPilotSummaryPremiumCard } from '@/features/reports/components/end-of-day/premium/ReportPilotSummaryPremiumCard';
 import { ReportPrimaryImpactSection } from '@/features/reports/components/end-of-day/premium/ReportPrimaryImpactSection';
 import { buildReportCarryOverPreview } from '@/core/carryOver';
+import {
+  buildReportTomorrowPreviewSummary,
+  isReportTomorrowPreviewDuplicateOf,
+  shouldShowReportTomorrowPreview,
+} from '@/core/reports/reportTomorrowPreviewPresentation';
+import { buildSocialDecisionEcho } from '@/core/socialEcho/socialEchoSelectors';
+import { buildSocialEchoContextFromPulseArgs } from '@/core/socialEcho/socialEchoPresentation';
+import { buildEventDomainFocusModel } from '@/core/events/eventDomainPresentation';
 import { ReportCarryOverPreviewCard } from '@/features/reports/components/ReportCarryOverPreviewCard';
+import {
+  buildResourceFatiguePanelLine,
+  buildResourceFatigueVisualSummary,
+} from '@/core/resources';
+import { ResourceFatigueStateChip } from '@/features/resources/components/ResourceFatigueStateChip';
+import { ReportTomorrowPreviewCard } from '@/features/reports/components/ReportTomorrowPreviewCard';
 import { ReportTomorrowNotesCard } from '@/features/reports/components/end-of-day/premium/ReportTomorrowNotesCard';
 import { ReportAdvisorCommentCard } from '@/features/reports/components/ReportAdvisorCommentCard';
 import { ReportAssignmentBalanceCard } from '@/features/reports/components/ReportAssignmentBalanceCard';
@@ -112,6 +126,7 @@ export function EndOfDayReportView({
   const crisisActionState = useGameStore((s) => s.crisisActionState);
   const assignments = useGameStore((s) => s.assignments);
   const microDecisionState = useGameStore((s) => s.microDecisionState);
+  const socialPulseScore = useGameStore((s) => s.socialPulseState.globalPulseScore);
   const socialPulseState = useGameStore((s) => s.socialPulseState);
 
   const reportGuard = useMemo(
@@ -146,14 +161,30 @@ export function EndOfDayReportView({
 
   const gameStatus = useGameStatus();
 
-  const model = buildEndOfDayReportViewModel({
-    report,
-    metrics,
-    dailyXpReport,
-    day1PriorityLine,
-    day1GoalsLine,
-    postPilotLightDay,
-  });
+  const model = useMemo(
+    () =>
+      buildEndOfDayReportViewModel({
+        report,
+        metrics,
+        dailyXpReport,
+        day1PriorityLine,
+        day1GoalsLine,
+        postPilotLightDay,
+      }),
+    [
+      report,
+      metrics,
+      dailyXpReport,
+      day1PriorityLine,
+      day1GoalsLine,
+      postPilotLightDay,
+    ],
+  );
+
+  const tomorrowNotesKey = useMemo(
+    () => (model.tomorrowNotes ?? []).join('\u0001'),
+    [model.tomorrowNotes],
+  );
 
   const headerModel = buildReportHeaderModel(gameStatus, report.day);
 
@@ -201,10 +232,131 @@ export function EndOfDayReportView({
     [decisionHistory, lastDecisionForDay, report],
   );
 
+  const eventDomainFocus = useMemo(() => {
+    if (!lastDecisionForDay) return null;
+    return buildEventDomainFocusModel({
+      event: {
+        id: lastDecisionForDay.eventId,
+        title: lastDecisionForDay.eventTitle,
+        neighborhoodId: lastDecisionForDay.neighborhoodId,
+      },
+      day: report.day,
+      includeEcho: true,
+    });
+  }, [lastDecisionForDay, report.day]);
+
+  const socialEchoForReport = useMemo(() => {
+    const ctx = buildSocialEchoContextFromPulseArgs({
+      day: report.day,
+      lastDecisionResult: lastDecisionForDay
+        ? {
+            eventId: lastDecisionForDay.eventId,
+            resultTone: 'mixed',
+          }
+        : undefined,
+      currentEvent: lastDecisionForDay
+        ? {
+            id: lastDecisionForDay.eventId,
+            title: lastDecisionForDay.eventTitle,
+            neighborhoodId: lastDecisionForDay.neighborhoodId,
+          }
+        : undefined,
+      eventDomainFocus: eventDomainFocus ?? undefined,
+      carryOverMemory: reportCarryOverMemory ?? undefined,
+      dailyReport: report,
+      operationSignals,
+      socialPulseState: { score: socialPulseScore },
+    });
+    return buildSocialDecisionEcho(ctx);
+  }, [
+    eventDomainFocus,
+    lastDecisionForDay,
+    operationSignals,
+    report,
+    reportCarryOverMemory,
+    socialPulseScore,
+  ]);
+
+  const tomorrowPreviewBundle = useMemo(() => {
+    const existingLines = [
+      ...(model.tomorrowNotes ?? []),
+      reportCarryOverMemory?.summary ?? '',
+      socialEchoForReport?.mention ?? '',
+      eventDomainFocus?.reportEchoLine ?? '',
+    ].filter(Boolean);
+
+    const previewInput = {
+      day: report.day,
+      currentReport: report,
+      lastEventResult: lastDecisionForDay
+        ? {
+            eventId: lastDecisionForDay.eventId,
+            summaryTitle: lastDecisionForDay.decisionLabel,
+          }
+        : undefined,
+      carryOverMemory: reportCarryOverMemory ?? undefined,
+      eventDomainFocus: eventDomainFocus ?? undefined,
+      socialEcho: socialEchoForReport ?? undefined,
+      operationSignals,
+      existingLines,
+    };
+
+    const summary = buildReportTomorrowPreviewSummary(previewInput);
+    const showPreview = shouldShowReportTomorrowPreview(report.day, previewInput);
+    const carryOverDuplicatesPreview = isReportTomorrowPreviewDuplicateOf(
+      summary.preview,
+      reportCarryOverMemory?.summary,
+    );
+
+    return { summary, showPreview, carryOverDuplicatesPreview };
+  }, [
+    eventDomainFocus,
+    lastDecisionForDay,
+    model.tomorrowNotes,
+    operationSignals,
+    report,
+    reportCarryOverMemory,
+    socialEchoForReport,
+    tomorrowNotesKey,
+  ]);
+
   const tomorrowNotesModel = useMemo(
     () => buildReportTomorrowNotesModel(model.tomorrowNotes),
     [model.tomorrowNotes],
   );
+
+  const reportFatigueState = useMemo(() => {
+    if (report.day <= 1) return null;
+    const preview = tomorrowPreviewBundle.summary.preview;
+    if (tomorrowPreviewBundle.showPreview && preview) {
+      if (preview.domain === 'container' || preview.domain === 'vehicle_route') {
+        return null;
+      }
+    }
+    return buildResourceFatigueVisualSummary({
+      day: report.day,
+      surface: 'report',
+      operationalResources,
+      operationSignals: {
+        dailyFocus: operationSignals.dailyFocus,
+        overall: { status: operationSignals.overall.status },
+        vehicles: { status: operationSignals.vehicles.status },
+        personnel: { status: operationSignals.personnel.status },
+        containers: { status: operationSignals.containers.status },
+      },
+      carryOverMemory: reportCarryOverMemory ?? undefined,
+      reportTomorrowPreview: preview
+        ? { domain: preview.domain, visible: true }
+        : undefined,
+    }).primaryState;
+  }, [
+    operationSignals,
+    operationalResources,
+    report.day,
+    reportCarryOverMemory,
+    tomorrowPreviewBundle.showPreview,
+    tomorrowPreviewBundle.summary.preview,
+  ]);
 
   const pilotPremiumModel = useMemo(
     () =>
@@ -373,6 +525,17 @@ export function EndOfDayReportView({
         <ReportPrimaryImpactSection model={impactModel} />
       </Animated.View>
 
+      {tomorrowPreviewBundle.showPreview && tomorrowPreviewBundle.summary.preview ? (
+        <ReportTomorrowPreviewCard
+          preview={tomorrowPreviewBundle.summary.preview}
+          compact={
+            model.isDay7 ||
+            tomorrowPreviewBundle.summary.preview.visibility === 'compact' ||
+            tomorrowPreviewBundle.summary.preview.visibility === 'final_safe'
+          }
+        />
+      ) : null}
+
       <ReportOperationSignalsCard
         report={report}
         compact={model.isDay1 || reportGuard.compactPrimaryImpact}
@@ -382,6 +545,15 @@ export function EndOfDayReportView({
         report={report}
         compact={model.isDay1 || reportGuard.compactPrimaryImpact}
       />
+
+      {reportFatigueState ? (
+        <View style={styles.fatigueReportRow}>
+          <ResourceFatigueStateChip model={reportFatigueState} compact />
+          <Text style={styles.fatigueReportText} numberOfLines={2}>
+            {buildResourceFatiguePanelLine(reportFatigueState)}
+          </Text>
+        </View>
+      ) : null}
 
       {!reportGuard.hideCrisis ? (
         <ReportCrisisDeskCard report={report} compact={model.isDay1} />
@@ -437,7 +609,7 @@ export function EndOfDayReportView({
 
       {model.showTomorrowNotes ? (
         <Animated.View entering={ENTER.notes}>
-          {reportCarryOverMemory?.visible ? (
+          {reportCarryOverMemory?.visible && !tomorrowPreviewBundle.carryOverDuplicatesPreview ? (
             <ReportCarryOverPreviewCard
               memory={reportCarryOverMemory}
               compact={model.isDay7}
@@ -479,5 +651,20 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: '#3D4F4C',
     flexShrink: 1,
+  },
+  fatigueReportRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    minWidth: 0,
+    paddingHorizontal: 4,
+  },
+  fatigueReportText: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#3D4F4C',
   },
 });

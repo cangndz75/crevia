@@ -422,8 +422,10 @@ export function verifyFinalPolishScenario(
   recordWarn(
     warn(
       checks,
-      nextStep.includes('Report Tomorrow') || nextStep.includes('report-tomorrow-preview'),
-      'Sonraki adım Report Tomorrow Preview önerisi',
+      nextStep.includes('Ece') ||
+        nextStep.includes('ece-player-style') ||
+        getFinalPolishRoadmapItemById('map-before-after-state')?.status === 'completed',
+      'Sonraki adım Ece Player Style Recognition önerisi',
       `Sonraki adım farklı: ${nextStep}`,
     ),
   );

@@ -14,7 +14,6 @@ import {
   deriveMainOperationAccessMode,
   ensureMainOperationSeasonForGameState,
 } from './mainOperationEngine';
-import { getMainOperationGoalTone } from './mainOperationPresentation';
 import { getActiveMainOperationDistrictIds } from './mainOperationState';
 import type {
   MainOperationEngineInput,
@@ -93,6 +92,16 @@ export type ReportMainOperationSeasonModel = {
   tone: MainOperationGoalTone;
   visible: boolean;
 };
+
+export function getMainOperationGoalTone(
+  progress: number,
+  status: string,
+): string {
+  if (status === 'completed') return 'positive';
+  if (progress >= 60) return 'positive';
+  if (progress >= 30) return 'neutral';
+  return 'warning';
+}
 
 function goalIconKey(domain: MainOperationGoalDomain): string {
   switch (domain) {

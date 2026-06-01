@@ -17,6 +17,8 @@ import {
   mapDistrictFromPilot,
   pilotAreaFromMapDistrict,
 } from '../data/mapDistrictMapping';
+import type { MapPresenceViewModel } from '@/core/mapPresence/mapPresenceTypes';
+
 import type { ActiveLayers, MapFilterId, MapViewMode, PilotAreaId } from '../types/map';
 import { getNeighborhoodMapCharacterLine } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 import { getMapDistrictLabel } from '../utils/mapDistrictLabels';
@@ -41,6 +43,7 @@ type Props = {
   selectedPinId?: string | null;
   crisisHighlightDistrictIds?: MapDistrictId[];
   resourceHighlightDistrictIds?: MapDistrictId[];
+  mapPresenceViewModel?: MapPresenceViewModel | null;
   activeOperationOverlay?: MapActiveOperationOverlayModel | null;
   onLayersPress: () => void;
   onDistrictSelect: (districtId: MapDistrictId) => void;
@@ -71,6 +74,7 @@ export function CityMapCard({
   selectedPinId = null,
   crisisHighlightDistrictIds,
   resourceHighlightDistrictIds,
+  mapPresenceViewModel = null,
   activeOperationOverlay = null,
   onLayersPress,
   onDistrictSelect,
@@ -109,6 +113,7 @@ export function CityMapCard({
             vehicleState={vehicleState}
             hideVehicleSignals={hideVehicleSignals}
             selectedPinId={selectedPinId}
+            mapPresenceViewModel={mapPresenceViewModel}
             onPinPress={onPinPress}
           />
         ) : (
@@ -128,6 +133,7 @@ export function CityMapCard({
             selectedPinId={selectedPinId}
             crisisHighlightDistrictIds={crisisHighlightDistrictIds}
             resourceHighlightDistrictIds={resourceHighlightDistrictIds}
+            mapPresenceViewModel={mapPresenceViewModel}
             onDistrictPress={handleDistrictPress}
             onPinPress={onPinPress}
           />

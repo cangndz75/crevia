@@ -60,16 +60,6 @@ export function getMainOperationDistrictStatusLabel(
   }
 }
 
-export function getMainOperationGoalTone(
-  progress: number,
-  status: string,
-): string {
-  if (status === 'completed') return 'positive';
-  if (progress >= 60) return 'positive';
-  if (progress >= 30) return 'neutral';
-  return 'warning';
-}
-
 function buildEngineInput(
   gameState: GameState,
   monetization: MonetizationState,

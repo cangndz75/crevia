@@ -6,6 +6,11 @@ import { buildAssignmentAnalyticsPayload } from '@/core/analytics/analyticsPaylo
 import { trackCreviaEvent, trackOncePerRuntime } from '@/core/analytics/analyticsRuntime';
 import { buildEventDomainFieldFocus } from '@/core/events/eventDomainPresentation';
 import {
+  buildResourceFatigueVisualSummary,
+  inferResourceDomainFromEventFocus,
+} from '@/core/resources';
+import { ResourceFatigueStateChip } from '@/features/resources/components/ResourceFatigueStateChip';
+import {
   buildMicroDecisionCardModel,
   buildMicroDecisionPresentationInput,
 } from '@/core/microDecisions';
@@ -29,6 +34,7 @@ export function EventFieldMicroDecisionCard({ event }: Props) {
   const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
   const advisorState = useGameStore((s) => s.advisorState);
   const microDecisionState = useGameStore((s) => s.microDecisionState);
+  const operationalResources = useGameStore((s) => s.operationalResources);
   const resolveMicroDecision = useGameStore((s) => s.resolveMicroDecision);
 
   const cardModel = useMemo(() => {
@@ -70,6 +76,23 @@ export function EventFieldMicroDecisionCard({ event }: Props) {
     return buildEventDomainFieldFocus(event, related ?? null, gameState.city.day);
   }, [event, gameState.city.day, microDecisionState]);
 
+  const fatiguePrimary = useMemo(() => {
+    if (shouldHideAdvancedSystemForFirstTenMinutes(gameState, 'live_micro_decisions')) return null;
+    const domain = inferResourceDomainFromEventFocus(fieldDomainHint?.model?.focus);
+    return buildResourceFatigueVisualSummary({
+      day: gameState.city.day,
+      surface: 'field',
+      domain,
+      operationalResources,
+      operationSignals: {
+        dailyFocus: operationSignals.dailyFocus,
+        overall: { status: operationSignals.overall.status },
+      },
+      activeEvent: event,
+      eventDomainFocus: fieldDomainHint?.model,
+    }).primaryState;
+  }, [event, fieldDomainHint?.model, gameState, operationalResources, operationSignals]);
+
   useEffect(() => {
     if (!cardModel) return;
     trackOncePerRuntime(
@@ -96,6 +119,7 @@ export function EventFieldMicroDecisionCard({ event }: Props) {
           {fieldDomainHint.hintLine}
         </Text>
       ) : null}
+      <ResourceFatigueStateChip model={fatiguePrimary} compact />
       <LiveOperationDecisionCard
         model={cardModel}
         onSelectOption={(optionId) => {

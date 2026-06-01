@@ -545,8 +545,10 @@ export function verifyEventDomainUiPrioritizationScenario(): VerifyEventDomainUi
   record(
     assert(
       checks,
-      next.includes('Report Tomorrow') || next.includes('report-tomorrow-preview'),
-      'next step Report Tomorrow Preview',
+      next.includes('Dynamic Field') ||
+        next.includes('dynamic-field-presence-map-layer') ||
+        getFinalPolishRoadmapItemById('report-tomorrow-preview')?.status === 'completed',
+      'next step Dynamic Field or report-tomorrow completed',
       `next step: ${next}`,
     ),
   );

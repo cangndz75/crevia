@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -29,35 +30,39 @@ type PostPilotAgendaBannerProps = {
 export function PostPilotAgendaBanner({ compact = false }: PostPilotAgendaBannerProps) {
   const router = useRouter();
   const tutorialActive = useGameStore(selectIsDay1TutorialActive);
-
-  const banner = useGameStore(
-    useShallow((s) => {
-      const pilot = s.gameState.pilot;
-      const postPilotOperation = selectPostPilotOperation(s);
-      const visible =
-        !tutorialActive &&
-        shouldShowPostPilotAgendaBanner(pilot.status, postPilotOperation);
-
-      if (!visible) {
-        return { visible: false as const };
-      }
-
-      const model = buildPostPilotAgendaBannerModel({
-        gameState: s.gameState,
-        postPilotOperation,
-        activeEvents: s.gameState.events,
-        featuredEventId: s.gameState.featuredEventId,
-      });
-
-      return { visible: true as const, model };
-    }),
+  const agendaInput = useGameStore(
+    useShallow((s) => ({
+      pilotStatus: s.gameState.pilot.status,
+      postPilotOperation: selectPostPilotOperation(s),
+      gameState: s.gameState,
+      activeEvents: s.gameState.events,
+      featuredEventId: s.gameState.featuredEventId,
+    })),
   );
 
-  if (!banner.visible) {
+  const model = useMemo(() => {
+    if (tutorialActive) {
+      return null;
+    }
+    if (
+      !shouldShowPostPilotAgendaBanner(
+        agendaInput.pilotStatus,
+        agendaInput.postPilotOperation,
+      )
+    ) {
+      return null;
+    }
+    return buildPostPilotAgendaBannerModel({
+      gameState: agendaInput.gameState,
+      postPilotOperation: agendaInput.postPilotOperation,
+      activeEvents: agendaInput.activeEvents,
+      featuredEventId: agendaInput.featuredEventId,
+    });
+  }, [agendaInput, tutorialActive]);
+
+  if (!model) {
     return null;
   }
-
-  const { model } = banner;
   const agendaIconTone = getIconToneStyle('teal');
 
   return (

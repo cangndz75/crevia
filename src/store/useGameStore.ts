@@ -259,6 +259,7 @@ import {
   processCrisisEndOfDay,
 } from '@/core/crisis/crisisEngine';
 import {
+  addCrisisSignal,
   buildCrisisSignal,
   createInitialCrisisState,
   normalizeCrisisState,
@@ -2476,27 +2477,25 @@ export const useGameStore = create<GameStore>()(
           get().devJumpToFullMainOperationForTesting();
         }
         const after = get();
-        set({
-          crisisState: {
+        const boostedCrisis = addCrisisSignal(
+          {
             ...after.crisisState,
             accessMode: 'active',
             cityCrisisScore: 84,
             riskLevel: 'critical',
             trend: 'worsening',
-            recentSignals: [
-              buildCrisisSignal({
-                id: 'dev-crisis-test-signal',
-                domain: 'city',
-                score: 84,
-                trend: 'worsening',
-                title: 'Çoklu mahalle baskısı yükseliyor.',
-                summary: 'Dev test sinyali — şehir baskısı yükseldi.',
-                sourceTags: ['dev', 'crisis'],
-              }),
-              ...after.crisisState.recentSignals,
-            ].slice(0, 5),
           },
-        });
+          buildCrisisSignal({
+            id: 'dev-crisis-test-signal',
+            domain: 'city',
+            score: 84,
+            trend: 'worsening',
+            title: 'Çoklu mahalle baskısı yükseliyor.',
+            summary: 'Dev test sinyali — şehir baskısı yükseldi.',
+            sourceTags: ['dev', 'crisis'],
+          }),
+        );
+        set({ crisisState: boostedCrisis });
       },
 
       devJumpToFullMainOperationForTesting: () => {

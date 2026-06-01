@@ -133,6 +133,7 @@ export type MapOperationPanelModel = {
   isDetailView: boolean;
   crisisLines?: MapCrisisPanelLine[];
   resourceLines?: MapResourcePanelLine[];
+  presenceLines?: string[];
 };
 
 const STATUS_LABELS: Record<MapNeighborhoodStripStatus, string> = {
@@ -482,6 +483,7 @@ export function buildMapOperationPanelModel(params: {
   postPilotMapContextLine?: string;
   crisisLines?: MapCrisisPanelLine[];
   resourceLines?: MapResourcePanelLine[];
+  presenceLines?: string[];
 }): MapOperationPanelModel {
   const preset = getPilotPreset(params.pilotAreaId);
   const isDetailView = params.viewMode === 'detail';
@@ -591,6 +593,10 @@ export function buildMapOperationPanelModel(params: {
     resourceLines:
       params.resourceLines && params.resourceLines.length > 0
         ? params.resourceLines.slice(0, 2)
+        : undefined,
+    presenceLines:
+      params.presenceLines && params.presenceLines.length > 0
+        ? params.presenceLines.slice(0, 2)
         : undefined,
   };
 }

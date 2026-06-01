@@ -450,8 +450,10 @@ export function verifyDynamicSocialEchoScenario(): VerifyDynamicSocialEchoOutcom
   record(
     assert(
       checks,
-      next.includes('Report Tomorrow') || next.includes('report-tomorrow-preview'),
-      'next step Report Tomorrow Preview',
+      next.includes('Dynamic Field') ||
+        next.includes('dynamic-field-presence-map-layer') ||
+        getFinalPolishRoadmapItemById('report-tomorrow-preview')?.status === 'completed',
+      'next step Dynamic Field or report-tomorrow completed',
       next,
     ),
   );
@@ -468,7 +470,7 @@ export function verifyDynamicSocialEchoScenario(): VerifyDynamicSocialEchoOutcom
     record(assert(checks, vis.length > 0, `day ${d} visibility defined`, vis));
   }
 
-  const domainEvents: Record<string, typeof CONTAINER_EVENT> = {
+  const domainEvents: Record<string, NonNullable<Parameters<typeof buildSocialEchoContext>[0]['currentEvent']>> = {
     container: CONTAINER_EVENT,
     vehicle_route: VEHICLE_EVENT,
     personnel: PERSONNEL_EVENT,
@@ -508,7 +510,7 @@ export function verifyDynamicSocialEchoScenario(): VerifyDynamicSocialEchoOutcom
   record(assert(checks, !readRepo('src/store/gamePersist.ts').includes('socialEcho'), 'persist unchanged', 'persist'));
   record(assert(checks, readRepo('src/features/social/components/HotSocialTopicCard.tsx').length > 0, 'hot topic preserved', 'hot'));
   record(assert(checks, readRepo('src/features/social/components/SocialMentionInlineList.tsx').length > 0, 'mention list preserved', 'mentions'));
-  record(assert(checks, readRepo('src/core/socialEcho/index.ts').includes('verifyDynamicSocialEchoScenario'), 'index exports verify', 'index'));
+  record(assert(checks, !readRepo('src/core/socialEcho/index.ts').includes('verifyDynamicSocialEchoScenario'), 'index bundle-safe no verify export', 'index'));
   record(assert(checks, readRepo('src/core/socialEcho/socialEchoPresentation.ts').includes('formatSocialEchoForDocs'), 'presentation helpers', 'pres'));
   record(assert(checks, readRepo('src/core/socialEcho/socialEchoValidation.ts').includes('validateSocialEchoDomainCoverage'), 'validation module', 'val'));
   record(assert(checks, buildSocialDecisionEchoCardModel(day4Ctx) != null, 'card model non-null day4', 'card4'));
@@ -521,7 +523,7 @@ export function verifyDynamicSocialEchoScenario(): VerifyDynamicSocialEchoOutcom
   record(assert(checks, readRepo('src/features/social/utils/socialPulsePresentation.ts').includes('buildDynamicSocialDecisionEchoModel'), 'dynamic builder wired', 'builder'));
   record(assert(checks, readRepo('src/features/social/components/SocialDecisionEchoCard.tsx').includes('highlighted'), 'card highlighted style', 'highlight'));
   record(assert(checks, readRepo('src/core/quality/finalPolish/finalPolishRoadmap.ts').includes("id: 'dynamic-social-echo'"), 'roadmap entry', 'roadmap'));
-  record(assert(checks, getFinalPolishRoadmapItemById('report-tomorrow-preview')?.status === 'planned', 'next roadmap item planned', 'next item'));
+  record(assert(checks, getFinalPolishRoadmapItemById('report-tomorrow-preview')?.status === 'completed', 'report-tomorrow roadmap completed', 'next item'));
 
   recordWarn(warn(checks, true, 'full-loop regression', 'run verify:full-loop'));
   recordWarn(warn(checks, true, 'full-ux-flow regression', 'run verify:full-ux-flow'));

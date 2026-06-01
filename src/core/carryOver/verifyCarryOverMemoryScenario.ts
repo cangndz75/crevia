@@ -350,9 +350,9 @@ export function verifyCarryOverMemoryScenario(): VerifyCarryOverMemoryOutcome {
   record(
     assert(
       checks,
-      next.includes('Report Tomorrow') || next.includes('report-tomorrow-preview') ||
-        next.includes('Dynamic Social') ||
-        next.includes('dynamic-social-echo'),
+      next.includes('Dynamic Field') ||
+        next.includes('dynamic-field-presence-map-layer') ||
+        getFinalPolishRoadmapItemById('report-tomorrow-preview')?.status === 'completed',
       'next step after carry-over',
       `next: ${next}`,
     ),
@@ -360,7 +360,7 @@ export function verifyCarryOverMemoryScenario(): VerifyCarryOverMemoryOutcome {
 
   record(assert(checks, existsSync(join(REPO_ROOT, 'docs/crevia-carry-over-memory-cards.md')), 'docs', 'docs'));
   record(assert(checks, readRepo('package.json').includes('verify:carry-over-memory'), 'package script', 'script'));
-  record(assert(checks, !existsSync(join(REPO_ROOT, 'src/core/index.ts')) || !readRepo('src/core/index.ts').includes('verifyCarryOver'), 'no verify in core index', 'index'));
+  record(assert(checks, !readRepo('src/core/carryOver/index.ts').includes('verifyCarryOverMemoryScenario'), 'carryOver index bundle-safe', 'index'));
 
   const debug = formatCarryOverMemoryForDebug(hub2);
   record(assert(checks, debug.includes('carry-over'), 'debug format', 'debug'));
