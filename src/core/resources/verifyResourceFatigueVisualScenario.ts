@@ -301,8 +301,10 @@ export function verifyResourceFatigueVisualScenario(): VerifyResourceFatigueVisu
   record(
     assert(
       checks,
-      next.includes('Ece') || next.includes('ece-player-style'),
-      'next Ece Player Style',
+      next.includes('Advisor Seniority') ||
+        next.includes('advisor-seniority') ||
+        getFinalPolishRoadmapItemById('ece-player-style-recognition')?.status === 'completed',
+      'next Advisor Seniority',
       `next: ${next}`,
     ),
   );

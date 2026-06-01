@@ -4,4 +4,7 @@ export * from './advisorState';
 export * from './advisorEngine';
 export * from './advisorPresentation';
 export * from './advisorPrediction';
+export * from './advisorSeniorityTypes';
+export * from './advisorSeniorityPresentation';
+export * from './advisorSeniorityValidation';
 export { verifyAdvisorScenario } from './verifyAdvisorScenario';

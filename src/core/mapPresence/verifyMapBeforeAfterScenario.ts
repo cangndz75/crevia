@@ -414,8 +414,10 @@ export function verifyMapBeforeAfterScenario(): {
   record(
     assert(
       checks,
-      nextStep.includes('Ece') || nextStep.includes('ece-player-style'),
-      'next Ece Player Style',
+      nextStep.includes('Advisor Seniority') ||
+        nextStep.includes('advisor-seniority') ||
+        getFinalPolishRoadmapItemById('ece-player-style-recognition')?.status === 'completed',
+      'next Advisor Seniority',
       `next: ${nextStep}`,
     ),
   );

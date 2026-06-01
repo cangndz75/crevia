@@ -422,10 +422,10 @@ export function verifyFinalPolishScenario(
   recordWarn(
     warn(
       checks,
-      nextStep.includes('Ece') ||
-        nextStep.includes('ece-player-style') ||
-        getFinalPolishRoadmapItemById('map-before-after-state')?.status === 'completed',
-      'Sonraki adım Ece Player Style Recognition önerisi',
+      nextStep.includes('Specialist Advisor') ||
+        nextStep.includes('specialist-advisor-notes') ||
+        getFinalPolishRoadmapItemById('advisor-seniority-system')?.status === 'completed',
+      'Sonraki adım Specialist Advisor Notes MVP önerisi',
       `Sonraki adım farklı: ${nextStep}`,
     ),
   );

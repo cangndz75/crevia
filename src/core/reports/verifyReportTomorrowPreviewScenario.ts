@@ -384,10 +384,10 @@ export function verifyReportTomorrowPreviewScenario(): VerifyReportTomorrowPrevi
   record(
     assert(
       checks,
-      next.includes('Ece') ||
-        next.includes('ece-player-style') ||
-        getFinalPolishRoadmapItemById('map-before-after-state')?.status === 'completed',
-      'next step Ece Player Style Recognition',
+      next.includes('Advisor Seniority') ||
+        next.includes('advisor-seniority') ||
+        getFinalPolishRoadmapItemById('ece-player-style-recognition')?.status === 'completed',
+      'next step Advisor Seniority System',
       next,
     ),
   );

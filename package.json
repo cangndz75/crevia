@@ -129,6 +129,8 @@
     "verify:map-presence": "npx tsx scripts/verify-map-presence.ts",
     "verify:resource-fatigue-visuals": "npx tsx scripts/verify-resource-fatigue-visuals.ts",
     "verify:map-before-after-state": "npx tsx scripts/verify-map-before-after-state.ts",
+    "verify:player-style": "npx tsx scripts/verify-player-style.ts",
+    "verify:advisor-seniority": "npx tsx scripts/verify-advisor-seniority.ts",
     "verify:dispatch-field-ui": "npx tsx scripts/verify-dispatch-field-ui.ts",
     "verify:full-ux-flow": "npx tsx scripts/verify-full-ux-flow.ts",
     "verify:post-pilot-operation": "npx tsx scripts/verify-post-pilot-operation.ts",

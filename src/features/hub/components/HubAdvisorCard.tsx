@@ -27,7 +27,15 @@ import {
   DAY1_ADVISOR_SHORT_COPY,
   shouldUseFirstTenMinutesAdvisorShortMode,
 } from '@/core/onboarding/firstTenMinutesPresentation';
+import {
+  buildAdvisorSeniorityModel,
+  shouldSuppressPlayerStyleForSeniority,
+} from '@/core/advisors/advisorSeniorityPresentation';
+import { buildPlayerStyleProfile } from '@/core/playerStyle';
+import { AdvisorDepthInsightBlock } from '@/features/advisor/components/AdvisorDepthInsightBlock';
+import { AdvisorSeniorityBadge } from '@/features/advisor/components/AdvisorSeniorityBadge';
 import { buildPilotThemeAdvisorLine } from '@/core/pilotRhythm';
+import { EcePlayerStyleInsightCard } from '@/features/advisor/components/EcePlayerStyleInsightCard';
 import {
   buildOperationalResourceAdvisorLine,
   buildOperationalResourceEngineInputFromStore,
@@ -35,6 +43,7 @@ import {
 import { selectIsDay1TutorialEligible } from '@/features/tutorial/tutorialSelectors';
 import {
   selectAdvisorState,
+  selectDecisionHistory,
   useGameStore,
 } from '@/store/useGameStore';
 import { getPressFeedbackStyle } from '@/ui/feedback/pressFeedback';
@@ -59,6 +68,7 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
   const crisisState = useGameStore((s) => s.crisisState);
   const crisisActionState = useGameStore((s) => s.crisisActionState);
   const operationalResources = useGameStore((s) => s.operationalResources);
+  const decisionHistory = useGameStore(selectDecisionHistory);
   const isDay1 = useGameStore(selectIsDay1TutorialEligible);
   const advisorShortMode = shouldUseFirstTenMinutesAdvisorShortMode(gameState);
   const askDaily = useGameStore((s) => s.askAdvisorForDailySummary);
@@ -165,6 +175,32 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
     return buildPilotThemeAdvisorLine(day) ?? undefined;
   }, [gameState.city.day]);
 
+  const playerStyleProfile = useMemo(() => {
+    if (isDay1 || advisorShortMode) return null;
+    const day = gameState.city.day;
+    return buildPlayerStyleProfile({
+      day,
+      surface: 'hub',
+      decisionHistory,
+      advisorState,
+    });
+  }, [advisorShortMode, advisorState, decisionHistory, gameState.city.day, isDay1]);
+
+  const seniorityModel = useMemo(() => {
+    if (advisorShortMode) return null;
+    return buildAdvisorSeniorityModel({
+      day: gameState.city.day,
+      surface: 'hub',
+      advisorState,
+      playerStyleProfile: playerStyleProfile ?? undefined,
+    });
+  }, [advisorShortMode, advisorState, gameState.city.day, playerStyleProfile]);
+
+  const suppressPlayerStyleDuplicate = shouldSuppressPlayerStyleForSeniority(
+    seniorityModel,
+    playerStyleProfile,
+  );
+
   const resourceAdvisorLine = useMemo(() => {
     if (advisorShortMode) return undefined;
     return buildOperationalResourceAdvisorLine(
@@ -230,6 +266,12 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
                 </Text>
               </View>
             ) : null}
+            {seniorityModel?.visible ? (
+              <AdvisorSeniorityBadge
+                model={seniorityModel}
+                compact={gameState.city.day <= 3 || isDay1}
+              />
+            ) : null}
           </View>
         </View>
 
@@ -242,6 +284,13 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
           </Text>
         ) : null}
 
+        {seniorityModel?.visible && gameState.city.day >= 2 && !advisorShortMode ? (
+          <AdvisorDepthInsightBlock
+            model={seniorityModel}
+            compact={gameState.city.day <= 3}
+          />
+        ) : null}
+
         {pilotThemeAdvisorLine && !advisorShortMode ? (
           <Text style={styles.themeContextLine} numberOfLines={2} ellipsizeMode="tail">
             {pilotThemeAdvisorLine}
@@ -252,6 +301,16 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
           <Text style={styles.resourceLine} numberOfLines={2}>
             {resourceAdvisorLine}
           </Text>
+        ) : null}
+
+        {playerStyleProfile?.visible &&
+        !suppressPlayerStyleDuplicate &&
+        gameState.city.day >= 4 ? (
+          <EcePlayerStyleInsightCard profile={playerStyleProfile} compact={gameState.city.day <= 5} />
+        ) : playerStyleProfile?.visible &&
+          !suppressPlayerStyleDuplicate &&
+          gameState.city.day >= 2 ? (
+          <EcePlayerStyleInsightCard profile={playerStyleProfile} hubChip compact />
         ) : null}
 
         {missedNote ? (

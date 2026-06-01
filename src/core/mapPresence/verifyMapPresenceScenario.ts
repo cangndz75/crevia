@@ -478,10 +478,10 @@ export function verifyMapPresenceScenario(): VerifyMapPresenceOutcome {
   record(
     assert(
       checks,
-      nextStep.includes('Ece') ||
-        nextStep.includes('ece-player-style') ||
-        getFinalPolishRoadmapItemById('map-before-after-state')?.status === 'completed',
-      'next step Ece Player Style Recognition',
+      nextStep.includes('Advisor Seniority') ||
+        nextStep.includes('advisor-seniority') ||
+        getFinalPolishRoadmapItemById('ece-player-style-recognition')?.status === 'completed',
+      'next step Advisor Seniority System',
       `next: ${nextStep}`,
     ),
   );

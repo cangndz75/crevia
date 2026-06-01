@@ -16,7 +16,16 @@ import type { DailyReport } from '@/core/models/DailyReport';
 import { AdvisorMissedSignalNote } from '@/features/hub/components/AdvisorMissedSignalNote';
 import { selectIsDay1TutorialEligible } from '@/features/tutorial/tutorialSelectors';
 import {
+  buildAdvisorSeniorityModel,
+  shouldSuppressPlayerStyleForSeniority,
+} from '@/core/advisors/advisorSeniorityPresentation';
+import { buildPlayerStyleProfile } from '@/core/playerStyle';
+import { AdvisorDepthInsightBlock } from '@/features/advisor/components/AdvisorDepthInsightBlock';
+import { AdvisorSeniorityBadge } from '@/features/advisor/components/AdvisorSeniorityBadge';
+import { EcePlayerStyleInsightCard } from '@/features/advisor/components/EcePlayerStyleInsightCard';
+import {
   selectAdvisorState,
+  selectDecisionHistory,
   useGameStore,
 } from '@/store/useGameStore';
 
@@ -35,6 +44,7 @@ export function ReportAdvisorCommentCard({
   const vehicleState = useGameStore((s) => s.vehicleState);
   const containerState = useGameStore((s) => s.containerState);
   const operationSignals = useGameStore((s) => s.operationSignals);
+  const decisionHistory = useGameStore(selectDecisionHistory);
   const isDay1 = useGameStore(selectIsDay1TutorialEligible);
 
   const model = useMemo(() => {
@@ -78,6 +88,37 @@ export function ReportAdvisorCommentCard({
 
   const body = model.primaryInsight?.body ?? '';
 
+  const playerStyleProfile = useMemo(() => {
+    if (isDay1) return null;
+    return buildPlayerStyleProfile({
+      day: report.day,
+      surface: 'report',
+      decisionHistory,
+      advisorState,
+      dailyReports: [
+        {
+          day: report.day,
+          summary: (report.summaryLines ?? []).join(' '),
+        },
+      ],
+    });
+  }, [advisorState, decisionHistory, isDay1, report.day, report.summaryLines]);
+
+  const seniorityModel = useMemo(() => {
+    if (isDay1) return null;
+    return buildAdvisorSeniorityModel({
+      day: report.day,
+      surface: 'report',
+      advisorState,
+      playerStyleProfile: playerStyleProfile ?? undefined,
+    });
+  }, [advisorState, isDay1, playerStyleProfile, report.day]);
+
+  const suppressPlayerStyleDuplicate = shouldSuppressPlayerStyleForSeniority(
+    seniorityModel,
+    playerStyleProfile,
+  );
+
   return (
     <Animated.View
       entering={FadeInUp.delay(100).duration(240).springify().damping(22)}
@@ -94,6 +135,9 @@ export function ReportAdvisorCommentCard({
             <Text style={styles.clarityChip} numberOfLines={1}>
               {model.clarityLabel}
             </Text>
+            {seniorityModel?.visible && report.day >= 2 ? (
+              <AdvisorSeniorityBadge model={seniorityModel} compact />
+            ) : null}
           </View>
         ) : null}
       </View>
@@ -105,6 +149,15 @@ export function ReportAdvisorCommentCard({
       </Text>
       {missedNote ? (
         <AdvisorMissedSignalNote model={{ ...missedNote, showCta: false }} />
+      ) : null}
+      {seniorityModel?.visible && report.day >= 3 && !compact ? (
+        <AdvisorDepthInsightBlock model={seniorityModel} compact={report.day <= 5} />
+      ) : null}
+      {playerStyleProfile?.visible && !suppressPlayerStyleDuplicate ? (
+        <EcePlayerStyleInsightCard
+          profile={playerStyleProfile}
+          compact={report.day <= 3 || compact}
+        />
       ) : null}
       <View style={styles.footer}>
         <Text style={styles.experienceLine} numberOfLines={1}>
