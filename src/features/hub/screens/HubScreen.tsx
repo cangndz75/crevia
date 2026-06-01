@@ -23,6 +23,8 @@ import { HubOperationSignalsCard } from '@/features/hub/components/HubOperationS
 import { HubCriticalEventCard } from '@/features/hub/components/HubCriticalEventCard';
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
 import { HubDailyGoalHeroCard } from '@/features/hub/components/HubDailyGoalHeroCard';
+import { buildHubCarryOverMemory } from '@/core/carryOver';
+import { HubCarryOverMemoryCard } from '@/features/hub/components/HubCarryOverMemoryCard';
 import { HubPilotThemeCard } from '@/features/hub/components/HubPilotThemeCard';
 import { HubDailyPriorityCard } from '@/features/hub/components/HubDailyPriorityCard';
 import { HubFooterActionRow } from '@/features/hub/components/HubFooterActionRow';
@@ -99,6 +101,20 @@ export function HubScreen() {
   );
 
   const hubDay = gameState.city.day;
+  const lastDailyReport = useGameStore((s) => s.lastDailyReport);
+  const operationSignals = useGameStore((s) => s.operationSignals);
+  const decisionHistory = useGameStore((s) => s.decisionHistory);
+
+  const hubCarryOverMemory = useMemo(
+    () =>
+      buildHubCarryOverMemory({
+        day: hubDay,
+        lastDailyReport,
+        operationSignals,
+        recentDecisions: decisionHistory,
+      }),
+    [decisionHistory, hubDay, lastDailyReport, operationSignals],
+  );
 
   useEffect(() => {
     const base = buildCommonAnalyticsBase(gameState, 'hub', monetization);
@@ -180,6 +196,10 @@ export function HubScreen() {
         </TutorialTarget>
 
         {hubDay >= 1 && hubDay <= 7 ? <HubPilotThemeCard /> : null}
+
+        {hubCarryOverMemory?.visible ? (
+          <HubCarryOverMemoryCard memory={hubCarryOverMemory} compact={isDay1Layout} />
+        ) : null}
 
         {hubCardVisibility.showFirstDayGuide ? <HubFirstTenMinutesGuideCard /> : null}
 

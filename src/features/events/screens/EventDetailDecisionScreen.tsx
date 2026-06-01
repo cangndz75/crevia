@@ -89,7 +89,13 @@ import {
   resolveEventCardById,
 } from '@/core/liveFlow/eventLifecycleEngine';
 import { getPilotRhythmChipLabel } from '@/core/events/pilotRhythmPresentation';
-import { buildPilotThemeEventFocusLine } from '@/core/pilotRhythm';
+import { buildEventCarryOverHint, shouldShowCarryOverMemory } from '@/core/carryOver';
+import {
+  buildEventDetailCombinedFocusPresentation,
+  shouldShowEventDomainFocus,
+} from '@/core/events/eventDomainPresentation';
+import { EventCarryOverHintCard } from '@/features/events/components/EventCarryOverHintCard';
+import { EventDomainFocusStrip } from '@/features/events/components/EventDomainFocusStrip';
 import { ResolvedEventSummaryCard } from '@/features/events/components/ResolvedEventSummaryCard';
 import { buildEventDetailHeaderChips } from '@/features/events/utils/decisionTradeoffPresentation';
 import { OnboardingFocusHint } from '@/features/onboarding/components/OnboardingFocusHint';
@@ -427,9 +433,32 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
     });
   }, [currentDay, dailyPriorityKey, event]);
 
-  const pilotThemeFocusLine = useMemo(
-    () => buildPilotThemeEventFocusLine(event?.day ?? currentDay),
-    [currentDay, event?.day],
+  const domainFocusPresentation = useMemo(
+    () =>
+      buildEventDetailCombinedFocusPresentation({
+        event: event ?? undefined,
+        day: event?.day ?? currentDay,
+      }),
+    [currentDay, event],
+  );
+
+  const lastDailyReport = useGameStore((s) => s.lastDailyReport);
+  const eventCarryOverHint = useMemo(
+    () =>
+      buildEventCarryOverHint({
+        day: event?.day ?? currentDay,
+        currentEvent: event ?? undefined,
+        lastDailyReport,
+        recentDecisions: decisionHistory,
+        eventDomainFocus: domainFocusPresentation.model ?? undefined,
+      }),
+    [
+      currentDay,
+      decisionHistory,
+      domainFocusPresentation.model,
+      event,
+      lastDailyReport,
+    ],
   );
 
   const timelineHighlight = useTutorialHighlight('event_detail', 'event_status_timeline');
@@ -865,9 +894,14 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
               {getOfficerRoleLabel(currentDay)}
             </Text>
             <Text style={styles.officerDay}>Gün {event.day ?? currentDay}</Text>
-            {pilotThemeFocusLine ? (
+            {domainFocusPresentation.headline ? (
               <Text style={styles.themeFocusLine} numberOfLines={1}>
-                {pilotThemeFocusLine}
+                {domainFocusPresentation.headline}
+              </Text>
+            ) : null}
+            {domainFocusPresentation.subline && !domainFocusPresentation.compact ? (
+              <Text style={styles.themeFocusSubline} numberOfLines={2}>
+                {domainFocusPresentation.subline}
               </Text>
             ) : null}
             {headerChips.length > 0 ? (
@@ -899,6 +933,39 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
             <EventInsightCard event={event} />
           </TutorialTarget>
         </View>
+
+        {event &&
+        domainFocusPresentation.model &&
+        shouldShowEventDomainFocus(
+          event.day ?? currentDay,
+          'inspect',
+          domainFocusPresentation.model.focus,
+        ) ? (
+          <View style={styles.sectionGap}>
+            <EventDomainFocusStrip
+              model={domainFocusPresentation.model}
+              surface="inspect"
+              compact={domainFocusPresentation.compact || isDay1Tutorial}
+            />
+          </View>
+        ) : null}
+
+        {event &&
+        eventCarryOverHint?.visible &&
+        shouldShowCarryOverMemory(event.day ?? currentDay, 'event_detail', {
+          day: event.day ?? currentDay,
+          currentEvent: event,
+          lastDailyReport,
+          recentDecisions: decisionHistory,
+          eventDomainFocus: domainFocusPresentation.model ?? undefined,
+        }) ? (
+          <View style={styles.sectionGap}>
+            <EventCarryOverHintCard
+              memory={eventCarryOverHint}
+              compact={isDay1Tutorial}
+            />
+          </View>
+        ) : null}
 
         {eventDetailHint ? (
           <OnboardingFocusHint
@@ -1077,6 +1144,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     flexShrink: 1,
     minWidth: 0,
+  },
+  themeFocusSubline: {
+    fontSize: 9,
+    fontWeight: '500',
+    color: eventDetail.textMuted,
+    marginBottom: 4,
+    flexShrink: 1,
+    minWidth: 0,
+    lineHeight: 12,
   },
   chipRow: {
     gap: 4,

@@ -422,9 +422,8 @@ export function verifyFinalPolishScenario(
   recordWarn(
     warn(
       checks,
-      nextStep.includes('Content Safety Pack Aşama 3') ||
-        nextStep.includes('content-safety-pack-stage-3'),
-      'Sonraki adım Content Safety Pack Aşama 3 önerisi',
+      nextStep.includes('Report Tomorrow') || nextStep.includes('report-tomorrow-preview'),
+      'Sonraki adım Report Tomorrow Preview önerisi',
       `Sonraki adım farklı: ${nextStep}`,
     ),
   );

@@ -13,6 +13,7 @@ import {
   selectSocialPulseStateFromStore,
   useGameStore,
 } from '@/store/useGameStore';
+import type { OperationSignalsState } from '@/core/operations/operationSignalTypes';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { spacing } from '@/ui/theme/spacing';
@@ -46,6 +47,9 @@ export function SocialPulseScreen() {
   const pilotStatus = useGameStore((s) => s.gameState.pilot.status);
   const postPilotOperation = useGameStore(selectPostPilotOperation);
   const lastDecisionResult = useGameStore(selectLastDecisionResult);
+  const operationSignals = useGameStore(
+    (s) => s.operationSignals as OperationSignalsState,
+  );
   const isDay1Compact = useGameStore(selectIsDay1TutorialEligible);
   const applySocialQuickAction = useGameStore((s) => s.applySocialQuickAction);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
@@ -65,12 +69,14 @@ export function SocialPulseScreen() {
         currentDay,
         postPilotPhase,
         lastDecisionResult,
+        operationSignals,
         isDay1Compact,
       }),
     [
       currentDay,
       isDay1Compact,
       lastDecisionResult,
+      operationSignals,
       postPilotPhase,
       socialPulseState,
     ],
@@ -162,7 +168,10 @@ export function SocialPulseScreen() {
         />
 
         {viewModel.decisionEcho ? (
-          <SocialDecisionEchoCard model={viewModel.decisionEcho} />
+          <SocialDecisionEchoCard
+            echo={viewModel.decisionEcho}
+            compact={viewModel.decisionEcho.visibility === 'compact'}
+          />
         ) : null}
 
         {viewModel.showOutcomeHistory ? (

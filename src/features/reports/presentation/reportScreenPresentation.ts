@@ -1,3 +1,4 @@
+import { buildTomorrowHintLine } from '@/core/contentPacks/eventEchoPresentation';
 import { formatSourceWithLabel } from '@/core/economy/economyFormatter';
 import type { BadgeEvaluationSnapshot } from '@/core/badges/badgeTypes';
 import type { PilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
@@ -89,8 +90,14 @@ export function buildReportPilotCompactModel(
   };
 }
 
-export function buildReportTomorrowNoteFallback(): string {
-  return 'Operasyon kararlarının halk, ekip ve kaynak dengesini birlikte etkiler.';
+export function buildReportTomorrowNoteFallback(day = 3): string {
+  const line = buildTomorrowHintLine({
+    day,
+    domain: 'generic_operation',
+    outcomeBand: 'mixed',
+    eventId: 'report-tomorrow-fallback',
+  });
+  return line ?? 'Operasyon kararlarının halk, ekip ve kaynak dengesini birlikte etkiler.';
 }
 
 export function formatReportBudgetDisplay(budget: number): string {

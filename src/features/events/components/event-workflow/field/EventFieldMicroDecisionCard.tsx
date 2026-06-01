@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { EventCard } from '@/core/models/EventCard';
 import { buildAssignmentAnalyticsPayload } from '@/core/analytics/analyticsPayloadBuilders';
 import { trackCreviaEvent, trackOncePerRuntime } from '@/core/analytics/analyticsRuntime';
+import { buildEventDomainFieldFocus } from '@/core/events/eventDomainPresentation';
 import {
   buildMicroDecisionCardModel,
   buildMicroDecisionPresentationInput,
@@ -49,6 +50,7 @@ export function EventFieldMicroDecisionCard({ event }: Props) {
     if (!related) return undefined;
     return buildMicroDecisionCardModel(input, related, { compact: true });
   }, [
+    event,
     event.id,
     gameState,
     monetization,
@@ -60,6 +62,13 @@ export function EventFieldMicroDecisionCard({ event }: Props) {
     advisorState,
     microDecisionState,
   ]);
+
+  const fieldDomainHint = useMemo(() => {
+    const related = getActiveMicroDecisions(microDecisionState).find(
+      (d) => d.relatedEventId === event.id,
+    );
+    return buildEventDomainFieldFocus(event, related ?? null, gameState.city.day);
+  }, [event, gameState.city.day, microDecisionState]);
 
   useEffect(() => {
     if (!cardModel) return;
@@ -82,6 +91,11 @@ export function EventFieldMicroDecisionCard({ event }: Props) {
       <Text style={styles.badge} numberOfLines={1}>
         Saha bildirimi
       </Text>
+      {fieldDomainHint.hintLine ? (
+        <Text style={styles.domainHint} numberOfLines={2}>
+          {fieldDomainHint.hintLine}
+        </Text>
+      ) : null}
       <LiveOperationDecisionCard
         model={cardModel}
         onSelectOption={(optionId) => {
@@ -107,5 +121,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0F8F86',
     letterSpacing: 0.2,
+  },
+  domainHint: {
+    fontSize: 12,
+    color: '#4A5F5B',
+    flexShrink: 1,
+    minWidth: 0,
+    lineHeight: 17,
   },
 });

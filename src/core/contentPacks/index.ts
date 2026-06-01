@@ -58,3 +58,46 @@ export { mapContentPackTemplateToEventCard } from './contentPackEventAdapter';
 
 export { verifyContentSafetyPackStage1Scenario } from './verifyContentSafetyPackStage1Scenario';
 export { verifyContentSafetyPackStage2Scenario } from './verifyContentSafetyPackStage2Scenario';
+export { verifyContentSafetyPackStage3Scenario } from './verifyContentSafetyPackStage3Scenario';
+
+export type {
+  AdvisorEchoTemplate,
+  EventEchoBundle,
+  EventEchoContext,
+  EventEchoDomain,
+  EventEchoOutcomeBand,
+  EventEchoSurface,
+  EventEchoTemplate,
+  ReportEchoTemplate,
+  SocialEchoTemplate,
+  TomorrowHintEchoTemplate,
+} from './eventEchoTypes';
+
+export {
+  ADVISOR_ECHO_TEMPLATES,
+  ALL_EVENT_ECHO_TEMPLATES,
+  REPORT_ECHO_TEMPLATES,
+  SOCIAL_ECHO_TEMPLATES,
+  TOMORROW_HINT_ECHO_TEMPLATES,
+} from './eventEchoCopy';
+
+export {
+  buildAdvisorEchoLine,
+  buildEventEchoBundleForPresentation,
+  buildEventEchoDebugSummary,
+  buildEventEchoSummaryForDocs,
+  buildReportEchoLine,
+  buildSocialEchoMention,
+  buildTomorrowHintLine,
+  formatEventEchoCoverageTable,
+} from './eventEchoPresentation';
+
+export {
+  buildEventEchoBundle,
+  buildEchoContextFromEventResult,
+  inferEchoDomainFromEvent,
+  inferOutcomeBandFromResult,
+  isEventEchoSelectionDeterministic,
+} from './eventEchoSelectors';
+
+export { validateEventEchoTemplates } from './eventEchoValidation';

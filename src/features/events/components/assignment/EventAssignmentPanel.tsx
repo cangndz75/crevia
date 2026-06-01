@@ -12,6 +12,7 @@ import {
   DAY1_ASSIGNMENT_COPY,
   shouldUseFirstTenMinutesAssignmentSimpleMode,
 } from '@/core/onboarding/firstTenMinutesPresentation';
+import { buildEventDomainDispatchFocus } from '@/core/events/eventDomainPresentation';
 import { buildAssignmentResourceFitLine } from '@/core/operationalResources/operationalResourcePresentation';
 import { buildAssignmentAnalyticsPayload } from '@/core/analytics/analyticsPayloadBuilders';
 import { trackCreviaEvent } from '@/core/analytics/analyticsRuntime';
@@ -68,6 +69,11 @@ export function EventAssignmentPanel({ event, compactTutorial = false }: Props) 
     );
   }, [assignment, event, storeSlice]);
 
+  const domainDispatchFocus = useMemo(() => {
+    const day = storeSlice.gameState.city.day;
+    return buildEventDomainDispatchFocus(event, assignment, day);
+  }, [assignment, event, storeSlice.gameState.city.day]);
+
   if (!panel || !assignment) {
     return null;
   }
@@ -113,6 +119,13 @@ export function EventAssignmentPanel({ event, compactTutorial = false }: Props) 
       <Text style={styles.status} numberOfLines={1}>
         {panel.statusLabel}
       </Text>
+
+      {domainDispatchFocus.warningLine &&
+      !panel.compatibilitySummary.includes(domainDispatchFocus.warningLine.slice(0, 24)) ? (
+        <Text style={styles.domainWarning} numberOfLines={2}>
+          {domainDispatchFocus.warningLine}
+        </Text>
+      ) : null}
 
       {panel.rows.map((row) => (
         <View key={row.key} style={styles.row}>
@@ -307,6 +320,13 @@ const styles = StyleSheet.create({
     color: '#5F7A75',
     marginTop: 2,
     flexShrink: 1,
+  },
+  domainWarning: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0F6B64',
+    flexShrink: 1,
+    minWidth: 0,
   },
   compatSummary: {
     fontSize: 12,

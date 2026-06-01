@@ -7,6 +7,7 @@ import {
 } from '@/core/assignments';
 import { buildCrisisImpactPreviewModel } from '@/core/crisis';
 import { buildDailyPlanImpactPreviewModel, buildDailyPlanningEngineInputFromStore } from '@/core/dailyPlanning';
+import { prioritizeOperationImpactSummary } from '@/core/events/eventDomainPresentation';
 import {
   buildOperationImpactPreviewModel,
   buildOperationSignalsEngineInput,
@@ -158,7 +159,9 @@ export function OperationImpactPreviewStrip({
       operationSignals,
       isDay1Tutorial: isDay1,
     });
-    return buildOperationImpactPreviewModel(engineInput, event, decision);
+    const base = buildOperationImpactPreviewModel(engineInput, event, decision);
+    if (!base) return null;
+    return prioritizeOperationImpactSummary(base, event);
   }, [
     gameState,
     personnelState,

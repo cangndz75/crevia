@@ -1,9 +1,18 @@
+import { buildHubCarryOverMemory } from '@/core/carryOver/carryOverMemoryPresentation';
+import type { CarryOverMemoryInput } from '@/core/carryOver/carryOverMemoryTypes';
 import {
   buildDistrictEventContextLine,
   getDistrictIdentity,
   normalizeMapDistrictId,
   resolveDistrictAccentColor,
 } from '@/core/districts/districtIdentityPresentation';
+import { buildEventDomainFocusModel } from '@/core/events/eventDomainPresentation';
+import type { OperationSignalsState } from '@/core/operations/operationSignalTypes';
+import {
+  buildSocialDecisionEcho,
+  buildSocialEchoContextFromPulseArgs,
+} from '@/core/socialEcho/socialEchoPresentation';
+import type { SocialDecisionEchoModel } from '@/core/socialEcho/socialEchoTypes';
 import {
   getIconForDistrict,
   getIconForSocialMentionType,
@@ -122,7 +131,7 @@ export type SocialPulseScreenViewModel = {
   neighborhoods: NeighborhoodSensitivityItem[];
   hotTopic: HotSocialTopicPresentation;
   mentions: LiveMentionsSectionModel;
-  decisionEcho: LastDecisionSocialEchoModel | null;
+  decisionEcho: SocialDecisionEchoModel | null;
   postPilotContextLine?: string;
   tipLine: string;
   isCompact: boolean;
@@ -447,6 +456,61 @@ export function buildLastDecisionSocialEchoModel(
   };
 }
 
+export function buildDynamicSocialDecisionEchoModel(
+  params: BuildSocialPulseScreenParams,
+): SocialDecisionEchoModel | null {
+  const currentDay = Math.max(1, params.currentDay ?? 1);
+  if (params.isDay1Compact === true || currentDay === 1) {
+    return null;
+  }
+
+  const carryInput: CarryOverMemoryInput | null =
+    params.operationSignals || params.lastDecisionResult
+      ? {
+          day: currentDay,
+          operationSignals: params.operationSignals ?? undefined,
+          eventResult: params.lastDecisionResult ?? undefined,
+        }
+      : null;
+
+  const carryHub = carryInput ? buildHubCarryOverMemory(carryInput) : null;
+
+  const eventDomainFocus = params.lastDecisionResult
+    ? buildEventDomainFocusModel({
+        day: currentDay,
+        event: {
+          id: params.lastDecisionResult.eventId,
+          title: params.lastDecisionResult.eventTitle,
+          neighborhoodId: params.lastDecisionResult.neighborhoodId,
+        },
+        includeEcho: true,
+        resultLike: {
+          successLabel: params.lastDecisionResult.summaryTitle,
+          tone: params.lastDecisionResult.resultTone,
+        },
+      })
+    : null;
+
+  const context = buildSocialEchoContextFromPulseArgs({
+    day: currentDay,
+    lastDecisionResult: params.lastDecisionResult ?? undefined,
+    eventDomainFocus,
+    carryOverMemory: carryHub
+      ? {
+          summary: carryHub.summary,
+          domain: carryHub.domain,
+          tone: carryHub.tone,
+        }
+      : undefined,
+    operationSignals: params.operationSignals ?? undefined,
+    socialPulseState: params.socialPulseState
+      ? { score: params.socialPulseState.globalPulseScore }
+      : undefined,
+  });
+
+  return buildSocialDecisionEcho(context);
+}
+
 export function assertNoSocialPulseForbiddenWords(text: string): string[] {
   const haystack = text.toLowerCase();
   const hits: string[] = [];
@@ -486,7 +550,7 @@ export function collectSocialPulsePresentationStrings(
     ]),
     model.mentions.emptyMessage,
     model.decisionEcho?.title ?? '',
-    model.decisionEcho?.summary ?? '',
+    model.decisionEcho?.mention ?? '',
     model.postPilotContextLine ?? '',
     model.tipLine,
   ].filter(Boolean);
@@ -497,6 +561,7 @@ export type BuildSocialPulseScreenParams = {
   currentDay?: number;
   postPilotPhase?: PostPilotPhase | null;
   lastDecisionResult?: DecisionResultSnapshot | null;
+  operationSignals?: OperationSignalsState | null;
   isDay1Compact?: boolean;
 };
 
@@ -517,12 +582,7 @@ export function buildSocialPulseScreenViewModel(
   );
   const hotTopic = buildHotSocialTopicModel(bundle.hotTopic);
   const mentions = buildLiveMentionCardsModel(bundle.mentions, { isCompact });
-  const decisionEcho = isCompact
-    ? null
-    : buildLastDecisionSocialEchoModel(
-        params.lastDecisionResult,
-        bundle.outcomes,
-      );
+  const decisionEcho = isCompact ? null : buildDynamicSocialDecisionEchoModel(params);
 
   const postPilotContextLine =
     params.postPilotPhase === 'main_operation_light'

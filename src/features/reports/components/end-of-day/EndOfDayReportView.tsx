@@ -22,6 +22,8 @@ import { EndOfDayReportMetaProgressSection } from '@/features/reports/components
 import { ReportAuthorityTrustCard } from '@/features/reports/components/end-of-day/premium/ReportAuthorityTrustCard';
 import { ReportPilotSummaryPremiumCard } from '@/features/reports/components/end-of-day/premium/ReportPilotSummaryPremiumCard';
 import { ReportPrimaryImpactSection } from '@/features/reports/components/end-of-day/premium/ReportPrimaryImpactSection';
+import { buildReportCarryOverPreview } from '@/core/carryOver';
+import { ReportCarryOverPreviewCard } from '@/features/reports/components/ReportCarryOverPreviewCard';
 import { ReportTomorrowNotesCard } from '@/features/reports/components/end-of-day/premium/ReportTomorrowNotesCard';
 import { ReportAdvisorCommentCard } from '@/features/reports/components/ReportAdvisorCommentCard';
 import { ReportAssignmentBalanceCard } from '@/features/reports/components/ReportAssignmentBalanceCard';
@@ -174,6 +176,29 @@ export function EndOfDayReportView({
         authorityState,
       }),
     [report.authoritySummaryLines, report.authorityDailyGain, authorityState],
+  );
+
+  const lastDecisionForDay = useMemo(() => {
+    const dayRecords = decisionHistory.filter((r) => r.day === report.day);
+    return dayRecords[dayRecords.length - 1];
+  }, [decisionHistory, report.day]);
+
+  const reportCarryOverMemory = useMemo(
+    () =>
+      buildReportCarryOverPreview({
+        day: report.day,
+        currentDailyReport: report,
+        recentDecisions: decisionHistory,
+        currentEvent: lastDecisionForDay
+          ? {
+              id: lastDecisionForDay.eventId,
+              title: lastDecisionForDay.eventTitle,
+              neighborhoodId: lastDecisionForDay.neighborhoodId,
+              category: 'operations',
+            }
+          : undefined,
+      }),
+    [decisionHistory, lastDecisionForDay, report],
   );
 
   const tomorrowNotesModel = useMemo(
@@ -412,7 +437,14 @@ export function EndOfDayReportView({
 
       {model.showTomorrowNotes ? (
         <Animated.View entering={ENTER.notes}>
-          <ReportTomorrowNotesCard model={tomorrowNotesModel} />
+          {reportCarryOverMemory?.visible ? (
+            <ReportCarryOverPreviewCard
+              memory={reportCarryOverMemory}
+              compact={model.isDay7}
+            />
+          ) : (
+            <ReportTomorrowNotesCard model={tomorrowNotesModel} />
+          )}
         </Animated.View>
       ) : null}
 

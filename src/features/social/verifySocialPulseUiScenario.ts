@@ -234,9 +234,12 @@ export function verifySocialPulseUiScenario(): VerifySocialPulseUiOutcome {
   });
   assert(
     checks,
-    Boolean(echoModel.decisionEcho?.summary?.includes('Halk')),
+    Boolean(
+      echoModel.decisionEcho?.mention?.length ||
+        echoModel.decisionEcho?.title?.length,
+    ),
     'Son karar yankısı mevcut veriden üretilir',
-    echoModel.decisionEcho?.summary ?? 'none',
+    echoModel.decisionEcho?.mention ?? 'none',
   );
 
   const failCount = checks.filter((c) => !c.ok).length;

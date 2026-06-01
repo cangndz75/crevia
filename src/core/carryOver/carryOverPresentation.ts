@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   CarryOverHubLine,
   CarryOverSignal,
   CarryOverSignalTone,
@@ -7,7 +7,7 @@ import type {
 const MAX_LINES = 2;
 
 export type CarryOverPresentationOptions = {
-  /** Karar yankısı rapor satırı varsa overlap carry-over satırlarını gizle. */
+  /** Karar yank─▒s─▒ rapor sat─▒r─▒ varsa overlap carry-over sat─▒rlar─▒n─▒ gizle. */
   hideOverlapWhenButterflyReport?: boolean;
 };
 
@@ -17,7 +17,7 @@ export function shouldShowCarryOverSignal(signal: CarryOverSignal): boolean {
 
 export function formatCarryOverShortLabel(signal: CarryOverSignal): string {
   if (signal.kind === 'butterfly_overlap') {
-    return 'Karar yankısı takipte';
+    return 'Karar yank─▒s─▒ takipte';
   }
   return signal.shortLabel?.trim() || signal.title;
 }
@@ -41,7 +41,7 @@ export function getCarryOverToneStyle(tone: CarryOverSignalTone): {
 
 function carryOverHubText(signal: CarryOverSignal): string {
   if (signal.kind === 'butterfly_overlap') {
-    return 'Dünkü konu karar yankısı olarak takipte.';
+    return 'D├╝nk├╝ konu karar yank─▒s─▒ olarak takipte.';
   }
   return signal.text;
 }
@@ -97,7 +97,7 @@ export function buildCarryOverReportLines(
   if (lines.length === 0) {
     const overlap = visible.filter((s) => s.kind === 'butterfly_overlap');
     for (const s of overlap.slice(0, 1)) {
-      lines.push('Dünkü konu karar yankısı olarak takipte.');
+      lines.push('D├╝nk├╝ konu karar yank─▒s─▒ olarak takipte.');
     }
   }
 

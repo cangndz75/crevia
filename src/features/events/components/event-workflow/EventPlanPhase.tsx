@@ -1,8 +1,13 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { buildEventCarryOverHint, shouldShowCarryOverMemory } from '@/core/carryOver';
+import { buildEventDomainPlanFocus, shouldShowEventDomainFocus } from '@/core/events/eventDomainPresentation';
+import { EventCarryOverHintCard } from '@/features/events/components/EventCarryOverHintCard';
 import { EventAdvisorHintCard } from '@/features/events/components/EventAdvisorHintCard';
+import { EventDomainImpactFocusCard } from '@/features/events/components/EventDomainImpactFocusCard';
 import { OperationImpactPreviewStrip } from '@/features/events/components/OperationImpactPreviewStrip';
+import { useGameStore } from '@/store/useGameStore';
 import { PlanDetailsInspectSection } from '@/features/events/components/event-workflow/plan/PlanDetailsInspectSection';
 import { PlanEventSummaryCard } from '@/features/events/components/event-workflow/plan/PlanEventSummaryCard';
 import { PlanOptionPicker } from '@/features/events/components/event-workflow/plan/PlanOptionPicker';
@@ -50,6 +55,38 @@ export function EventPlanPhase({
     [event],
   );
 
+  const currentDay = useGameStore((s) => s.gameState.city.day);
+  const lastDailyReport = useGameStore((s) => s.lastDailyReport);
+  const decisionHistory = useGameStore((s) => s.decisionHistory);
+  const planDomainModel = useMemo(
+    () => buildEventDomainPlanFocus(event, event.day ?? currentDay),
+    [currentDay, event],
+  );
+  const showPlanDomain =
+    shouldShowEventDomainFocus(
+      event.day ?? currentDay,
+      'plan',
+      planDomainModel.focus,
+    );
+  const planCarryOver = useMemo(
+    () =>
+      buildEventCarryOverHint({
+        day: event.day ?? currentDay,
+        currentEvent: event,
+        lastDailyReport,
+        recentDecisions: decisionHistory,
+        eventDomainFocus: planDomainModel,
+      }),
+    [currentDay, decisionHistory, event, lastDailyReport, planDomainModel],
+  );
+  const showPlanCarryOver = shouldShowCarryOverMemory(event.day ?? currentDay, 'plan', {
+    day: event.day ?? currentDay,
+    currentEvent: event,
+    lastDailyReport,
+    recentDecisions: decisionHistory,
+    eventDomainFocus: planDomainModel,
+  });
+
   return (
     <View style={styles.root}>
       <ScrollView
@@ -70,6 +107,14 @@ export function EventPlanPhase({
         </View>
 
         <EventAdvisorHintCard event={event} />
+
+        {showPlanDomain ? (
+          <EventDomainImpactFocusCard model={planDomainModel} compact />
+        ) : null}
+
+        {showPlanCarryOver && planCarryOver?.visible ? (
+          <EventCarryOverHintCard memory={planCarryOver} compact />
+        ) : null}
 
         <OperationImpactPreviewStrip event={event} />
 

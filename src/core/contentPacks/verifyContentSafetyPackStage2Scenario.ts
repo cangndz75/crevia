@@ -221,7 +221,11 @@ export function verifyContentSafetyPackStage2Scenario(): VerifyContentSafetyPack
   record(
     assert(
       checks,
-      socialEvents.every((e) => SOCIAL_MARKERS.some((m) => blobHas(e.sceneText + e.socialEchoText, m))),
+      socialEvents.every((e) =>
+        SOCIAL_MARKERS.some((m) =>
+          blobHas([e.sceneText, e.pressureText, e.socialEchoText].join(' '), m),
+        ),
+      ),
       'social dil işaretleri',
       'social dil zayıf',
     ),

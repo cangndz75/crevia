@@ -32,7 +32,17 @@ import { TutorialCoachOverlay } from '@/features/tutorial/TutorialCoachOverlay';
 import { selectActiveTutorialStepForScreen } from '@/features/tutorial/tutorialSelectors';
 import type { EventCard, SolvedEvent } from '@/core/models/EventCard';
 import type { DecisionResultSnapshot } from '@/features/events/types/decisionResultTypes';
+import {
+  buildResultCarryOverMemory,
+  shouldShowCarryOverMemory,
+} from '@/core/carryOver';
+import {
+  buildEventDomainResultFocus,
+  shouldShowEventDomainFocus,
+} from '@/core/events/eventDomainPresentation';
 import { buildFirstResultGuidanceModel } from '@/core/onboarding/onboardingPresentation';
+import { EventCarryOverHintCard } from '@/features/events/components/EventCarryOverHintCard';
+import { EventDomainFocusStrip } from '@/features/events/components/EventDomainFocusStrip';
 import { OnboardingPhaseHint } from '@/features/onboarding/components/OnboardingPhaseHint';
 import { selectIsDay1TutorialEligible } from '@/features/tutorial/tutorialSelectors';
 import { isDay1LearningEventId } from '@/features/tutorial/tutorialTypes';
@@ -173,6 +183,68 @@ export function DecisionResultScreen() {
     isFirstTutorialResult,
   );
 
+  const domainResultFocus = useMemo(() => {
+    if (!relatedEvent) return null;
+    const satisfactionDelta = result.metricChanges.find((m) =>
+      m.label.toLowerCase().includes('memnun'),
+    )?.delta;
+    const riskDelta = result.metricChanges.find((m) =>
+      m.label.toLowerCase().includes('risk'),
+    )?.delta;
+    return buildEventDomainResultFocus(
+      relatedEvent,
+      {
+        publicSatisfactionDelta: satisfactionDelta,
+        riskDelta: riskDelta,
+        successLabel: result.summaryTitle,
+        tone: result.resultTone,
+      },
+      result.day ?? currentDay,
+    );
+  }, [currentDay, relatedEvent, result]);
+
+  const showDomainResult =
+    domainResultFocus &&
+    shouldShowEventDomainFocus(
+      result.day ?? currentDay,
+      'result',
+      domainResultFocus.model.focus,
+    );
+
+  const resultCarryOver = useMemo(() => {
+    return buildResultCarryOverMemory({
+      day: result.day ?? currentDay,
+      currentEvent: relatedEvent ?? undefined,
+      eventResult: {
+        summaryText: result.summaryText,
+        summaryTitle: result.summaryTitle,
+        resultTone: result.resultTone,
+        neighborhoodName: result.neighborhoodName,
+        eventId: result.eventId,
+      },
+      suppressEchoDuplicate: Boolean(showDomainResult && domainResultFocus?.echoLine),
+    });
+  }, [
+    currentDay,
+    domainResultFocus?.echoLine,
+    relatedEvent,
+    result,
+    showDomainResult,
+  ]);
+
+  const showResultCarryOver =
+    resultCarryOver?.visible &&
+    shouldShowCarryOverMemory(result.day ?? currentDay, 'result', {
+      day: result.day ?? currentDay,
+      currentEvent: relatedEvent ?? undefined,
+      eventResult: {
+        summaryText: result.summaryText,
+        summaryTitle: result.summaryTitle,
+        resultTone: result.resultTone,
+      },
+      suppressEchoDuplicate: Boolean(showDomainResult && domainResultFocus?.echoLine),
+    });
+
   const scrollBottomPadding = tabBarHeight + Math.max(insets.bottom, 8) + spacing.md;
 
   return (
@@ -218,6 +290,25 @@ export function DecisionResultScreen() {
             <Animated.View entering={FadeInUp.delay(80).duration(280)}>
               <EventResultImpactMetricsRow rows={viewModel.impactRows} />
             </Animated.View>
+
+            {showDomainResult ? (
+              <Animated.View entering={FadeInUp.delay(100).duration(260)} style={styles.domainResult}>
+                <EventDomainFocusStrip
+                  model={{
+                    ...domainResultFocus.model,
+                    summary: domainResultFocus.echoLine ?? domainResultFocus.model.summary,
+                  }}
+                  surface="result"
+                  compact
+                />
+              </Animated.View>
+            ) : null}
+
+            {showResultCarryOver && !showDomainResult ? (
+              <Animated.View entering={FadeInUp.delay(110).duration(260)} style={styles.domainResult}>
+                <EventCarryOverHintCard memory={resultCarryOver} compact />
+              </Animated.View>
+            ) : null}
 
             <Animated.View entering={FadeInUp.delay(120).duration(280)}>
               <EventResultFieldNoteCard note={viewModel.fieldNote} />
@@ -317,6 +408,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: eventDetail.textMuted,
     lineHeight: 20,
+  },
+  domainResult: {
+    marginTop: spacing.sm,
+    minWidth: 0,
+    flexShrink: 1,
   },
   butterflyHintCard: {
     marginHorizontal: 18,

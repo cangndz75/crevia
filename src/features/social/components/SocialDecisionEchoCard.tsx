@@ -1,31 +1,69 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import type { ComponentProps } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
+import type { SocialDecisionEchoModel } from '@/core/socialEcho/socialEchoTypes';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { spacing } from '@/ui/theme/spacing';
 
-import type { LastDecisionSocialEchoModel } from '../utils/socialPulsePresentation';
 import { SOCIAL_CARD_BORDER } from '../utils/socialLayout';
 
 type Props = {
-  model: LastDecisionSocialEchoModel;
+  echo: SocialDecisionEchoModel | null | undefined;
+  compact?: boolean;
 };
 
-export function SocialDecisionEchoCard({ model }: Props) {
+const TONE_ACCENT: Record<SocialDecisionEchoModel['tone'], string> = {
+  teal: colors.primary,
+  mint: '#3D9B8F',
+  amber: '#C98A2E',
+  coral: '#D4736E',
+  neutral: colors.textSecondary,
+};
+
+export function SocialDecisionEchoCard({ echo, compact }: Props) {
+  if (!echo) {
+    return null;
+  }
+
+  const isCompact = compact === true || echo.visibility === 'compact';
+  const accent = TONE_ACCENT[echo.tone] ?? colors.primary;
+  const iconName = (echo.iconKey || 'pulse-outline') as ComponentProps<
+    typeof Ionicons
+  >['name'];
+
   return (
-    <Animated.View entering={FadeInUp.delay(280).duration(320)} style={styles.card}>
-      <View style={styles.iconWrap}>
-        <Ionicons name="pulse-outline" size={16} color={colors.primary} />
+    <Animated.View
+      entering={FadeInUp.delay(280).duration(320)}
+      style={[
+        styles.card,
+        isCompact && styles.cardCompact,
+        echo.visibility === 'highlighted' && styles.cardHighlighted,
+        { borderLeftColor: accent },
+      ]}>
+      <View style={[styles.iconWrap, { backgroundColor: `${accent}18` }]}>
+        <Ionicons name={iconName} size={16} color={accent} />
       </View>
       <View style={styles.copy}>
         <Text style={styles.title} numberOfLines={1}>
-          {model.title}
+          {echo.title}
         </Text>
-        <Text style={styles.summary} numberOfLines={2}>
-          {model.summary}
+        <Text style={styles.summary} numberOfLines={echo.maxLines}>
+          {echo.mention}
         </Text>
+        {echo.tags.length > 0 ? (
+          <View style={styles.tagRow}>
+            {echo.tags.slice(0, 2).map((tag) => (
+              <View key={tag} style={styles.tag}>
+                <Text style={styles.tagText} numberOfLines={1}>
+                  {tag}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
       </View>
     </Animated.View>
   );
@@ -42,8 +80,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
+    borderLeftWidth: 3,
     borderColor: SOCIAL_CARD_BORDER,
     minWidth: 0,
+  },
+  cardCompact: {
+    paddingVertical: 8,
+  },
+  cardHighlighted: {
+    backgroundColor: 'rgba(26,143,138,0.06)',
   },
   iconWrap: {
     width: 32,
@@ -71,5 +116,27 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textPrimary,
     lineHeight: 17,
+    flexShrink: 1,
+  },
+  tagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 4,
+    minWidth: 0,
+  },
+  tag: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primaryMuted,
+    maxWidth: '48%',
+    minWidth: 0,
+  },
+  tagText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    flexShrink: 1,
   },
 });
