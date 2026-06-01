@@ -89,6 +89,7 @@ import {
   resolveEventCardById,
 } from '@/core/liveFlow/eventLifecycleEngine';
 import { getPilotRhythmChipLabel } from '@/core/events/pilotRhythmPresentation';
+import { buildPilotThemeEventFocusLine } from '@/core/pilotRhythm';
 import { ResolvedEventSummaryCard } from '@/features/events/components/ResolvedEventSummaryCard';
 import { buildEventDetailHeaderChips } from '@/features/events/utils/decisionTradeoffPresentation';
 import { OnboardingFocusHint } from '@/features/onboarding/components/OnboardingFocusHint';
@@ -425,6 +426,11 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
       rhythmLabel: getPilotRhythmChipLabel(event, event.day ?? currentDay),
     });
   }, [currentDay, dailyPriorityKey, event]);
+
+  const pilotThemeFocusLine = useMemo(
+    () => buildPilotThemeEventFocusLine(event?.day ?? currentDay),
+    [currentDay, event?.day],
+  );
 
   const timelineHighlight = useTutorialHighlight('event_detail', 'event_status_timeline');
   const insightHighlight = useTutorialHighlight('event_detail', 'event_insight_card');
@@ -859,6 +865,11 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
               {getOfficerRoleLabel(currentDay)}
             </Text>
             <Text style={styles.officerDay}>Gün {event.day ?? currentDay}</Text>
+            {pilotThemeFocusLine ? (
+              <Text style={styles.themeFocusLine} numberOfLines={1}>
+                {pilotThemeFocusLine}
+              </Text>
+            ) : null}
             {headerChips.length > 0 ? (
               <View style={styles.chipRow}>
                 {headerChips.map((chip) => (
@@ -1058,6 +1069,14 @@ const styles = StyleSheet.create({
     color: eventDetail.textMuted,
     marginTop: 2,
     marginBottom: 6,
+  },
+  themeFocusLine: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: eventDetail.teal,
+    marginBottom: 4,
+    flexShrink: 1,
+    minWidth: 0,
   },
   chipRow: {
     gap: 4,

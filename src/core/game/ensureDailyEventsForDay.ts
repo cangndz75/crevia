@@ -1,3 +1,4 @@
+import { mergePilotCatalogWithContentSafetyPacks } from '@/core/contentPacks/contentPackStage2PilotCatalog';
 import { pilotEvents } from '@/core/content/pilotEvents';
 import { mergeEventCatalogs } from '@/core/districts/districtEventIntegration';
 import {
@@ -121,7 +122,7 @@ function resolvePilotDay(gameState: GameState): number {
 export function ensureDailyEventsForDay(
   gameState: GameState,
   currentEventPool: EventCard[] = [],
-  catalog: EventCard[] = pilotEvents,
+  catalog: EventCard[] = mergePilotCatalogWithContentSafetyPacks(),
   options?: EnsureDailyEventsForDayOptions,
 ): EnsureDailyEventsForDayResult {
   if (shouldClearPilotActiveEvents(gameState)) {

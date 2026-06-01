@@ -23,6 +23,7 @@ import { HubOperationSignalsCard } from '@/features/hub/components/HubOperationS
 import { HubCriticalEventCard } from '@/features/hub/components/HubCriticalEventCard';
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
 import { HubDailyGoalHeroCard } from '@/features/hub/components/HubDailyGoalHeroCard';
+import { HubPilotThemeCard } from '@/features/hub/components/HubPilotThemeCard';
 import { HubDailyPriorityCard } from '@/features/hub/components/HubDailyPriorityCard';
 import { HubFooterActionRow } from '@/features/hub/components/HubFooterActionRow';
 import { HubPersonnelStrip } from '@/features/hub/components/HubPersonnelStrip';
@@ -177,6 +178,8 @@ export function HubScreen() {
         <TutorialTarget targetKey="hub_metrics" highlighted={metricsHighlight}>
           <HubDailyGoalHeroCard imageSource={hubAssets.dailyGoalBadge} />
         </TutorialTarget>
+
+        {hubDay >= 1 && hubDay <= 7 ? <HubPilotThemeCard /> : null}
 
         {hubCardVisibility.showFirstDayGuide ? <HubFirstTenMinutesGuideCard /> : null}
 

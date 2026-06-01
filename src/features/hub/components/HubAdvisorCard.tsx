@@ -27,6 +27,7 @@ import {
   DAY1_ADVISOR_SHORT_COPY,
   shouldUseFirstTenMinutesAdvisorShortMode,
 } from '@/core/onboarding/firstTenMinutesPresentation';
+import { buildPilotThemeAdvisorLine } from '@/core/pilotRhythm';
 import {
   buildOperationalResourceAdvisorLine,
   buildOperationalResourceEngineInputFromStore,
@@ -158,6 +159,12 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
     [advisorState, isDay1, advisorShortMode],
   );
 
+  const pilotThemeAdvisorLine = useMemo(() => {
+    const day = gameState.city.day;
+    if (day < 1 || day > 7) return undefined;
+    return buildPilotThemeAdvisorLine(day) ?? undefined;
+  }, [gameState.city.day]);
+
   const resourceAdvisorLine = useMemo(() => {
     if (advisorShortMode) return undefined;
     return buildOperationalResourceAdvisorLine(
@@ -232,6 +239,12 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
             numberOfLines={expanded ? 4 : 2}
             ellipsizeMode="tail">
             {model.primaryInsight.body}
+          </Text>
+        ) : null}
+
+        {pilotThemeAdvisorLine && !advisorShortMode ? (
+          <Text style={styles.themeContextLine} numberOfLines={2} ellipsizeMode="tail">
+            {pilotThemeAdvisorLine}
           </Text>
         ) : null}
 
@@ -387,6 +400,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: '#3D4F4C',
+    flexShrink: 1,
+  },
+  themeContextLine: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: HUB_PREMIUM_COLORS.teal,
+    fontStyle: 'italic',
     flexShrink: 1,
   },
   resourceLine: {

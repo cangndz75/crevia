@@ -17,6 +17,7 @@ import type { DailyReport } from '@/core/models/DailyReport';
 import type { GameMetrics } from '@/core/models/GameMetrics';
 import type { DailyXpReport } from '@/core/xp/xpReport';
 import { EndOfDayReportHero } from '@/features/reports/components/end-of-day/EndOfDayReportHero';
+import { ReportPilotThemeSummary } from '@/features/reports/components/ReportPilotThemeSummary';
 import { EndOfDayReportMetaProgressSection } from '@/features/reports/components/end-of-day/EndOfDayReportMetaProgressSection';
 import { ReportAuthorityTrustCard } from '@/features/reports/components/end-of-day/premium/ReportAuthorityTrustCard';
 import { ReportPilotSummaryPremiumCard } from '@/features/reports/components/end-of-day/premium/ReportPilotSummaryPremiumCard';
@@ -330,6 +331,8 @@ export function EndOfDayReportView({
           hideScoreRing={reportGuard.hideMetaProgressHeavy}
         />
       </Animated.View>
+
+      <ReportPilotThemeSummary day={report.day} />
 
       {educationalLines.length > 0 ? (
         <View style={styles.educationalBlock}>
