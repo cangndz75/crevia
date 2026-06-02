@@ -19,6 +19,9 @@ import {
 } from '@/core/resources';
 import { ResourceFatigueSummaryStrip } from '@/features/resources/components/ResourceFatigueSummaryStrip';
 import { buildAssignmentResourceFitLine } from '@/core/operationalResources/operationalResourcePresentation';
+import {
+  buildAssignmentTeamSpecializationPreviewLine,
+} from '@/core/teamSpecialization/teamSpecializationModel';
 import { buildAssignmentAnalyticsPayload } from '@/core/analytics/analyticsPayloadBuilders';
 import { trackCreviaEvent } from '@/core/analytics/analyticsRuntime';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
@@ -73,6 +76,18 @@ export function EventAssignmentPanel({ event, compactTutorial = false }: Props) 
       storeSlice.operationalResources,
     );
   }, [assignment, event, storeSlice]);
+
+  const teamSpecializationLine = useMemo(() => {
+    if (!assignment || assignmentSimpleMode) return null;
+    const day = storeSlice.gameState.city.day;
+    return buildAssignmentTeamSpecializationPreviewLine({
+      day,
+      assignment,
+      operationalResources: storeSlice.operationalResources,
+      operationSignals: storeSlice.operationSignals,
+      isDispatchPhase: true,
+    });
+  }, [assignment, assignmentSimpleMode, event, storeSlice]);
 
   const domainDispatchFocus = useMemo(() => {
     const day = storeSlice.gameState.city.day;
@@ -201,6 +216,12 @@ export function EventAssignmentPanel({ event, compactTutorial = false }: Props) 
           ]}
           numberOfLines={2}>
           {resourceFit.line}
+        </Text>
+      ) : null}
+
+      {teamSpecializationLine ? (
+        <Text style={styles.teamSpecializationLine} numberOfLines={1}>
+          {teamSpecializationLine}
         </Text>
       ) : null}
 
@@ -447,5 +468,13 @@ const styles = StyleSheet.create({
   resourceFitWarning: {
     color: '#9A6B12',
     fontWeight: '600',
+  },
+  teamSpecializationLine: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: eventDetail.teal,
+    fontWeight: '700',
+    flexShrink: 1,
+    minWidth: 0,
   },
 });

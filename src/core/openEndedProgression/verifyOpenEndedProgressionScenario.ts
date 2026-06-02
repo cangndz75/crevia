@@ -48,6 +48,13 @@ const ALLOWED_TECHNICAL_FILES = [
   'rankPermissions',
   'eventFamilies',
   'districtTrust',
+  'mapLayers',
+  'activeTaskRoutes',
+  'districtOperations',
+  'teamSpecialization',
+  'vehicleMaintenance',
+  'containerNetwork',
+  'operationEra',
 ];
 
 function assert(checks: string[], ok: boolean, pass: string, fail: string): boolean {
