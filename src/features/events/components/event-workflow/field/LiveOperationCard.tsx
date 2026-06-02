@@ -5,11 +5,18 @@ import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import type { FieldScreenModel } from '@/features/events/utils/eventWorkflowDispatchFieldPresentation';
 import { shadows } from '@/ui/theme/shadows';
 
+import type { CreviaActiveTaskRouteUiModel } from '@/core/activeTaskRoutes/activeTaskRouteUiTypes';
+
 type Props = {
   model: FieldScreenModel;
+  routePreview?: CreviaActiveTaskRouteUiModel | null;
 };
 
-export function LiveOperationCard({ model }: Props) {
+export function LiveOperationCard({ model, routePreview }: Props) {
+  const routeLine = routePreview?.visible ? routePreview.fieldLine : undefined;
+  const activeStep = routePreview?.activeStepIndex ?? 1;
+  const stepCount = routePreview?.steps.length ?? 3;
+
   return (
     <View style={[styles.card, shadows.soft]}>
       <View style={styles.header}>
@@ -34,24 +41,33 @@ export function LiveOperationCard({ model }: Props) {
           {model.progressLabel}
         </Text>
         <View style={styles.timeline}>
-          {[0, 1, 2].map((step) => (
+          {Array.from({ length: Math.min(stepCount, 4) }).map((_, step) => (
             <View
               key={step}
               style={[
                 styles.timelineDot,
-                step <= 1 && styles.timelineDotActive,
+                step <= activeStep && styles.timelineDotActive,
               ]}
             />
           ))}
         </View>
       </View>
 
-      <View style={styles.routeRow}>
-        <Ionicons name="git-network-outline" size={13} color={eventDetail.teal} />
-        <Text style={styles.routeText} numberOfLines={1}>
-          Rota etkisi izleniyor · {model.location}
-        </Text>
-      </View>
+      {routeLine ? (
+        <View style={styles.routeRow}>
+          <Ionicons name="git-network-outline" size={13} color={eventDetail.teal} />
+          <Text style={styles.routeText} numberOfLines={2}>
+            {routeLine}
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.routeRow}>
+          <Ionicons name="git-network-outline" size={13} color={eventDetail.teal} />
+          <Text style={styles.routeText} numberOfLines={1}>
+            Rota etkisi izleniyor · {model.location}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }

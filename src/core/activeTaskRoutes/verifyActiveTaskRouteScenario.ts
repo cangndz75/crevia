@@ -36,6 +36,17 @@ import {
   buildActiveTaskRoutePresentationModel,
   buildActiveTaskRouteUnlockPreviewLine,
 } from './activeTaskRoutePresentation';
+import {
+  activeTaskRouteUiCopyContainsForbiddenTerms,
+  buildActiveTaskRouteForAssignment,
+  buildActiveTaskRouteForEvent,
+  buildActiveTaskRouteSteps,
+  buildActiveTaskRouteUiModel,
+  buildActiveRouteRankVisibility,
+  shouldSuppressMapOperationHintForActiveRoute,
+  validateActiveTaskRouteUiCopy,
+} from './activeTaskRouteUiPresentation';
+import { ACTIVE_TASK_ROUTE_UI_MAX_STEPS, ACTIVE_TASK_ROUTE_UI_PHASE_DEFINITIONS } from './activeTaskRouteUiConstants';
 import type { ActiveTaskRouteAuditResult, ActiveTaskRouteContext } from './activeTaskRouteTypes';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
@@ -268,13 +279,153 @@ export function verifyActiveTaskRouteScenario(): VerifyActiveTaskRouteOutcome {
     record(assert(results, !readRepo(file).includes('activeTaskRoutes'), `${file} no activeTaskRoutes import`, `${file} imports activeTaskRoutes`));
   }
 
-  const dispatchSrc = readRepo('src/features/events/components/event-workflow/dispatch/DispatchCommandCard.tsx');
+  const dispatchSrc = readRepo('src/features/events/components/event-workflow/dispatch/EventDispatchPhase.tsx');
   const fieldSrc = readRepo('src/features/events/components/event-workflow/field/LiveOperationCard.tsx');
-  if (dispatchSrc.includes('activeTaskRoutes') || fieldSrc.includes('activeTaskRoutes')) {
-    record(assert(results, dispatchSrc.includes('numberOfLines') && fieldSrc.includes('numberOfLines'), 'UI integration compact/overflow guard', 'UI integration missing overflow guard'));
-  } else {
-    warn(results, 'UI integration absence note', 'Active route UI integration follow-up needed');
-  }
+  const mapSrc = readRepo('src/features/map/screens/MapScreen.tsx');
+  record(
+    assert(
+      results,
+      dispatchSrc.includes('ActiveTaskRoutePreviewStrip') && fieldSrc.includes('routePreview'),
+      'dispatch/field UI binding',
+      'dispatch/field binding missing',
+    ),
+  );
+  record(
+    assert(
+      results,
+      mapSrc.includes('activeTaskRoutePreview') && mapSrc.includes('shouldSuppressMapOperationHintForActiveRoute'),
+      'map UI binding',
+      'map binding missing',
+    ),
+  );
+  record(
+    assert(
+      results,
+      dispatchSrc.includes('ActiveTaskRoutePreviewStrip') &&
+        (fieldSrc.includes('numberOfLines') ||
+          readRepo('src/features/events/components/ActiveTaskRoutePreviewStrip.tsx').includes('numberOfLines')),
+      'UI overflow guard',
+      'overflow guard missing',
+    ),
+  );
+
+  record(assert(results, ACTIVE_TASK_ROUTE_UI_PHASE_DEFINITIONS.length >= 8, 'UI phase definitions', 'UI phases missing'));
+
+  const noEventUi = buildActiveTaskRouteUiModel({ day: 5 });
+  record(assert(results, !noEventUi.visible || noEventUi.status === 'hidden', 'no event hidden fallback', 'no event not hidden'));
+
+  const plannedUi = buildActiveTaskRouteForEvent({ day: 5, activeEvent: createEvent() });
+  record(assert(results, plannedUi.visible, 'day 5 event route visible', 'event route hidden'));
+
+  const dispatchUi = buildActiveTaskRouteForAssignment({
+    day: 5,
+    activeEvent: createEvent(),
+    assignment: createAssignment(),
+    isDispatchPhase: true,
+  });
+  record(
+    assert(
+      results,
+      dispatchUi.phase === 'dispatch_ready' || dispatchUi.phase === 'risk_watch',
+      'dispatch phase line',
+      `dispatch phase ${dispatchUi.phase}`,
+    ),
+  );
+
+  const fieldUi = buildActiveTaskRouteForEvent({
+    day: 5,
+    activeEvent: createEvent(),
+    assignment: createAssignment({ status: 'dispatched' }),
+    isFieldPhase: true,
+  });
+  record(
+    assert(
+      results,
+      fieldUi.phase === 'on_site' || fieldUi.phase === 'en_route' || fieldUi.phase === 'risk_watch',
+      'field phase line',
+      `field phase ${fieldUi.phase}`,
+    ),
+  );
+
+  const completedUi = buildActiveTaskRouteForEvent({
+    day: 5,
+    activeEvent: createEvent(),
+    assignment: createAssignment({ status: 'processed' }),
+    isResultPhase: true,
+  });
+  record(assert(results, completedUi.phase === 'completed', 'completed phase line', `completed ${completedUi.phase}`));
+
+  const fatigueUi = buildActiveTaskRouteForEvent({
+    day: 5,
+    activeEvent: createEvent(),
+    assignment: createAssignment(),
+    operationalResources: { vehicles: { status: 'strained' } },
+    isDispatchPhase: true,
+  });
+  record(assert(results, !!fatigueUi.resourceWarningLine, 'resource fatigue warning', 'fatigue warning missing'));
+  record(
+    assert(
+      results,
+      (fatigueUi.resourceWarningLine ?? '').split('\n').length <= 1,
+      'max 1 fatigue warning line',
+      'too many fatigue lines',
+    ),
+  );
+
+  const crisisUi = buildActiveTaskRouteForEvent({
+    day: 5,
+    activeEvent: createEvent(),
+    crisisState: { level: 'watch', trend: 'elevated' },
+    isDispatchPhase: true,
+  });
+  record(
+    assert(
+      results,
+      !activeTaskRouteUiCopyContainsForbiddenTerms(crisisUi.dispatchLine),
+      'crisis no panic copy',
+      'panic in crisis route copy',
+    ),
+  );
+
+  const day1Ui = buildActiveTaskRouteForEvent({ day: 1, activeEvent: createEvent(), isDispatchPhase: true });
+  record(assert(results, !day1Ui.visible || day1Ui.visibility.mode === 'hidden', 'day 1 simplified', 'day1 exposed'));
+
+  const postPilotUi = buildActiveTaskRouteForEvent({
+    day: 8,
+    activeEvent: createEvent(),
+    assignment: createAssignment(),
+    isMapSurface: true,
+    isPostPilot: true,
+  });
+  record(assert(results, !!postPilotUi.mapLine, 'post-pilot map hint', 'post-pilot map missing'));
+
+  const steps = buildActiveTaskRouteSteps(
+    { day: 5, activeEvent: createEvent(), assignment: createAssignment() },
+    'en_route',
+  );
+  record(assert(results, steps.length <= ACTIVE_TASK_ROUTE_UI_MAX_STEPS, 'max 4 steps', `steps ${steps.length}`));
+  record(assert(results, validateActiveTaskRouteUiCopy(dispatchUi), 'UI copy validation', 'UI copy invalid'));
+
+  const suppress = shouldSuppressMapOperationHintForActiveRoute({
+    day: 8,
+    activeEvent: createEvent(),
+    assignment: createAssignment({ status: 'dispatched' }),
+    isMapSurface: true,
+    isPostPilot: true,
+  });
+  record(assert(results, suppress === true || suppress === false, 'map density guard helper', 'suppress helper fail'));
+
+  const lowRank = buildActiveRouteRankVisibility({ day: 2 });
+  const highRank = buildActiveRouteRankVisibility({
+    day: 10,
+    rankKey: 'department_director',
+    unlockedPermissionIds: ['active_task_route'],
+  });
+  record(assert(results, lowRank.mode === 'compact', 'low rank compact', 'low rank wrong'));
+  record(assert(results, highRank.mode === 'detailed', 'high rank detailed', 'high rank wrong'));
+
+  const uiDocs = readRepo('docs/crevia-active-task-route-ui-integration.md').toLocaleLowerCase('tr-TR');
+  record(assert(results, uiDocs.includes('pathfinding') || uiDocs.includes('gps'), 'UI docs boundary', 'UI docs missing'));
 
   const activeRouteSrc =
     readRepo('src/core/activeTaskRoutes/activeTaskRouteModel.ts') +

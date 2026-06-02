@@ -137,6 +137,9 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
   const confirmEventAssignment = useGameStore((s) => s.confirmEventAssignment);
   const markAssignmentDispatched = useGameStore((s) => s.markAssignmentDispatched);
   const assignments = useGameStore((s) => s.assignments);
+  const operationSignals = useGameStore((s) => s.operationSignals);
+  const operationalResources = useGameStore((s) => s.operationalResources);
+  const crisisState = useGameStore((s) => s.crisisState);
   const economyState = useGameStore((s) => s.economyState);
   const personnelState = useGameStore(selectPersonnelState);
   const eventAdvisor = useGameStore((s) => s.gameState.eventAdvisor);
@@ -800,6 +803,11 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           decisionsHighlighted={decisionsHighlight}
           compactTutorial={isDay1Tutorial}
           phaseHint={workflowPhaseHint}
+          gameDay={currentDay}
+          assignment={eventAssignment ?? null}
+          operationSignals={operationSignals}
+          operationalResources={operationalResources}
+          crisisState={crisisState}
         />
         <TutorialCoachOverlay
           screen="event_detail"
@@ -828,6 +836,11 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           completeDisabled={!effectiveSelectedId || applying}
           applying={applying}
           phaseHint={workflowPhaseHint}
+          gameDay={currentDay}
+          assignment={eventAssignment ?? null}
+          operationSignals={operationSignals}
+          operationalResources={operationalResources}
+          crisisState={crisisState}
         />
         <TutorialCoachOverlay
           screen="event_detail"

@@ -123,6 +123,11 @@ export function MapNeighborhoodStrip({ items, selectedId, onSelect }: Props) {
                   />
                 ))}
               </View>
+              {selected && item.intelligenceAccentLabel ? (
+                <Text style={styles.intelligenceAccent} numberOfLines={1}>
+                  {item.intelligenceAccentLabel}
+                </Text>
+              ) : null}
             </View>
           </Pressable>
         );
@@ -203,6 +208,15 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 3,
     maxWidth: 22,
+  },
+  intelligenceAccent: {
+    marginTop: 4,
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '700',
+    color: mapUi.teal,
+    flexShrink: 1,
+    minWidth: 0,
   },
   empty: {
     marginHorizontal: mapUi.screenPadding,

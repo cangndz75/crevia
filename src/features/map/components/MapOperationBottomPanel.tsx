@@ -2,8 +2,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { resolveIoniconForRegistryKey } from '@/core/presentation/creviaIconPresentation';
+import type { CreviaActiveTaskRouteUiModel } from '@/core/activeTaskRoutes/activeTaskRouteUiTypes';
+import type { CreviaMapDistrictIntelligenceModel } from '@/core/map/mapDistrictIntelligencePresentation';
 import type { MapBeforeAfterImpactModel } from '@/core/mapPresence/mapBeforeAfterTypes';
+import { ActiveTaskRoutePreviewStrip } from '@/features/events/components/ActiveTaskRoutePreviewStrip';
 import { MapBeforeAfterImpactStrip } from '@/features/map/components/MapBeforeAfterImpactStrip';
+import { MapDistrictIntelligenceStrip } from '@/features/map/components/MapDistrictIntelligenceStrip';
 import type {
   DistrictRiskSummaryMetric,
   MapCrisisPanelLine,
@@ -16,6 +20,8 @@ import { shadows } from '@/ui/theme/shadows';
 
 type Props = {
   model: MapOperationPanelModel;
+  districtIntelligence?: CreviaMapDistrictIntelligenceModel | null;
+  activeTaskRoutePreview?: CreviaActiveTaskRouteUiModel | null;
   mapBeforeAfterImpact?: MapBeforeAfterImpactModel | null;
   onPressCta?: () => void;
   onPressRecommended?: () => void;
@@ -141,6 +147,8 @@ function DistrictRiskMetricCard({ metric }: { metric: DistrictRiskSummaryMetric 
 
 export function MapOperationBottomPanel({
   model,
+  districtIntelligence,
+  activeTaskRoutePreview,
   mapBeforeAfterImpact,
   onPressCta,
   onPressRecommended,
@@ -202,6 +210,27 @@ export function MapOperationBottomPanel({
       {model.resourceLines?.map((line) => (
         <ResourceMapLineRow key={line.id} line={line} />
       ))}
+
+      {activeTaskRoutePreview?.visible ? (
+        <ActiveTaskRoutePreviewStrip
+          model={activeTaskRoutePreview}
+          surface="map"
+          compact={Boolean(model.crisisLines?.length || model.resourceLines?.length)}
+        />
+      ) : null}
+
+      {districtIntelligence?.visible ? (
+        <MapDistrictIntelligenceStrip
+          model={
+            districtIntelligence.crisisPriorityActive
+              ? {
+                  ...districtIntelligence,
+                  visibleLines: districtIntelligence.visibleLines.slice(0, 1),
+                }
+              : districtIntelligence
+          }
+        />
+      ) : null}
 
       {model.presenceLines?.map((line, index) => (
         <View key={`presence-${index}`} style={styles.presenceRow}>

@@ -4,6 +4,8 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import type { EventCard, EventDecision } from '@/core/models/EventCard';
 import type { PersonnelImpactPreview } from '@/core/personnel/personnelPresentation';
 import type { VehicleImpactPreview } from '@/core/vehicles/vehiclePresentation';
+import { buildActiveTaskRouteForEvent } from '@/core/activeTaskRoutes/activeTaskRouteUiPresentation';
+import type { EventAssignmentState } from '@/core/assignments/assignmentTypes';
 import { EventFieldAssignmentSummary } from '@/features/events/components/assignment/EventFieldAssignmentSummary';
 import { FieldNoteCard } from '@/features/events/components/FieldNoteCard';
 import { EventWorkflowStepper } from '@/features/events/components/event-workflow/EventWorkflowStepper';
@@ -29,6 +31,11 @@ type Props = {
   completeDisabled?: boolean;
   applying?: boolean;
   phaseHint?: string | null;
+  gameDay?: number;
+  assignment?: EventAssignmentState | null;
+  operationSignals?: unknown;
+  operationalResources?: unknown;
+  crisisState?: unknown;
 };
 
 export function EventFieldPhase({
@@ -42,7 +49,26 @@ export function EventFieldPhase({
   completeDisabled = false,
   applying = false,
   phaseHint = null,
+  gameDay = 1,
+  assignment = null,
+  operationSignals,
+  operationalResources,
+  crisisState,
 }: Props) {
+  const routePreview = useMemo(
+    () =>
+      buildActiveTaskRouteForEvent({
+        day: gameDay,
+        activeEvent: event,
+        assignment: assignment ?? undefined,
+        operationSignals: operationSignals as never,
+        operationalResources,
+        crisisState,
+        isFieldPhase: true,
+      }),
+    [assignment, crisisState, event, gameDay, operationSignals, operationalResources],
+  );
+
   const model = useMemo(
     () =>
       buildFieldScreenModel({
@@ -79,7 +105,7 @@ export function EventFieldPhase({
           <EventWorkflowStepper activeStep="field" compact />
         </View>
 
-        <LiveOperationCard model={model} />
+        <LiveOperationCard model={model} routePreview={routePreview} />
 
         <EventFieldMicroDecisionCard event={event} />
 

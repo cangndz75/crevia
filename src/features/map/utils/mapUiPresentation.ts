@@ -72,6 +72,8 @@ export type MapNeighborhoodStripItem = {
   identityIconKey?: string;
   /** Kriz strip vurgusu — seçili pin teal glow’u ezmez */
   crisisStripTone?: 'neutral' | 'warning' | 'critical';
+  /** Seçili mahalle intelligence accent — max 1 kısa chip */
+  intelligenceAccentLabel?: string;
 };
 
 export type MapOperationMetric = {

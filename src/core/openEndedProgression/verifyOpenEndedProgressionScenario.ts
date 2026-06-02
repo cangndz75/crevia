@@ -55,6 +55,13 @@ const ALLOWED_TECHNICAL_FILES = [
   'vehicleMaintenance',
   'containerNetwork',
   'operationEra',
+  'contentProduction',
+  'eventSelection',
+  'eventVariants',
+  'eventFreshness',
+  'districtTrustRuntime',
+  'districtMemoryRuntime',
+  'districtOperationsRuntime',
 ];
 
 function assert(checks: string[], ok: boolean, pass: string, fail: string): boolean {

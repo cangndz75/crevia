@@ -3,7 +3,10 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import type { DecisionAffordabilityCheck } from '@/core/economy/economyAffordability';
 import type { EventCard } from '@/core/models/EventCard';
+import { buildActiveTaskRouteForEvent } from '@/core/activeTaskRoutes/activeTaskRouteUiPresentation';
+import type { EventAssignmentState } from '@/core/assignments/assignmentTypes';
 import { EventAdvisorHintCard } from '@/features/events/components/EventAdvisorHintCard';
+import { ActiveTaskRoutePreviewStrip } from '@/features/events/components/ActiveTaskRoutePreviewStrip';
 import { OperationImpactPreviewStrip } from '@/features/events/components/OperationImpactPreviewStrip';
 import { EventDecisionList } from '@/features/events/components/EventDecisionList';
 import { QuickDecisionActions } from '@/features/events/components/QuickDecisionActions';
@@ -43,6 +46,11 @@ type Props = {
   /** Day 1 tutorial: alternatif karar listesini gizle, akışı sade tut. */
   compactTutorial?: boolean;
   phaseHint?: string | null;
+  gameDay?: number;
+  assignment?: EventAssignmentState | null;
+  operationSignals?: unknown;
+  operationalResources?: unknown;
+  crisisState?: unknown;
 };
 
 export function EventDispatchPhase({
@@ -62,6 +70,11 @@ export function EventDispatchPhase({
   decisionsHighlighted = false,
   compactTutorial = false,
   phaseHint = null,
+  gameDay = 1,
+  assignment = null,
+  operationSignals,
+  operationalResources,
+  crisisState,
 }: Props) {
   const selectedDecision = useMemo(
     () => event.decisions.find((d) => d.id === selectedDecisionId) ?? null,
@@ -71,6 +84,22 @@ export function EventDispatchPhase({
   const model = useMemo(
     () => buildDispatchScreenModel({ event, selectedDecision }),
     [event, selectedDecision],
+  );
+
+  const routePreview = useMemo(
+    () =>
+      compactTutorial
+        ? null
+        : buildActiveTaskRouteForEvent({
+            day: gameDay,
+            activeEvent: event,
+            assignment: assignment ?? undefined,
+            operationSignals: operationSignals as never,
+            operationalResources,
+            crisisState,
+            isDispatchPhase: true,
+          }),
+    [assignment, compactTutorial, crisisState, event, gameDay, operationSignals, operationalResources],
   );
 
   const thumbnail = useMemo(
@@ -103,6 +132,8 @@ export function EventDispatchPhase({
         </View>
 
         <DispatchCommandCard model={model} />
+
+        <ActiveTaskRoutePreviewStrip model={routePreview} surface="dispatch" compact={compactTutorial} />
 
         <EventAssignmentPanel event={event} compactTutorial={compactTutorial} />
 

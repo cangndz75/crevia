@@ -12,6 +12,13 @@ import {
   buildCommonAnalyticsBase,
   trackOncePerRuntime,
 } from '@/core/analytics/analyticsRuntime';
+import { getEventAssignment } from '@/core/assignments/assignmentState';
+import {
+  buildActiveTaskRouteForEvent,
+  shouldSuppressMapOperationHintForActiveRoute,
+} from '@/core/activeTaskRoutes/activeTaskRouteUiPresentation';
+import type { CreviaActiveTaskRouteUiModel } from '@/core/activeTaskRoutes/activeTaskRouteUiTypes';
+import { buildMapDistrictIntelligenceModel } from '@/core/map/mapDistrictIntelligencePresentation';
 import { buildMapBeforeAfterSummary, buildMapPresenceViewModel } from '@/core/mapPresence';
 import { buildMainOperationMapScopeBadges } from '@/core/mainOperation/mainOperationPresentation';
 import { buildEventDomainFocusModel } from '@/core/events/eventDomainPresentation';
@@ -314,9 +321,38 @@ export function MapScreen() {
     showPostPilotMapChrome,
   ]);
 
+  const primaryMapEvent = activeEvents[0];
+
+  const activeTaskRoutePreview = useMemo((): CreviaActiveTaskRouteUiModel | null => {
+    if (!primaryMapEvent) return null;
+    const assignment = getEventAssignment(assignments, primaryMapEvent.id);
+    const model = buildActiveTaskRouteForEvent({
+      day: gameDay,
+      activeEvent: primaryMapEvent,
+      assignment,
+      operationSignals,
+      operationalResources,
+      crisisState,
+      isMapSurface: true,
+      isPostPilot: showPostPilotMapChrome,
+      rankKey: authorityState?.formalRankId,
+      unlockedPermissionIds: authorityState?.unlockedPermissionIds,
+    });
+    return model.visible ? model : null;
+  }, [
+    assignments,
+    authorityState,
+    crisisState,
+    gameDay,
+    operationalResources,
+    operationSignals,
+    primaryMapEvent,
+    showPostPilotMapChrome,
+  ]);
+
   const neighborhoodStripItems = useMemo(
-    () =>
-      buildMapNeighborhoodStripItems({
+    () => {
+      const items = buildMapNeighborhoodStripItems({
         pilotDistrictId: selectedDistrictId,
         focusDistrictId,
         gameDay,
@@ -332,22 +368,108 @@ export function MapScreen() {
         crisisDistrictBadges: mapCrisisPresentation.districtBadges,
         crisisAccessMode: crisisState.accessMode,
         resourceDistrictBadges: mapResourcePresentation.districtBadges,
-      }),
+      });
+
+      if (!showPostPilotMapChrome || gameDay <= 1) {
+        return items;
+      }
+
+      const selectedIntelligence = buildMapDistrictIntelligenceModel({
+        selectedDistrictId: focusDistrictId,
+        day: gameDay,
+        isPostPilot: showPostPilotMapChrome,
+        isPilotCompleted: pilotCompleted,
+        crisisState,
+        operationSignals,
+        resourceFatigue: operationalResources,
+        crisisOverlayVisible: mapCrisisPresentation.visible,
+        rankKey: authorityState?.formalRankId,
+        unlockedPermissionIds: authorityState?.unlockedPermissionIds,
+      });
+      const accentChip = selectedIntelligence.stripChips[0]?.label;
+
+      return items.map((item) => {
+        const accentLabel =
+          activeTaskRoutePreview?.visible && item.id === focusDistrictId
+            ? 'Rota aktif'
+            : accentChip;
+        return item.id === focusDistrictId && accentLabel
+          ? { ...item, intelligenceAccentLabel: accentLabel }
+          : item;
+      });
+    },
     [
       authorityState,
+      crisisState,
       crisisState.accessMode,
       focusDistrictId,
       gameDay,
       gameStateForMap.pilot.status,
       mainOperationScopeBadges,
       mapCrisisPresentation.districtBadges,
+      mapCrisisPresentation.visible,
       mapResourcePresentation.districtBadges,
+      operationalResources,
+      operationSignals,
+      pilotCompleted,
       postPilotOperation,
+      activeTaskRoutePreview?.visible,
       selectedDistrictId,
+      showPostPilotMapChrome,
     ],
   );
 
-  const primaryMapEvent = activeEvents[0];
+  const mapDistrictIntelligence = useMemo(() => {
+    const base = buildMapDistrictIntelligenceModel({
+      selectedDistrictId: focusDistrictId,
+      day: gameDay,
+      isPostPilot: showPostPilotMapChrome,
+      isPilotCompleted: pilotCompleted,
+      crisisState,
+      operationSignals,
+      resourceFatigue: operationalResources,
+      recentEvents: activeEvents,
+      rankKey: authorityState?.formalRankId,
+      unlockedPermissionIds: authorityState?.unlockedPermissionIds,
+      crisisOverlayVisible: mapCrisisPresentation.visible,
+      activeMapLayerId: activeTaskRoutePreview?.visible ? 'active_task_route' : undefined,
+      activeEvent: primaryMapEvent,
+    });
+
+    const suppressOperation = shouldSuppressMapOperationHintForActiveRoute({
+      day: gameDay,
+      activeEvent: primaryMapEvent,
+      assignment: primaryMapEvent
+        ? getEventAssignment(assignments, primaryMapEvent.id)
+        : undefined,
+      isMapSurface: true,
+      isPostPilot: showPostPilotMapChrome,
+    });
+
+    if (!suppressOperation) return base;
+
+    const visibleLines = base.visibleLines.filter((line) => line.kind !== 'operation');
+    return {
+      ...base,
+      visibleLines,
+      operationLine: undefined,
+      visible: visibleLines.length > 0,
+    };
+  }, [
+    activeEvents,
+    activeTaskRoutePreview?.visible,
+    assignments,
+    authorityState,
+    crisisState,
+    focusDistrictId,
+    gameDay,
+    mapCrisisPresentation.visible,
+    operationalResources,
+    operationSignals,
+    pilotCompleted,
+    primaryMapEvent,
+    showPostPilotMapChrome,
+  ]);
 
   const mapBeforeAfterSummary = useMemo(() => {
     if (gameDay <= 1) return null;
@@ -597,6 +719,8 @@ export function MapScreen() {
           {showPostPilotMapChrome ? (
             <MapOperationBottomPanel
               model={operationPanel}
+              districtIntelligence={mapDistrictIntelligence}
+              activeTaskRoutePreview={activeTaskRoutePreview}
               mapBeforeAfterImpact={
                 gameDay > 1 &&
                 !mapCrisisPresentation.visible &&

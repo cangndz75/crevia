@@ -46,7 +46,11 @@ import {
   inferResourceDomainFromEventFocus,
 } from '@/core/resources';
 import { ResourceFatigueStateChip } from '@/features/resources/components/ResourceFatigueStateChip';
+import { buildEventResultSystemsEchoModel } from '@/core/events/eventResultNewSystemsPresentation';
+import { getEventAssignment } from '@/core/assignments/assignmentState';
+import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 import { buildFirstResultGuidanceModel } from '@/core/onboarding/onboardingPresentation';
+import { EventResultSystemsEchoStrip } from '@/features/events/components/result/EventResultSystemsEchoStrip';
 import { EventCarryOverHintCard } from '@/features/events/components/EventCarryOverHintCard';
 import { EventMapImpactSummaryCard } from '@/features/events/components/EventMapImpactSummaryCard';
 import { buildMapBeforeAfterSummary } from '@/core/mapPresence';
@@ -107,6 +111,10 @@ export function DecisionResultScreen() {
   const dailyGoalState = useGameStore((s) => s.dailyGoalState);
   const operationalResources = useGameStore((s) => s.operationalResources);
   const operationSignals = useGameStore((s) => s.operationSignals);
+  const crisisState = useGameStore((s) => s.crisisState);
+  const assignments = useGameStore((s) => s.assignments);
+  const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
+  const pilotStatus = useGameStore((s) => s.gameState.pilot.status);
 
   const result = snapshot ?? createEmptyDecisionResultFallback();
   const isMissing = snapshot == null;
@@ -299,10 +307,6 @@ export function DecisionResultScreen() {
     resultCarryOver,
   ]);
 
-  const showMapBeforeAfter =
-    (result.day ?? currentDay) > 1 &&
-    mapBeforeAfterSummary?.impact?.visible === true;
-
   const resultFatigueState = useMemo(() => {
     if (!relatedEvent || isMissing) return null;
     const domain = inferResourceDomainFromEventFocus(domainResultFocus?.model.focus);
@@ -334,6 +338,69 @@ export function DecisionResultScreen() {
     operationSignals,
     relatedEvent,
     result.day,
+    resultCarryOver?.summary,
+  ]);
+
+  const showMapBeforeAfter =
+    (result.day ?? currentDay) > 1 &&
+    mapBeforeAfterSummary?.impact?.visible === true;
+
+  const resultSystemsEcho = useMemo(() => {
+    if (isMissing) return null;
+    const day = result.day ?? currentDay;
+    const existingEchoLines: string[] = [];
+    if (domainResultFocus?.echoLine) existingEchoLines.push(domainResultFocus.echoLine);
+    if (resultCarryOver?.summary) existingEchoLines.push(resultCarryOver.summary);
+    if (mapBeforeAfterSummary?.impact?.summary) {
+      existingEchoLines.push(mapBeforeAfterSummary.impact.summary);
+    }
+
+    const assignment = result.eventId
+      ? getEventAssignment(assignments, result.eventId)
+      : undefined;
+
+    return buildEventResultSystemsEchoModel({
+      snapshot: result,
+      event: relatedEvent ?? undefined,
+      day,
+      districtId: result.neighborhoodId ?? relatedEvent?.neighborhoodId,
+      operationSignals,
+      resourceFatigue: operationalResources,
+      crisisState,
+      rankKey: authorityState?.formalRankId,
+      unlockedPermissionIds: authorityState?.unlockedPermissionIds,
+      isPostPilot: day >= POST_PILOT_FIRST_OPERATION_DAY,
+      isPilotCompleted: pilotStatus === 'completed',
+      existingEchoLines,
+      carryOverSummary: resultCarryOver?.summary,
+      mapImpactSummary: mapBeforeAfterSummary?.impact?.summary,
+      activeTaskRouteContext: {
+        day,
+        activeEvent: relatedEvent ?? undefined,
+        assignment,
+        operationSignals,
+        operationalResources,
+        crisisState,
+        isResultPhase: true,
+        eventPhase: 'result',
+        rankKey: authorityState?.formalRankId,
+        unlockedPermissionIds: authorityState?.unlockedPermissionIds,
+      },
+    });
+  }, [
+    assignments,
+    authorityState?.formalRankId,
+    authorityState?.unlockedPermissionIds,
+    crisisState,
+    currentDay,
+    domainResultFocus?.echoLine,
+    isMissing,
+    mapBeforeAfterSummary?.impact?.summary,
+    operationalResources,
+    operationSignals,
+    pilotStatus,
+    relatedEvent,
+    result,
     resultCarryOver?.summary,
   ]);
 
@@ -405,6 +472,12 @@ export function DecisionResultScreen() {
             {resultFatigueState ? (
               <Animated.View entering={FadeInUp.delay(115).duration(260)} style={styles.fatigueChip}>
                 <ResourceFatigueStateChip model={resultFatigueState} />
+              </Animated.View>
+            ) : null}
+
+            {resultSystemsEcho?.visible ? (
+              <Animated.View entering={FadeInUp.delay(116).duration(260)} style={styles.systemsEchoStrip}>
+                <EventResultSystemsEchoStrip model={resultSystemsEcho} />
               </Animated.View>
             ) : null}
 
@@ -524,6 +597,10 @@ const styles = StyleSheet.create({
   fatigueChip: {
     marginBottom: spacing.sm,
     minWidth: 0,
+  },
+  systemsEchoStrip: {
+    minWidth: 0,
+    flexShrink: 1,
   },
   domainResult: {
     marginTop: spacing.sm,

@@ -1,0 +1,106 @@
+
+> crevia@1.0.0 web
+> expo start --web --port 8082
+
+Starting project at C:\crevia
+Using src/app as the root directory for Expo Router.
+Starting Metro Bundler
+Waiting on http://localhost:8082
+Logs for your project will appear below.
+Web node_modules\expo-router\entry.js ▓▓░░░░░░░░░░░░░░ 16.0% ( 4/10)
+λ node_modules\expo-router\node\render.js ▓░░░░░░░░░░░░░░░  9.5% (  9/102)
+Web node_modules\expo-router\entry.js ▓▓░░░░░░░░░░░░░░ 16.0% ( 4/10)
+λ node_modules\expo-router\node\render.js ▓▓░░░░░░░░░░░░░░ 16.2% ( 95/236)
+Web node_modules\expo-router\entry.js ▓▓▓▓░░░░░░░░░░░░ 28.2% ( 24/118)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓░░░░░░░░░░░ 31.8% (233/413)
+Web node_modules\expo-router\entry.js ▓▓▓▓░░░░░░░░░░░░ 28.2% (117/286)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓░░░░░░░░ 51.5% (396/557)
+Web node_modules\expo-router\entry.js ▓▓▓▓░░░░░░░░░░░░ 28.2% (209/396)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 56.8% (450/627)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓░░░░░░░░░░ 40.3% (317/525)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 56.8% (578/858)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓░░░░░░░░░░ 40.3% (404/742)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 56.8% ( 671/1102)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓░░░░░░░░░░ 40.3% (514/890)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 56.8% ( 851/1282)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓░░░░░░░░░░ 40.3% ( 734/1210)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 56.8% ( 966/1390)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓░░░░░░░░░░ 40.3% ( 734/1210)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 56.8% (1135/1525)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 47.6% ( 984/1433)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 57.8% (1280/1728)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓░░░░░░░░ 53.9% (1213/1652)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 64.3% (1445/1802)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓░░░░░░░░ 54.7% (1224/1655)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 65.5% (1522/1940)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 60.5% (1360/1749)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 75.5% (1730/2000)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ node_modules\expo-router\node\render.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 79.2% (1651/1855)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 78.1% (1819/2058)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ node_modules\expo-router\node\render.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 79.2% (1651/1855)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 85.2% (1996/2162)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ node_modules\expo-router\node\render.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 87.5% (1888/2038)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 89.0% (2072/2196)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ node_modules\expo-router\node\render.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 92.0% (2016/2102)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 90.9% (2182/2289)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ node_modules\expo-router\node\render.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 95.6% (2100/2148)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94.9% (2299/2367)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ node_modules\expo-router\node\render.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 96.9% (2188/2224)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 96.9% (2398/2436)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ node_modules\expo-router\node\render.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 75655ms node_modules\expo-router\node\render.js (1 module)
+λ Bundled 27132ms node_modules\expo-router\node\render.js (1 module)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1/1)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1/1)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Metro error: Image.default.resolveAssetSource is not a function
+
+Call Stack
+  resolveAsset (src\features\map\data\mapAssets.ts)
+  factory (src\features\map\data\mapAssets.ts)
+  factory (src\features\map\components\CityOverviewMap.tsx)
+  <unknown> (src\features\map\components\CityMapCard.tsx)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1/1)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+
+Metro error: Image.default.resolveAssetSource is not a function
+
+Call Stack
+  resolveAsset (src\features\map\data\mapAssets.ts)
+  factory (src\features\map\data\mapAssets.ts)
+  factory (src\features\map\components\CityOverviewMap.tsx)
+  <unknown> (src\features\map\components\CityMapCard.tsx)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1/1)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 86910ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 38033ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 1039ms node_modules\expo-router\_error.js (311 modules)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 220ms node_modules\expo-router\node\render.js (1 module)
+
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Metro error: Image.default.resolveAssetSource is not a function
+
+Call Stack
+  resolveAsset (src\features\map\data\mapAssets.ts)
+  factory (src\features\map\data\mapAssets.ts)
+  factory (src\features\map\components\CityOverviewMap.tsx)
+  <unknown> (src\features\map\components\CityMapCard.tsx)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 3963ms node_modules\expo-router\entry.js (1 module)
