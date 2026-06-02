@@ -732,7 +732,7 @@ const SIDE_DEFS: ContentPackEventDef[] = [
       },
       {
         title: 'Mevcut tempoda devam',
-        description: 'Değişiklik yok; sezon sonu baskısı artar.',
+        description: 'Değişiklik yok; dönemsel operasyon baskısı artar.',
         effects: { risk: 2 },
         decisionStyle: 'partial',
       },

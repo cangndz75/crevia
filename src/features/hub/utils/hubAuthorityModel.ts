@@ -2,6 +2,7 @@ import { calculateAuthorityProgress } from '@/core/authority/authorityEngine';
 import { buildAuthorityRankLabel } from '@/core/authority/authorityPresentation';
 import { createInitialAuthorityState, normalizeAuthorityState } from '@/core/authority/authoritySeed';
 import type { AuthorityEvaluationSnapshot, AuthorityState } from '@/core/authority/authorityTypes';
+import { buildCompactRankUnlockLine } from '@/core/rankPermissions';
 
 export type HubAuthorityChipAccent = 'candidate' | 'promoted' | null;
 
@@ -9,6 +10,7 @@ export type HubAuthorityChipSummary = {
   rankLabel: string;
   progressLine: string;
   accentLine?: string;
+  nextUnlockLine?: string;
   progressPercent: number;
   evaluationAccent: HubAuthorityChipAccent;
 };
@@ -72,6 +74,14 @@ export function buildHubAuthorityChipSummary(
     rankLabel: buildAuthorityRankLabel(authorityState.formalRankId),
     progressLine: buildProgressLine(authorityState, progress),
     accentLine: evaluationPresentation.accentLine,
+    nextUnlockLine:
+      day <= 1
+        ? undefined
+        : buildCompactRankUnlockLine({
+            authorityState,
+            currentTitle: authorityState.formalRankId,
+            compact: true,
+          }),
     progressPercent: progress.progressToNextPercent,
     evaluationAccent: evaluationPresentation.evaluationAccent,
   };

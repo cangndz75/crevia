@@ -560,7 +560,7 @@ export const INTERACTION_CONTRACT_REGISTRY: InteractionContract[] = [
       modalId: 'season_end_evaluation_detail_sheet',
     },
     isOptional: true,
-    notes: 'Full Ana Operasyon sezon sonu; opens SeasonEndEvaluationDetailSheet.',
+    notes: 'Full Ana Operasyon dönemsel değerlendirme; opens SeasonEndEvaluationDetailSheet.',
   }),
   c({
     id: 'report_season_end_static',
@@ -588,7 +588,7 @@ export const INTERACTION_CONTRACT_REGISTRY: InteractionContract[] = [
     id: 'season_end_evaluation_detail_static',
     componentName: 'SeasonEndEvaluationDetailSheet',
     surface: 'report',
-    label: 'Sezon sonu kategori kartları',
+    label: 'Dönemsel değerlendirme kategori kartları',
     visualAffordance: 'static_card',
     expectedAction: 'none',
     notes: 'Category cards and metric rows are read-only.',

@@ -155,9 +155,9 @@ export function verifyIapProductDesignScenario(): VerifyIapProductDesignOutcome 
   ok =
     assert(
       checks,
-      main.unlocks.some((b) => /sezon sonu/i.test(b)),
-      'Unlock season end evaluation',
-      'Missing season end',
+      main.unlocks.some((b) => /dönemsel operasyon değerlendirmesi/i.test(b)),
+      'Unlock periodic operation review',
+      'Missing periodic operation review',
     ) && ok;
 
   const offer = buildIapOfferCopyModel();

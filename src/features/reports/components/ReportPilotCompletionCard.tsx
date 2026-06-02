@@ -91,7 +91,7 @@ export function ReportPilotCompletionCard({
       <GameCard padding={compact ? 'md' : 'lg'} style={styles.card}>
         <View style={styles.seasonBadge}>
           <Text style={styles.seasonBadgeText} numberOfLines={1}>
-            Sezon Sonu Değerlendirmesi
+            Pilot Değerlendirmesi
           </Text>
         </View>
 

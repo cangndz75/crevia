@@ -591,7 +591,7 @@ export const FINAL_POLISH_ROADMAP: FinalPolishRoadmapItem[] = [
     requiresPersistChange: false,
     allowsNewRoute: false,
     allowsGameplayCoreChange: false,
-    description: 'Sezon sonu AI değerlendirmesi (later faz).',
+    description: 'Dönemsel operasyon AI değerlendirmesi (later faz).',
     acceptanceChecks: ['Season end contract korunur'],
     forbiddenChanges: ['Season 2 restart'],
   }),

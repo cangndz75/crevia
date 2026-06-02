@@ -81,7 +81,7 @@ export const ANALYTICS_FUNNEL_DEFINITIONS: AnalyticsFunnelDefinition[] = [
   {
     id: 'full_main_operation',
     title: 'Tam Ana Operasyon',
-    description: '14 günlük tam operasyon döngüsü.',
+    description: 'Early operation benchmark window içindeki tam operasyon döngüsü.',
     orderedEvents: [
       'main_operation_day_started',
       'season_goal_card_seen',
@@ -95,7 +95,7 @@ export const ANALYTICS_FUNNEL_DEFINITIONS: AnalyticsFunnelDefinition[] = [
     dropoffRisks: [
       'Sezon hedefleri görülmeden çıkış',
       'Kriz masası kullanılmadan gün bitirme',
-      'Sezon sonu değerlendirme atlanması',
+      'Dönemsel operasyon değerlendirmesi atlanması',
     ],
   },
   {
@@ -133,15 +133,15 @@ export const ANALYTICS_FUNNEL_DEFINITIONS: AnalyticsFunnelDefinition[] = [
   },
   {
     id: 'season_end',
-    title: 'Sezon Sonu',
-    description: 'Sezon değerlendirme kartı ve detay.',
+    title: 'Dönemsel Operasyon Değerlendirmesi',
+    description: 'Operasyon dönemi değerlendirme kartı ve detay.',
     orderedEvents: [
       'report_season_end_seen',
       'season_end_seen',
       'season_end_detail_opened',
     ],
     successEvent: 'season_end_detail_opened',
-    dropoffRisks: ['Sezon sonu kartı görülüp detay açılmaması'],
+    dropoffRisks: ['Dönemsel değerlendirme kartı görülüp detay açılmaması'],
   },
   {
     id: 'retention',

@@ -142,7 +142,7 @@ export function SeasonEndEvaluationDetailSheet({
 
             <View style={styles.metricsBlock}>
               <Text style={styles.metricsTitle} numberOfLines={1}>
-                Sezon özeti
+                Operasyon dönemi özeti
               </Text>
               {model.metricRows.map((row) => (
                 <View key={row.id} style={styles.metricRow}>

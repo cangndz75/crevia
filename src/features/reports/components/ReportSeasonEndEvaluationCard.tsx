@@ -125,7 +125,7 @@ export function ReportSeasonEndEvaluationCard({
             },
           ]}>
           <Text style={styles.eyebrow} numberOfLines={1}>
-            Sezon 1 tamamlandı
+            Operasyon dönemi özeti
           </Text>
           <Text style={styles.title} numberOfLines={1}>
             {cardModel.title}

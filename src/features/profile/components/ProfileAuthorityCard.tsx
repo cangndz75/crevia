@@ -148,6 +148,26 @@ export function ProfileAuthorityCard({ summary }: ProfileAuthorityCardProps) {
           </Text>
         </View>
       </View>
+
+      {summary.nextPermissionChips.length > 0 ? (
+        <View style={styles.unlockPreview}>
+          <Text style={styles.unlockLabel} numberOfLines={1}>
+            Sıradaki Yetki Açılımları
+          </Text>
+          <Text style={styles.unlockLine} numberOfLines={2}>
+            {summary.nextUnlockLine}
+          </Text>
+          <View style={styles.unlockChips}>
+            {summary.nextPermissionChips.slice(0, 3).map((item) => (
+              <View key={item.id} style={styles.unlockChip}>
+                <Text style={styles.unlockChipText} numberOfLines={1}>
+                  {item.title}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -300,5 +320,47 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     lineHeight: 17,
+  },
+  unlockPreview: {
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: 6,
+    minWidth: 0,
+  },
+  unlockLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.textSecondary,
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
+  },
+  unlockLine: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    lineHeight: 17,
+    minWidth: 0,
+  },
+  unlockChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    minWidth: 0,
+  },
+  unlockChip: {
+    maxWidth: '48%',
+    minWidth: 0,
+    borderRadius: radius.full,
+    backgroundColor: colors.secondaryMuted,
+    borderWidth: 1,
+    borderColor: 'rgba(26,143,138,0.16)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  unlockChipText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.primary,
   },
 });

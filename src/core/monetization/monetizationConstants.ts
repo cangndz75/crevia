@@ -17,9 +17,9 @@ export const MONETIZATION_UI_FORBIDDEN_WORDS = [
 export const MAIN_OPERATION_PACK = {
   productId: MAIN_OPERATION_PRODUCT_ID,
   title: 'Ana Operasyon Paketi',
-  subtitle: 'Sezon 1: Şehir Yönetimi',
+  subtitle: 'Açık Uçlu Şehir Operasyonu',
   description:
-    'Pilot operasyonu tamamladın. Ana Operasyon’da şehir kapsamı büyür; mahalle planı, saha atamaları, operasyon sinyalleri ve sezon hedefleri daha güçlü çalışır.',
+    'Pilot operasyonu tamamladın. Ana Operasyon’da şehir kapsamı büyür; mahalle planı, saha atamaları, operasyon sinyalleri ve milestone hedefleri daha güçlü çalışır.',
   includedFeatures: [
     {
       id: 'districts',
@@ -44,16 +44,16 @@ export const MAIN_OPERATION_PACK = {
     },
     {
       id: 'season_goals',
-      title: 'Sezon Hedefleri',
+      title: 'Milestone Hedefleri',
       description:
-        'Şehir güveni, kaynak dengesi ve mahalle başarısı sezon boyunca izlenir.',
+        'Şehir güveni, kaynak dengesi ve mahalle başarısı operasyon kariyeri boyunca izlenir.',
       status: 'coming_later' as const,
     },
     {
       id: 'reports',
       title: 'Gelişmiş Raporlar',
       description:
-        'Gün sonu ve sezon raporlarında neden-sonuç etkileri daha net görünür.',
+        'Gün sonu ve dönemsel operasyon raporlarında neden-sonuç etkileri daha net görünür.',
       status: 'full_access' as const,
     },
     {
@@ -70,7 +70,7 @@ export const MONETIZATION_COPY = {
   offerTitle: 'Ana Operasyon Açılıyor',
   offerSubtitle: 'Pilot operasyon tamamlandı. Şehir kapsamını büyütme zamanı.',
   heroLine:
-    'Artık yalnızca günü kapatmıyorsun; şehir operasyonunu sezon boyunca yönetiyorsun.',
+    'Artık yalnızca günü kapatmıyorsun; şehir operasyonunu açık uçlu bir kariyer olarak yönetiyorsun.',
   pilotSummaryLine:
     'Pilot boyunca planlama, saha ataması, operasyon sinyalleri ve rapor akışını tamamladın.',
   primaryCta: 'Ana Operasyonu Aç',
@@ -88,7 +88,7 @@ export const MONETIZATION_COPY = {
   limitedWarningLine:
     'Sınırlı gündemde günlük olay sayısı ve mahalle kapsamı dar kalır.',
   fullUnlockedTitle: 'Ana Operasyon erişimi tanımlandı',
-  fullUnlockedLine: 'Ana Operasyon erişimi tanımlandı. Sezon kapsamı aktif.',
+  fullUnlockedLine: 'Ana Operasyon erişimi tanımlandı. Şehir kapsamı aktif.',
   restoreFeedback: 'Erişim kontrol edildi.',
   mockUnlockFeedback: 'Ana Operasyon erişimi tanımlandı.',
   reportCtaOffer: 'Ana Operasyona Geç',

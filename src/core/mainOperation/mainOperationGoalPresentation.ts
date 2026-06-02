@@ -165,7 +165,7 @@ function sourceLineForGoal(
           focus ? `; plan odağı ${focus}.` : '.'
         }`;
       }
-      return 'Mahalle kapsamı sezon gündemi ve bölge sinyalleriyle genişliyor.';
+      return 'Mahalle kapsamı operasyon gündemi ve bölge sinyalleriyle genişliyor.';
     }
     case 'vehicles': {
       const vf = plan?.vehicleFocus;
@@ -188,7 +188,7 @@ function sourceLineForGoal(
       return 'Saha ataması hedefi günlük atama özeti ve olay uyumuna bağlı.';
     }
     default:
-      return 'Sezon hedefi bugünkü operasyon kararlarıyla güncellendi.';
+      return 'Milestone hedefi bugünkü operasyon kararlarıyla güncellendi.';
   }
 }
 
@@ -230,7 +230,7 @@ function recommendationForGoal(
       return 'Yarın güçlü uyumu korumak için atamayı plan odağıyla aynı günde onayla.';
     }
     default:
-      return 'Yarınki plan sezon hedeflerine göre yeniden şekillenir.';
+      return 'Yarınki plan milestone hedeflerine göre yeniden şekillenir.';
   }
 }
 
@@ -309,7 +309,7 @@ function buildSourceRows(
   if (rows.length === 0) {
     rows.push({
       id: 'fallback',
-      label: 'Sezon izleme',
+      label: 'Operasyon izleme',
       value: 'Aktif',
       summary: 'Bugünkü veriler henüz sınırlı; hedef izleniyor.',
       tone: 'neutral',
@@ -370,7 +370,7 @@ export function pickTopSeasonInsightLine(
   insights: MainOperationGoalInsight[],
 ): string {
   if (insights.length === 0) {
-    return 'Sezon hedefleri izleniyor';
+    return 'Milestone hedefleri izleniyor';
   }
   const risky = [...insights].sort((a, b) => a.progressRatio - b.progressRatio)[0];
   const best = [...insights].sort((a, b) => b.progressRatio - a.progressRatio)[0];
@@ -384,7 +384,7 @@ export function pickTopSeasonInsightLine(
   if (risky?.domain === 'city_balance') {
     return 'Bugün şehir dengesi izleniyor';
   }
-  return risky?.sourceLine.split('.')[0] ?? 'Sezon hedefleri güncellendi';
+  return risky?.sourceLine.split('.')[0] ?? 'Milestone hedefleri güncellendi';
 }
 
 export function sortInsightsForHub(insights: MainOperationGoalInsight[]): MainOperationGoalInsight[] {
@@ -413,7 +413,7 @@ export function buildMainOperationSeasonDetailModel(
   return {
     title: MAIN_OPERATION_UI_COPY.hubTitle,
     subtitle: MAIN_OPERATION_UI_COPY.seasonSubtitle,
-    seasonDayLabel: `Sezon günü ${season.currentSeasonDay} / ${season.seasonLengthDays}`,
+    seasonDayLabel: `Operasyon günü ${season.currentSeasonDay}`,
     accessLabel: MAIN_OPERATION_UI_COPY.accessFull,
     topInsightLine: pickTopSeasonInsightLine(sorted),
     goalDetails: season.goals
@@ -464,12 +464,12 @@ function reportLineForDomain(
     case 'assignments': {
       const s = assignments?.dailyAssignmentSummary;
       if (s && s.strongFitCount > 0) {
-        return 'Güçlü saha atamaları sezonun atama hedefini ilerletti.';
+        return 'Güçlü saha atamaları operasyon dönemi atama hedefini ilerletti.';
       }
       if (s && s.weakFitCount > 0) {
         return 'Zayıf atamalar atama hedefini zorladı.';
       }
-      return 'Saha atamaları sezon hedefini izlemeye aldı.';
+      return 'Saha atamaları milestone hedefini izlemeye aldı.';
     }
     default:
       return undefined;
@@ -514,7 +514,7 @@ export function buildReportMainOperationSeasonModel(
       subtitle: MAIN_OPERATION_UI_COPY.seasonSubtitle,
       seasonDayLabel: '',
       topLine: MAIN_OPERATION_UI_COPY.accessLimited,
-      lines: ['Sınırlı gündemde sezon hedefleri tam kapsamda izlenmez.'],
+      lines: ['Sınırlı gündemde milestone hedefleri tam kapsamda izlenmez.'],
       goalChips: [],
       footerNote: '',
       tone: 'neutral',
@@ -531,14 +531,14 @@ export function buildReportMainOperationSeasonModel(
   }
 
   if (input.crisisState?.activeIncident) {
-    lineCandidates.unshift('Aktif kriz olayı sezon hedeflerini bugün zorladı.');
+    lineCandidates.unshift('Aktif kriz olayı milestone hedeflerini bugün zorladı.');
   }
 
   const lines = lineCandidates.slice(0, 3);
   const topLine =
     insights.find((i) => i.tone === 'warning')?.sourceLine.split('.')[0] ??
     insights[0]?.sourceLine.split('.')[0] ??
-    'Bugün sezon hedefleri operasyon kararlarıyla güncellendi.';
+    'Bugün milestone hedefleri operasyon kararlarıyla güncellendi.';
 
   const goalChips = sortInsightsForHub(insights)
     .slice(0, 3)
@@ -552,7 +552,7 @@ export function buildReportMainOperationSeasonModel(
   return {
     title: MAIN_OPERATION_UI_COPY.reportTitle,
     subtitle: MAIN_OPERATION_UI_COPY.seasonSubtitle,
-    seasonDayLabel: `Sezon günü ${season.currentSeasonDay} / ${season.seasonLengthDays}`,
+    seasonDayLabel: `Operasyon günü ${season.currentSeasonDay}`,
     topLine,
     lines,
     goalChips,
@@ -587,9 +587,9 @@ export function buildMainOperationGoalAdvisorLine(
           : risky.domain === 'districts'
             ? 'mahalle odağını'
             : 'plan odağını';
-      return `Sezon hedeflerinde ${risky.title.toLowerCase()} hassas görünüyor. Yarın ${focusHint} izlemek iyi olur.`;
+      return `Milestone hedeflerinde ${risky.title.toLowerCase()} hassas görünüyor. Yarın ${focusHint} izlemek iyi olur.`;
     }
-    return 'Sezon hedefleri izleniyor; yarın planı hedeflere göre kurmak güvenli.';
+    return 'Milestone hedefleri izleniyor; yarın planı hedeflere göre kurmak güvenli.';
   }
 
   if (level === 2) {

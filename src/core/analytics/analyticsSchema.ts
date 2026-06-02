@@ -381,7 +381,7 @@ export const ANALYTICS_EVENT_DEFINITIONS: AnalyticsEventDefinition[] = [
   }),
   defineEvent({
     name: 'season_end_seen',
-    description: 'Sezon sonu değerlendirme kartı görüldü.',
+    description: 'Dönemsel operasyon değerlendirme kartı görüldü.',
     surface: 'report',
     funnelIds: ['season_end', 'full_main_operation'],
     requiredPayloadKeys: ['day', 'seasonDay', 'ratingBand'],
@@ -389,7 +389,7 @@ export const ANALYTICS_EVENT_DEFINITIONS: AnalyticsEventDefinition[] = [
   }),
   defineEvent({
     name: 'season_end_detail_opened',
-    description: 'Sezon sonu detay sheet açıldı.',
+    description: 'Dönemsel operasyon detay sheet açıldı.',
     surface: 'report',
     funnelIds: ['season_end', 'full_main_operation'],
     requiredPayloadKeys: ['day', 'seasonDay', 'ratingBand'],
@@ -453,7 +453,7 @@ export const ANALYTICS_EVENT_DEFINITIONS: AnalyticsEventDefinition[] = [
   }),
   defineEvent({
     name: 'report_season_end_seen',
-    description: 'Rapor sezon sonu kartı görüldü.',
+    description: 'Rapor dönemsel operasyon değerlendirme kartı görüldü.',
     surface: 'report',
     funnelIds: ['season_end', 'full_main_operation'],
     requiredPayloadKeys: ['day', 'seasonDay', 'ratingBand'],

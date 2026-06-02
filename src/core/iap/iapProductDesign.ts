@@ -18,7 +18,7 @@ const MAIN_OPERATION_PRODUCT: IapProductDefinition = {
   entitlementId: MAIN_OPERATION_ENTITLEMENT_ID,
   type: 'one_time_unlock',
   title: 'Ana Operasyon Paketi',
-  subtitle: 'Sezon 1: Şehir Yönetimi',
+  subtitle: 'Açık Uçlu Şehir Operasyonu',
   description: 'Pilot sonrası geniş şehir operasyonunu açar.',
   storeProductIds: {
     ios: IAP_STORE_PRODUCT_IDS.ios,

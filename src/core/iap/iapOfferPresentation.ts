@@ -125,13 +125,13 @@ export function validateIapOfferCopy(): IapDesignAuditResult {
   const goals = model.valueBullets.some((b) => /hedef/i.test(b));
   const resources = model.valueBullets.some((b) => /kaynak|harita/i.test(b));
   const live = model.valueBullets.some((b) => /canlı|karar/i.test(b));
-  const seasonEnd = model.valueBullets.some((b) => /sezon sonu/i.test(b));
+  const periodicReview = model.valueBullets.some((b) => /dönemsel operasyon değerlendirmesi/i.test(b));
 
   if (crisis) push('bullet_crisis', 'pass', 'Crisis in bullets', 'ok');
   if (goals) push('bullet_goals', 'pass', 'Season goals in bullets', 'ok');
   if (resources) push('bullet_resources', 'pass', 'Resources/map in bullets', 'ok');
   if (live) push('bullet_live', 'pass', 'Live decisions in bullets', 'ok');
-  if (seasonEnd) push('bullet_season_end', 'pass', 'Season end in bullets', 'ok');
+  if (periodicReview) push('bullet_periodic_review', 'pass', 'Periodic review in bullets', 'ok');
 
   let health: IapDesignAuditResult['health'] = 'PASS';
   if (failCount > 0) health = 'FAIL';

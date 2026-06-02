@@ -30,24 +30,24 @@ export const FULL_MAIN_SIDE_COUNT = 2;
 
 export const MAIN_OPERATION_UI_COPY = {
   hubTitle: 'Ana Operasyon',
-  seasonSubtitle: 'Sezon 1: Şehir Yönetimi',
+  seasonSubtitle: 'Açık Uçlu Şehir Operasyonu',
   accessFull: 'Ana Operasyon aktif',
   accessLimited: 'Sınırlı gündem',
   scopeExpanded: 'Şehir kapsamı genişledi',
   scopeDetailFull:
     'Sınırlı gündemden farklı olarak daha fazla mahalle sinyali izlenir',
-  goalsTracked: 'Tam erişimde sezon hedefleri takip edilir',
+  goalsTracked: 'Tam erişimde milestone hedefleri takip edilir',
   limitedFooter:
     'Sınırlı gündem aktif. Ana operasyon hedefleri tam kapsamda izlenmez.',
   fullFooter:
-    'Ana Operasyon aktif. Sezon hedefleri ve mahalle kapsamı izleniyor.',
-  reportTitle: 'Ana Operasyon Sezonu',
+    'Ana Operasyon aktif. Milestone hedefleri ve mahalle kapsamı izleniyor.',
+  reportTitle: 'Ana Operasyon Dönemi',
   reportFooter:
-    'Yarınki plan sezon hedeflerine göre yeniden şekillenir.',
+    'Yarınki plan milestone hedeflerine göre yeniden şekillenir.',
   hubCtaFull: 'Hedefleri Gör',
   hubCtaLimited: 'Ana Operasyon Kapsamını Gör',
   previewActive: 'Ana Operasyon aktif',
-  previewGoalsLine: 'Sezon hedefleri ve mahalle kapsamı izleniyor.',
+  previewGoalsLine: 'Milestone hedefleri ve mahalle kapsamı izleniyor.',
 } as const;
 
 export const MAIN_OPERATION_FORBIDDEN_WORDS = [
@@ -135,7 +135,7 @@ export function createInitialSeasonGoals(): MainOperationSeasonGoal[] {
       domain: 'city_balance',
       title: 'Şehir Dengesini Koru',
       description:
-        'Genel operasyon baskısını sezon boyunca kritik eşiğin altında tut.',
+        'Genel operasyon baskısını dönem boyunca kritik eşiğin altında tut.',
     },
     {
       id: 'goal_districts',

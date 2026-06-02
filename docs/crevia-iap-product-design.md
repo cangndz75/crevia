@@ -20,8 +20,8 @@ Post-pilot monetization gate, mock purchase ve analytics schema hazır. Gerçek 
 
 ## Neden tek seferlik unlock?
 
-- Pilot sonrası değer önerisi net: “Ana Operasyon Paketi / Sezon 1”.
-- Oyuncu tek seferlik erişim satın alır; sezon sonu değerlendirmesi dahil tam kapsam açılır.
+- Pilot sonrası değer önerisi net: “Ana Operasyon Paketi / Açık Uçlu Şehir Operasyonu”.
+- Oyuncu tek seferlik erişim alır; dönemsel operasyon değerlendirmesi dahil tam kapsam açılır.
 - Mock purchase ve mevcut `ownedPacks` modeliyle uyumlu.
 - Store review’da abonelik yönetimi ve iptal akışı riski yok.
 
@@ -34,17 +34,17 @@ Post-pilot monetization gate, mock purchase ve analytics schema hazır. Gerçek 
 ## Ürün tanımı
 
 **Başlık:** Ana Operasyon Paketi  
-**Alt başlık:** Sezon 1: Şehir Yönetimi  
+**Alt başlık:** Açık Uçlu Şehir Operasyonu  
 **Açıklama:** Pilot sonrası geniş şehir operasyonunu açar.
 
 **Unlock maddeleri:**
 
 - Geniş mahalle kapsamı
-- Ana operasyon sezon hedefleri
+- Ana operasyon milestone hedefleri
 - Kriz Masası ve kriz hamleleri
 - Saha kaynakları ve harita sinyalleri
 - Canlı operasyon kararları
-- Sezon sonu değerlendirmesi
+- Dönemsel Operasyon Değerlendirmesi
 
 ## Entitlement mapping
 

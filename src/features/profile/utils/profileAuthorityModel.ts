@@ -8,6 +8,11 @@ import {
   buildAuthorityTrustLabel,
 } from '@/core/authority/authorityPresentation';
 import { createInitialAuthorityState, normalizeAuthorityState } from '@/core/authority/authoritySeed';
+import {
+  buildNextPermissionChips,
+  buildRankPermissionAxisLine,
+  type RankPermissionUiItem,
+} from '@/core/rankPermissions';
 import type {
   AuthorityDomainKey,
   AuthorityEvaluationSnapshot,
@@ -27,6 +32,8 @@ export type ProfileAuthoritySummary = {
   unlockedPermissionCountLabel: string;
   evaluationLabel: string;
   evaluationTone: ProfileAuthorityEvaluationTone;
+  nextUnlockLine: string;
+  nextPermissionChips: RankPermissionUiItem[];
 };
 
 const DOMAIN_LABELS: Record<AuthorityDomainKey, string> = {
@@ -137,6 +144,16 @@ export function buildProfileAuthoritySummary(
   const evaluationPresentation = resolveEvaluationPresentation(
     authorityState.lastEvaluation,
   );
+  const nextPermissionChips = buildNextPermissionChips({
+    authorityState,
+    currentTitle: authorityState.formalRankId,
+    compact: true,
+  });
+  const nextUnlockLine = buildRankPermissionAxisLine({
+    authorityState,
+    currentTitle: authorityState.formalRankId,
+    compact: true,
+  });
 
   const rankLabel = buildAuthorityRankLabel(authorityState.formalRankId);
   const authorityTrustLabel = buildAuthorityTrustLabel(authorityState.authorityTrust);
@@ -151,6 +168,8 @@ export function buildProfileAuthoritySummary(
       progressSubtitle: 'En üst resmi görev seviyesindesin.',
       strongestDomainLabel: resolveStrongestDomainLabel(authorityState.domainScores),
       unlockedPermissionCountLabel: `${unlockedCount} / ${totalPermissions} izin`,
+      nextUnlockLine,
+      nextPermissionChips,
       ...evaluationPresentation,
     };
   }
@@ -169,6 +188,8 @@ export function buildProfileAuthoritySummary(
     progressSubtitle,
     strongestDomainLabel: resolveStrongestDomainLabel(authorityState.domainScores),
     unlockedPermissionCountLabel: `${unlockedCount} / ${totalPermissions} izin`,
+    nextUnlockLine,
+    nextPermissionChips,
     ...evaluationPresentation,
   };
 }

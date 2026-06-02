@@ -68,6 +68,12 @@ export function HubAuthorityProgressChip({
           </Text>
         ) : null}
 
+        {summary.nextUnlockLine ? (
+          <Text style={styles.nextUnlockLine} numberOfLines={1} ellipsizeMode="tail">
+            {summary.nextUnlockLine}
+          </Text>
+        ) : null}
+
         <View style={styles.progressTrack}>
           <View
             style={[
@@ -140,6 +146,14 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     lineHeight: 13,
+  },
+  nextUnlockLine: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.primary,
+    lineHeight: 13,
+    flexShrink: 1,
+    minWidth: 0,
   },
   progressTrack: {
     marginTop: 2,

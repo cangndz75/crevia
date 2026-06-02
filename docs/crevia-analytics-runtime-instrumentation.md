@@ -93,7 +93,7 @@ Yasak: PII, `saveState`, ham metin, `advisorLine`, `reportText`. `districtId`, `
 - [ ] Day 1: hub → plan onay → olay → karar → atama → saha → sonuç → rapor → hub
 - [ ] `npm run verify:analytics-runtime` PASS
 - [ ] Post-pilot: kaynak kartı, kriz sheet, harita overlay
-- [ ] Sezon sonu kartı + detay sheet (tam erişim günü)
+- [ ] Dönemsel operasyon değerlendirme kartı + detay sheet (tam erişim günü)
 - [ ] Dev konsolda event spam yok
 
 ## Verify

@@ -5,7 +5,6 @@ import type {
 } from './seasonEndTypes';
 
 export const SEASON_END_FORBIDDEN_WORDS = [
-  'xp',
   'premium',
   'satın al',
   'kilitli',
@@ -43,26 +42,27 @@ export const SEASON_END_CATEGORY_META: Record<
   assignments: { title: 'Saha Atamaları', iconKey: 'assignment' },
   crisis_management: { title: 'Kriz Yönetimi', iconKey: 'crisis' },
   social_trust: { title: 'Sosyal Güven', iconKey: 'social_pulse' },
-  season_goals: { title: 'Sezon Hedefleri', iconKey: 'season_goal' },
+  season_goals: { title: 'Milestone Hedefleri', iconKey: 'season_goal' },
 };
 
 export const SEASON_END_RATING_LABELS: Record<SeasonEndRating, string> = {
-  excellent: 'Üst düzey sezon',
-  strong: 'Güçlü sezon',
-  steady: 'Dengeli sezon',
-  strained: 'Zorlayıcı sezon',
-  critical: 'Kritik sezon',
+  excellent: 'Üst düzey dönem',
+  strong: 'Güçlü dönem',
+  steady: 'Dengeli dönem',
+  strained: 'Zorlayıcı dönem',
+  critical: 'Kritik dönem',
 };
 
 export const SEASON_END_UI_COPY = {
-  evaluationTitle: 'Sezon Değerlendirmesi',
-  evaluationSubtitle: 'Ana Operasyon Sezonu tamamlandı',
-  detailTitle: 'Sezon Sonu Değerlendirmesi',
-  detailClose: 'Kapat',
+  evaluationTitle: 'Dönemsel Operasyon Değerlendirmesi',
+  evaluationSubtitle:
+    'Operasyon devam ediyor; bu özet son dönemdeki kararlarının etkisini gösterir.',
+  detailTitle: 'Operasyon Dönemi Özeti',
+  detailClose: 'Operasyona Devam Et',
   detailCta: 'Detayları Gör',
   footerNote:
-    'Bu değerlendirme mevcut sezon verilerinden üretildi; sonraki sezon akışı yakında genişleyecek.',
-  completedDayPrefix: 'Tamamlanan gün',
+    'Bu değerlendirme operasyon kariyerini kapatmaz; sonraki yetkiler XP, authority, ünvan ve kaynak istikrarıyla açılır.',
+  completedDayPrefix: 'Değerlendirilen operasyon günü',
 } as const;
 
 export function getSeasonEndToneFromRating(rating: SeasonEndRating): SeasonEndTone {

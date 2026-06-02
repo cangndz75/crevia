@@ -26,16 +26,16 @@ export const IAP_STORE_PRODUCT_IDS = {
 
 export const MAIN_OPERATION_UNLOCK_BULLETS = [
   'Geniş mahalle kapsamı',
-  'Ana operasyon sezon hedefleri',
+  'Ana operasyon milestone hedefleri',
   'Kriz Masası ve kriz hamleleri',
   'Saha kaynakları ve harita sinyalleri',
   'Canlı operasyon kararları',
-  'Sezon sonu değerlendirmesi',
+  'Dönemsel Operasyon Değerlendirmesi',
 ] as const;
 
 export const IAP_OFFER_COPY = {
   title: 'Ana Operasyon Paketi',
-  subtitle: 'Sezon 1: Şehir Yönetimi',
+  subtitle: 'Açık Uçlu Şehir Operasyonu',
   primaryCtaLabel: 'Ana Operasyonu Aç',
   secondaryCtaLabel: 'Sınırlı Gündemle Devam Et',
   restoreCtaLabel: 'Erişimi Geri Yükle',

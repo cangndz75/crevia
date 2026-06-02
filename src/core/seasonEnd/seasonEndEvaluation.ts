@@ -175,27 +175,27 @@ export function evaluateSeasonGoals(
   const avg = averageGoalProgress(season);
   const completed = season.goals.filter((g) => g.status === 'completed').length;
   const evidence: string[] = [
-    `Sezon hedefleri %${Math.round(avg)} seviyesinde tamamlandı.`,
+    `Milestone hedefleri %${Math.round(avg)} seviyesinde ilerledi.`,
   ];
   if (completed > 0) {
     evidence.push(`${completed} hedef tam tamamlandı.`);
   }
   const weakGoal = season.goals.find((g) => g.progress < 40);
   if (weakGoal) {
-    evidence.push(`${weakGoal.title} sezonu belirledi.`);
+    evidence.push(`${weakGoal.title} bu operasyon döneminde belirleyici oldu.`);
   }
   const recommendation =
     avg >= 70
-      ? 'Sonraki sezonda hedefleri erken tamamlamak için günlük planı koru.'
-      : 'Sonraki sezonda hedefleri parçalayarak günlük ilerlemeyi sabitle.';
+      ? 'Sonraki dönemde hedefleri erken ilerletmek için günlük planı koru.'
+      : 'Sonraki dönemde hedefleri parçalayarak günlük ilerlemeyi sabitle.';
   return buildCategoryEvaluation(
     'season_goals',
     avg,
     avg >= 70
-      ? 'Sezon hedefleri güçlü ilerledi.'
+      ? 'Milestone hedefleri güçlü ilerledi.'
       : avg >= 40
-        ? 'Sezon hedefleri ilerledi ama bazı alanlar geride kaldı.'
-        : 'Sezon hedefleri zorlayıcı kaldı.',
+        ? 'Milestone hedefleri ilerledi ama bazı alanlar geride kaldı.'
+        : 'Milestone hedefleri zorlayıcı kaldı.',
     evidence,
     recommendation,
   );
@@ -214,7 +214,7 @@ export function evaluateCityBalance(
   if (signals?.overall?.status === 'stable') {
     evidence.push('Genel operasyon baskısı dengeli kaldı.');
   } else {
-    evidence.push('Genel operasyon baskısı sezon içinde dalgalandı.');
+    evidence.push('Genel operasyon baskısı dönem içinde dalgalandı.');
   }
   if (crisis?.riskLevel === 'elevated' || crisis?.riskLevel === 'critical') {
     evidence.push('Bazı günlerde kriz eşiği şehir dengesini zorladı.');
@@ -222,13 +222,13 @@ export function evaluateCityBalance(
   const recommendation =
     score >= 70
       ? 'Şehir dengesini korumak için plan ve atamayı birlikte oku.'
-      : 'Sonraki sezonda şehir baskısını erken günlerde düşürmeye odaklan.';
+      : 'Sonraki dönemde şehir baskısını erken günlerde düşürmeye odaklan.';
   return buildCategoryEvaluation(
     'city_balance',
     score,
     score >= 70
-      ? 'Sezon boyunca şehir dengesi kontrollü kaldı.'
-      : 'Şehir dengesi sezon içinde zorlandı.',
+      ? 'Operasyon dönemi boyunca şehir dengesi kontrollü kaldı.'
+      : 'Şehir dengesi dönem içinde zorlandı.',
     evidence,
     recommendation,
   );
@@ -264,9 +264,9 @@ export function evaluateDistrictCoverage(
       .slice(0, 2)
       .map((s) => getMapDistrictLabel(s.districtId))
       .join(', ');
-    evidence.push(`${names} sezon içinde daha fazla izleme istedi.`);
+    evidence.push(`${names} dönem içinde daha fazla izleme istedi.`);
   } else {
-    evidence.push('Aktif mahalleler sezon boyunca dengeli izlendi.');
+    evidence.push('Aktif mahalleler dönem boyunca dengeli izlendi.');
   }
   return buildCategoryEvaluation(
     'district_coverage',
@@ -275,7 +275,7 @@ export function evaluateDistrictCoverage(
       ? 'Mahalle kapsamı operasyonla uyumlu genişledi.'
       : 'Mahalle kapsamı bazı bölgelerde baskı taşıdı.',
     evidence,
-    'Sonraki sezonda yüksek baskılı mahalleleri erken gündeme al.',
+    'Sonraki dönemde yüksek baskılı mahalleleri erken gündeme al.',
   );
 }
 
@@ -291,7 +291,7 @@ export function evaluateOperationalResources(
   if (summary?.personnelLine) {
     evidence.push(summary.personnelLine);
   } else if (critical > 0) {
-    evidence.push('Teknik ekip veya saha grupları sezon boyunca yoğun kaldı.');
+    evidence.push('Teknik ekip veya saha grupları dönem boyunca yoğun kaldı.');
   } else {
     evidence.push('Saha kaynakları genel olarak dengeli seyretti.');
   }
@@ -302,7 +302,7 @@ export function evaluateOperationalResources(
   }
   const recommendation =
     critical > 0
-      ? 'Sonraki sezon odağı: filo ve konteyner hattı bakımı.'
+      ? 'Sonraki dönem odağı: filo ve konteyner hattı bakımı.'
       : 'Kaynak toparlamasını plan günü başında kontrol et.';
   return buildCategoryEvaluation(
     'operational_resources',
@@ -329,11 +329,11 @@ export function evaluateAssignments(
   score = clampScore(score);
   const evidence: string[] = [];
   if (strongFit > weakFit) {
-    evidence.push('Güçlü uyumlu atamalar sezonu destekledi.');
+    evidence.push('Güçlü uyumlu atamalar operasyon dönemini destekledi.');
   } else if (weakFit > 0) {
     evidence.push('Zayıf atama günleri operasyon dengesini yavaşlattı.');
   } else {
-    evidence.push('Atama uyumu sezon boyunca izlendi.');
+    evidence.push('Atama uyumu dönem boyunca izlendi.');
   }
   if (summary?.dominantDomain) {
     evidence.push(`Baskın etki alanı: ${summary.dominantDomain}.`);
@@ -342,10 +342,10 @@ export function evaluateAssignments(
     'assignments',
     score,
     score >= 70
-      ? 'Atama uyumu sezon hedeflerini destekledi.'
-      : 'Atama uyumu sezon içinde dalgalandı.',
+      ? 'Atama uyumu milestone hedeflerini destekledi.'
+      : 'Atama uyumu dönem içinde dalgalandı.',
     evidence,
-    'Sonraki sezonda zayıf uyumlu günleri erken telafi et.',
+    'Sonraki dönemde zayıf uyumlu günleri erken telafi et.',
   );
 }
 
@@ -373,21 +373,21 @@ export function evaluateCrisisManagement(
   } else if (crisis?.recentSignals.length) {
     evidence.push('Kriz sinyalleri izlendi; hamle seçimi sınırlı kaldı.');
   } else {
-    evidence.push('Kriz Masası sezon boyunca düşük profilde kaldı.');
+    evidence.push('Kriz Masası dönem boyunca düşük profilde kaldı.');
   }
   if (crisis?.activeIncident) {
-    evidence.push('Sezon sonunda açık bir kriz hattı izleniyor.');
+    evidence.push('Dönem sonunda açık bir kriz hattı izleniyor.');
   }
   return buildCategoryEvaluation(
     'crisis_management',
     score,
     score >= 70
-      ? 'Kriz yönetimi sezonu dengede tuttu.'
-      : 'Kriz yönetimi sezon içinde zorlandı.',
+      ? 'Kriz yönetimi dönemi dengede tuttu.'
+      : 'Kriz yönetimi dönem içinde zorlandı.',
     evidence,
     selectedActions > 0
       ? 'Kriz hamlelerini risk yükselmeden önce seçmeye devam et.'
-      : 'Sonraki sezonda kriz hamlelerini daha erken devreye al.',
+      : 'Sonraki dönemde kriz hamlelerini daha erken devreye al.',
   );
 }
 
@@ -411,17 +411,17 @@ export function evaluateSocialTrust(
   ];
   if (profiles[0]) {
     evidence.push(
-      `${getNeighborhoodDisplayName(profiles[0]!.neighborhoodId)} hattı sezon içinde izlendi.`,
+      `${getNeighborhoodDisplayName(profiles[0]!.neighborhoodId)} hattı dönem içinde izlendi.`,
     );
   }
   return buildCategoryEvaluation(
     'social_trust',
     score,
     score >= 65
-      ? 'Sosyal güven sezon boyunca dengeli kaldı.'
+      ? 'Sosyal güven dönem boyunca dengeli kaldı.'
       : 'Sosyal güven bazı mahallelerde zorlandı.',
     evidence,
-    'Sonraki sezonda sosyal sinyalleri plan günü başında oku.',
+    'Sonraki dönemde sosyal sinyalleri plan günü başında oku.',
   );
 }
 
@@ -432,7 +432,7 @@ export function pickStrongestSeasonArea(
   const best = [...scored].sort((a, b) => b.score - a.score)[0]!;
   return {
     id: `strongest-${best.evaluation.category}`,
-    title: 'Sezonun güçlü alanı',
+    title: 'Dönemin güçlü alanı',
     summary: `${best.evaluation.title}: ${best.evaluation.summary}`,
     tone: best.evaluation.tone,
     iconKey: best.evaluation.iconKey,
@@ -460,17 +460,17 @@ export function buildNextSeasonFocus(
   const sorted = [...scored].sort((a, b) => a.score - b.score);
   const picks = sorted.slice(0, 3);
   const focusCopy: Partial<Record<SeasonEndCategory, string>> = {
-    operational_resources: 'Sonraki sezon odağı: filo ve konteyner hattı.',
-    crisis_management: 'Sonraki sezon odağı: kriz hamlelerini erken seçmek.',
-    assignments: 'Sonraki sezon odağı: atama uyumunu güçlendirmek.',
-    city_balance: 'Sonraki sezon odağı: şehir baskısını erken düşürmek.',
-    district_coverage: 'Sonraki sezon odağı: yüksek baskılı mahalleler.',
-    season_goals: 'Sonraki sezon odağı: hedef ilerlemesini sabitlemek.',
-    social_trust: 'Sonraki sezon odağı: mahalle iletişimi.',
+    operational_resources: 'Sonraki dönem odağı: filo ve konteyner hattı.',
+    crisis_management: 'Sonraki dönem odağı: kriz hamlelerini erken seçmek.',
+    assignments: 'Sonraki dönem odağı: atama uyumunu güçlendirmek.',
+    city_balance: 'Sonraki dönem odağı: şehir baskısını erken düşürmek.',
+    district_coverage: 'Sonraki dönem odağı: yüksek baskılı mahalleler.',
+    season_goals: 'Sonraki dönem odağı: hedef ilerlemesini sabitlemek.',
+    social_trust: 'Sonraki dönem odağı: mahalle iletişimi.',
   };
   return picks.map((item, index) => ({
     id: `focus-${item.evaluation.category}-${index}`,
-    title: 'Sonraki sezon odağı',
+    title: 'Sonraki dönem odağı',
     summary:
       focusCopy[item.evaluation.category] ??
       item.evaluation.recommendationLine,
@@ -492,9 +492,9 @@ function buildSeasonEndMetricRows(
   const rows: SeasonEndMetricRow[] = [
     {
       id: 'metric-season-goals',
-      label: 'Sezon hedefi',
+      label: 'Milestone hedefi',
       valueLabel: `%${Math.round(goalAvg)}`,
-      summary: 'Ortalama sezon hedef ilerlemesi',
+      summary: 'Ortalama milestone hedef ilerlemesi',
       tone: goalAvg >= 70 ? 'positive' : goalAvg >= 40 ? 'neutral' : 'warning',
       iconKey: 'season_goal',
     },
@@ -517,7 +517,7 @@ function buildSeasonEndMetricRows(
       valueLabel: critical > 0 ? `${critical} kritik grup` : 'Dengeli',
       summary:
         resources?.dailySummary?.vehicleLine ??
-        'Filo ve konteyner durumu sezon sonu özeti',
+        'Filo ve konteyner durumu dönem özeti',
       tone: critical > 0 ? 'warning' : 'positive',
       iconKey: 'operational_resources',
     },
@@ -545,14 +545,14 @@ export function buildSeasonEndAdvisorLine(
   switch (model.overallRating) {
     case 'excellent':
     case 'strong':
-      return 'Bu sezon şehir dengesi iyi korundu. Sonraki sezonda kaynak baskısını erken okumak daha büyük fark yaratır.';
+      return 'Bu dönemde şehir dengesi iyi korundu. Sonraki dönemde kaynak baskısını erken okumak daha büyük fark yaratır.';
     case 'steady':
-      return 'Sezon genel olarak dengeli geçti. Filo ve konteyner hattını biraz daha erken toparlamak gerekir.';
+      return 'Dönem genel olarak dengeli geçti. Filo ve konteyner hattını biraz daha erken toparlamak gerekir.';
     case 'strained':
-      return 'Sezon hedefleri ilerledi ama kriz ve kaynak baskısı kararlarını zorladı. Sonraki sezon ilk odak bakım ve atama uyumu olmalı.';
+      return 'Milestone hedefleri ilerledi ama kriz ve kaynak baskısı kararlarını zorladı. Sonraki dönem ilk odak bakım ve atama uyumu olmalı.';
     case 'critical':
     default:
-      return 'Bu sezon şehir baskısı yüksek kaldı. Önce kaynakları toparlamak ve kriz hamlelerini daha erken seçmek gerekiyor.';
+      return 'Bu dönemde şehir baskısı yüksek kaldı. Önce kaynakları toparlamak ve kriz hamlelerini daha erken seçmek gerekiyor.';
   }
 }
 
@@ -601,11 +601,11 @@ export function buildSeasonEndEvaluationModel(
     overallScoreLabel: `${overallScore}/100`,
     overallSummary:
       overallRating === 'excellent' || overallRating === 'strong'
-        ? 'Ana Operasyon sezonu kontrollü bir profille tamamlandı.'
+        ? 'Ana operasyon bu dönemde kontrollü bir profil gösterdi.'
         : overallRating === 'steady'
-          ? 'Sezon tamamlandı; bazı alanlar güçlü, bazıları izleme istedi.'
-          : 'Sezon tamamlandı; kaynak ve kriz baskısı kararları zorladı.',
-    completedDayLabel: `${SEASON_END_UI_COPY.completedDayPrefix}: ${season.currentSeasonDay} / ${season.seasonLengthDays}`,
+          ? 'Dönem özeti dengeli; bazı alanlar güçlü, bazıları izleme istedi.'
+          : 'Dönem özeti kaynak ve kriz baskısının kararları zorladığını gösteriyor.',
+    completedDayLabel: `${SEASON_END_UI_COPY.completedDayPrefix}: ${season.currentSeasonDay}`,
     categoryEvaluations,
     strongestArea,
     weakestArea,

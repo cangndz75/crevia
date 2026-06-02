@@ -146,7 +146,7 @@ export function buildMainOperationHubModel(
       ? MAIN_OPERATION_UI_COPY.accessFull
       : MAIN_OPERATION_UI_COPY.accessLimited,
     seasonProgressLabel: isFull
-      ? `Sezon günü ${season.currentSeasonDay} / ${season.seasonLengthDays}`
+      ? `Operasyon günü ${season.currentSeasonDay}`
       : 'Sınırlı gündem aktif',
     topInsightLine: isFull
       ? pickTopSeasonInsightLine(sortedInsights)
@@ -268,7 +268,7 @@ export function buildMainOperationAccessSummaryModel(
       ? MAIN_OPERATION_UI_COPY.accessFull
       : MAIN_OPERATION_UI_COPY.accessLimited,
     detailLine: isFull
-      ? `Sezon günü ${season.currentSeasonDay} / ${season.seasonLengthDays}`
+      ? `Operasyon günü ${season.currentSeasonDay}`
       : MAIN_OPERATION_UI_COPY.limitedFooter,
     tone: isFull ? 'positive' : 'neutral',
   };
@@ -355,7 +355,7 @@ export function buildMainOperationAdvisorNote(
     return 'Sınırlı gündemde kapsam dar, ama operasyon sinyalleri takip ediliyor.';
   }
 
-  return 'Ana Operasyon aktif. Sezon hedefleri ve mahalle kapsamı izleniyor.';
+  return 'Ana Operasyon aktif. Milestone hedefleri ve mahalle kapsamı izleniyor.';
 }
 
 export function getMainOperationPreviewSubtitle(

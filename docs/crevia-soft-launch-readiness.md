@@ -4,7 +4,7 @@
 
 ## Amaç
 
-First 10 Minutes, tam Ana Operasyon, sezon sonu, analytics şeması ve IAP ürün tasarımı tamamlandıktan sonra tüm ürün, teknik, UX, monetization, analytics ve QA risklerini tek audit altında toplamak.
+First 10 Minutes, tam Ana Operasyon, dönemsel operasyon değerlendirmesi, analytics şeması ve IAP ürün tasarımı tamamlandıktan sonra tüm ürün, teknik, UX, monetization, analytics ve QA risklerini tek audit altında toplamak.
 
 ```bash
 npm run verify:soft-launch-readiness
@@ -26,7 +26,7 @@ npm run verify:soft-launch-readiness
 - Post-pilot offer, limited continue, mock full access
 - IAP ürün modeli (`one_time_unlock`, entitlement mapping)
 - Analytics event schema (60 event, 9 funnel, privacy)
-- Season end evaluation (full mod)
+- Dönemsel operation review (full mod)
 - Interaction contracts + dev tool `__DEV__` guard’ları
 - Yasak paywall dili taraması (constants)
 
@@ -38,7 +38,7 @@ npm run verify:soft-launch-readiness
 - Manuel playtest (4 profil + gerçek cihaz)
 - Store product ID oluşturma (console)
 - Fiyatlandırma finalize
-- Sezon 2 restart / paylaşım
+- Sonraki operation era runtime / paylaşım
 
 ## Known WARNs
 
@@ -47,7 +47,7 @@ npm run verify:soft-launch-readiness
 - Manual playtest pending
 - Performance selector WARN (full gameState selectors)
 - Store product IDs / pricing pending
-- Season 2 restart pending
+- Operation era runtime pending
 - Full season simulation balance WARN
 
 ## Release blockers
@@ -94,7 +94,7 @@ Pre-SDK modunda IAP SDK ve instrumentation **WARN**; `launch_candidate` modunda 
 - [ ] Düşük RAM cihazda Hub scroll / Report
 - [ ] Map overlay + crisis badge çakışması
 - [ ] Operational resources detail sheet
-- [ ] Season end kartı (gün 14 full)
+- [ ] Dönemsel değerlendirme kartı (early operation benchmark window)
 
 ## Manual playtest requirements
 

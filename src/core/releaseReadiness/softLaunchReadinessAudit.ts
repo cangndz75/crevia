@@ -570,7 +570,7 @@ export function auditSeasonEndReadiness(): SoftLaunchReadinessFinding[] {
         'season_end.season2_restart',
         'season_end',
         'Season 2 restart pending',
-        'Sezon 2 yeniden başlatma henüz yok — WARN only.',
+        'Sonraki operation era runtime akışı henüz yok — WARN only.',
         'Plan meta-progression for post-season-1.',
         'product',
       ),
