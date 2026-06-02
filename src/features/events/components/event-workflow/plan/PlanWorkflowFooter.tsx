@@ -21,7 +21,7 @@ export function PlanWorkflowFooter({
   const inactive = disabled && !loading;
 
   return (
-    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 8) }]}>
       <Pressable
         onPress={onPress}
         disabled={disabled || loading}
@@ -34,12 +34,19 @@ export function PlanWorkflowFooter({
         accessibilityRole="button"
         accessibilityLabel={loading ? 'Yükleniyor' : WORKFLOW_CTA_LABELS.plan}
         accessibilityState={{ disabled: disabled || loading, busy: loading }}>
-        <Ionicons name="checkmark-circle-outline" size={24} color="#FFFFFF" />
+        <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
         <Text style={styles.label} numberOfLines={1}>
-          {loading ? 'Hazırlanıyor…' : WORKFLOW_CTA_LABELS.plan}
+          {loading ? 'Hazırlanıyor...' : WORKFLOW_CTA_LABELS.plan}
         </Text>
         <View style={styles.ctaSpacer} />
       </Pressable>
+
+      <View style={styles.helperRow}>
+        <Ionicons name="shield-checkmark-outline" size={13} color={eventDetail.textMuted} />
+        <Text style={styles.helperText} numberOfLines={1}>
+          Onayladığın plan hemen uygulamaya geçirilecek.
+        </Text>
+      </View>
     </View>
   );
 }
@@ -51,12 +58,12 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     paddingHorizontal: eventDetail.screenPadding,
-    paddingTop: 10,
-    backgroundColor: 'rgba(247, 241, 230, 0.92)',
+    paddingTop: 8,
+    backgroundColor: 'rgba(247, 241, 230, 0.94)',
   },
   cta: {
-    minHeight: 64,
-    borderRadius: 30,
+    minHeight: 50,
+    borderRadius: 12,
     backgroundColor: eventDetail.tealDark,
     flexDirection: 'row',
     alignItems: 'center',
@@ -66,11 +73,11 @@ const styles = StyleSheet.create({
   },
   label: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '900',
     color: '#FFFFFF',
     textAlign: 'center',
-    letterSpacing: 0.15,
+    letterSpacing: 0,
   },
   ctaSpacer: {
     width: 24,
@@ -82,5 +89,17 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.94,
     transform: [{ scale: 0.99 }],
+  },
+  helperRow: {
+    minHeight: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  helperText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: eventDetail.textMuted,
   },
 });

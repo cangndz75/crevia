@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useShallow } from 'zustand/react/shallow';
 
 import {
   buildAssignmentEngineInputFromGameStore,
@@ -44,16 +45,18 @@ const TONE_COLORS = {
 } as const;
 
 export function EventAssignmentPanel({ event, compactTutorial = false }: Props) {
-  const storeSlice = useGameStore((s) => ({
-    gameState: s.gameState,
-    monetization: s.monetization,
-    operationSignals: s.operationSignals,
-    advisorState: s.advisorState,
-    dailyOperationsPlan: s.dailyOperationsPlan,
-    assignments: s.assignments,
-    tutorialState: s.tutorialState,
-    operationalResources: s.operationalResources,
-  }));
+  const storeSlice = useGameStore(
+    useShallow((s) => ({
+      gameState: s.gameState,
+      monetization: s.monetization,
+      operationSignals: s.operationSignals,
+      advisorState: s.advisorState,
+      dailyOperationsPlan: s.dailyOperationsPlan,
+      assignments: s.assignments,
+      tutorialState: s.tutorialState,
+      operationalResources: s.operationalResources,
+    })),
+  );
   const assignment = useGameStore((s) => s.assignments.assignmentsByEventId[event.id]);
   const confirmAssignment = useGameStore((s) => s.confirmEventAssignment);
   const assignmentSimpleMode = shouldUseFirstTenMinutesAssignmentSimpleMode(

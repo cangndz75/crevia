@@ -23,6 +23,10 @@ import { ReportAuthorityTrustCard } from '@/features/reports/components/end-of-d
 import { ReportPilotSummaryPremiumCard } from '@/features/reports/components/end-of-day/premium/ReportPilotSummaryPremiumCard';
 import { ReportPrimaryImpactSection } from '@/features/reports/components/end-of-day/premium/ReportPrimaryImpactSection';
 import { buildReportCarryOverPreview } from '@/core/carryOver';
+import { buildReportSystemsIntegrationModel } from '@/core/reports/reportSystemsIntegrationPresentation';
+import { getEventAssignment } from '@/core/assignments/assignmentState';
+import { buildMapBeforeAfterSummary } from '@/core/mapPresence';
+import { ReportSystemsIntegrationCard } from '@/features/reports/components/ReportSystemsIntegrationCard';
 import {
   buildReportTomorrowPreviewSummary,
   isReportTomorrowPreviewDuplicateOf,
@@ -358,6 +362,134 @@ export function EndOfDayReportView({
     tomorrowPreviewBundle.summary.preview,
   ]);
 
+  const reportSystemsIntegration = useMemo(() => {
+    const existingEchoLines: string[] = [
+      ...(model.tomorrowNotes ?? []),
+      ...(report.summaryLines ?? []),
+      ...(report.carryOverSummaryLines ?? []),
+      reportCarryOverMemory?.summary ?? '',
+      socialEchoForReport?.mention ?? '',
+      eventDomainFocus?.reportEchoLine ?? '',
+      tomorrowPreviewBundle.summary.preview?.summary ?? '',
+    ].filter(Boolean);
+
+    const fatiguePanelLine = reportFatigueState
+      ? buildResourceFatiguePanelLine(reportFatigueState)
+      : undefined;
+    if (fatiguePanelLine) existingEchoLines.push(fatiguePanelLine);
+
+    const mapSummary = buildMapBeforeAfterSummary({
+      day: report.day,
+      surface: 'report',
+      activeEvent: lastDecisionForDay
+        ? {
+            id: lastDecisionForDay.eventId,
+            title: lastDecisionForDay.eventTitle,
+            neighborhoodId: lastDecisionForDay.neighborhoodId,
+          }
+        : undefined,
+      carryOverMemory: reportCarryOverMemory
+        ? {
+            domain: reportCarryOverMemory.domain,
+            summary: reportCarryOverMemory.summary,
+            resolved: reportCarryOverMemory.direction === 'positive_memory',
+          }
+        : null,
+      eventDomainFocus: eventDomainFocus
+        ? {
+            focus: eventDomainFocus.focus,
+            reportEchoLine: eventDomainFocus.reportEchoLine ?? undefined,
+            summary: eventDomainFocus.summary,
+          }
+        : null,
+    });
+
+    const assignment = lastDecisionForDay
+      ? getEventAssignment(assignments, lastDecisionForDay.eventId)
+      : undefined;
+
+    return buildReportSystemsIntegrationModel({
+      dailyReport: report,
+      day: report.day,
+      focusDistrictId: lastDecisionForDay?.neighborhoodId,
+      lastEvent: lastDecisionForDay
+        ? {
+            id: lastDecisionForDay.eventId,
+            title: lastDecisionForDay.eventTitle,
+            neighborhoodId: lastDecisionForDay.neighborhoodId,
+            category: 'operations',
+            riskLevel: 'medium',
+            district: lastDecisionForDay.neighborhoodName ?? 'Merkez',
+            description: '',
+            contextTag: '',
+            urgencyHours: 4,
+            day: report.day,
+            previewEffects: { publicSatisfaction: 0, risk: 0, xp: 0 },
+            decisions: [],
+          }
+        : undefined,
+      operationSignals,
+      resourceFatigue: operationalResources,
+      crisisState,
+      carryOverMemory: reportCarryOverMemory ?? undefined,
+      reportTomorrowPreview: tomorrowPreviewBundle.summary,
+      mapAfterEffectSummary: mapSummary.impact?.summary,
+      rankKey: authorityState?.formalRankId,
+      unlockedPermissionIds: authorityState?.unlockedPermissionIds,
+      isPostPilot: report.day >= POST_PILOT_FIRST_OPERATION_DAY,
+      isPilotCompleted: pilotStatus === 'completed',
+      existingEchoLines,
+      suppressResourceFatigue: Boolean(reportFatigueState),
+      resourceFatiguePanelLine: fatiguePanelLine,
+      activeTaskRouteContext: {
+        day: report.day,
+        assignment,
+        operationSignals,
+        operationalResources,
+        crisisState,
+        isResultPhase: true,
+        eventPhase: 'result',
+        rankKey: authorityState?.formalRankId,
+        unlockedPermissionIds: authorityState?.unlockedPermissionIds,
+        activeEvent: lastDecisionForDay
+          ? {
+              id: lastDecisionForDay.eventId,
+              title: lastDecisionForDay.eventTitle,
+              neighborhoodId: lastDecisionForDay.neighborhoodId,
+              category: 'operations',
+              riskLevel: 'medium',
+              district: lastDecisionForDay.neighborhoodName ?? 'Merkez',
+              description: '',
+              contextTag: '',
+              urgencyHours: 4,
+              day: report.day,
+              previewEffects: { publicSatisfaction: 0, risk: 0, xp: 0 },
+              decisions: [],
+            }
+          : undefined,
+      },
+    });
+  }, [
+    assignments,
+    authorityState?.formalRankId,
+    authorityState?.unlockedPermissionIds,
+    crisisState,
+    eventDomainFocus?.focus,
+    eventDomainFocus?.reportEchoLine,
+    eventDomainFocus?.summary,
+    lastDecisionForDay,
+    model.tomorrowNotes,
+    operationalResources,
+    operationSignals,
+    pilotStatus,
+    report,
+    reportCarryOverMemory,
+    reportFatigueState,
+    socialEchoForReport?.mention,
+    tomorrowPreviewBundle.summary,
+    tomorrowPreviewBundle.summary.preview?.summary,
+  ]);
+
   const pilotPremiumModel = useMemo(
     () =>
       pilotReportContext
@@ -553,6 +685,10 @@ export function EndOfDayReportView({
             {buildResourceFatiguePanelLine(reportFatigueState)}
           </Text>
         </View>
+      ) : null}
+
+      {reportSystemsIntegration?.visible ? (
+        <ReportSystemsIntegrationCard model={reportSystemsIntegration} />
       ) : null}
 
       {!reportGuard.hideCrisis ? (

@@ -1,20 +1,12 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { buildEventCarryOverHint, shouldShowCarryOverMemory } from '@/core/carryOver';
-import { buildEventDomainPlanFocus, shouldShowEventDomainFocus } from '@/core/events/eventDomainPresentation';
-import { EventCarryOverHintCard } from '@/features/events/components/EventCarryOverHintCard';
-import { EventAdvisorHintCard } from '@/features/events/components/EventAdvisorHintCard';
-import { EventDomainImpactFocusCard } from '@/features/events/components/EventDomainImpactFocusCard';
-import { OperationImpactPreviewStrip } from '@/features/events/components/OperationImpactPreviewStrip';
-import { useGameStore } from '@/store/useGameStore';
-import { PlanDetailsInspectSection } from '@/features/events/components/event-workflow/plan/PlanDetailsInspectSection';
 import { PlanEventSummaryCard } from '@/features/events/components/event-workflow/plan/PlanEventSummaryCard';
 import { PlanOptionPicker } from '@/features/events/components/event-workflow/plan/PlanOptionPicker';
 import { PlanSummaryCard } from '@/features/events/components/event-workflow/plan/PlanSummaryCard';
 import { PlanWorkflowFooter } from '@/features/events/components/event-workflow/plan/PlanWorkflowFooter';
-import { EventWorkflowStepper } from '@/features/events/components/event-workflow/EventWorkflowStepper';
-import { OnboardingPhaseHint } from '@/features/onboarding/components/OnboardingPhaseHint';
 import type { EventCard } from '@/core/models/EventCard';
 import { getInspectNeighborhoodHero } from '@/features/events/utils/eventWorkflowAssets';
 import {
@@ -38,8 +30,9 @@ export function EventPlanPhase({
   event,
   bottomPadding,
   onConfirmPlan,
-  phaseHint = null,
+  phaseHint: _phaseHint = null,
 }: EventPlanPhaseProps) {
+  const insets = useSafeAreaInsets();
   const model = useMemo(() => buildPlanScreenModel(event), [event]);
   const [selectedId, setSelectedId] = useState<PlanOptionId>(model.recommendedOptionId);
 
@@ -55,43 +48,26 @@ export function EventPlanPhase({
     [event],
   );
 
-  const currentDay = useGameStore((s) => s.gameState.city.day);
-  const lastDailyReport = useGameStore((s) => s.lastDailyReport);
-  const decisionHistory = useGameStore((s) => s.decisionHistory);
-  const planDomainModel = useMemo(
-    () => buildEventDomainPlanFocus(event, event.day ?? currentDay),
-    [currentDay, event],
-  );
-  const showPlanDomain =
-    shouldShowEventDomainFocus(
-      event.day ?? currentDay,
-      'plan',
-      planDomainModel.focus,
-    );
-  const planCarryOver = useMemo(
-    () =>
-      buildEventCarryOverHint({
-        day: event.day ?? currentDay,
-        currentEvent: event,
-        lastDailyReport,
-        recentDecisions: decisionHistory,
-        eventDomainFocus: planDomainModel,
-      }),
-    [currentDay, decisionHistory, event, lastDailyReport, planDomainModel],
-  );
-  const showPlanCarryOver = shouldShowCarryOverMemory(event.day ?? currentDay, 'plan', {
-    day: event.day ?? currentDay,
-    currentEvent: event,
-    lastDailyReport,
-    recentDecisions: decisionHistory,
-    eventDomainFocus: planDomainModel,
-  });
-
   return (
     <View style={styles.root}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scroll, { paddingBottom: bottomPadding }]}>
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: Math.max(insets.top + 8, 18), paddingBottom: bottomPadding },
+        ]}>
+        <View style={styles.headerRow}>
+          <Text style={styles.screenTitle} numberOfLines={1}>
+            Operasyon Planı
+          </Text>
+          <View style={styles.guideRow}>
+            <Ionicons name="information-circle-outline" size={16} color="#5D706E" />
+            <Text style={styles.guideText} numberOfLines={1}>
+              Planlama Rehberi
+            </Text>
+          </View>
+        </View>
+
         <PlanEventSummaryCard
           title={event.title}
           location={event.district}
@@ -100,24 +76,6 @@ export function EventPlanPhase({
           thumbnail={thumbnail}
         />
 
-        {phaseHint ? <OnboardingPhaseHint text={phaseHint} /> : null}
-
-        <View style={styles.stepperGap}>
-          <EventWorkflowStepper activeStep="plan" compact />
-        </View>
-
-        <EventAdvisorHintCard event={event} />
-
-        {showPlanDomain ? (
-          <EventDomainImpactFocusCard model={planDomainModel} compact />
-        ) : null}
-
-        {showPlanCarryOver && planCarryOver?.visible ? (
-          <EventCarryOverHintCard memory={planCarryOver} compact />
-        ) : null}
-
-        <OperationImpactPreviewStrip event={event} />
-
         <PlanOptionPicker
           options={displayOptions}
           selectedId={selectedId}
@@ -125,13 +83,11 @@ export function EventPlanPhase({
         />
 
         <View style={styles.summaryGap}>
-          <PlanSummaryCard summary={summaryUi} />
-        </View>
-
-        <View style={styles.detailsGap}>
-          <PlanDetailsInspectSection
+          <PlanSummaryCard
+            summary={summaryUi}
+            selectedPlanTitle={selectedPlan.title}
+            selectedPlanNote={selectedPlan.note}
             selectedPlanId={selectedId}
-            selectedPlan={selectedPlan}
           />
         </View>
       </ScrollView>
@@ -146,17 +102,36 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    gap: 14,
-    paddingTop: 2,
-  },
-  stepperGap: {
-    marginTop: -2,
-    marginBottom: -2,
+    gap: 12,
+    paddingTop: 8,
   },
   summaryGap: {
-    marginTop: 2,
+    marginTop: -2,
   },
-  detailsGap: {
-    marginTop: 4,
+  headerRow: {
+    marginHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  screenTitle: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#123D3A',
+    letterSpacing: 0,
+  },
+  guideRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    flexShrink: 0,
+  },
+  guideText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#123D3A',
   },
 });

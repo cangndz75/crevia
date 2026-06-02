@@ -146,6 +146,7 @@
     "analyze:badges": "npx tsx scripts/analyze-badge-balance.ts",
     "verify:meta-progression": "npx tsx scripts/verify-meta-progression.ts",
     "verify:report-ui": "npx tsx scripts/verify-report-ui.ts",
+    "verify:report-systems-integration": "npx tsx scripts/verify-report-systems-integration.ts",
     "verify:map-ui": "npx tsx scripts/verify-map-ui.ts",
     "verify:map-presence": "npx tsx scripts/verify-map-presence.ts",
     "verify:resource-fatigue-visuals": "npx tsx scripts/verify-resource-fatigue-visuals.ts",

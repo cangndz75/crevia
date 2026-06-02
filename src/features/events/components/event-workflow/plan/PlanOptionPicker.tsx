@@ -1,21 +1,87 @@
+import type { ComponentProps } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image, type ImageSource } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { PlanOptionId } from '@/features/events/utils/eventWorkflowPlanPresentation';
-import {
-  getPlanDisplayToneStyle,
-  type PlanDisplayOption,
-} from '@/features/events/utils/eventWorkflowPlanUiPresentation';
+import type { PlanDisplayOption } from '@/features/events/utils/eventWorkflowPlanUiPresentation';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import { shadows } from '@/ui/theme/shadows';
 
-const SELECTED_BORDER = '#006B63';
+const SELECTED_BORDER = '#0E6D69';
+
+const fastImage = require('../../../../../../assets/b9.png');
+const balancedImage = require('../../../../../../assets/b4.png');
+const economyImage = require('../../../../../../assets/b2.png');
 
 type PlanOptionPickerProps = {
   options: PlanDisplayOption[];
   selectedId: PlanOptionId;
   onSelect: (id: PlanOptionId) => void;
 };
+
+type ImpactTone = 'high' | 'medium' | 'low';
+
+type PlanMetric = {
+  label: string;
+  value: string;
+  tone: ImpactTone;
+  icon: ComponentProps<typeof Ionicons>['name'];
+};
+
+const PLAN_COPY: Record<
+  PlanOptionId,
+  {
+    title: string;
+    description: string;
+    image: ImageSource;
+    icon: ComponentProps<typeof Ionicons>['name'];
+    metrics: PlanMetric[];
+  }
+> = {
+  fast: {
+    title: 'Hızlı Müdahale Planı',
+    description: 'Mevcut riske hızlı müdahale ederek hasarı en aza indirir.',
+    image: fastImage,
+    icon: 'flash',
+    metrics: [
+      { label: 'Personel', value: 'Yüksek', tone: 'high', icon: 'people' },
+      { label: 'Araç', value: 'Yüksek', tone: 'high', icon: 'bus' },
+      { label: 'Sosyal Etki', value: 'Orta', tone: 'medium', icon: 'people' },
+      { label: 'Güven', value: 'Yüksek', tone: 'high', icon: 'shield-checkmark' },
+    ],
+  },
+  balanced: {
+    title: 'Önleyici Plan',
+    description: 'Risk büyümeden tedbir alır, gelecekteki etkileri azaltır.',
+    image: balancedImage,
+    icon: 'shield-checkmark',
+    metrics: [
+      { label: 'Personel', value: 'Orta', tone: 'medium', icon: 'people' },
+      { label: 'Araç', value: 'Orta', tone: 'medium', icon: 'bus' },
+      { label: 'Sosyal Etki', value: 'Yüksek', tone: 'high', icon: 'people' },
+      { label: 'Güven', value: 'Orta', tone: 'medium', icon: 'shield-checkmark' },
+    ],
+  },
+  economy: {
+    title: 'Görünür İletişim Planı',
+    description: 'Vatandaşları bilgilendirir, farkındalığı artırır ve iş birliğini güçlendirir.',
+    image: economyImage,
+    icon: 'chatbubble-ellipses',
+    metrics: [
+      { label: 'Personel', value: 'Düşük', tone: 'low', icon: 'people' },
+      { label: 'Araç', value: 'Düşük', tone: 'low', icon: 'bus' },
+      { label: 'Sosyal Etki', value: 'Yüksek', tone: 'high', icon: 'people' },
+      { label: 'Güven', value: 'Yüksek', tone: 'high', icon: 'shield-checkmark' },
+    ],
+  },
+};
+
+function toneColor(tone: ImpactTone): string {
+  if (tone === 'high') return '#0E6D69';
+  if (tone === 'medium') return '#C58B18';
+  return '#2F8E62';
+}
 
 function PlanOptionCard({
   option,
@@ -26,7 +92,7 @@ function PlanOptionCard({
   selected: boolean;
   onPress: () => void;
 }) {
-  const tone = getPlanDisplayToneStyle(option.tone);
+  const copy = PLAN_COPY[option.id];
 
   return (
     <Pressable
@@ -39,40 +105,43 @@ function PlanOptionCard({
       ]}
       accessibilityRole="button"
       accessibilityState={{ selected }}>
-      {selected ? (
-        <View style={styles.selectedCheck}>
-          <Ionicons name="checkmark" size={14} color="#FFFFFF" />
-        </View>
-      ) : null}
-
-      <View style={styles.cardRow}>
-        <View style={[styles.iconCircle, { backgroundColor: tone.iconCircle }]}>
-          <Ionicons name={option.iconName} size={24} color={tone.iconColor} />
+      <View style={styles.topRow}>
+        <View style={[styles.radio, selected && styles.radioSelected]}>
+          {selected ? <Ionicons name="checkmark" size={18} color="#FFFFFF" /> : null}
         </View>
 
-        <View style={styles.content}>
-          <Text style={styles.title} numberOfLines={1}>
-            {option.title}
+        <View style={styles.iconCircle}>
+          <Ionicons name={copy.icon} size={25} color={eventDetail.tealDark} />
+        </View>
+
+        <View style={styles.copyCol}>
+          <Text style={styles.title} numberOfLines={2}>
+            {copy.title}
           </Text>
           <Text style={styles.description} numberOfLines={2}>
-            {option.description}
+            {copy.description}
           </Text>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaText} numberOfLines={1}>
-              {option.durationLabel}
-            </Text>
-            <Text style={styles.metaDot}>·</Text>
-            <Text style={styles.metaText} numberOfLines={1}>
-              {option.successLabel}
-            </Text>
-          </View>
         </View>
 
-        <View style={[styles.effectPill, { backgroundColor: tone.pillBg }]}>
-          <Text style={[styles.effectPillText, { color: tone.pillText }]} numberOfLines={2}>
-            {option.effectLabel}
-          </Text>
-        </View>
+        <Image source={copy.image} style={styles.planImage} contentFit="contain" />
+      </View>
+
+      <View style={styles.metricsGrid}>
+        {copy.metrics.map((metric) => (
+          <View key={`${option.id}-${metric.label}`} style={styles.metricPill}>
+            <Text style={styles.metricLabel} numberOfLines={1}>
+              {metric.label}
+            </Text>
+            <View style={styles.metricValueRow}>
+              <Ionicons name={metric.icon} size={12} color={eventDetail.tealDark} />
+              <Text
+                style={[styles.metricValue, { color: toneColor(metric.tone) }]}
+                numberOfLines={1}>
+                {metric.value}
+              </Text>
+            </View>
+          </View>
+        ))}
       </View>
     </Pressable>
   );
@@ -86,15 +155,12 @@ export function PlanOptionPicker({
   return (
     <View style={styles.wrap}>
       <View style={styles.sectionHeader}>
-        <Ionicons name="sparkles" size={18} color={eventDetail.teal} />
-        <View style={styles.sectionHeaderText}>
-          <Text style={styles.sectionTitle} numberOfLines={1}>
-            Plan Seçenekleri
-          </Text>
-          <Text style={styles.sectionHint} numberOfLines={1}>
-            İhtiyacına en uygun planı seç.
-          </Text>
-        </View>
+        <Text style={styles.sectionTitle} numberOfLines={1}>
+          Plan Seçenekleri
+        </Text>
+        <Text style={styles.sectionHint} numberOfLines={2}>
+          Duruma göre en uygun stratejiyi seç. Her plan farklı kaynak ve etki dengesi sunar.
+        </Text>
       </View>
 
       <View style={styles.list}>
@@ -114,130 +180,127 @@ export function PlanOptionPicker({
 const styles = StyleSheet.create({
   wrap: {
     marginHorizontal: eventDetail.screenPadding,
-    gap: 12,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     gap: 10,
   },
-  sectionHeaderText: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
+  sectionHeader: {
+    gap: 3,
   },
   sectionTitle: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '900',
     color: eventDetail.textDark,
-    letterSpacing: -0.2,
+    letterSpacing: 0,
   },
   sectionHint: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '700',
     color: eventDetail.textMuted,
   },
   list: {
-    gap: 10,
+    gap: 8,
   },
   card: {
     width: '100%',
-    borderRadius: 20,
+    minHeight: 148,
+    borderRadius: 12,
     borderWidth: 1.5,
     overflow: 'hidden',
-    minHeight: 108,
-    justifyContent: 'center',
+    backgroundColor: eventDetail.card,
+    padding: 12,
+    gap: 10,
   },
   cardDefault: {
-    backgroundColor: eventDetail.card,
     borderColor: 'rgba(6, 63, 59, 0.08)',
   },
   cardSelected: {
-    backgroundColor: eventDetail.mintSoft,
     borderColor: SELECTED_BORDER,
-    minHeight: 128,
+    backgroundColor: '#FFFCF5',
   },
   pressed: {
     opacity: 0.94,
   },
-  selectedCheck: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: SELECTED_BORDER,
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minWidth: 0,
+  },
+  radio: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.2,
+    borderColor: 'rgba(6, 63, 59, 0.16)',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 2,
+    flexShrink: 0,
+    backgroundColor: '#FFFFFF',
   },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    paddingRight: 12,
+  radioSelected: {
+    backgroundColor: SELECTED_BORDER,
+    borderColor: SELECTED_BORDER,
   },
   iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#E7F4EF',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  content: {
+  copyCol: {
     flex: 1,
     minWidth: 0,
     gap: 4,
-    paddingTop: 2,
-    paddingRight: 4,
   },
   title: {
     fontSize: 16,
-    fontWeight: '800',
+    lineHeight: 19,
+    fontWeight: '900',
     color: eventDetail.textDark,
-    paddingRight: 28,
   },
   description: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: eventDetail.textMuted,
-    lineHeight: 17,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 4,
-    marginTop: 2,
-  },
-  metaText: {
     fontSize: 11,
     fontWeight: '700',
     color: eventDetail.textMuted,
-    flexShrink: 1,
+    lineHeight: 15,
   },
-  metaDot: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: eventDetail.textMuted,
-  },
-  effectPill: {
-    alignSelf: 'center',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    maxWidth: 78,
-    minWidth: 64,
+  planImage: {
+    width: 86,
+    height: 76,
     flexShrink: 0,
   },
-  effectPillText: {
-    fontSize: 10,
+  metricsGrid: {
+    flexDirection: 'row',
+    gap: 5,
+  },
+  metricPill: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 42,
+    borderRadius: 8,
+    backgroundColor: '#F6F2EA',
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    gap: 3,
+  },
+  metricLabel: {
+    fontSize: 8,
     fontWeight: '800',
-    textAlign: 'center',
-    lineHeight: 13,
+    color: eventDetail.textDark,
+  },
+  metricValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    minWidth: 0,
+  },
+  metricValue: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 8,
+    fontWeight: '900',
   },
 });

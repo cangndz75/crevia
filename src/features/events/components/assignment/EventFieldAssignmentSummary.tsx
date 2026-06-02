@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 
 import {
   buildAssignmentEngineInputFromGameStore,
@@ -18,14 +19,16 @@ type Props = {
 };
 
 export function EventFieldAssignmentSummary({ event }: Props) {
-  const storeSlice = useGameStore((s) => ({
-    gameState: s.gameState,
-    operationSignals: s.operationSignals,
-    advisorState: s.advisorState,
-    dailyOperationsPlan: s.dailyOperationsPlan,
-    assignments: s.assignments,
-    tutorialState: s.tutorialState,
-  }));
+  const storeSlice = useGameStore(
+    useShallow((s) => ({
+      gameState: s.gameState,
+      operationSignals: s.operationSignals,
+      advisorState: s.advisorState,
+      dailyOperationsPlan: s.dailyOperationsPlan,
+      assignments: s.assignments,
+      tutorialState: s.tutorialState,
+    })),
+  );
   const assignment = useGameStore((s) => s.assignments.assignmentsByEventId[event.id]);
 
   const summary = useMemo(() => {

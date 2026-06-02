@@ -763,7 +763,6 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
   if (showPlanPhase) {
     return (
       <View style={styles.root}>
-        <EventHeader />
         <EventPlanPhase
           event={event}
           bottomPadding={bottomPadding}
