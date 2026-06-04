@@ -13,11 +13,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { buildActiveTaskRouteUiModel } from '@/core/activeTaskRoutes';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
+import type { CarryOverMemoryModel } from '@/core/carryOver';
+import { buildHubOpenEndedIntegrationModel } from '@/core/hub/hubOpenEndedIntegrationPresentation';
 import { getTimeGreeting } from '@/core/utils/timeGreeting';
 import { useGameStatus } from '@/store/gameSelectors';
 import { useGameStore } from '@/store/useGameStore';
 import { HeaderAvatar } from '@/ui/components/game-header/HeaderAvatar';
+
+import { HubOpenEndedOperationCard } from './HubOpenEndedOperationCard';
 
 const eceImage = require('../../../../assets/b1.png');
 const municipalImage = require('../../../../assets/b2.png');
@@ -564,13 +569,80 @@ function QuickPreparationStrip() {
   );
 }
 
-export function HubReferenceHome() {
+type HubReferenceHomeProps = {
+  hubCarryOverMemory?: CarryOverMemoryModel | null;
+  showHubCarryOver?: boolean;
+};
+
+function HubOpenEndedOperationSlot({
+  hubCarryOverMemory,
+  showHubCarryOver,
+}: HubReferenceHomeProps) {
+  const gameState = useGameStore((s) => s.gameState);
+  const operationSignals = useGameStore((s) => s.operationSignals);
+  const advisorState = useGameStore((s) => s.advisorState);
+  const crisisState = useGameStore((s) => s.crisisState);
+  const operationalResources = useGameStore((s) => s.operationalResources);
+  const playerProgress = useGameStore((s) => s.playerProgress);
+  const activeEvent = gameState.events[0];
+
+  const model = useMemo(() => {
+    const activeRoute = activeEvent
+      ? buildActiveTaskRouteUiModel({
+          day: gameState.city.day,
+          activeEvent,
+          operationSignals,
+          operationalResources,
+          crisisState,
+          eventPhase: 'dispatch',
+          isPostPilot: gameState.pilot.status === 'completed',
+        })
+      : null;
+
+    return buildHubOpenEndedIntegrationModel({
+      gameState,
+      day: gameState.city.day,
+      authorityState: gameState.pilot.authorityState,
+      currentTitle: gameState.pilot.authorityState?.formalRankId,
+      xp: playerProgress.totalXp,
+      operationSignals,
+      carryOverMemory: hubCarryOverMemory,
+      isCarryOverCardVisible: showHubCarryOver,
+      activeTaskRouteUiModel: activeRoute,
+      advisorState,
+      isAdvisorCardVisible: true,
+      crisisState,
+      operationalResources,
+    });
+  }, [
+    activeEvent,
+    advisorState,
+    crisisState,
+    gameState,
+    hubCarryOverMemory,
+    operationSignals,
+    operationalResources,
+    playerProgress.totalXp,
+    showHubCarryOver,
+  ]);
+
+  return <HubOpenEndedOperationCard model={model} />;
+}
+
+export function HubReferenceHome({
+  hubCarryOverMemory,
+  showHubCarryOver,
+}: HubReferenceHomeProps = {}) {
   return (
     <View style={styles.root}>
       <HeaderBlock />
       <View style={styles.body}>
         <EceWelcomeCard />
         <LearningProgressCard />
+        <HubOpenEndedOperationSlot
+          hubCarryOverMemory={hubCarryOverMemory}
+          showHubCarryOver={showHubCarryOver}
+        />
         <QuickPreparationStrip />
         <OperationSignalsCompactCard />
         <DailyGoalPlanGrid />

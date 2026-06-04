@@ -9,8 +9,10 @@ import {
 } from 'react-native-safe-area-context';
 
 import { buildLeaderboardPrestigeSummary } from '@/features/leaderboard/utils/leaderboardProfileModel';
+import { buildProfileCareerShowcaseModel } from '@/core/profile/profileCareerShowcasePresentation';
 import { ProfileAuthorityCard } from '@/features/profile/components/ProfileAuthorityCard';
 import { ProfileBadgeShowcaseCard } from '@/features/profile/components/ProfileBadgeShowcaseCard';
+import { ProfileCareerShowcaseCard } from '@/features/profile/components/ProfileCareerShowcaseCard';
 import { OperatorBadgeRow } from '@/features/profile/components/OperatorBadgeRow';
 import { ProfileHeroCard } from '@/features/profile/components/ProfileHeroCard';
 import { ProfileMenuSection } from '@/features/profile/components/ProfileMenuSection';
@@ -37,6 +39,11 @@ export function ProfileScreen() {
   const status = useGameStatus();
   const player = useGameStore((s) => s.gameState.player);
   const pilot = useGameStore((s) => s.gameState.pilot);
+  const gameDay = useGameStore((s) => s.gameState.city.day);
+  const dailyReport = useGameStore((s) => s.gameState.dailyReport);
+  const advisorState = useGameStore((s) => s.advisorState);
+  const operationSignals = useGameStore((s) => s.operationSignals);
+  const operationalResources = useGameStore((s) => s.operationalResources);
   const bestPilotScores = useGameStore((s) => s.bestPilotScores);
   const lastPilotScore = useGameStore((s) => s.lastPilotScore);
 
@@ -65,6 +72,30 @@ export function ProfileScreen() {
         pilot.currentPilotDay,
       ),
     [pilot.badgeState, pilot.currentPilotDay],
+  );
+  const careerShowcase = useMemo(
+    () =>
+      buildProfileCareerShowcaseModel({
+        day: gameDay,
+        authorityState: pilot.authorityState,
+        badgeState: pilot.badgeState,
+        advisorState,
+        dailyReport,
+        operationSignals,
+        resourceFatigue: operationalResources,
+        isPostPilot: pilot.status === 'completed',
+        suppressAuthorityDuplicate: true,
+      }),
+    [
+      advisorState,
+      dailyReport,
+      gameDay,
+      operationSignals,
+      operationalResources,
+      pilot.authorityState,
+      pilot.badgeState,
+      pilot.status,
+    ],
   );
 
   const layout = useMemo(
@@ -116,10 +147,14 @@ export function ProfileScreen() {
           </Animated.View>
 
           <Animated.View entering={FadeIn.duration(280).delay(100)}>
-            <ProfileBadgeShowcaseCard summary={badgeShowcaseSummary} />
+            <ProfileCareerShowcaseCard model={careerShowcase} />
           </Animated.View>
 
           <Animated.View entering={FadeIn.duration(280).delay(120)}>
+            <ProfileBadgeShowcaseCard summary={badgeShowcaseSummary} />
+          </Animated.View>
+
+          <Animated.View entering={FadeIn.duration(280).delay(140)}>
             <ProfilePrestigeCard
               summary={prestigeSummary}
               compact={layout.prestigeCompact}
@@ -128,18 +163,18 @@ export function ProfileScreen() {
           </Animated.View>
 
           {layout.showOperatorBadgeRow ? (
-            <Animated.View entering={FadeIn.duration(280).delay(140)}>
+            <Animated.View entering={FadeIn.duration(280).delay(160)}>
               <OperatorBadgeRow badges={operatorBadges} compact />
             </Animated.View>
           ) : null}
 
           {layout.showXpProgress ? (
-            <Animated.View entering={FadeIn.duration(280).delay(160)}>
+            <Animated.View entering={FadeIn.duration(280).delay(180)}>
               <ProfileXpCard model={model} compact />
             </Animated.View>
           ) : null}
 
-          <Animated.View entering={FadeIn.duration(280).delay(180)}>
+          <Animated.View entering={FadeIn.duration(280).delay(200)}>
             <ProfileMenuSection />
           </Animated.View>
         </View>

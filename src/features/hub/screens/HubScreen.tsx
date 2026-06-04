@@ -114,7 +114,10 @@ export function HubScreen() {
       {showHubCarryOver ? (
         <HubCarryOverMemoryCard memory={hubCarryOverMemory} compact />
       ) : null}
-      <HubReferenceHome />
+      <HubReferenceHome
+        hubCarryOverMemory={hubCarryOverMemory}
+        showHubCarryOver={showHubCarryOver}
+      />
       {__DEV__ ? <HubDevTools /> : null}
       <TutorialCoachOverlay screen="hub" />
       {coachHint && !hubTutorialStep && tutorialActive ? (

@@ -59,9 +59,12 @@ const ALLOWED_TECHNICAL_FILES = [
   'eventSelection',
   'eventVariants',
   'eventFreshness',
+  'eventResultNewSystems',
+  'reports',
   'districtTrustRuntime',
   'districtMemoryRuntime',
   'districtOperationsRuntime',
+  'hub',
 ];
 
 function assert(checks: string[], ok: boolean, pass: string, fail: string): boolean {
