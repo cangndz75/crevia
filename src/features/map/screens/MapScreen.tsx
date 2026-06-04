@@ -470,6 +470,15 @@ export function MapScreen() {
     primaryMapEvent,
     showPostPilotMapChrome,
   ]);
+  const newSystemsAnalyticsContext = useMemo(
+    () => ({
+      day: gameDay,
+      rankId: authorityState?.formalRankId,
+      isPostPilot: showPostPilotMapChrome,
+      source: 'map_operation_bottom_panel',
+    }),
+    [authorityState?.formalRankId, gameDay, showPostPilotMapChrome],
+  );
 
   const mapBeforeAfterSummary = useMemo(() => {
     if (gameDay <= 1) return null;
@@ -728,6 +737,7 @@ export function MapScreen() {
                   ? mapBeforeAfterSummary.impact
                   : null
               }
+              analyticsContext={newSystemsAnalyticsContext}
               onPressCta={handleFocusDistrict}
               onPressRecommended={handleFocusDistrict}
             />

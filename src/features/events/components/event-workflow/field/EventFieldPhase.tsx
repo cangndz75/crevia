@@ -68,6 +68,14 @@ export function EventFieldPhase({
       }),
     [assignment, crisisState, event, gameDay, operationSignals, operationalResources],
   );
+  const routeAnalyticsContext = useMemo(
+    () => ({
+      day: gameDay,
+      isPostPilot: gameDay >= 8,
+      source: 'live_operation_route_phase',
+    }),
+    [gameDay],
+  );
 
   const model = useMemo(
     () =>
@@ -105,7 +113,11 @@ export function EventFieldPhase({
           <EventWorkflowStepper activeStep="field" compact />
         </View>
 
-        <LiveOperationCard model={model} routePreview={routePreview} />
+        <LiveOperationCard
+          model={model}
+          routePreview={routePreview}
+          analyticsContext={routeAnalyticsContext}
+        />
 
         <EventFieldMicroDecisionCard event={event} />
 

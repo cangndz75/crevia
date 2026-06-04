@@ -23,6 +23,10 @@ import { ReportAuthorityTrustCard } from '@/features/reports/components/end-of-d
 import { ReportPilotSummaryPremiumCard } from '@/features/reports/components/end-of-day/premium/ReportPilotSummaryPremiumCard';
 import { ReportPrimaryImpactSection } from '@/features/reports/components/end-of-day/premium/ReportPrimaryImpactSection';
 import { buildReportCarryOverPreview } from '@/core/carryOver';
+import {
+  buildDistrictOperationActionDailySummary,
+  buildDistrictOperationActionReportLine,
+} from '@/core/districtOperationActions';
 import { buildReportSystemsIntegrationModel } from '@/core/reports/reportSystemsIntegrationPresentation';
 import { getEventAssignment } from '@/core/assignments/assignmentState';
 import { buildMapBeforeAfterSummary } from '@/core/mapPresence';
@@ -128,6 +132,9 @@ export function EndOfDayReportView({
   const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
   const operationSignals = useGameStore((s) => s.operationSignals);
   const crisisActionState = useGameStore((s) => s.crisisActionState);
+  const districtOperationActionState = useGameStore(
+    (s) => s.districtOperationActionState,
+  );
   const assignments = useGameStore((s) => s.assignments);
   const microDecisionState = useGameStore((s) => s.microDecisionState);
   const socialPulseScore = useGameStore((s) => s.socialPulseState.globalPulseScore);
@@ -162,6 +169,20 @@ export function EndOfDayReportView({
     () => normalizeAuthorityState(pilotAuthorityState, report.day),
     [pilotAuthorityState, report.day],
   );
+
+  const districtOperationActionSummary = useMemo(
+    () =>
+      buildDistrictOperationActionDailySummary(
+        districtOperationActionState,
+        report.day,
+      ),
+    [districtOperationActionState, report.day],
+  );
+
+  const districtOperationActionReportLine = useMemo(() => {
+    const selected = districtOperationActionSummary.selectedAction;
+    return selected ? buildDistrictOperationActionReportLine(selected) : null;
+  }, [districtOperationActionSummary.selectedAction]);
 
   const gameStatus = useGameStatus();
 
@@ -287,6 +308,7 @@ export function EndOfDayReportView({
       reportCarryOverMemory?.summary ?? '',
       socialEchoForReport?.mention ?? '',
       eventDomainFocus?.reportEchoLine ?? '',
+      districtOperationActionReportLine ?? '',
     ].filter(Boolean);
 
     const previewInput = {
@@ -315,6 +337,7 @@ export function EndOfDayReportView({
     return { summary, showPreview, carryOverDuplicatesPreview };
   }, [
     eventDomainFocus,
+    districtOperationActionReportLine,
     lastDecisionForDay,
     model.tomorrowNotes,
     operationSignals,
@@ -370,6 +393,7 @@ export function EndOfDayReportView({
       reportCarryOverMemory?.summary ?? '',
       socialEchoForReport?.mention ?? '',
       eventDomainFocus?.reportEchoLine ?? '',
+      districtOperationActionReportLine ?? '',
       tomorrowPreviewBundle.summary.preview?.summary ?? '',
     ].filter(Boolean);
 
@@ -474,6 +498,7 @@ export function EndOfDayReportView({
     authorityState?.formalRankId,
     authorityState?.unlockedPermissionIds,
     crisisState,
+    districtOperationActionReportLine,
     eventDomainFocus?.focus,
     eventDomainFocus?.reportEchoLine,
     eventDomainFocus?.summary,
@@ -489,6 +514,15 @@ export function EndOfDayReportView({
     tomorrowPreviewBundle.summary,
     tomorrowPreviewBundle.summary.preview?.summary,
   ]);
+  const reportSystemsAnalyticsContext = useMemo(
+    () => ({
+      day: report.day,
+      rankId: authorityState?.formalRankId,
+      isPostPilot: report.day >= POST_PILOT_FIRST_OPERATION_DAY,
+      source: 'end_of_day_report_systems_integration',
+    }),
+    [authorityState?.formalRankId, report.day],
+  );
 
   const pilotPremiumModel = useMemo(
     () =>
@@ -687,8 +721,22 @@ export function EndOfDayReportView({
         </View>
       ) : null}
 
+      {districtOperationActionReportLine ? (
+        <View style={styles.districtActionReportRow}>
+          <Text style={styles.districtActionReportLabel} numberOfLines={1}>
+            Mahalle hamlesi
+          </Text>
+          <Text style={styles.districtActionReportText} numberOfLines={2}>
+            {districtOperationActionReportLine}
+          </Text>
+        </View>
+      ) : null}
+
       {reportSystemsIntegration?.visible ? (
-        <ReportSystemsIntegrationCard model={reportSystemsIntegration} />
+        <ReportSystemsIntegrationCard
+          model={reportSystemsIntegration}
+          analyticsContext={reportSystemsAnalyticsContext}
+        />
       ) : null}
 
       {!reportGuard.hideCrisis ? (
@@ -802,5 +850,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: '#3D4F4C',
+  },
+  districtActionReportRow: {
+    gap: 4,
+    minWidth: 0,
+    paddingHorizontal: 4,
+  },
+  districtActionReportLabel: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#0E5F5B',
+  },
+  districtActionReportText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    color: '#3D4F4C',
+    flexShrink: 1,
   },
 });

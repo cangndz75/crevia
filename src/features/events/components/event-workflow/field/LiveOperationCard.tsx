@@ -1,6 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import {
+  buildActiveRouteAnalyticsPayload,
+  type NewSystemsAnalyticsContext,
+} from '@/core/analytics/analyticsPayloadBuilders';
+import { trackOncePerRuntime } from '@/core/analytics/analyticsRuntime';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import type { FieldScreenModel } from '@/features/events/utils/eventWorkflowDispatchFieldPresentation';
 import { shadows } from '@/ui/theme/shadows';
@@ -10,9 +16,22 @@ import type { CreviaActiveTaskRouteUiModel } from '@/core/activeTaskRoutes/activ
 type Props = {
   model: FieldScreenModel;
   routePreview?: CreviaActiveTaskRouteUiModel | null;
+  analyticsContext?: NewSystemsAnalyticsContext;
 };
 
-export function LiveOperationCard({ model, routePreview }: Props) {
+export function LiveOperationCard({ model, routePreview, analyticsContext }: Props) {
+  useEffect(() => {
+    if (!routePreview?.visible) return;
+    const day = analyticsContext?.day ?? 1;
+    trackOncePerRuntime(
+      `active_route_phase_viewed:${day}:field:${routePreview.id}:${routePreview.phase}`,
+      'active_route_phase_viewed',
+      buildActiveRouteAnalyticsPayload(routePreview, analyticsContext, {
+        lineKind: 'field_phase',
+      }),
+    );
+  }, [analyticsContext, routePreview]);
+
   const routeLine = routePreview?.visible ? routePreview.fieldLine : undefined;
   const activeStep = routePreview?.activeStepIndex ?? 1;
   const stepCount = routePreview?.steps.length ?? 3;

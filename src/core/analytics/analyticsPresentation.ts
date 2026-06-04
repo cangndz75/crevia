@@ -1,7 +1,7 @@
 import { ANALYTICS_SCHEMA_VERSION } from './analyticsConstants';
 import { ANALYTICS_FUNNEL_DEFINITIONS } from './analyticsFunnels';
 import { ANALYTICS_EVENT_DEFINITIONS } from './analyticsSchema';
-import type { AnalyticsAuditFinding, AnalyticsAuditResult } from './analyticsTypes';
+import type { AnalyticsAuditFinding, AnalyticsAuditResult, AnalyticsEventPayload } from './analyticsTypes';
 
 export function formatAnalyticsFinding(finding: AnalyticsAuditFinding): string {
   const tag = finding.severity.toUpperCase();
@@ -83,4 +83,48 @@ export function buildAnalyticsFunnelMarkdown(): string {
     lines.push('');
   }
   return lines.join('\n');
+}
+
+const NEW_SYSTEMS_EVENT_PREFIXES = [
+  'hub_open_ended',
+  'hub_next_unlock',
+  'hub_district_runtime',
+  'map_district',
+  'map_active_route',
+  'active_route',
+  'result_',
+  'report_systems',
+  'report_tomorrow',
+  'report_district',
+  'profile_',
+  'content_pack',
+  'district_pack_one',
+] as const;
+
+export function buildAnalyticsNewSystemsDebugRows(): string[] {
+  return ANALYTICS_EVENT_DEFINITIONS
+    .filter((def) => NEW_SYSTEMS_EVENT_PREFIXES.some((prefix) => def.name.startsWith(prefix)))
+    .map(
+      (def) =>
+        `${def.name} | ${def.surface} | required:${def.requiredPayloadKeys.join(',')} | production:${def.enabledInProduction}`,
+    );
+}
+
+export function validateNewSystemsAnalyticsPayload(payload: AnalyticsEventPayload): boolean {
+  const raw = JSON.stringify(payload).toLocaleLowerCase('tr-TR');
+  return (
+    !raw.includes('rawtext') &&
+    !raw.includes('reporttext') &&
+    !raw.includes('devic') &&
+    !raw.includes('pathfinding') &&
+    !raw.includes('gerÃ§ek zamanlÄ± rota') &&
+    !raw.includes('satÄ±n al') &&
+    !raw.includes('paywall')
+  );
+}
+
+export function summarizeNewSystemsAnalyticsCoverage(): string {
+  const rows = buildAnalyticsNewSystemsDebugRows();
+  const devOnly = rows.filter((row) => row.includes('production:false')).length;
+  return `newSystemsEvents=${rows.length}; devOnly=${devOnly}; privacySafePayload=structured_only`;
 }

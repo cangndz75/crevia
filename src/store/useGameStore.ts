@@ -327,6 +327,14 @@ import {
 } from '@/core/operations/operationSignalState';
 import type { OperationSignalsState } from '@/core/operations/operationSignalTypes';
 import {
+  applyDistrictOperationActionEffects,
+  buildDistrictOperationActionCandidates,
+  createInitialDistrictOperationActionState,
+  selectDistrictOperationAction as selectDistrictOperationActionState,
+  type CreviaDistrictOperationAction,
+  type CreviaDistrictOperationActionState,
+} from '@/core/districtOperationActions';
+import {
   applyDailyAuthorityTrustGain,
   calculateDailyAuthorityTrustGain,
 } from '@/core/authority/authorityEngine';
@@ -450,6 +458,8 @@ type GameStoreState = {
   crisisActionState: CrisisActionState;
   microDecisionState: MicroDecisionState;
   operationalResources: OperationalResourcesState;
+  /** Oturum içi mahalle hamlesi seçimi — persist edilmez. */
+  districtOperationActionState: CreviaDistrictOperationActionState;
   tutorialState: TutorialState;
   /** Oturum içi onboarding ipucu kapatmaları — persist edilmez. */
   onboardingDismissedHintIds: string[];
@@ -544,6 +554,10 @@ type GameStoreActions = {
   processCrisisActionsForEndOfDay: () => void;
   refreshOperationalResources: () => void;
   processOperationalResourcesForEndOfDay: () => void;
+  selectDistrictOperationAction: (
+    actionId: string,
+    districtId?: string,
+  ) => { success: boolean; action?: CreviaDistrictOperationAction; message: string };
   devResetOperationalResourcesForTesting?: () => void;
   devGenerateCrisisActionForTesting?: () => void;
   devGenerateMicroDecisionForTesting?: () => void;
@@ -795,6 +809,7 @@ function applySeedBundle(
   | 'crisisActionState'
   | 'microDecisionState'
   | 'operationalResources'
+  | 'districtOperationActionState'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -858,6 +873,7 @@ function applySeedBundle(
     operationalResources: createInitialOperationalResourcesState(
       bundle.gameState.city.day,
     ),
+    districtOperationActionState: createInitialDistrictOperationActionState(),
     tutorialState: { ...INITIAL_TUTORIAL_STATE },
     bestPilotScores: [],
     lastPilotScore: undefined,
@@ -1143,6 +1159,7 @@ export const useGameStore = create<GameStore>()(
       lastPilotScore: undefined,
       lastBudgetDelta: null,
       lastDecisionResult: null,
+      districtOperationActionState: createInitialDistrictOperationActionState(),
       _hasHydrated: false,
 
       setLastDecisionResult: (result) => set({ lastDecisionResult: result }),
@@ -1330,6 +1347,7 @@ export const useGameStore = create<GameStore>()(
       initializeDay1: () => {
         set({
           ...applySeedBundle(createDay1Seed()),
+          districtOperationActionState: createInitialDistrictOperationActionState(),
           tutorialState: { ...INITIAL_TUTORIAL_STATE },
           onboardingDismissedHintIds: [],
         });
@@ -2445,6 +2463,58 @@ export const useGameStore = create<GameStore>()(
         }
         const next = processOperationalResourcesEndOfDay(input, closingDay);
         set({ operationalResources: next });
+      },
+
+      selectDistrictOperationAction: (actionId, districtId) => {
+        const current = get();
+        const day = current.gameState.city.day;
+        const candidates = buildDistrictOperationActionCandidates({
+          day,
+          focusDistrictId:
+            districtId ?? current.operationSignals.priorityDistrictId,
+          rankKey: current.gameState.pilot.authorityState?.formalRankId,
+          unlockedPermissionIds:
+            current.gameState.pilot.authorityState?.unlockedPermissionIds,
+          operationSignals: current.operationSignals,
+          resourceFatigue: current.operationalResources,
+          crisisState: current.crisisState,
+          selectedByDay: current.districtOperationActionState.selectedByDay,
+          recentDistrictOperationKeys:
+            current.districtOperationActionState.recentDistrictOperationKeys,
+        });
+        const action = candidates.find((candidate) => candidate.id === actionId);
+        if (!action) {
+          return {
+            success: false,
+            message: 'Mahalle hamlesi bulunamadı.',
+          };
+        }
+        const nextActionState = selectDistrictOperationActionState(
+          current.districtOperationActionState,
+          action,
+        );
+        if (nextActionState === current.districtOperationActionState) {
+          return {
+            success: false,
+            action,
+            message:
+              action.status === 'preview_only'
+                ? 'Bu hamle şimdilik önizlemede.'
+                : 'Bugün için mahalle hamlesi zaten seçildi.',
+          };
+        }
+        set({
+          districtOperationActionState: nextActionState,
+          operationSignals: applyDistrictOperationActionEffects(
+            current.operationSignals,
+            action,
+          ),
+        });
+        return {
+          success: true,
+          action: nextActionState.selectedByDay[day],
+          message: 'Mahalle odağı bugünün küçük hamlesi olarak seçildi.',
+        };
       },
 
       devResetOperationalResourcesForTesting: () => {
@@ -3981,6 +4051,7 @@ export const useGameStore = create<GameStore>()(
             createInitialOperationalResourcesState(
               withSyncedPulse(pilotRefresh.gameState).city.day,
             ),
+          districtOperationActionState: createInitialDistrictOperationActionState(),
           tutorialState: saved.tutorialState ?? { ...INITIAL_TUTORIAL_STATE },
           bestPilotScores: saved.bestPilotScores ?? [],
           lastPilotScore: saved.lastPilotScore,

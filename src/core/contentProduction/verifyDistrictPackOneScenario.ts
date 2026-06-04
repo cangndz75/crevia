@@ -307,6 +307,15 @@ export function verifyDistrictPackOneScenario(): VerifyDistrictPackOneOutcome {
   record(assert(checks, audit.failCount === 0, 'audit no failures', `audit failures ${audit.failCount}`));
   recordWarn(warn(checks, audit.warnCount === 0, 'audit no warnings', `audit warnings ${audit.warnCount}`));
   record(assert(checks, audit.score >= 80, 'audit score >= 80', `audit score ${audit.score}`));
+  record(assert(checks, audit.score > 80, 'audit score no longer stuck at 80', `audit score stuck at ${audit.score}`));
+  record(
+    assert(
+      checks,
+      audit.summaryLines.some((line) => line.includes('no duplicate risk detected')),
+      'audit duplicate no-risk summary',
+      'missing duplicate no-risk summary',
+    ),
+  );
 
   const coverage = buildContentCoverageMatrix([DISTRICT_PACK_ONE_CONTENT_PACK]);
   record(assert(checks, coverage.every((entry) => entry.status !== 'fail'), 'coverage has no FAIL', 'coverage FAIL present'));

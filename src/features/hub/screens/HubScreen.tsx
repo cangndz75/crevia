@@ -16,6 +16,7 @@ import {
 import { HubCarryOverMemoryCard } from '@/features/hub/components/HubCarryOverMemoryCard';
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
 import { HubReferenceHome } from '@/features/hub/components/HubReferenceHome';
+import { buildHubScreenLayoutModel } from '@/features/hub/utils/hubScreenPresentation';
 import { OnboardingCoachBubble } from '@/features/onboarding/components/OnboardingCoachBubble';
 import { useOnboardingHint } from '@/features/onboarding/hooks/useOnboardingHint';
 import {
@@ -46,6 +47,17 @@ export function HubScreen() {
 
   const hubCardVisibility = buildHubCardVisibilityModel(gameState, monetization);
   const hubDay = gameState.city.day;
+  const hubLayoutModel = useMemo(
+    () =>
+      buildHubScreenLayoutModel({
+        gameState,
+        tutorialActive,
+        isDay1Layout: hubDay <= 1,
+        activeEventCount: gameState.events.length,
+        postPilotOperation: gameState.pilot.postPilotOperation,
+      }),
+    [gameState, hubDay, tutorialActive],
+  );
 
   const hubCarryOverMemory = useMemo(
     () => buildHubCarryOverMemory({ day: hubDay }),
@@ -105,6 +117,7 @@ export function HubScreen() {
   ]);
 
   const { coachHint, dismissHint } = useOnboardingHint('hub');
+  void hubLayoutModel;
 
   return (
     <GameScreenShell

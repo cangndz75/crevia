@@ -102,6 +102,28 @@ export function scoreContentProductionAudit(input: {
   return { score, status };
 }
 
+export function calculateDuplicateSafetyRatio(input: {
+  pass: number;
+  warn: number;
+  fail: number;
+}): number {
+  const total = input.pass + input.warn + input.fail;
+  if (total === 0) return 1;
+  return input.pass / total;
+}
+
+function buildDuplicateSafetySummaryLine(input: {
+  pass: number;
+  warn: number;
+  fail: number;
+}): string {
+  const ratio = calculateDuplicateSafetyRatio(input);
+  if (input.warn + input.fail === 0 && input.pass === 0) {
+    return 'Duplicate safety: no duplicate risk detected; safety ratio full.';
+  }
+  return `Duplicate safety ratio: ${Math.round(ratio * 100)}/100`;
+}
+
 export function buildContentProductionAuditResult(
   packs: readonly CreviaContentPackDefinition[],
 ): CreviaContentProductionAuditResult {
@@ -198,10 +220,7 @@ export function buildContentProductionAuditResult(
     echoSummary.pass,
     echoSummary.pass + echoSummary.warn + echoSummary.fail,
   );
-  const duplicateSafetyRatio = ratioScore(
-    duplicateSummary.pass,
-    Math.max(1, duplicateSummary.pass + duplicateSummary.warn + duplicateSummary.fail),
-  );
+  const duplicateSafetyRatio = calculateDuplicateSafetyRatio(duplicateSummary) * 100;
   const copySafetyRatio = copyBlocker ? 0 : 100;
   const mobileIssues = issues.filter((issue) => issue.kind === 'mobile_length_risk').length;
   const mobileReadabilityRatio = clampScore(100 - mobileIssues * 8);
@@ -227,6 +246,7 @@ export function buildContentProductionAuditResult(
     `Coverage PASS/WARN/FAIL: ${coverageSummary.pass}/${coverageSummary.warn}/${coverageSummary.fail}`,
     `Echo completeness PASS/WARN/FAIL: ${echoSummary.pass}/${echoSummary.warn}/${echoSummary.fail}`,
     `Duplicate risk WARN/FAIL: ${duplicateSummary.warn}/${duplicateSummary.fail}`,
+    buildDuplicateSafetySummaryLine(duplicateSummary),
     ...buildDistrictCoverageSummary(coverageResults).slice(0, 3),
     ...buildRewardRecoveryCoverageSummary(items),
   ];

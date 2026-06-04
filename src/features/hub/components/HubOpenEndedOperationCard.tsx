@@ -1,14 +1,25 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import {
+  buildHubOpenEndedAnalyticsPayload,
+  type NewSystemsAnalyticsContext,
+} from '@/core/analytics/analyticsPayloadBuilders';
+import {
+  trackHubOpenEndedCardViewed,
+  trackOncePerRuntime,
+} from '@/core/analytics/analyticsRuntime';
 import type {
   CreviaHubOpenEndedFocusLine,
   CreviaHubOpenEndedIntegrationModel,
   CreviaHubOpenEndedTone,
 } from '@/core/hub/hubOpenEndedIntegrationPresentation';
+import { DistrictOperationActionCard } from '@/features/districtOperationActions/components/DistrictOperationActionCard';
 
 type Props = {
   model: CreviaHubOpenEndedIntegrationModel | null | undefined;
+  analyticsContext?: NewSystemsAnalyticsContext;
 };
 
 const toneStyles: Record<
@@ -89,7 +100,49 @@ function FocusLine({ line }: { line: CreviaHubOpenEndedFocusLine }) {
   );
 }
 
-export function HubOpenEndedOperationCard({ model }: Props) {
+export function HubOpenEndedOperationCard({ model, analyticsContext }: Props) {
+  useEffect(() => {
+    if (!model?.visible || model.focusLines.length === 0) return;
+    const day = analyticsContext?.day ?? 1;
+    const payload = buildHubOpenEndedAnalyticsPayload(model, analyticsContext);
+    trackHubOpenEndedCardViewed(
+      `hub_open_ended_card_viewed:${day}:${model.visibility.mode}`,
+      payload,
+    );
+    for (const line of model.focusLines.slice(0, 3)) {
+      trackOncePerRuntime(
+        `hub_open_ended_focus_line_viewed:${day}:${line.id}`,
+        'hub_open_ended_focus_line_viewed',
+        buildHubOpenEndedAnalyticsPayload(model, analyticsContext, {
+          lineKind: line.kind,
+          source: line.source,
+          count: line.maxLines,
+        }),
+      );
+    }
+    if (model.nextUnlockSummary.visible) {
+      trackOncePerRuntime(
+        `hub_next_unlock_summary_viewed:${day}:${model.visibility.mode}`,
+        'hub_next_unlock_summary_viewed',
+        buildHubOpenEndedAnalyticsPayload(model, analyticsContext, {
+          lineKind: 'next_unlock',
+          source: 'rank_permissions',
+        }),
+      );
+    }
+    if (model.districtRuntimeSummary.visible && model.districtRuntimeSummary.districtId) {
+      trackOncePerRuntime(
+        `hub_district_runtime_summary_viewed:${day}:${model.districtRuntimeSummary.districtId}:${model.districtRuntimeSummary.kind}`,
+        'hub_district_runtime_summary_viewed',
+        buildHubOpenEndedAnalyticsPayload(model, analyticsContext, {
+          districtId: model.districtRuntimeSummary.districtId,
+          lineKind: model.districtRuntimeSummary.kind,
+          source: model.districtRuntimeSummary.source ?? 'district_runtime',
+        }),
+      );
+    }
+  }, [analyticsContext, model]);
+
   if (!model?.visible || model.focusLines.length === 0) return null;
 
   return (
@@ -115,6 +168,8 @@ export function HubOpenEndedOperationCard({ model }: Props) {
           <FocusLine key={line.id} line={line} />
         ))}
       </View>
+
+      <DistrictOperationActionCard source="hub_open_ended" compact />
     </View>
   );
 }

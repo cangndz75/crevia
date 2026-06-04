@@ -88,6 +88,17 @@ Rank permission matrix dosyaları bu patchte değiştirilmez.
 - **UI redesign yok** — büyük kart/screen eklenmez
 - **applyDecision / dayPipeline değişmez**
 
+## 10.1. Aşama 2 sınırlı activation
+
+Aşama 2, foundation operasyonlarını tam event flow’a bağlamadan küçük selectable action olarak açar:
+
+- Day 1 gizli, Day 2-3 preview, Day 4+ seçilebilir.
+- Günde en fazla 1 mahalle hamlesi seçilir.
+- Seçim sonucu küçük operation signal delta üretir ve priority district odağını günceller.
+- Hub, Map ve end-of-day Report bağlanır; Report en fazla 1 action summary satırı gösterir.
+- Persist shape değişmez ve SAVE_VERSION 23 kalır.
+- Runtime event generation, `applyDecision`, day pipeline ve event variant/freshness runtime değiştirilmez.
+
 ## 11. Sonraki patch bağlantıları
 
 - District Operation UI Preview

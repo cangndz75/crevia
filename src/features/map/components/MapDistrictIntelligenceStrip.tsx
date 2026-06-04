@@ -1,12 +1,22 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import {
+  buildMapDistrictIntelligenceAnalyticsPayload,
+  type NewSystemsAnalyticsContext,
+} from '@/core/analytics/analyticsPayloadBuilders';
+import {
+  trackMapDistrictIntelligenceViewed,
+  trackOncePerRuntime,
+} from '@/core/analytics/analyticsRuntime';
 import type { CreviaMapDistrictIntelligenceModel } from '@/core/map/mapDistrictIntelligencePresentation';
 import { resolveIoniconForRegistryKey } from '@/core/presentation/creviaIconPresentation';
 import { mapUi } from '@/features/map/utils/mapUiTokens';
 
 type Props = {
   model: CreviaMapDistrictIntelligenceModel | null | undefined;
+  analyticsContext?: NewSystemsAnalyticsContext;
 };
 
 const TONE_COLORS = {
@@ -21,7 +31,33 @@ const TONE_COLORS = {
   },
 } as const;
 
-export function MapDistrictIntelligenceStrip({ model }: Props) {
+export function MapDistrictIntelligenceStrip({ model, analyticsContext }: Props) {
+  useEffect(() => {
+    if (!model?.visible || model.visibleLines.length === 0) return;
+    const day = analyticsContext?.day ?? 1;
+    trackMapDistrictIntelligenceViewed(
+      `map_district_intelligence_viewed:${day}:${model.districtId}:${model.visibility.mode}`,
+      buildMapDistrictIntelligenceAnalyticsPayload(model, analyticsContext),
+    );
+    for (const line of model.visibleLines) {
+      const eventName =
+        line.kind === 'trust'
+          ? 'map_district_trust_line_viewed'
+          : line.kind === 'memory'
+            ? 'map_district_memory_line_viewed'
+            : 'map_district_operation_hint_viewed';
+      trackOncePerRuntime(
+        `${eventName}:${day}:${model.districtId}:${line.id}`,
+        eventName,
+        buildMapDistrictIntelligenceAnalyticsPayload(model, analyticsContext, {
+          lineKind: line.kind,
+          domain: line.kind,
+          source: 'map_district_intelligence',
+        }),
+      );
+    }
+  }, [analyticsContext, model]);
+
   if (!model?.visible || model.visibleLines.length === 0) {
     return null;
   }

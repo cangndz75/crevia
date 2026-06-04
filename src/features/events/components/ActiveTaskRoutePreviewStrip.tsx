@@ -1,6 +1,15 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import {
+  buildActiveRouteAnalyticsPayload,
+  type NewSystemsAnalyticsContext,
+} from '@/core/analytics/analyticsPayloadBuilders';
+import {
+  trackActiveRoutePreviewViewed,
+  trackOncePerRuntime,
+} from '@/core/analytics/analyticsRuntime';
 import type { CreviaActiveTaskRouteUiModel } from '@/core/activeTaskRoutes/activeTaskRouteUiTypes';
 import { getActiveTaskRouteUiPhaseDefinition } from '@/core/activeTaskRoutes/activeTaskRouteUiConstants';
 import { resolveIoniconForRegistryKey } from '@/core/presentation/creviaIconPresentation';
@@ -12,6 +21,7 @@ type Props = {
   model: CreviaActiveTaskRouteUiModel | null | undefined;
   surface?: 'dispatch' | 'field' | 'map';
   compact?: boolean;
+  analyticsContext?: NewSystemsAnalyticsContext;
 };
 
 const TONE = {
@@ -20,7 +30,57 @@ const TONE = {
   map: { bg: mapUi.mint, border: 'rgba(15, 143, 134, 0.12)', text: mapUi.teal },
 } as const;
 
-export function ActiveTaskRoutePreviewStrip({ model, surface = 'dispatch', compact = false }: Props) {
+export function ActiveTaskRoutePreviewStrip({
+  model,
+  surface = 'dispatch',
+  compact = false,
+  analyticsContext,
+}: Props) {
+  useEffect(() => {
+    if (!model?.visible) return;
+    const day = analyticsContext?.day ?? 1;
+    const surfaceSource = `active_route_${surface}`;
+    trackActiveRoutePreviewViewed(
+      `active_route_preview_viewed:${day}:${surface}:${model.id}:${model.phase}`,
+      buildActiveRouteAnalyticsPayload(model, {
+        ...analyticsContext,
+        source: analyticsContext?.source ?? surfaceSource,
+      }),
+    );
+    trackOncePerRuntime(
+      `active_route_phase_viewed:${day}:${surface}:${model.id}:${model.phase}`,
+      'active_route_phase_viewed',
+      buildActiveRouteAnalyticsPayload(model, {
+        ...analyticsContext,
+        source: analyticsContext?.source ?? surfaceSource,
+      }, {
+        lineKind: 'phase',
+      }),
+    );
+    if (model.resourceWarningLine && model.visibility.showResourceWarning) {
+      trackOncePerRuntime(
+        `active_route_resource_warning_viewed:${day}:${surface}:${model.id}:${model.phase}`,
+        'active_route_resource_warning_viewed',
+        buildActiveRouteAnalyticsPayload(model, {
+          ...analyticsContext,
+          source: analyticsContext?.source ?? surfaceSource,
+        }, {
+          lineKind: 'resource_warning',
+        }),
+      );
+    }
+    if (surface === 'map' && model.visibility.showMapHint) {
+      trackOncePerRuntime(
+        `map_active_route_hint_viewed:${day}:${model.id}:${model.phase}`,
+        'map_active_route_hint_viewed',
+        buildActiveRouteAnalyticsPayload(model, {
+          ...analyticsContext,
+          source: 'map_active_route_hint',
+        }),
+      );
+    }
+  }, [analyticsContext, model, surface]);
+
   if (!model?.visible) return null;
 
   const palette = TONE[surface];

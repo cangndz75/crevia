@@ -107,7 +107,22 @@ Verify, `CRITICAL_UI_GUARD_TARGETS` listesini dosya içeriğinde tarar. Faz wrap
 
 ---
 
-## 7. Verify/analyze script matrisi
+## 7. Performance selector pass 2
+
+`npm run verify:performance-selector-pass-two`, yeni Hub/Map/Active Route/Result/Report/Profile entegrasyonlari icin ikinci performans gecisini denetler.
+
+Kapsam:
+
+- Parent ekranlarda yeni sistem analytics context objeleri `useMemo` ile sabitlenir.
+- Hub open-ended, Map district intelligence, Result systems, Report systems ve Profile career model builder cagrilari `useMemo` kapsaminda kalir.
+- Map district intelligence maksimum satir yogunlugu ve active-route operation hint suppression korunur.
+- Result/Report/Profile builder'lari hidden, eksik rapor ve Day 1 guard senaryolarinda model uretimini kapatir.
+- Analytics tracking render govdesinde degil `useEffect` icinde kalir.
+- Bu pass runtime gameplay, persist, `SAVE_VERSION`, `applyDecision`, `endCurrentDay` veya day pipeline davranisini degistirmez.
+
+---
+
+## 8. Verify/analyze script matrisi
 
 | Script | Rol |
 |--------|-----|
@@ -120,12 +135,13 @@ Verify, `CRITICAL_UI_GUARD_TARGETS` listesini dosya içeriğinde tarar. Faz wrap
 | `verify:icon-presentation` | Icon registry |
 | `verify:event-authoring` | İçerik planı |
 | `verify:quality-audit` | Bu denetim |
+| `verify:performance-selector-pass-two` | Yeni sistem selector/memo/context pass 2 |
 
 `analyze:*` scriptleri balance/rapor içindir; `verify:*` regression içindir.
 
 ---
 
-## 8. Kritik riskler
+## 9. Kritik riskler
 
 - Production core’un `@/features` importları (type/util taşınmalı)
 - HubScreen tam `gameState` subscription
@@ -134,7 +150,7 @@ Verify, `CRITICAL_UI_GUARD_TARGETS` listesini dosya içeriğinde tarar. Faz wrap
 
 ---
 
-## 9. Orta vadeli refactor önerileri
+## 10. Orta vadeli refactor önerileri
 
 1. End-of-day pipeline’ı store dışına pure fonksiyon olarak çıkar  
 2. core/contracts altında paylaşılan UI-facing tipler  
@@ -144,7 +160,7 @@ Verify, `CRITICAL_UI_GUARD_TARGETS` listesini dosya içeriğinde tarar. Faz wrap
 
 ---
 
-## 10. Şimdi yapılmaması gerekenler
+## 11. Şimdi yapılmaması gerekenler
 
 - Store rewrite veya `endCurrentDay` sıra değişikliği (açık bug yoksa)  
 - Event generation / pilot template büyük refactor  

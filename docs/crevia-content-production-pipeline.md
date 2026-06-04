@@ -54,6 +54,8 @@ Benzer title/domain/district/echo tekrarını yakalar.
 - 0.65–0.81: **WARN**
 - Altı: PASS
 
+Duplicate scoring edge case: duplicate guard WARN/FAIL riski bulmadiginda risk listesi bos kalir. Bu durumda duplicate-safety tam guvenli kabul edilir (`safety ratio full`) ve kalite skorunu dusurmez. WARN/FAIL riski varsa mevcut esikler ve skor cezasi aynen korunur.
+
 ## 6. Echo completeness
 
 Her içerik olay/operasyon/era dışındaki yüzeylere bağlanmalı:
@@ -127,7 +129,7 @@ Her operation era kendi content targetlarına bağlanır. `buildContentPackItemF
 - Content pack listesi
 - Coverage matrix
 - Quality score
-- Duplicate warning
+- Duplicate warning / no-risk safety summary
 - Echo completeness
 - Version status
 - Release readiness

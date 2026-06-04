@@ -8,6 +8,12 @@ import type { GameState } from '@/core/models/GameState';
 import type { MonetizationState } from '@/core/monetization/monetizationTypes';
 import type { SeasonEndEvaluationModel } from '@/core/seasonEnd/seasonEndTypes';
 import type { DecisionResultSummaryTone } from '@/features/events/types/decisionResultTypes';
+import type { CreviaActiveTaskRouteUiModel } from '@/core/activeTaskRoutes/activeTaskRouteUiTypes';
+import type { CreviaEventResultSystemsEchoModel } from '@/core/events/eventResultNewSystemsPresentation';
+import type { CreviaHubOpenEndedIntegrationModel } from '@/core/hub/hubOpenEndedIntegrationPresentation';
+import type { CreviaMapDistrictIntelligenceModel } from '@/core/map/mapDistrictIntelligencePresentation';
+import type { CreviaProfileCareerShowcaseModel } from '@/core/profile/profileCareerShowcasePresentation';
+import type { CreviaReportSystemsIntegrationModel } from '@/core/reports/reportSystemsIntegrationPresentation';
 import {
   buildCommonAnalyticsBase,
   getAnalyticsAccessModeFromGameState,
@@ -19,6 +25,19 @@ export type ResourceStatusBand = 'stable' | 'busy' | 'strained' | 'critical';
 export type CrisisRiskBand = 'stable' | 'watch' | 'elevated' | 'critical';
 export type AssignmentFitBand = 'weak' | 'steady' | 'strong';
 export type AnalyticsResultBand = 'strong' | 'steady' | 'weak' | 'critical';
+
+export type NewSystemsAnalyticsContext = {
+  day?: number;
+  pilotDay?: number;
+  seasonDay?: number;
+  accessMode?: AnalyticsTrackBase['accessMode'];
+  phase?: string;
+  rankId?: string | null;
+  rankBand?: string | null;
+  operationCareerPhase?: string | null;
+  isPostPilot?: boolean;
+  source?: string;
+};
 
 const SAFE_ID_PATTERN = /^[a-z0-9_]{1,64}$/;
 
@@ -42,6 +61,192 @@ export function sanitizeAnalyticsEventType(
 ): string {
   const raw = event.eventType ?? event.districtEventType ?? event.category ?? 'operations';
   return sanitizeAnalyticsId(raw) ?? 'operations';
+}
+
+function safeCount(value: number | undefined): number {
+  return Math.max(0, Math.round(value ?? 0));
+}
+
+function rankBandFromRankId(rankId: string | undefined): string | undefined {
+  if (!rankId) return undefined;
+  if (rankId.includes('director') || rankId.includes('chief')) return 'senior';
+  if (rankId.includes('manager') || rankId.includes('coordinator')) return 'lead';
+  return 'operator';
+}
+
+function careerPhaseForDay(day: number): string {
+  if (day >= 8) return 'post_pilot';
+  if (day >= 4) return 'pilot_expansion';
+  return 'pilot_learning';
+}
+
+export function buildNewSystemsAnalyticsBase(
+  surface: AnalyticsTrackBase['surface'],
+  context: NewSystemsAnalyticsContext = {},
+): AnalyticsTrackBase | undefined {
+  const day = Math.max(1, Math.round(context.day ?? 1));
+  const rankId = sanitizeAnalyticsId(context.rankId);
+  return {
+    surface,
+    day,
+    ...(context.pilotDay ? { pilotDay: context.pilotDay } : {}),
+    ...(context.seasonDay ? { seasonDay: context.seasonDay } : {}),
+    ...(context.accessMode ? { accessMode: context.accessMode } : {}),
+    phase: sanitizeAnalyticsId(context.phase) ?? careerPhaseForDay(day),
+    rankId,
+    rankBand:
+      sanitizeAnalyticsId(context.rankBand) ?? rankBandFromRankId(rankId),
+    operationCareerPhase:
+      sanitizeAnalyticsId(context.operationCareerPhase) ?? careerPhaseForDay(day),
+    isPostPilot: context.isPostPilot ?? day >= 8,
+    source: sanitizeAnalyticsId(context.source) ?? 'new_systems_runtime',
+  };
+}
+
+function hiddenNewSystemsPayload(
+  visible: boolean | undefined,
+  context: NewSystemsAnalyticsContext,
+): boolean {
+  const day = Math.max(1, Math.round(context.day ?? 1));
+  return visible !== true || day <= 1;
+}
+
+export function buildHubOpenEndedAnalyticsPayload(
+  model: CreviaHubOpenEndedIntegrationModel | null | undefined,
+  context: NewSystemsAnalyticsContext = {},
+  extra: Record<string, AnalyticsPayloadValue> = {},
+): AnalyticsTrackBase | undefined {
+  if (hiddenNewSystemsPayload(model?.visible, context)) return undefined;
+  const base = buildNewSystemsAnalyticsBase('hub', {
+    ...context,
+    phase: context.phase ?? model?.visibility.mode,
+  });
+  if (!base) return undefined;
+  return {
+    ...base,
+    visibilityMode: model?.visibility.mode,
+    count: safeCount(model?.focusLines.length),
+    isHintOnly: true,
+    ...extra,
+  };
+}
+
+export function buildMapDistrictIntelligenceAnalyticsPayload(
+  model: CreviaMapDistrictIntelligenceModel | null | undefined,
+  context: NewSystemsAnalyticsContext = {},
+  extra: Record<string, AnalyticsPayloadValue> = {},
+): AnalyticsTrackBase | undefined {
+  if (hiddenNewSystemsPayload(model?.visible, context)) return undefined;
+  const base = buildNewSystemsAnalyticsBase('map', {
+    ...context,
+    phase: context.phase ?? model?.layerFocus,
+  });
+  if (!base) return undefined;
+  return {
+    ...base,
+    districtId: sanitizeAnalyticsId(model?.districtId),
+    visibilityMode: model?.visibility.mode,
+    count: safeCount(model?.visibleLines.length),
+    isHintOnly: true,
+    ...extra,
+  };
+}
+
+export function buildActiveRouteAnalyticsPayload(
+  model: CreviaActiveTaskRouteUiModel | null | undefined,
+  context: NewSystemsAnalyticsContext = {},
+  extra: Record<string, AnalyticsPayloadValue> = {},
+): AnalyticsTrackBase | undefined {
+  if (hiddenNewSystemsPayload(model?.visible, context)) return undefined;
+  const base = buildNewSystemsAnalyticsBase('event_dispatch', {
+    ...context,
+    phase: context.phase ?? model?.phase,
+  });
+  if (!base) return undefined;
+  return {
+    ...base,
+    phase: sanitizeAnalyticsId(model?.phase),
+    visibilityMode: model?.visibility.mode,
+    count: safeCount(model?.steps.length),
+    isHintOnly: true,
+    ...extra,
+  };
+}
+
+export function buildResultSystemsEchoAnalyticsPayload(
+  model: CreviaEventResultSystemsEchoModel | null | undefined,
+  context: NewSystemsAnalyticsContext = {},
+  extra: Record<string, AnalyticsPayloadValue> = {},
+): AnalyticsTrackBase | undefined {
+  if (hiddenNewSystemsPayload(model?.visible, context)) return undefined;
+  const base = buildNewSystemsAnalyticsBase('event_result', {
+    ...context,
+    phase: context.phase ?? model?.visibility.mode,
+  });
+  if (!base) return undefined;
+  return {
+    ...base,
+    visibilityMode: model?.visibility.mode,
+    count: safeCount(model?.lines.length),
+    isHintOnly: true,
+    ...extra,
+  };
+}
+
+export function buildReportSystemsAnalyticsPayload(
+  model: CreviaReportSystemsIntegrationModel | null | undefined,
+  context: NewSystemsAnalyticsContext = {},
+  extra: Record<string, AnalyticsPayloadValue> = {},
+): AnalyticsTrackBase | undefined {
+  if (hiddenNewSystemsPayload(model?.visible, context)) return undefined;
+  const base = buildNewSystemsAnalyticsBase('report', {
+    ...context,
+    phase: context.phase ?? model?.visibility.mode,
+  });
+  if (!base) return undefined;
+  return {
+    ...base,
+    visibilityMode: model?.visibility.mode,
+    count: safeCount(model?.lines.length),
+    isHintOnly: true,
+    ...extra,
+  };
+}
+
+export function buildProfileCareerShowcaseAnalyticsPayload(
+  model: CreviaProfileCareerShowcaseModel | null | undefined,
+  context: NewSystemsAnalyticsContext = {},
+  extra: Record<string, AnalyticsPayloadValue> = {},
+): AnalyticsTrackBase | undefined {
+  if (hiddenNewSystemsPayload(model?.visible, context)) return undefined;
+  const base = buildNewSystemsAnalyticsBase('profile', {
+    ...context,
+    phase: context.phase ?? model?.visibility.mode,
+  });
+  if (!base) return undefined;
+  return {
+    ...base,
+    visibilityMode: model?.visibility.mode,
+    count: safeCount(model?.sections.length),
+    isHintOnly: true,
+    ...extra,
+  };
+}
+
+export function buildContentPackQualityAnalyticsPayload(
+  context: NewSystemsAnalyticsContext = {},
+  extra: Record<string, AnalyticsPayloadValue> = {},
+): AnalyticsTrackBase | undefined {
+  const base = buildNewSystemsAnalyticsBase('devtools', {
+    ...context,
+    source: context.source ?? 'content_pack_authoring_quality',
+  });
+  if (!base) return undefined;
+  return {
+    ...base,
+    isHintOnly: true,
+    ...extra,
+  };
 }
 
 export function getAssignmentFitBand(score: number): AssignmentFitBand {

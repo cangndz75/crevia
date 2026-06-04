@@ -716,6 +716,18 @@ export function DecisionResultScreen() {
     result,
     resultCarryOver?.summary,
   ]);
+  const resultSystemsAnalyticsContext = useMemo(
+    () => {
+      const day = result.day ?? currentDay;
+      return {
+        day,
+        rankId: authorityState?.formalRankId,
+        isPostPilot: day >= POST_PILOT_FIRST_OPERATION_DAY,
+        source: 'decision_result_systems_echo',
+      };
+    },
+    [authorityState?.formalRankId, currentDay, result.day],
+  );
 
   const goHub = useCallback(() => {
     playLightImpactHaptic();
@@ -787,7 +799,10 @@ export function DecisionResultScreen() {
           ) : null}
 
           {resultSystemsEcho?.visible ? (
-            <EventResultSystemsEchoStrip model={resultSystemsEcho} />
+            <EventResultSystemsEchoStrip
+              model={resultSystemsEcho}
+              analyticsContext={resultSystemsAnalyticsContext}
+            />
           ) : null}
 
           {showMapBeforeAfter && mapBeforeAfterSummary?.impact ? (

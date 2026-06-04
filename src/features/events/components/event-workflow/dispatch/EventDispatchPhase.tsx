@@ -101,6 +101,14 @@ export function EventDispatchPhase({
           }),
     [assignment, compactTutorial, crisisState, event, gameDay, operationSignals, operationalResources],
   );
+  const routeAnalyticsContext = useMemo(
+    () => ({
+      day: gameDay,
+      isPostPilot: gameDay >= 8,
+      source: 'event_dispatch_route_preview',
+    }),
+    [gameDay],
+  );
 
   const thumbnail = useMemo(
     () => getInspectNeighborhoodHero(resolveInspectDistrictId(event)),
@@ -133,7 +141,12 @@ export function EventDispatchPhase({
 
         <DispatchCommandCard model={model} />
 
-        <ActiveTaskRoutePreviewStrip model={routePreview} surface="dispatch" compact={compactTutorial} />
+        <ActiveTaskRoutePreviewStrip
+          model={routePreview}
+          surface="dispatch"
+          compact={compactTutorial}
+          analyticsContext={routeAnalyticsContext}
+        />
 
         <EventAssignmentPanel event={event} compactTutorial={compactTutorial} />
 

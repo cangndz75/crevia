@@ -91,7 +91,7 @@ export function HubDevTools() {
         onPress={() => void handleResetOnboarding()}
         disabled={busy}>
         <Ionicons name="refresh" size={16} color={colors.secondary} />
-        <Text style={styles.btnText}>
+        <Text style={styles.btnText} numberOfLines={1}>
           {busy ? 'Yenileniyor…' : "Onboarding'i sıfırla"}
         </Text>
       </Pressable>
@@ -100,7 +100,7 @@ export function HubDevTools() {
         onPress={handleResetAll}
         disabled={busy}>
         <Ionicons name="trash-outline" size={16} color={colors.danger} />
-        <Text style={[styles.btnText, styles.btnTextDanger]}>
+        <Text style={[styles.btnText, styles.btnTextDanger]} numberOfLines={1}>
           Onboarding + kayıt sıfırla
         </Text>
       </Pressable>
@@ -132,6 +132,8 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     backgroundColor: colors.secondaryMuted,
     gap: spacing.sm,
+    minWidth: 0,
+    flexShrink: 1,
   },
   label: {
     fontSize: 10,
@@ -150,6 +152,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderWidth: 1,
     borderColor: colors.border,
+    minWidth: 0,
+    flexShrink: 1,
   },
   btnOutline: {
     backgroundColor: 'transparent',
@@ -165,6 +169,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: colors.textPrimary,
+    minWidth: 0,
+    flexShrink: 1,
   },
   btnTextDanger: {
     color: colors.danger,

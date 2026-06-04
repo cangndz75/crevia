@@ -155,6 +155,8 @@ const styles = StyleSheet.create({
   wrap: {
     paddingHorizontal: spacing.md,
     marginBottom: spacing.sm,
+    minWidth: 0,
+    flexShrink: 1,
   },
   wrapCompact: {
     marginBottom: spacing.xs,
@@ -165,6 +167,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(214, 162, 60, 0.22)',
     gap: spacing.xs,
+    minWidth: 0,
+    flexShrink: 1,
   },
   headerRow: {
     flexDirection: 'row',
@@ -175,6 +179,7 @@ const styles = StyleSheet.create({
   headerText: {
     flex: 1,
     minWidth: 0,
+    flexShrink: 1,
   },
   title: {
     fontSize: 17,
@@ -191,6 +196,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 20,
     maxWidth: '48%',
+    minWidth: 0,
+    flexShrink: 1,
   },
   riskPillText: {
     fontSize: 11,
@@ -211,6 +218,8 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     borderWidth: 1,
     borderColor: 'rgba(214, 162, 60, 0.2)',
+    minWidth: 0,
+    flexShrink: 1,
   },
   incidentTitle: {
     fontSize: 13,

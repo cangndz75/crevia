@@ -25,6 +25,19 @@ Aşama 1 bilinçli olarak **preview / recommendation / hint** katmanıdır:
 
 Sonraki patch’lerde activation ve UI binding genişletilebilir.
 
+## Aşama 2 selectable action notu
+
+District-Specific Operations Activation Aşama 2, runtime-lite önerilerinden en fazla **günde 1** küçük mahalle hamlesi seçtirir.
+
+- Day 1: action gizli.
+- Day 2-3: sadece preview, seçim yok.
+- Day 4+: uygun tek action `available` olabilir.
+- Aynı gün ikinci action blocked kalır.
+- Yakın geçmişte aynı mahalle + operation kind tekrarı blocked kalır.
+- Etki modeli küçük operation signal delta ile sınırlıdır; event generation veya `applyDecision` zinciri değişmez.
+- State oturum içidir; persist shape değişmediği için SAVE_VERSION 23 kalır.
+- Hub ve Map aynı küçük kartı kullanır; Report sadece seçilen action için tek summary satırı gösterir.
+
 ## Trust / memory / resource / era sinyalleri → skor
 
 | Sinyal | Etki |
@@ -89,7 +102,7 @@ npm run verify:district-operations-runtime
 
 ## Sonraki patch sırası
 
-1. **District-Specific Operations Activation Aşama 2** — selectable action ve persist genişlemesi (ayrı SAVE_VERSION)
+1. **District-Specific Operations Activation Aşama 2** — selectable action, persist yok, SAVE_VERSION 23
 2. **District Trust + Memory Map Integration**
 3. **Active Task Route UI Integration**
 4. **Result/Report/Map New Systems Binding**

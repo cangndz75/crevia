@@ -36,6 +36,26 @@ Bu belge, **Analytics Event Schema (Aşama 1)** üzerine inşa edilen runtime in
 
 Post-pilot IAP eventleri `PostPilotOfferScreen` üzerinde (Aşama 2 IAP patch) bağlı kalmaya devam eder.
 
+## New systems runtime expansion
+
+Bu patch runtime-lite ve UI integration yüzeyleri için sadece privacy-safe no-op analytics bağlantıları ekler. Gerçek SDK/network entegrasyonu yoktur.
+
+| Surface | Events | Guard |
+| --- | --- | --- |
+| Hub open-ended | `hub_open_ended_card_viewed`, `hub_open_ended_focus_line_viewed`, `hub_next_unlock_summary_viewed`, `hub_district_runtime_summary_viewed` | day + visibility/line id |
+| Map intelligence | `map_district_intelligence_viewed`, `map_district_trust_line_viewed`, `map_district_memory_line_viewed`, `map_district_operation_hint_viewed`, `map_active_route_hint_viewed` | day + district + line id |
+| Active route | `active_route_preview_viewed`, `active_route_phase_viewed`, `active_route_resource_warning_viewed` | day + route id + phase |
+| Result echo | `result_systems_echo_viewed`, `result_variant_echo_viewed`, `result_route_echo_viewed`, `result_district_memory_echo_viewed`, `result_tomorrow_echo_viewed` | day + echo kind |
+| Report systems | `report_systems_card_viewed`, `report_systems_line_viewed`, `report_tomorrow_carryover_line_viewed`, `report_district_operation_hint_viewed` | day + line id/kind |
+| Profile career | `profile_career_showcase_viewed`, `profile_next_unlock_viewed`, `profile_permission_chip_viewed`, `profile_district_achievement_viewed` | day + visibility/count |
+| Content readiness | `content_pack_available_for_selection`, `content_pack_quality_audit_summary`, `district_pack_one_loaded` | devtools/debug only |
+
+Payload alanları kontrollüdür: `day`, `phase`, `rankId`, `rankBand`, `operationCareerPhase`, `surface`, `visibilityMode`, `lineKind`, `districtId`, `domain`, `variantKind`, `isPostPilot`, `isHintOnly`, `count`, `source`. Ham metin/copy, cihaz id, kişisel veri, raw save ve GPS/pathfinding iddiası payload'a girmez.
+
+Day 1 hidden/learning sistem yüzeyleri track edilmez. Component tracking `useEffect` içindedir; render içi side effect yoktur. Duplicate guard module-level Set ile aynı model/day/line kombinasyonunu tekrar fire etmez.
+
+Content Pack 1 runtime selection'a bağlanmadı; content eventleri `devtools` surface ve production-disabled readiness/quality sinyali olarak kalır. Gameplay runtime, `ensureDailyEventsForDay`, `applyDecision`, `dayPipeline`, persist shape ve SAVE_VERSION değişmedi.
+
 ## Surfaces
 
 - **HubScreen** — gün başlangıcı, rehber, plan, kaynak kartı, sezon hedefi, kriz masası
@@ -100,5 +120,6 @@ Yasak: PII, `saveState`, ham metin, `advisorLine`, `reportText`. `districtId`, `
 
 ```bash
 npm run verify:analytics-runtime
+npm run verify:analytics-new-systems
 npm run verify:analytics-events
 ```

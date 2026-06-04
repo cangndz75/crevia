@@ -1,11 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import type { NewSystemsAnalyticsContext } from '@/core/analytics/analyticsPayloadBuilders';
 import { resolveIoniconForRegistryKey } from '@/core/presentation/creviaIconPresentation';
 import type { CreviaActiveTaskRouteUiModel } from '@/core/activeTaskRoutes/activeTaskRouteUiTypes';
 import type { CreviaMapDistrictIntelligenceModel } from '@/core/map/mapDistrictIntelligencePresentation';
 import type { MapBeforeAfterImpactModel } from '@/core/mapPresence/mapBeforeAfterTypes';
 import { ActiveTaskRoutePreviewStrip } from '@/features/events/components/ActiveTaskRoutePreviewStrip';
+import { DistrictOperationActionCard } from '@/features/districtOperationActions/components/DistrictOperationActionCard';
 import { MapBeforeAfterImpactStrip } from '@/features/map/components/MapBeforeAfterImpactStrip';
 import { MapDistrictIntelligenceStrip } from '@/features/map/components/MapDistrictIntelligenceStrip';
 import type {
@@ -23,6 +25,7 @@ type Props = {
   districtIntelligence?: CreviaMapDistrictIntelligenceModel | null;
   activeTaskRoutePreview?: CreviaActiveTaskRouteUiModel | null;
   mapBeforeAfterImpact?: MapBeforeAfterImpactModel | null;
+  analyticsContext?: NewSystemsAnalyticsContext;
   onPressCta?: () => void;
   onPressRecommended?: () => void;
 };
@@ -150,6 +153,7 @@ export function MapOperationBottomPanel({
   districtIntelligence,
   activeTaskRoutePreview,
   mapBeforeAfterImpact,
+  analyticsContext,
   onPressCta,
   onPressRecommended,
 }: Props) {
@@ -216,6 +220,7 @@ export function MapOperationBottomPanel({
           model={activeTaskRoutePreview}
           surface="map"
           compact={Boolean(model.crisisLines?.length || model.resourceLines?.length)}
+          analyticsContext={analyticsContext}
         />
       ) : null}
 
@@ -229,8 +234,15 @@ export function MapOperationBottomPanel({
                 }
               : districtIntelligence
           }
+          analyticsContext={analyticsContext}
         />
       ) : null}
+
+      <DistrictOperationActionCard
+        districtId={districtIntelligence?.districtId}
+        source="map_panel"
+        compact
+      />
 
       {model.presenceLines?.map((line, index) => (
         <View key={`presence-${index}`} style={styles.presenceRow}>

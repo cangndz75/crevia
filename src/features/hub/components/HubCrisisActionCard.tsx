@@ -166,6 +166,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     marginBottom: spacing.sm,
     minWidth: 0,
+    flexShrink: 1,
   },
   wrapCompact: {
     marginBottom: spacing.xs,
@@ -177,16 +178,19 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(214, 162, 60, 0.28)',
     gap: 6,
     minWidth: 0,
+    flexShrink: 1,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
     minWidth: 0,
+    flexShrink: 1,
   },
   headerText: {
     flex: 1,
     minWidth: 0,
+    flexShrink: 1,
   },
   title: {
     fontSize: 15,
@@ -202,6 +206,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 10,
     maxWidth: '42%',
+    minWidth: 0,
+    flexShrink: 1,
   },
   pillText: {
     fontSize: 11,
@@ -235,6 +241,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: 'rgba(15, 143, 134, 0.08)',
     minWidth: 0,
+    flexShrink: 1,
   },
   advisorLabel: {
     fontSize: 10,
@@ -253,6 +260,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
+    minWidth: 0,
+    flexShrink: 1,
   },
   ctaText: {
     fontSize: 14,

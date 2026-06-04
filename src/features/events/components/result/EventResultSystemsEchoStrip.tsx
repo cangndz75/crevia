@@ -1,6 +1,15 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import {
+  buildResultSystemsEchoAnalyticsPayload,
+  type NewSystemsAnalyticsContext,
+} from '@/core/analytics/analyticsPayloadBuilders';
+import {
+  trackOncePerRuntime,
+  trackResultSystemsEchoViewed,
+} from '@/core/analytics/analyticsRuntime';
 import type {
   CreviaEventResultSystemsEchoLine,
   CreviaEventResultSystemsEchoModel,
@@ -10,6 +19,7 @@ import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 
 type Props = {
   model: CreviaEventResultSystemsEchoModel | null | undefined;
+  analyticsContext?: NewSystemsAnalyticsContext;
 };
 
 const TONE_COLORS: Record<CreviaEventResultSystemsEchoTone, string> = {
@@ -44,7 +54,55 @@ function EchoRow({ line }: { line: CreviaEventResultSystemsEchoLine }) {
   );
 }
 
-export function EventResultSystemsEchoStrip({ model }: Props) {
+export function EventResultSystemsEchoStrip({ model, analyticsContext }: Props) {
+  useEffect(() => {
+    if (!model?.visible || model.lines.length === 0) return;
+    const day = analyticsContext?.day ?? 1;
+    trackResultSystemsEchoViewed(
+      `result_systems_echo_viewed:${day}:${model.visibility.mode}`,
+      buildResultSystemsEchoAnalyticsPayload(model, analyticsContext),
+    );
+    if (model.variantEcho.visible) {
+      trackOncePerRuntime(
+        `result_variant_echo_viewed:${day}:${model.variantEcho.kind}`,
+        'result_variant_echo_viewed',
+        buildResultSystemsEchoAnalyticsPayload(model, analyticsContext, {
+          variantKind: model.variantEcho.kind,
+          lineKind: 'variant',
+        }),
+      );
+    }
+    if (model.routeEcho.visible) {
+      trackOncePerRuntime(
+        `result_route_echo_viewed:${day}:${model.routeEcho.phase}`,
+        'result_route_echo_viewed',
+        buildResultSystemsEchoAnalyticsPayload(model, analyticsContext, {
+          phase: model.routeEcho.phase,
+          lineKind: 'active_route',
+        }),
+      );
+    }
+    if (model.memoryEcho.visible) {
+      trackOncePerRuntime(
+        `result_district_memory_echo_viewed:${day}:${model.memoryEcho.memoryKind}`,
+        'result_district_memory_echo_viewed',
+        buildResultSystemsEchoAnalyticsPayload(model, analyticsContext, {
+          lineKind: model.memoryEcho.memoryKind ?? 'district_memory',
+          domain: 'district_memory',
+        }),
+      );
+    }
+    if (model.tomorrowEcho.visible) {
+      trackOncePerRuntime(
+        `result_tomorrow_echo_viewed:${day}:${model.visibility.mode}`,
+        'result_tomorrow_echo_viewed',
+        buildResultSystemsEchoAnalyticsPayload(model, analyticsContext, {
+          lineKind: 'tomorrow_carry_over',
+        }),
+      );
+    }
+  }, [analyticsContext, model]);
+
   if (!model?.visible || model.lines.length === 0) return null;
 
   return (

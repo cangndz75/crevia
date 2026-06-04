@@ -34,3 +34,5 @@ npm run verify:district-pack-one
 ```
 
 The verifier checks district distribution, variant count, echo completeness, duplicate risk, mobile copy length, controlled adjacent-risk tone, existing pipeline scenarios, and SAVE_VERSION.
+
+Current audit score is 100/100 when duplicate guard reports 0 WARN and 0 FAIL. The duplicate no-risk state is scored as full duplicate safety, so the pack no longer gets capped at 80 by an empty duplicate-risk list.

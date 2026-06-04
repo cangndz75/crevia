@@ -625,8 +625,26 @@ function HubOpenEndedOperationSlot({
     playerProgress.totalXp,
     showHubCarryOver,
   ]);
+  const analyticsContext = useMemo(
+    () => ({
+      day: gameState.city.day,
+      rankId: gameState.pilot.authorityState?.formalRankId,
+      isPostPilot: gameState.pilot.status === 'completed',
+      source: 'hub_open_ended_card',
+    }),
+    [
+      gameState.city.day,
+      gameState.pilot.authorityState?.formalRankId,
+      gameState.pilot.status,
+    ],
+  );
 
-  return <HubOpenEndedOperationCard model={model} />;
+  return (
+    <HubOpenEndedOperationCard
+      model={model}
+      analyticsContext={analyticsContext}
+    />
+  );
 }
 
 export function HubReferenceHome({

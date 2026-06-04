@@ -1,6 +1,15 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import {
+  buildReportSystemsAnalyticsPayload,
+  type NewSystemsAnalyticsContext,
+} from '@/core/analytics/analyticsPayloadBuilders';
+import {
+  trackOncePerRuntime,
+  trackReportSystemsCardViewed,
+} from '@/core/analytics/analyticsRuntime';
 import type {
   CreviaReportSystemsIntegrationModel,
   CreviaReportSystemsLine,
@@ -10,6 +19,7 @@ import { colors } from '@/ui/theme/colors';
 
 type Props = {
   model: CreviaReportSystemsIntegrationModel | null | undefined;
+  analyticsContext?: NewSystemsAnalyticsContext;
 };
 
 const TONE_COLORS: Record<CreviaReportSystemsLineTone, string> = {
@@ -44,7 +54,46 @@ function SystemsRow({ line }: { line: CreviaReportSystemsLine }) {
   );
 }
 
-export function ReportSystemsIntegrationCard({ model }: Props) {
+export function ReportSystemsIntegrationCard({ model, analyticsContext }: Props) {
+  useEffect(() => {
+    if (!model?.visible || model.lines.length === 0) return;
+    const day = analyticsContext?.day ?? 1;
+    trackReportSystemsCardViewed(
+      `report_systems_card_viewed:${day}:${model.visibility.mode}`,
+      buildReportSystemsAnalyticsPayload(model, analyticsContext),
+    );
+    for (const line of model.lines) {
+      trackOncePerRuntime(
+        `report_systems_line_viewed:${day}:${line.id}`,
+        'report_systems_line_viewed',
+        buildReportSystemsAnalyticsPayload(model, analyticsContext, {
+          lineKind: line.kind,
+          source: line.source,
+          count: line.maxLines,
+        }),
+      );
+    }
+    if (model.tomorrowSummary.visible) {
+      trackOncePerRuntime(
+        `report_tomorrow_carryover_line_viewed:${day}:${model.visibility.mode}`,
+        'report_tomorrow_carryover_line_viewed',
+        buildReportSystemsAnalyticsPayload(model, analyticsContext, {
+          lineKind: 'tomorrow_carry_over',
+        }),
+      );
+    }
+    if (model.operationSummary.visible) {
+      trackOncePerRuntime(
+        `report_district_operation_hint_viewed:${day}:${model.visibility.mode}`,
+        'report_district_operation_hint_viewed',
+        buildReportSystemsAnalyticsPayload(model, analyticsContext, {
+          lineKind: 'district_operation',
+          domain: 'district_operation',
+        }),
+      );
+    }
+  }, [analyticsContext, model]);
+
   if (!model?.visible || model.lines.length === 0) return null;
 
   return (

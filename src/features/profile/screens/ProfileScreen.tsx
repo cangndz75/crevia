@@ -97,6 +97,15 @@ export function ProfileScreen() {
       pilot.status,
     ],
   );
+  const careerAnalyticsContext = useMemo(
+    () => ({
+      day: gameDay,
+      rankId: pilot.authorityState?.formalRankId,
+      isPostPilot: pilot.status === 'completed',
+      source: 'profile_career_showcase',
+    }),
+    [gameDay, pilot.authorityState?.formalRankId, pilot.status],
+  );
 
   const layout = useMemo(
     () =>
@@ -147,7 +156,10 @@ export function ProfileScreen() {
           </Animated.View>
 
           <Animated.View entering={FadeIn.duration(280).delay(100)}>
-            <ProfileCareerShowcaseCard model={careerShowcase} />
+            <ProfileCareerShowcaseCard
+              model={careerShowcase}
+              analyticsContext={careerAnalyticsContext}
+            />
           </Animated.View>
 
           <Animated.View entering={FadeIn.duration(280).delay(120)}>

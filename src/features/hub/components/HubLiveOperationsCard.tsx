@@ -140,6 +140,7 @@ const styles = StyleSheet.create({
   wrap: {
     paddingHorizontal: spacing.md,
     minWidth: 0,
+    flexShrink: 1,
   },
   wrapCompact: {
     paddingHorizontal: spacing.sm,
@@ -151,21 +152,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(15, 143, 134, 0.15)',
     minWidth: 0,
+    flexShrink: 1,
   },
   head: {
     gap: 2,
     minWidth: 0,
+    flexShrink: 1,
   },
   title: {
     fontSize: 16,
     fontWeight: '700',
     color: HUB_PREMIUM_COLORS.textDark,
+    minWidth: 0,
+    flexShrink: 1,
   },
   subtitle: {
     fontSize: 12,
     color: HUB_PREMIUM_COLORS.textMuted,
+    minWidth: 0,
+    flexShrink: 1,
   },
   stack: {
     gap: spacing.sm,
+    minWidth: 0,
+    flexShrink: 1,
   },
 });

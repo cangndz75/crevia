@@ -36,14 +36,75 @@ export function trackCreviaEvent(
 export function trackOncePerRuntime(
   key: string,
   eventName: AnalyticsEventName,
-  base: AnalyticsTrackBase,
+  base: AnalyticsTrackBase | undefined,
   extra: Record<string, AnalyticsPayloadValue> = {},
 ): void {
+  if (!base) {
+    return;
+  }
   if (runtimeGuardKeys.has(key)) {
     return;
   }
   runtimeGuardKeys.add(key);
   trackCreviaEvent(eventName, base, extra);
+}
+
+function trackOptionalNewSystemsEvent(
+  guardKey: string,
+  eventName: AnalyticsEventName,
+  payload: AnalyticsTrackBase | undefined,
+): void {
+  if (!payload) return;
+  trackOncePerRuntime(guardKey, eventName, payload);
+}
+
+export function trackHubOpenEndedCardViewed(
+  guardKey: string,
+  payload: AnalyticsTrackBase | undefined,
+): void {
+  trackOptionalNewSystemsEvent(guardKey, 'hub_open_ended_card_viewed', payload);
+}
+
+export function trackMapDistrictIntelligenceViewed(
+  guardKey: string,
+  payload: AnalyticsTrackBase | undefined,
+): void {
+  trackOptionalNewSystemsEvent(guardKey, 'map_district_intelligence_viewed', payload);
+}
+
+export function trackActiveRoutePreviewViewed(
+  guardKey: string,
+  payload: AnalyticsTrackBase | undefined,
+): void {
+  trackOptionalNewSystemsEvent(guardKey, 'active_route_preview_viewed', payload);
+}
+
+export function trackResultSystemsEchoViewed(
+  guardKey: string,
+  payload: AnalyticsTrackBase | undefined,
+): void {
+  trackOptionalNewSystemsEvent(guardKey, 'result_systems_echo_viewed', payload);
+}
+
+export function trackReportSystemsCardViewed(
+  guardKey: string,
+  payload: AnalyticsTrackBase | undefined,
+): void {
+  trackOptionalNewSystemsEvent(guardKey, 'report_systems_card_viewed', payload);
+}
+
+export function trackProfileCareerShowcaseViewed(
+  guardKey: string,
+  payload: AnalyticsTrackBase | undefined,
+): void {
+  trackOptionalNewSystemsEvent(guardKey, 'profile_career_showcase_viewed', payload);
+}
+
+export function trackContentPackQualitySummary(
+  guardKey: string,
+  payload: AnalyticsTrackBase | undefined,
+): void {
+  trackOptionalNewSystemsEvent(guardKey, 'content_pack_quality_audit_summary', payload);
 }
 
 export function clearAnalyticsRuntimeGuardsForTesting(): void {

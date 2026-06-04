@@ -17,6 +17,8 @@ import {
   CONTENT_PRODUCTION_RECOMMENDED_DOMAIN_TARGETS,
   CONTENT_PRODUCTION_RECOMMENDED_VARIANT_TARGETS,
   CONTENT_PRODUCTION_REQUIRED_ECHO_SURFACES,
+  CONTENT_PRODUCTION_DUPLICATE_FAIL_THRESHOLD,
+  CONTENT_PRODUCTION_DUPLICATE_WARN_THRESHOLD,
   CONTENT_PRODUCTION_SCORE_THRESHOLDS,
   CONTENT_PRODUCTION_SURFACES,
 } from './contentProductionConstants';
@@ -50,8 +52,10 @@ import {
   buildContentProductionAuditResult,
   buildContentProductionReportModel,
   buildWriterChecklist,
+  calculateDuplicateSafetyRatio,
   collectContentProductionPlayerFacingCopy,
   contentProductionCopyContainsForbiddenTerms,
+  scoreContentProductionAudit,
 } from './contentProductionPresentation';
 import type { CreviaContentPackDefinition, CreviaContentPackItem } from './contentProductionTypes';
 
@@ -262,6 +266,46 @@ export function verifyContentProductionScenario(): VerifyContentProductionOutcom
 
   const dupRisks = findContentDuplicateRisks([similarA, similarB]);
   record(assert(checks, dupRisks.some((risk) => risk.status !== 'pass'), 'duplicate WARN/FAIL', 'duplicate risk missing'));
+  record(assert(checks, calculateDuplicateSafetyRatio({ pass: 0, warn: 0, fail: 0 }) === 1, 'empty duplicate risk ratio full', 'empty duplicate ratio not full'));
+  record(assert(checks, calculateDuplicateSafetyRatio({ pass: 0, warn: 1, fail: 0 }) === 0, 'duplicate WARN ratio penalized', 'duplicate WARN ratio not penalized'));
+  record(assert(checks, calculateDuplicateSafetyRatio({ pass: 0, warn: 0, fail: 1 }) === 0, 'duplicate FAIL ratio penalized', 'duplicate FAIL ratio not penalized'));
+  record(
+    assert(
+      checks,
+      CONTENT_PRODUCTION_DUPLICATE_WARN_THRESHOLD === 0.65 &&
+        CONTENT_PRODUCTION_DUPLICATE_FAIL_THRESHOLD === 0.82,
+      'duplicate thresholds unchanged',
+      'duplicate thresholds changed',
+    ),
+  );
+
+  const noDuplicateScore = scoreContentProductionAudit({
+    coveragePassRatio: 100,
+    echoPassRatio: 100,
+    duplicateSafetyRatio: calculateDuplicateSafetyRatio({ pass: 0, warn: 0, fail: 0 }) * 100,
+    copySafetyRatio: 100,
+    mobileReadabilityRatio: 100,
+    hasBlocker: false,
+  });
+  const warnDuplicateScore = scoreContentProductionAudit({
+    coveragePassRatio: 100,
+    echoPassRatio: 100,
+    duplicateSafetyRatio: calculateDuplicateSafetyRatio({ pass: 0, warn: 1, fail: 0 }) * 100,
+    copySafetyRatio: 100,
+    mobileReadabilityRatio: 100,
+    hasBlocker: false,
+  });
+  const failDuplicateScore = scoreContentProductionAudit({
+    coveragePassRatio: 100,
+    echoPassRatio: 100,
+    duplicateSafetyRatio: calculateDuplicateSafetyRatio({ pass: 0, warn: 0, fail: 1 }) * 100,
+    copySafetyRatio: 100,
+    mobileReadabilityRatio: 100,
+    hasBlocker: false,
+  });
+  record(assert(checks, noDuplicateScore.score === 100, 'no duplicate risk keeps full score', `no duplicate score ${noDuplicateScore.score}`));
+  record(assert(checks, warnDuplicateScore.score < noDuplicateScore.score, 'duplicate WARN still lowers score', 'duplicate WARN did not lower score'));
+  record(assert(checks, failDuplicateScore.score < noDuplicateScore.score, 'duplicate FAIL still lowers score', 'duplicate FAIL did not lower score'));
 
   const echoRequired = getRequiredEchoSurfacesForItem(familyItem);
   record(assert(checks, echoRequired.length > 0, 'required echo surfaces', 'empty required echo'));
@@ -342,6 +386,7 @@ export function verifyContentProductionScenario(): VerifyContentProductionOutcom
   const audit = buildContentProductionAuditResult([verifyPack]);
   record(assert(checks, audit.score >= 0 && audit.score <= 100, 'audit score range', 'score out of range'));
   record(assert(checks, audit.summaryLines.length > 0, 'audit summary lines', 'empty summary'));
+  record(assert(checks, audit.summaryLines.some((line) => line.includes('Duplicate safety')), 'audit duplicate safety summary', 'missing duplicate safety summary'));
   record(assert(checks, buildContentProductionReportModel(audit).title.length > 0, 'report model title', 'empty report title'));
   record(assert(checks, buildContentProductionReportModel(audit).nextActionLines.length > 0, 'next action lines', 'empty next actions'));
 

@@ -1,6 +1,15 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import {
+  buildProfileCareerShowcaseAnalyticsPayload,
+  type NewSystemsAnalyticsContext,
+} from '@/core/analytics/analyticsPayloadBuilders';
+import {
+  trackOncePerRuntime,
+  trackProfileCareerShowcaseViewed,
+} from '@/core/analytics/analyticsRuntime';
 import type {
   CreviaProfileCareerSection,
   CreviaProfileCareerShowcaseModel,
@@ -13,6 +22,7 @@ import { spacing } from '@/ui/theme/spacing';
 
 type Props = {
   model: CreviaProfileCareerShowcaseModel | null | undefined;
+  analyticsContext?: NewSystemsAnalyticsContext;
 };
 
 const toneStyle: Record<
@@ -108,7 +118,46 @@ function ShowcaseSection({ section }: { section: CreviaProfileCareerSection }) {
   );
 }
 
-export function ProfileCareerShowcaseCard({ model }: Props) {
+export function ProfileCareerShowcaseCard({ model, analyticsContext }: Props) {
+  useEffect(() => {
+    if (!model?.visible || model.sections.length === 0) return;
+    const day = analyticsContext?.day ?? 1;
+    trackProfileCareerShowcaseViewed(
+      `profile_career_showcase_viewed:${day}:${model.visibility.mode}`,
+      buildProfileCareerShowcaseAnalyticsPayload(model, analyticsContext),
+    );
+    if (model.nextUnlockSummary.visible) {
+      trackOncePerRuntime(
+        `profile_next_unlock_viewed:${day}:${model.visibility.mode}`,
+        'profile_next_unlock_viewed',
+        buildProfileCareerShowcaseAnalyticsPayload(model, analyticsContext, {
+          lineKind: 'next_unlock',
+          count: model.nextUnlockSummary.chips.length,
+        }),
+      );
+    }
+    if (model.permissionShowcase.visible) {
+      trackOncePerRuntime(
+        `profile_permission_chip_viewed:${day}:${model.permissionShowcase.chips.length}`,
+        'profile_permission_chip_viewed',
+        buildProfileCareerShowcaseAnalyticsPayload(model, analyticsContext, {
+          lineKind: 'permission_chip',
+          count: model.permissionShowcase.chips.length,
+        }),
+      );
+    }
+    if (model.districtAchievementSummary.visible) {
+      trackOncePerRuntime(
+        `profile_district_achievement_viewed:${day}:${model.districtAchievementSummary.chips.length}`,
+        'profile_district_achievement_viewed',
+        buildProfileCareerShowcaseAnalyticsPayload(model, analyticsContext, {
+          lineKind: 'district_achievement',
+          count: model.districtAchievementSummary.chips.length,
+        }),
+      );
+    }
+  }, [analyticsContext, model]);
+
   if (!model?.visible || model.sections.length === 0) return null;
 
   return (
