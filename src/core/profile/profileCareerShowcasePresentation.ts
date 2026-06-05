@@ -22,6 +22,10 @@ import {
   type RankPermissionUiItem,
 } from '@/core/rankPermissions';
 import { normalizeAdvisorState } from '@/core/advisors/advisorState';
+import {
+  buildOperationEraCompactChip,
+  buildOperationEraProfileLine,
+} from '@/core/operationEra/operationEraRuntimePreviewPresentation';
 
 export type CreviaProfileCareerTone = 'teal' | 'mint' | 'gold' | 'neutral';
 
@@ -84,6 +88,12 @@ export type CreviaProfileBestOperationSummary = {
   source?: string;
 };
 
+export type CreviaProfileOperationEraPreviewSummary = {
+  visible: boolean;
+  line?: string;
+  chipLabel?: string;
+};
+
 export type CreviaProfileCareerVisibility = {
   mode: 'hidden' | 'learning' | 'compact' | 'standard' | 'detailed';
   maxSections: number;
@@ -94,6 +104,7 @@ export type CreviaProfileCareerVisibility = {
   showAdvisor: boolean;
   showDistrictAchievement: boolean;
   showBestOperation: boolean;
+  showOperationEraPreview: boolean;
 };
 
 export type CreviaProfileCareerShowcaseModel = {
@@ -109,6 +120,7 @@ export type CreviaProfileCareerShowcaseModel = {
   advisorGrowthSummary: CreviaProfileAdvisorGrowthSummary;
   districtAchievementSummary: CreviaProfileDistrictAchievementSummary;
   bestOperationSummary: CreviaProfileBestOperationSummary;
+  operationEraPreviewSummary: CreviaProfileOperationEraPreviewSummary;
   duplicateSuppression: {
     suppressAuthorityLine: boolean;
     suppressAdvisorLine: boolean;
@@ -228,6 +240,7 @@ export function buildProfileCareerVisibility(
       showAdvisor: false,
       showDistrictAchievement: false,
       showBestOperation: false,
+      showOperationEraPreview: false,
     };
   }
 
@@ -242,6 +255,7 @@ export function buildProfileCareerVisibility(
       showAdvisor: false,
       showDistrictAchievement: false,
       showBestOperation: false,
+      showOperationEraPreview: false,
     };
   }
 
@@ -256,6 +270,7 @@ export function buildProfileCareerVisibility(
       showAdvisor: true,
       showDistrictAchievement: highRank,
       showBestOperation: true,
+      showOperationEraPreview: false,
     };
   }
 
@@ -269,6 +284,52 @@ export function buildProfileCareerVisibility(
     showAdvisor: true,
     showDistrictAchievement: true,
     showBestOperation: postPilot,
+    showOperationEraPreview: postPilot,
+  };
+}
+
+export function buildProfileOperationEraPreviewSummary(
+  input: BuildProfileCareerShowcaseInput = {},
+): CreviaProfileOperationEraPreviewSummary {
+  const day = dayOf(input);
+  if (day < 8) return { visible: false };
+
+  const authority = readAuthority(input);
+  const permissionChips = buildRankPermissionPreviewModel({
+    authorityState: authority,
+    currentTitle: authority.formalRankId,
+    compact: true,
+  }).compactItems.map((item) => item.title);
+
+  const profileLine = buildOperationEraProfileLine(
+    {
+      gameDay: day,
+      operationSignals: input.operationSignals,
+      resourceFatigue: input.resourceFatigue,
+      districtTrustSnapshot: input.districtTrustSnapshot ?? undefined,
+      districtMemorySnapshot: input.districtMemorySnapshot ?? undefined,
+      rankKey: authority.formalRankId,
+      unlockedPermissionIds: authority.unlockedPermissionIds,
+      isPostPilot: input.isPostPilot ?? day >= 8,
+      isFullMode: day >= 8,
+      permissionChipLabels: permissionChips,
+      profileCareerSummary: input.dailyReport?.summaryLines?.[0],
+    },
+    permissionChips,
+  );
+
+  if (!profileLine?.text) return { visible: false };
+
+  return {
+    visible: true,
+    line: profileLine.text,
+    chipLabel: buildOperationEraCompactChip({
+      gameDay: day,
+      operationSignals: input.operationSignals,
+      districtTrustSnapshot: input.districtTrustSnapshot ?? undefined,
+      isPostPilot: true,
+      isFullMode: true,
+    }) || profileLine.chipLabel,
   };
 }
 
@@ -490,6 +551,7 @@ export function buildProfileCareerShowcaseModel(
   const advisorGrowthSummary = buildProfileAdvisorGrowthSummary(input);
   const districtAchievementSummary = buildProfileDistrictAchievementSummary(input);
   const bestOperationSummary = buildProfileBestOperationSummary(input);
+  const operationEraPreviewSummary = buildProfileOperationEraPreviewSummary(input);
 
   const candidates: CreviaProfileCareerSection[] = [];
   if (visibility.showRankPath && rankPathSummary.visible) {
@@ -565,6 +627,18 @@ export function buildProfileCareerShowcaseModel(
       priority: 56,
     }));
   }
+  if (visibility.showOperationEraPreview && operationEraPreviewSummary.visible) {
+    candidates.push(section({
+      id: 'operation_era_preview',
+      title: 'Operasyon Dönemi',
+      subtitle: operationEraPreviewSummary.chipLabel ?? 'Dönemsel odağı',
+      tone: 'gold',
+      iconKey: 'calendar-outline',
+      chips: operationEraPreviewSummary.chipLabel ? [operationEraPreviewSummary.chipLabel] : [],
+      lines: operationEraPreviewSummary.line ? [operationEraPreviewSummary.line] : [],
+      priority: 52,
+    }));
+  }
 
   const sections = candidates
     .sort((a, b) => b.priority - a.priority)
@@ -583,6 +657,7 @@ export function buildProfileCareerShowcaseModel(
     advisorGrowthSummary,
     districtAchievementSummary,
     bestOperationSummary,
+    operationEraPreviewSummary,
     duplicateSuppression: {
       suppressAuthorityLine: input.suppressAuthorityDuplicate === true,
       suppressAdvisorLine: input.suppressAdvisorDuplicate === true,
@@ -610,6 +685,7 @@ export function buildProfileCareerDebugRows(
     `advisor: ${model.advisorGrowthSummary.visible}`,
     `district: ${model.districtAchievementSummary.visible}`,
     `bestOperation: ${model.bestOperationSummary.visible}`,
+    `operationEra: ${model.operationEraPreviewSummary.visible}`,
     ...model.sections.map((item) => `${item.id}: ${item.title}`),
   ];
 }

@@ -50,6 +50,7 @@ import type { OperationSignalsState } from '@/core/operations/operationSignalTyp
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 import type { ReportTomorrowPreviewSummary } from '@/core/reports/reportTomorrowPreviewTypes';
 import type { CreviaDistrictOperationActionState } from '@/core/districtOperationActions/districtOperationActionTypes';
+import { buildOperationEraReportLine } from '@/core/operationEra/operationEraRuntimePreviewPresentation';
 import { buildStoryChainHintForReport } from '@/core/storyChains/storyChainRuntimeHintPresentation';
 
 export const REPORT_SYSTEMS_MAX_COPY_LENGTH = 96;
@@ -95,7 +96,8 @@ export type CreviaReportSystemsLineKind =
   | 'tomorrow_carry_over'
   | 'crisis_watch'
   | 'operation_signal'
-  | 'story_chain';
+  | 'story_chain'
+  | 'operation_era';
 
 export type CreviaReportSystemsLineTone = 'teal' | 'mint' | 'gold' | 'neutral' | 'warn';
 
@@ -843,6 +845,40 @@ export function buildReportSystemsIntegrationModel(
     );
     if (chainLine && !isDuplicate(chainLine.text, [...existing, ...candidates.map((l) => l.text)])) {
       candidates.push(chainLine);
+    }
+  }
+
+  const eraLine = buildOperationEraReportLine(
+    {
+      gameDay: input.day ?? input.dailyReport?.day,
+      focusDistrictId: input.focusDistrictId,
+      operationSignals: input.operationSignals,
+      resourceFatigue: input.resourceFatigue,
+      crisisState: input.crisisState,
+      districtOperationActionState: input.districtOperationActionState ?? undefined,
+      rankKey: input.rankKey,
+      unlockedPermissionIds: input.unlockedPermissionIds,
+      isPostPilot: input.isPostPilot,
+      isPilotCompleted: input.isPilotCompleted,
+      isFullMode: input.isPostPilot === true,
+      tomorrowPreviewLine: tomorrowSummary.text ?? input.reportTomorrowPreview?.preview?.summary,
+      carryOverLine: input.carryOverMemory?.summary,
+      existingLines: [...existing, ...candidates.map((line) => line.text)],
+    },
+    [...existing, ...candidates.map((line) => line.text)],
+  );
+  if (eraLine?.text && visibility.maxVisibleLines > 0 && (input.day ?? input.dailyReport?.day ?? 1) >= 8) {
+    const reportEraLine = toLine(
+      { visible: true, text: eraLine.text },
+      'operation_era',
+      eraLine.label,
+      eraLine.iconKey,
+      eraLine.tone === 'watch' ? 'warn' : eraLine.tone === 'gold' ? 'gold' : 'teal',
+      eraLine.priority,
+      eraLine.source,
+    );
+    if (reportEraLine && !isDuplicate(reportEraLine.text, [...existing, ...candidates.map((l) => l.text)])) {
+      candidates.push(reportEraLine);
     }
   }
 

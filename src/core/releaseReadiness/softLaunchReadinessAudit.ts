@@ -10,6 +10,8 @@ import { verifyDayPipelineScenario } from '@/core/dayPipeline/verifyDayPipelineS
 import { runFullLoopAnalysis } from '@/core/fullLoop/runFullLoopSimulation';
 import { runIapSandboxQaAudit } from '@/core/iapQa/iapSandboxQaAudit';
 import { IAP_SANDBOX_QA_DOCS_PATH } from '@/core/iapQa/iapSandboxQaConstants';
+import { runIapSandboxReadinessAudit } from '@/core/iapQa/iapSandboxReadinessAudit';
+import { IAP_SANDBOX_SMOKE_TEST_DOCS_PATH } from '@/core/iapQa/iapSandboxReadinessConstants';
 import { verifyIapProductDesignScenario } from '@/core/iap/verifyIapProductDesignScenario';
 import { getMainOperationProductDefinition } from '@/core/iap/iapProductDesign';
 import { IAP_UI_FORBIDDEN_WORDS } from '@/core/iap/iapProductConstants';
@@ -656,6 +658,9 @@ export function auditIapReadiness(mode: SoftLaunchReadinessAuditMode): SoftLaunc
   }
 
   const sandboxQa = runIapSandboxQaAudit();
+  const readinessMode = mode === 'launch_candidate' ? 'launch_candidate' : 'pre_sdk';
+  const sandboxReadiness = runIapSandboxReadinessAudit({ mode: readinessMode });
+
   if (sandboxQa.health === 'BLOCKED' || sandboxQa.health === 'FAIL') {
     findings.push(
       warnFinding(
@@ -675,6 +680,46 @@ export function auditIapReadiness(mode: SoftLaunchReadinessAuditMode): SoftLaunc
         'IAP sandbox QA manual steps pending',
         `Automatic checks: ${sandboxQa.passCount} pass, ${sandboxQa.warnCount} warn — store/dashboard/native manual.`,
         'Run npm run verify:iap-sandbox-qa and docs/crevia-iap-sandbox-qa.md.',
+        'monetization',
+      ),
+    );
+  }
+
+  for (const blocker of sandboxReadiness.blockers) {
+    if (!blocker.appliesInMode.includes(readinessMode)) continue;
+    if (blocker.severity === 'blocker' && mode === 'launch_candidate') {
+      findings.push(
+        blockerFinding(
+          `monetization_iap.sandbox_readiness.${blocker.id}`,
+          'monetization_iap',
+          blocker.title,
+          blocker.message,
+          blocker.recommendation,
+          'monetization',
+        ),
+      );
+    } else if (blocker.severity === 'warn' || mode === 'pre_sdk') {
+      findings.push(
+        warnFinding(
+          `monetization_iap.sandbox_readiness.${blocker.id}`,
+          'monetization_iap',
+          blocker.title,
+          blocker.message,
+          blocker.recommendation,
+          'monetization',
+        ),
+      );
+    }
+  }
+
+  if (mode === 'pre_sdk' && sandboxReadiness.health === 'WARN') {
+    findings.push(
+      warnFinding(
+        'monetization_iap.sandbox_readiness_warn',
+        'monetization_iap',
+        'IAP sandbox readiness WARN (pre-SDK)',
+        `Smoke matrix ${sandboxReadiness.smokeTestPlan.cases.length} cases; manual store setup pending.`,
+        `Run verify:iap-sandbox-readiness and ${IAP_SANDBOX_SMOKE_TEST_DOCS_PATH}.`,
         'monetization',
       ),
     );
@@ -740,6 +785,19 @@ export function auditIapReadiness(mode: SoftLaunchReadinessAuditMode): SoftLaunc
         'IAP sandbox QA docs',
         IAP_SANDBOX_QA_DOCS_PATH,
         'Follow checklist before device test.',
+        'monetization',
+      ),
+    );
+  }
+
+  if (existsSync(join(REPO_ROOT, IAP_SANDBOX_SMOKE_TEST_DOCS_PATH))) {
+    findings.push(
+      pass(
+        'monetization_iap.sandbox_smoke_docs',
+        'monetization_iap',
+        'IAP sandbox smoke test docs',
+        IAP_SANDBOX_SMOKE_TEST_DOCS_PATH,
+        'Complete manual smoke matrix on EAS dev build.',
         'monetization',
       ),
     );

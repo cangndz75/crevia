@@ -43,3 +43,33 @@ export {
   verifyIapSandboxQaScenario,
   type VerifyIapSandboxQaOutcome,
 } from './verifyIapSandboxQaScenario';
+
+export type {
+  CreviaIapSandboxReadinessMode,
+  CreviaIapSandboxReadinessHealth,
+  CreviaIapSandboxPlatformStatus,
+  CreviaRevenueCatConfigStatus,
+  CreviaStoreProductStatus,
+  CreviaIapSandboxChecklistItem,
+  CreviaIapSandboxBlocker,
+  CreviaSandboxSmokeTestCase,
+  CreviaSandboxSmokeTestPlan,
+  CreviaIapSandboxReadinessResult,
+} from './iapSandboxReadinessTypes';
+
+export {
+  IAP_SANDBOX_SMOKE_TEST_DOCS_PATH,
+  REVENUECAT_DEFAULT_OFFERING_ID,
+  REVENUECAT_PACKAGE_PRODUCT_ID,
+} from './iapSandboxReadinessConstants';
+
+export {
+  runIapSandboxReadinessAudit,
+  buildSandboxSmokeTestPlan,
+  type RunIapSandboxReadinessAuditOptions,
+} from './iapSandboxReadinessAudit';
+
+export {
+  verifyIapSandboxReadinessScenario,
+  type VerifyIapSandboxReadinessOutcome,
+} from './verifyIapSandboxReadinessScenario';

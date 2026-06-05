@@ -63,6 +63,7 @@ function iconName(key: string): keyof typeof Ionicons.glyphMap {
     'chatbubble-ellipses-outline': 'chatbubble-ellipses-outline',
     'map-outline': 'map-outline',
     'medal-outline': 'medal-outline',
+    'calendar-outline': 'calendar-outline',
   };
   return map[key] ?? 'ribbon-outline';
 }

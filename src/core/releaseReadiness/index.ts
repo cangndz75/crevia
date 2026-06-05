@@ -57,3 +57,54 @@ export {
 } from './softLaunchReadinessPresentation';
 
 export { verifySoftLaunchReadinessScenario } from './verifySoftLaunchReadinessScenario';
+
+export type {
+  CreviaSoftLaunchReviewMode,
+  CreviaSoftLaunchReviewArea,
+  CreviaSoftLaunchReviewSeverity,
+  CreviaSoftLaunchReadinessLevel,
+  CreviaSoftLaunchDecision,
+  CreviaSoftLaunchReviewFinding,
+  CreviaSoftLaunchReviewAreaResult,
+  CreviaSoftLaunchReviewBlocker,
+  CreviaSoftLaunchReviewWarning,
+  CreviaSoftLaunchReviewRecommendation,
+  CreviaSoftLaunchContentCoverageSummary,
+  CreviaSoftLaunchReviewResult,
+  RunSoftLaunchReadinessReviewOptions,
+} from './softLaunchReviewTypes';
+
+export {
+  SOFT_LAUNCH_REVIEW_DOCS_PATH,
+  SOFT_LAUNCH_REVIEW_AREAS,
+  SOFT_LAUNCH_REVIEW_AREA_LABELS,
+  SOFT_LAUNCH_REVIEW_MIN_FAMILIES,
+  SOFT_LAUNCH_REVIEW_MIN_VARIANTS,
+} from './softLaunchReviewConstants';
+
+export {
+  runSoftLaunchReadinessReview,
+  buildSoftLaunchReviewAreaResults,
+  buildContentCoverageSummary,
+  collectSoftLaunchBlockers,
+  collectSoftLaunchWarnings,
+  buildSoftLaunchDecision,
+  buildSoftLaunchReadinessLevel,
+  buildSoftLaunchNextActions,
+  buildNoNewSystemFreezeRecommendation,
+  buildSoftLaunchReviewRecommendations,
+} from './softLaunchReviewAudit';
+
+export {
+  buildSoftLaunchReviewMarkdown,
+  buildSoftLaunchReviewConsoleSummary,
+  buildSoftLaunchReviewChecklist,
+  buildSoftLaunchReviewNextStepTable,
+  buildSoftLaunchBlockerTable,
+  buildSoftLaunchWarningTable,
+} from './softLaunchReviewPresentation';
+
+export {
+  verifySoftLaunchReviewScenario,
+  type VerifySoftLaunchReviewOutcome,
+} from './verifySoftLaunchReviewScenario';

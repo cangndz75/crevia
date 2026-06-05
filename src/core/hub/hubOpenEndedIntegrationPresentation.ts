@@ -28,6 +28,10 @@ import {
 } from '@/core/rankPermissions';
 import type { CreviaDistrictOperationActionState } from '@/core/districtOperationActions/districtOperationActionTypes';
 import {
+  buildOperationEraHubLine,
+  type BuildOperationEraRuntimePreviewInput,
+} from '@/core/operationEra/operationEraRuntimePreviewPresentation';
+import {
   buildStoryChainHintForHub,
   type BuildStoryChainRuntimeHintInput,
 } from '@/core/storyChains/storyChainRuntimeHintPresentation';
@@ -43,7 +47,8 @@ export type CreviaHubOpenEndedFocusKind =
   | 'resource_pressure'
   | 'crisis_watch'
   | 'advisor_focus'
-  | 'story_chain';
+  | 'story_chain'
+  | 'operation_era';
 
 export type CreviaHubOpenEndedTone = 'teal' | 'mint' | 'gold' | 'neutral' | 'warn';
 
@@ -99,6 +104,7 @@ export type CreviaHubOpenEndedVisibility = {
   showCarryOverSynthesis: boolean;
   showAdvisorFocus: boolean;
   showStoryChainHint: boolean;
+  showOperationEraPreview: boolean;
 };
 
 export type CreviaHubOpenEndedIntegrationModel = {
@@ -139,6 +145,9 @@ export type BuildHubOpenEndedIntegrationInput = {
   operationalResources?: unknown;
   districtOperationActionState?: CreviaDistrictOperationActionState | null;
   storyChainHintInput?: BuildStoryChainRuntimeHintInput;
+  operationEraPreviewInput?: BuildOperationEraRuntimePreviewInput;
+  isPostPilot?: boolean;
+  isPilotCompleted?: boolean;
 };
 
 const MAX_LINES = 3;
@@ -262,6 +271,7 @@ export function buildHubOpenEndedVisibility(
       showCarryOverSynthesis: false,
       showAdvisorFocus: false,
       showStoryChainHint: false,
+      showOperationEraPreview: false,
     };
   }
 
@@ -277,6 +287,7 @@ export function buildHubOpenEndedVisibility(
       showCarryOverSynthesis: false,
       showAdvisorFocus: false,
       showStoryChainHint: Boolean(input.carryOverMemory?.visible),
+      showOperationEraPreview: false,
     };
   }
 
@@ -292,6 +303,7 @@ export function buildHubOpenEndedVisibility(
       showCarryOverSynthesis: !input.isCarryOverCardVisible,
       showAdvisorFocus: false,
       showStoryChainHint: true,
+      showOperationEraPreview: false,
     };
   }
 
@@ -306,6 +318,7 @@ export function buildHubOpenEndedVisibility(
     showCarryOverSynthesis: !input.isCarryOverCardVisible,
     showAdvisorFocus: !input.isAdvisorCardVisible && highRank,
     showStoryChainHint: true,
+    showOperationEraPreview: true,
   };
 }
 
@@ -663,6 +676,51 @@ export function buildHubOpenEndedIntegrationModel(
         source: 'advisor',
       })!,
     );
+  }
+
+  if (visibility.showOperationEraPreview) {
+    const eraExisting = [
+      ...candidates.map((line) => line.text),
+      nextUnlockSummary.text ?? '',
+      districtOperationSummary.text ?? '',
+    ].filter(Boolean);
+    const eraLine = buildOperationEraHubLine(
+      {
+        gameDay: resolveDay(input),
+        focusDistrictId: resolveFocusDistrictId(input),
+        operationSignals: input.operationSignals ?? undefined,
+        districtTrustSnapshot: input.districtTrustSnapshot ?? undefined,
+        districtMemorySnapshot: input.districtMemorySnapshot ?? undefined,
+        districtOperationActionState: input.districtOperationActionState ?? undefined,
+        resourceFatigue: input.operationalResources,
+        crisisState: input.crisisState,
+        activeTaskRouteModel: input.activeTaskRouteUiModel ?? undefined,
+        rankKey: input.rankKey ?? input.currentTitle,
+        unlockedPermissionIds: input.unlockedPermissionIds ?? [],
+        isPostPilot: input.isPostPilot,
+        isPilotCompleted: input.isPilotCompleted,
+        isFullMode: input.isPostPilot === true || resolveDay(input) >= 8,
+        nextUnlockLine: nextUnlockSummary.text,
+        districtOperationLine: districtOperationSummary.text,
+        ...input.operationEraPreviewInput,
+      },
+      eraExisting,
+    );
+    if (eraLine?.text) {
+      candidates.push(
+        toLine({
+          id: 'hub-open-ended-operation-era',
+          kind: 'operation_era',
+          label: eraLine.label,
+          text: eraLine.text,
+          tone: eraLine.tone === 'watch' ? 'warn' : eraLine.tone === 'gold' ? 'gold' : 'teal',
+          iconKey: eraLine.iconKey,
+          priority: eraLine.priority,
+          source: eraLine.source,
+          maxLines: eraLine.maxLines,
+        })!,
+      );
+    }
   }
 
   if (visibility.showStoryChainHint) {
