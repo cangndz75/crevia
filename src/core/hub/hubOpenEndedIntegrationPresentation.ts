@@ -26,6 +26,11 @@ import {
   containsForbiddenRankPermissionCopy,
   type RankPermissionPreviewModel,
 } from '@/core/rankPermissions';
+import type { CreviaDistrictOperationActionState } from '@/core/districtOperationActions/districtOperationActionTypes';
+import {
+  buildStoryChainHintForHub,
+  type BuildStoryChainRuntimeHintInput,
+} from '@/core/storyChains/storyChainRuntimeHintPresentation';
 
 export type CreviaHubOpenEndedFocusKind =
   | 'daily_focus'
@@ -37,7 +42,8 @@ export type CreviaHubOpenEndedFocusKind =
   | 'carry_over'
   | 'resource_pressure'
   | 'crisis_watch'
-  | 'advisor_focus';
+  | 'advisor_focus'
+  | 'story_chain';
 
 export type CreviaHubOpenEndedTone = 'teal' | 'mint' | 'gold' | 'neutral' | 'warn';
 
@@ -92,6 +98,7 @@ export type CreviaHubOpenEndedVisibility = {
   showActiveRoute: boolean;
   showCarryOverSynthesis: boolean;
   showAdvisorFocus: boolean;
+  showStoryChainHint: boolean;
 };
 
 export type CreviaHubOpenEndedIntegrationModel = {
@@ -130,6 +137,8 @@ export type BuildHubOpenEndedIntegrationInput = {
   isAdvisorCardVisible?: boolean;
   crisisState?: unknown;
   operationalResources?: unknown;
+  districtOperationActionState?: CreviaDistrictOperationActionState | null;
+  storyChainHintInput?: BuildStoryChainRuntimeHintInput;
 };
 
 const MAX_LINES = 3;
@@ -252,6 +261,7 @@ export function buildHubOpenEndedVisibility(
       showActiveRoute: false,
       showCarryOverSynthesis: false,
       showAdvisorFocus: false,
+      showStoryChainHint: false,
     };
   }
 
@@ -266,6 +276,7 @@ export function buildHubOpenEndedVisibility(
       showActiveRoute: true,
       showCarryOverSynthesis: false,
       showAdvisorFocus: false,
+      showStoryChainHint: Boolean(input.carryOverMemory?.visible),
     };
   }
 
@@ -280,6 +291,7 @@ export function buildHubOpenEndedVisibility(
       showActiveRoute: true,
       showCarryOverSynthesis: !input.isCarryOverCardVisible,
       showAdvisorFocus: false,
+      showStoryChainHint: true,
     };
   }
 
@@ -293,6 +305,7 @@ export function buildHubOpenEndedVisibility(
     showActiveRoute: true,
     showCarryOverSynthesis: !input.isCarryOverCardVisible,
     showAdvisorFocus: !input.isAdvisorCardVisible && highRank,
+    showStoryChainHint: true,
   };
 }
 
@@ -650,6 +663,55 @@ export function buildHubOpenEndedIntegrationModel(
         source: 'advisor',
       })!,
     );
+  }
+
+  if (visibility.showStoryChainHint) {
+    const existingTexts = [
+      ...candidates.map((line) => line.text),
+      carryOverSummary.text ?? '',
+      activeRouteSummary.text ?? '',
+      districtRuntimeSummary.text ?? '',
+      districtOperationSummary.text ?? '',
+      input.carryOverMemory?.summary ?? '',
+    ].filter(Boolean);
+    const storyChainHint = buildStoryChainHintForHub(
+      {
+        gameDay: resolveDay(input),
+        selectedDistrictId: resolveFocusDistrictId(input),
+        carryOverMemory: input.carryOverMemory ?? undefined,
+        districtTrustSnapshot: input.districtTrustSnapshot ?? undefined,
+        districtMemorySnapshot: input.districtMemorySnapshot ?? undefined,
+        districtOperationsSnapshot: input.districtOperationsSnapshot ?? undefined,
+        districtOperationActionState: input.districtOperationActionState ?? undefined,
+        operationSignals: input.operationSignals ?? undefined,
+        resourceFatigue: input.operationalResources,
+        crisisState: input.crisisState,
+        activeTaskRouteModel: input.activeTaskRouteUiModel ?? undefined,
+        activeTaskRouteContext: input.activeTaskRouteContext,
+        isCarryOverCardVisible: input.isCarryOverCardVisible,
+        carryOverLine: carryOverSummary.text,
+        activeRouteLine: activeRouteSummary.text,
+        districtMemoryUnresolvedLine: districtRuntimeSummary.kind === 'memory' ? districtRuntimeSummary.text : undefined,
+        districtOperationActionSummary: districtOperationSummary.text,
+        ...input.storyChainHintInput,
+      },
+      existingTexts,
+    );
+    if (storyChainHint?.text) {
+      candidates.push(
+        toLine({
+          id: 'hub-open-ended-story-chain',
+          kind: 'story_chain',
+          label: storyChainHint.label,
+          text: storyChainHint.text,
+          tone: storyChainHint.tone === 'warn' ? 'warn' : storyChainHint.tone === 'gold' ? 'gold' : 'teal',
+          iconKey: storyChainHint.iconKey,
+          priority: storyChainHint.priority,
+          source: storyChainHint.source,
+          maxLines: storyChainHint.maxLines,
+        })!,
+      );
+    }
   }
 
   const focusLines = dedupeLines(candidates).slice(0, visibility.maxVisibleLines);

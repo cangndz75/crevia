@@ -132,6 +132,14 @@ export {
   getSocialTrustPackOneEchoSurfaceCoverage,
   getSocialTrustPackOneFamiliesByDistrict,
   getSocialTrustPackOneVariantCoverage,
+  CRISIS_ADJACENT_PACK_ONE_CONTENT_PACK,
+  CRISIS_ADJACENT_PACK_ONE_FAMILIES,
+  CRISIS_ADJACENT_PACK_ONE_ID,
+  CRISIS_ADJACENT_PACK_ONE_ITEMS,
+  CRISIS_ADJACENT_PACK_ONE_REQUIRED_ECHO_SURFACES,
+  getCrisisAdjacentPackOneEchoSurfaceCoverage,
+  getCrisisAdjacentPackOneFamiliesByDistrict,
+  getCrisisAdjacentPackOneVariantCoverage,
 } from './contentPacks';
 
 export type {
@@ -162,4 +170,11 @@ export type {
   SocialTrustPackOneSocialHints,
   SocialTrustPackOneVariantCopy,
   SocialTrustPackOneVariantKind,
+  CrisisAdjacentPackOneCrisisHints,
+  CrisisAdjacentPackOneDistrictId,
+  CrisisAdjacentPackOneDomain,
+  CrisisAdjacentPackOneEchoSurface,
+  CrisisAdjacentPackOneFamily,
+  CrisisAdjacentPackOneVariantCopy,
+  CrisisAdjacentPackOneVariantKind,
 } from './contentPacks';

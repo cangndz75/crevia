@@ -74,6 +74,9 @@ function iconName(key: string): keyof typeof Ionicons.glyphMap {
     'time-outline': 'time-outline',
     'sparkles-outline': 'sparkles-outline',
     'chatbubble-ellipses-outline': 'chatbubble-ellipses-outline',
+    'link-outline': 'link-outline',
+    'trail-sign-outline': 'trail-sign-outline',
+    'git-network-outline': 'git-network-outline',
   };
   return map[key] ?? 'radio-outline';
 }

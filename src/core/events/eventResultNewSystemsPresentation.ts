@@ -45,6 +45,8 @@ import type { CreviaEventVariantContext, CreviaResolvedEventVariant } from '@/co
 import type { EventCard } from '@/core/models/EventCard';
 import type { OperationSignalsState } from '@/core/operations/operationSignalTypes';
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
+import type { CreviaDistrictOperationActionState } from '@/core/districtOperationActions/districtOperationActionTypes';
+import { buildStoryChainHintForResult } from '@/core/storyChains/storyChainRuntimeHintPresentation';
 import type { DecisionResultSnapshot } from '@/features/events/types/decisionResultTypes';
 
 export const EVENT_RESULT_SYSTEMS_ECHO_MAX_COPY_LENGTH = 96;
@@ -85,7 +87,8 @@ export type CreviaEventResultSystemsEchoLineKind =
   | 'resource_pressure'
   | 'crisis_watch'
   | 'tomorrow_carry_over'
-  | 'map_after_effect';
+  | 'map_after_effect'
+  | 'story_chain';
 
 export type CreviaEventResultSystemsEchoTone = 'teal' | 'mint' | 'gold' | 'neutral' | 'warn';
 
@@ -189,6 +192,7 @@ export type CreviaEventResultSystemsEchoInput = {
   existingEchoLines?: string[];
   carryOverSummary?: string;
   mapImpactSummary?: string;
+  districtOperationActionState?: CreviaDistrictOperationActionState | null;
 };
 
 const TRUST_RESULT_INTENT: Record<CreviaDistrictTrustBand, string> = {
@@ -721,6 +725,43 @@ export function buildEventResultSystemsEchoModel(
     if (tomorrowLine && !isDuplicate(tomorrowLine.text, existing)) candidates.push(tomorrowLine);
   }
 
+  const storyChainHint = buildStoryChainHintForResult(
+    {
+      gameDay: input.day ?? input.snapshot?.day,
+      selectedDistrictId: input.districtId ?? input.event?.neighborhoodId ?? input.snapshot?.neighborhoodId,
+      activeEvent: input.event ?? undefined,
+      lastCompletedEvent: input.event ?? undefined,
+      operationSignals: input.operationSignals,
+      resourceFatigue: input.resourceFatigue,
+      crisisState: input.crisisState,
+      districtOperationActionState: input.districtOperationActionState ?? undefined,
+      activeTaskRouteContext: input.activeTaskRouteContext,
+      activeTaskRouteModel: input.activeTaskRouteUiModel ?? undefined,
+      isPostPilot: input.isPostPilot,
+      isPilotCompleted: input.isPilotCompleted,
+      rankKey: input.rankKey,
+      unlockedPermissionIds: input.unlockedPermissionIds,
+      carryOverLine: input.carryOverSummary,
+      tomorrowPreviewLine: tomorrowEcho.text,
+      existingLines: [...existing, ...candidates.map((line) => line.text)],
+    },
+    [...existing, ...candidates.map((line) => line.text)],
+  );
+  if (storyChainHint?.text && visibility.maxVisibleLines > 0) {
+    const chainLine = toLine(
+      { visible: true, text: storyChainHint.text },
+      'story_chain',
+      storyChainHint.label,
+      storyChainHint.iconKey,
+      storyChainHint.tone === 'warn' ? 'warn' : storyChainHint.tone === 'gold' ? 'gold' : 'teal',
+      storyChainHint.priority,
+      storyChainHint.source,
+    );
+    if (chainLine && !isDuplicate(chainLine.text, [...existing, ...candidates.map((l) => l.text)])) {
+      candidates.push(chainLine);
+    }
+  }
+
   candidates.sort((a, b) => b.priority - a.priority);
 
   const lines: CreviaEventResultSystemsEchoLine[] = [];
@@ -732,6 +773,7 @@ export function buildEventResultSystemsEchoModel(
     if (line.kind === 'district_memory' && usedKinds.has('district_memory')) continue;
     if (line.kind === 'tomorrow_carry_over' && usedKinds.has('tomorrow_carry_over')) continue;
     if (line.kind === 'district_operation' && usedKinds.has('district_operation')) continue;
+    if (line.kind === 'story_chain' && usedKinds.has('story_chain')) continue;
     lines.push(line);
     usedKinds.add(line.kind);
   }

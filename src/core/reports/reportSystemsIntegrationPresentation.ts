@@ -49,6 +49,8 @@ import type { EventCard } from '@/core/models/EventCard';
 import type { OperationSignalsState } from '@/core/operations/operationSignalTypes';
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 import type { ReportTomorrowPreviewSummary } from '@/core/reports/reportTomorrowPreviewTypes';
+import type { CreviaDistrictOperationActionState } from '@/core/districtOperationActions/districtOperationActionTypes';
+import { buildStoryChainHintForReport } from '@/core/storyChains/storyChainRuntimeHintPresentation';
 
 export const REPORT_SYSTEMS_MAX_COPY_LENGTH = 96;
 export const REPORT_SYSTEMS_MOBILE_COPY_LENGTH = 72;
@@ -92,7 +94,8 @@ export type CreviaReportSystemsLineKind =
   | 'map_after_effect'
   | 'tomorrow_carry_over'
   | 'crisis_watch'
-  | 'operation_signal';
+  | 'operation_signal'
+  | 'story_chain';
 
 export type CreviaReportSystemsLineTone = 'teal' | 'mint' | 'gold' | 'neutral' | 'warn';
 
@@ -202,6 +205,7 @@ export type CreviaReportSystemsIntegrationInput = {
   existingEchoLines?: string[];
   suppressResourceFatigue?: boolean;
   resourceFatiguePanelLine?: string;
+  districtOperationActionState?: CreviaDistrictOperationActionState | null;
 };
 
 const TRUST_REPORT_INTENT: Record<CreviaDistrictTrustBand, string> = {
@@ -801,6 +805,45 @@ export function buildReportSystemsIntegrationModel(
   if (visibility.showTomorrow) {
     const tomorrowLine = toLine(tomorrowSummary, 'tomorrow_carry_over', 'Yarına İz', 'arrow-forward-circle-outline', 'teal', 52, 'carry_over');
     if (tomorrowLine && !isDuplicate(tomorrowLine.text, existing)) candidates.push(tomorrowLine);
+  }
+
+  const storyChainHint = buildStoryChainHintForReport(
+    {
+      gameDay: input.day ?? input.dailyReport?.day,
+      selectedDistrictId: input.focusDistrictId,
+      lastCompletedEvent: input.lastEvent ?? undefined,
+      dailyReport: input.dailyReport ?? undefined,
+      carryOverMemory: input.carryOverMemory ?? undefined,
+      reportTomorrowPreview: input.reportTomorrowPreview ?? undefined,
+      operationSignals: input.operationSignals,
+      resourceFatigue: input.resourceFatigue,
+      crisisState: input.crisisState,
+      districtOperationActionState: input.districtOperationActionState ?? undefined,
+      activeTaskRouteContext: input.activeTaskRouteContext,
+      activeTaskRouteModel: input.activeTaskRouteUiModel ?? undefined,
+      isPostPilot: input.isPostPilot,
+      isPilotCompleted: input.isPilotCompleted,
+      rankKey: input.rankKey,
+      unlockedPermissionIds: input.unlockedPermissionIds,
+      tomorrowPreviewLine: tomorrowSummary.text ?? input.reportTomorrowPreview?.preview?.summary,
+      carryOverLine: input.carryOverMemory?.summary,
+      existingLines: [...existing, ...candidates.map((line) => line.text)],
+    },
+    [...existing, ...candidates.map((line) => line.text)],
+  );
+  if (storyChainHint?.text && visibility.maxVisibleLines > 0) {
+    const chainLine = toLine(
+      { visible: true, text: storyChainHint.text },
+      'story_chain',
+      storyChainHint.label,
+      storyChainHint.iconKey,
+      storyChainHint.tone === 'warn' ? 'warn' : storyChainHint.tone === 'gold' ? 'gold' : 'teal',
+      storyChainHint.priority,
+      storyChainHint.source,
+    );
+    if (chainLine && !isDuplicate(chainLine.text, [...existing, ...candidates.map((l) => l.text)])) {
+      candidates.push(chainLine);
+    }
   }
 
   candidates.sort((a, b) => b.priority - a.priority);

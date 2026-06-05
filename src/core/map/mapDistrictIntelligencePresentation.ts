@@ -1,3 +1,4 @@
+import type { CarryOverMemoryModel } from '@/core/carryOver/carryOverMemoryTypes';
 import type { CreviaMapLayerId } from '@/core/mapLayers/mapLayerTypes';
 import { normalizeMapDistrictId } from '@/core/districts/districtIdentityPresentation';
 import { DISTRICT_IDENTITIES } from '@/core/districts/districtIdentityConstants';
@@ -20,6 +21,10 @@ import {
   DISTRICT_MEMORY_RUNTIME_PANIC_TERMS,
 } from '@/core/districtMemoryRuntime/districtMemoryRuntimeConstants';
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
+import type { CreviaDistrictOperationActionState } from '@/core/districtOperationActions/districtOperationActionTypes';
+import type { CreviaDistrictMemorySnapshot } from '@/core/districtMemoryRuntime/districtMemoryRuntimeTypes';
+import type { CreviaDistrictTrustRuntimeSnapshot } from '@/core/districtTrustRuntime/districtTrustRuntimeTypes';
+import { buildStoryChainHintForMap } from '@/core/storyChains/storyChainRuntimeHintPresentation';
 
 export const MAP_DISTRICT_INTELLIGENCE_MAX_COPY_LENGTH = 88;
 export const MAP_DISTRICT_INTELLIGENCE_MOBILE_COPY_LENGTH = 72;
@@ -80,6 +85,17 @@ export type CreviaMapDistrictOperationLine = {
   isHintOnly: true;
 };
 
+export type CreviaMapDistrictChainLine = {
+  id: string;
+  kind: 'chain';
+  text: string;
+  chainKind?: string;
+  tone: CreviaMapDistrictIntelligenceLineTone;
+  iconKey: string;
+  priority: number;
+  isHintOnly: true;
+};
+
 export type CreviaMapDistrictIntelligenceChip = {
   id: string;
   label: string;
@@ -98,8 +114,12 @@ export type CreviaMapDistrictIntelligenceModel = {
   trustLine?: CreviaMapDistrictTrustLine;
   memoryLine?: CreviaMapDistrictMemoryLine;
   operationLine?: CreviaMapDistrictOperationLine;
+  chainLine?: CreviaMapDistrictChainLine;
   visibleLines: Array<
-    CreviaMapDistrictTrustLine | CreviaMapDistrictMemoryLine | CreviaMapDistrictOperationLine
+    | CreviaMapDistrictTrustLine
+    | CreviaMapDistrictMemoryLine
+    | CreviaMapDistrictOperationLine
+    | CreviaMapDistrictChainLine
   >;
   stripChips: CreviaMapDistrictIntelligenceChip[];
   isHintOnly: true;
@@ -121,6 +141,9 @@ export type CreviaMapDistrictIntelligenceInput = {
   activeMapLayerId?: CreviaMapLayerId | string;
   crisisOverlayVisible?: boolean;
   activeEvent?: { id?: string; title?: string; neighborhoodId?: string };
+  districtTrustSnapshot?: CreviaDistrictTrustRuntimeSnapshot | null;
+  districtMemorySnapshot?: CreviaDistrictMemorySnapshot | null;
+  districtOperationActionState?: CreviaDistrictOperationActionState | null;
 };
 
 function clampCopy(text: string, max = MAP_DISTRICT_INTELLIGENCE_MOBILE_COPY_LENGTH): string {
@@ -313,6 +336,54 @@ export function buildSelectedDistrictMemoryMapLine(
   };
 }
 
+export function buildSelectedDistrictChainMapLine(
+  input: CreviaMapDistrictIntelligenceInput = {},
+): CreviaMapDistrictChainLine | undefined {
+  const districtId = normalizeMapDistrictId(input.selectedDistrictId ?? 'merkez') ?? 'merkez';
+  const day = input.day ?? 1;
+  if (day <= 1) return undefined;
+
+  const trustLine = buildSelectedDistrictTrustMapLine(input);
+  const memoryLine = buildSelectedDistrictMemoryMapLine(input);
+  const operationLine = buildSelectedDistrictOperationMapLine(input);
+  const existing = [trustLine?.text, memoryLine?.text, operationLine?.text].filter(Boolean) as string[];
+
+  const hint = buildStoryChainHintForMap(
+    {
+      gameDay: day,
+      selectedDistrictId: districtId,
+      activeEvent: input.activeEvent,
+      carryOverMemory: input.carryOverMemory as CarryOverMemoryModel | undefined,
+      districtTrustSnapshot: input.districtTrustSnapshot ?? undefined,
+      districtMemorySnapshot: input.districtMemorySnapshot ?? undefined,
+      districtOperationActionState: input.districtOperationActionState ?? undefined,
+      operationSignals: input.operationSignals,
+      resourceFatigue: input.resourceFatigue,
+      crisisState: input.crisisState,
+      crisisOverlayVisible: input.crisisOverlayVisible,
+      isPostPilot: input.isPostPilot,
+      isPilotCompleted: input.isPilotCompleted,
+      rankKey: input.rankKey,
+      unlockedPermissionIds: input.unlockedPermissionIds,
+      districtMemoryUnresolvedLine: memoryLine?.text,
+      districtOperationActionSummary: operationLine?.text,
+    },
+    existing,
+  );
+  if (!hint?.text) return undefined;
+
+  return {
+    id: `map_chain_${districtId}`,
+    kind: 'chain',
+    text: safeMapCopy(hint.text, `${districtName(districtId)}: kısa saha izi yarına taşınabilir.`),
+    chainKind: hint.chainKind,
+    tone: hint.tone === 'warn' ? 'gold' : hint.tone === 'mint' ? 'mint' : 'teal',
+    iconKey: hint.iconKey,
+    priority: 4,
+    isHintOnly: true,
+  };
+}
+
 export function buildSelectedDistrictOperationMapLine(
   input: CreviaMapDistrictIntelligenceInput = {},
 ): CreviaMapDistrictOperationLine | undefined {
@@ -337,29 +408,39 @@ export function buildSelectedDistrictOperationMapLine(
   };
 }
 
+type MapDistrictIntelligenceLine =
+  | CreviaMapDistrictTrustLine
+  | CreviaMapDistrictMemoryLine
+  | CreviaMapDistrictOperationLine
+  | CreviaMapDistrictChainLine;
+
 function orderLinesByLayerFocus(
-  lines: Array<
-    CreviaMapDistrictTrustLine | CreviaMapDistrictMemoryLine | CreviaMapDistrictOperationLine
-  >,
+  lines: MapDistrictIntelligenceLine[],
   focus: CreviaMapDistrictIntelligenceLayerFocus,
-): typeof lines {
+): MapDistrictIntelligenceLine[] {
   const weight = (kind: string) => {
     if (focus === 'trust') {
       if (kind === 'trust') return 0;
       if (kind === 'memory') return 1;
-      return 2;
+      if (kind === 'chain') return 2;
+      return 3;
     }
     if (focus === 'memory') {
       if (kind === 'memory') return 0;
       if (kind === 'trust') return 1;
-      return 2;
+      if (kind === 'chain') return 2;
+      return 3;
     }
     if (focus === 'operation') {
       if (kind === 'operation') return 0;
-      if (kind === 'trust') return 1;
-      return 2;
+      if (kind === 'chain') return 1;
+      if (kind === 'trust') return 2;
+      return 3;
     }
-    return kind === 'trust' ? 0 : kind === 'memory' ? 1 : 2;
+    if (kind === 'trust') return 0;
+    if (kind === 'memory') return 1;
+    if (kind === 'chain') return 2;
+    return 3;
   };
 
   return [...lines].sort((a, b) => weight(a.kind) - weight(b.kind) || a.priority - b.priority);
@@ -415,10 +496,9 @@ export function buildMapDistrictIntelligenceModel(
   const trustLine = buildSelectedDistrictTrustMapLine(input);
   const memoryLine = buildSelectedDistrictMemoryMapLine(input);
   const operationLine = buildSelectedDistrictOperationMapLine(input);
+  const chainLine = buildSelectedDistrictChainMapLine(input);
 
-  const candidateLines = [trustLine, memoryLine, operationLine].filter(Boolean) as Array<
-    CreviaMapDistrictTrustLine | CreviaMapDistrictMemoryLine | CreviaMapDistrictOperationLine
-  >;
+  const candidateLines = [trustLine, memoryLine, operationLine, chainLine].filter(Boolean) as MapDistrictIntelligenceLine[];
 
   let maxLines = visibility.maxVisibleLines;
   if (
@@ -448,6 +528,7 @@ export function buildMapDistrictIntelligenceModel(
     trustLine,
     memoryLine,
     operationLine,
+    chainLine,
     visibleLines: dedupedLines,
     stripChips: buildMapDistrictIntelligenceChips(input),
     isHintOnly: true,
