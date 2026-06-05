@@ -50,9 +50,11 @@ import { getTimeGreeting } from '@/core/utils/timeGreeting';
 import { TutorialCoachOverlay } from '@/features/tutorial/TutorialCoachOverlay';
 import { OnboardingCoachBubble } from '@/features/onboarding/components/OnboardingCoachBubble';
 import { useOnboardingHint } from '@/features/onboarding/hooks/useOnboardingHint';
+import { creviaAssets } from '@/core/assets/creviaAssets';
+import { hubAssets } from '@/features/hub/utils/hubAssets';
 
-const eceImage = require('../../../../assets/b1.png');
-const municipalImage = require('../../../../assets/b2.png');
+const eceImage = hubAssets.advisorPortrait;
+const municipalImage = creviaAssets.buildings.municipalHall3d;
 const planImage = require('../../../../assets/b4.png');
 const personnelImage = require('../../../../assets/b7.png');
 const reportImage = require('../../../../assets/b8.png');

@@ -77,7 +77,7 @@ export function HubCarryOverMemoryCard({ memory, compact = false }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: spacing.md,
+    marginHorizontal: 0,
     borderRadius: HUB_PREMIUM_RADIUS.card,
     paddingHorizontal: 14,
     paddingVertical: 12,

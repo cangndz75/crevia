@@ -68,6 +68,3 @@ export {
   listDistrictMemoryRuntimeKinds,
   validateDistrictMemoryPresentationCopy,
 } from './districtMemoryRuntimePresentation';
-
-export { verifyDistrictMemoryRuntimeScenario } from './verifyDistrictMemoryRuntimeScenario';
-export type { VerifyDistrictMemoryRuntimeOutcome } from './verifyDistrictMemoryRuntimeScenario';

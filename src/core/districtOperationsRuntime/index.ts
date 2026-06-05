@@ -67,6 +67,3 @@ export {
   listDistrictOperationRuntimeKindsByDistrict,
   validateDistrictOperationPresentationCopy,
 } from './districtOperationsRuntimePresentation';
-
-export { verifyDistrictOperationsRuntimeScenario } from './verifyDistrictOperationsRuntimeScenario';
-export type { VerifyDistrictOperationsRuntimeOutcome } from './verifyDistrictOperationsRuntimeScenario';

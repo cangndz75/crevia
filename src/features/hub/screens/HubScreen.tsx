@@ -13,7 +13,6 @@ import {
   buildHubCarryOverMemory,
   shouldShowCarryOverMemory,
 } from '@/core/carryOver/carryOverMemoryPresentation';
-import { HubCarryOverMemoryCard } from '@/features/hub/components/HubCarryOverMemoryCard';
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
 import { HubReferenceHome } from '@/features/hub/components/HubReferenceHome';
 import { buildHubScreenLayoutModel } from '@/features/hub/utils/hubScreenPresentation';
@@ -124,9 +123,6 @@ export function HubScreen() {
       headerVariant="none"
       backgroundColor="#F7F1E6"
       contentStyle={{ paddingHorizontal: 0, paddingTop: 0, gap: 0, paddingBottom: 118 }}>
-      {showHubCarryOver ? (
-        <HubCarryOverMemoryCard memory={hubCarryOverMemory} compact />
-      ) : null}
       <HubReferenceHome
         hubCarryOverMemory={hubCarryOverMemory}
         showHubCarryOver={showHubCarryOver}

@@ -294,7 +294,14 @@ export function verifyCarryOverMemoryScenario(): VerifyCarryOverMemoryOutcome {
   record(assert(checks, eventCard.includes('numberOfLines'), 'Event card numberOfLines', 'event lines'));
   record(assert(checks, reportCard.includes('flexShrink'), 'Report card flexShrink', 'report shrink'));
 
-  record(assert(checks, readRepo('src/features/hub/screens/HubScreen.tsx').includes('HubCarryOverMemoryCard'), 'HubScreen integration', 'hub screen'));
+  record(
+    assert(
+      checks,
+      readRepo('src/features/hub/components/HubReferenceHome.tsx').includes('HubCarryOverMemoryCard'),
+      'HubReferenceHome integration',
+      'hub home',
+    ),
+  );
   record(assert(checks, readRepo('src/features/events/screens/EventDetailDecisionScreen.tsx').includes('EventCarryOverHintCard'), 'EventDetail integration', 'event detail'));
   record(assert(checks, !readRepo('src/features/events/screens/EventDetailDecisionScreen.tsx').includes('hubDay === 1') || readRepo('src/features/events/screens/EventDetailDecisionScreen.tsx').includes('shouldShowCarryOverMemory'), 'EventDetail Day1 guard', 'event day1'));
 

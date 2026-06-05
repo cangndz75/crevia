@@ -62,6 +62,3 @@ export {
   listDistrictTrustRuntimeBands,
   validateDistrictTrustPresentationCopy,
 } from './districtTrustRuntimePresentation';
-
-export { verifyDistrictTrustRuntimeScenario } from './verifyDistrictTrustRuntimeScenario';
-export type { VerifyDistrictTrustRuntimeOutcome } from './verifyDistrictTrustRuntimeScenario';

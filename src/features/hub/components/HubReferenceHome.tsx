@@ -20,12 +20,15 @@ import { buildHubOpenEndedIntegrationModel } from '@/core/hub/hubOpenEndedIntegr
 import { getTimeGreeting } from '@/core/utils/timeGreeting';
 import { useGameStatus } from '@/store/gameSelectors';
 import { useGameStore } from '@/store/useGameStore';
+import { creviaAssets } from '@/core/assets/creviaAssets';
+import { hubAssets } from '@/features/hub/utils/hubAssets';
 import { HeaderAvatar } from '@/ui/components/game-header/HeaderAvatar';
 
+import { HubCarryOverMemoryCard } from './HubCarryOverMemoryCard';
 import { HubOpenEndedOperationCard } from './HubOpenEndedOperationCard';
 
-const eceImage = require('../../../../assets/b1.png');
-const municipalImage = require('../../../../assets/b2.png');
+const eceImage = hubAssets.advisorPortrait;
+const municipalImage = creviaAssets.buildings.municipalHall3d;
 const teamImage = require('../../../../assets/b3.png');
 const planImage = require('../../../../assets/b4.png');
 const routeImage = require('../../../../assets/b5.png');
@@ -262,7 +265,7 @@ function HeaderBlock() {
   );
 }
 
-function EceWelcomeCard() {
+function EceWelcomeCard({ belowCarryOver = false }: { belowCarryOver?: boolean }) {
   const router = useRouter();
   const status = useGameStatus();
   const width = useWindowDimensions().width;
@@ -274,7 +277,9 @@ function EceWelcomeCard() {
   };
 
   return (
-    <AnimatedCard delay={80} style={styles.overlapCardWrap}>
+    <AnimatedCard
+      delay={80}
+      style={belowCarryOver ? styles.overlapCardWrapBelowCarryOver : styles.overlapCardWrap}>
       <View style={[styles.card, styles.eceCard]}>
         <Image source={municipalImage} style={styles.eceBuilding} contentFit="contain" />
         <View style={styles.sparkleA} />
@@ -655,7 +660,10 @@ export function HubReferenceHome({
     <View style={styles.root}>
       <HeaderBlock />
       <View style={styles.body}>
-        <EceWelcomeCard />
+        {showHubCarryOver && hubCarryOverMemory ? (
+          <HubCarryOverMemoryCard memory={hubCarryOverMemory} compact />
+        ) : null}
+        <EceWelcomeCard belowCarryOver={showHubCarryOver === true} />
         <LearningProgressCard />
         <HubOpenEndedOperationSlot
           hubCarryOverMemory={hubCarryOverMemory}
@@ -795,6 +803,9 @@ const styles = StyleSheet.create({
   },
   overlapCardWrap: {
     marginTop: -18,
+  },
+  overlapCardWrapBelowCarryOver: {
+    marginTop: -8,
   },
   card: {
     backgroundColor: palette.card,
