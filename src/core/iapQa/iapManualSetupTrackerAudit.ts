@@ -1,6 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { runSecretHygieneScan } from '@/core/security/secretHygieneAudit';
+import { buildSecretRotationClosureResult } from '@/core/security/secretRotationClosureAudit';
+
 import { IAP_SANDBOX_QA_ENV_KEYS } from './iapSandboxQaConstants';
 import {
   IAP_MANUAL_SETUP_TRACKER_AREAS,
@@ -45,41 +48,15 @@ function readRepoFile(rel: string): string {
 }
 
 function checkSecretKeyCommitted(): boolean {
-  const filesToScan = [
-    'src/core/iap/iapProductConstants.ts',
-    'src/core/iap/iapRuntimeConfig.ts',
-    'src/core/iapQa/iapSandboxQaConstants.ts',
-    'app.json',
-    '.env',
-    '.env.local',
-  ];
-  for (const file of filesToScan) {
-    const content = readRepoFile(file);
-    if (content.length === 0) continue;
-    for (const pattern of IAP_MANUAL_SETUP_SECRET_PATTERNS) {
-      if (content.includes(pattern)) return true;
-    }
-  }
-  return false;
+  const hygiene = runSecretHygieneScan();
+  return hygiene.findings.some((f) => f.kind === 'revenuecat_secret_key');
 }
 
 function checkDocsContainRealKey(): boolean {
-  const docsToScan = [
-    IAP_MANUAL_SETUP_TRACKER_DOCS_PATH,
-    'docs/crevia-iap-sandbox-smoke-test.md',
-    'docs/crevia-iap-sandbox-smoke-execution.md',
-    'docs/crevia-iap-integration.md',
-  ];
-  for (const doc of docsToScan) {
-    const content = readRepoFile(doc);
-    if (content.length === 0) continue;
-    if (/appl_[a-zA-Z0-9]{10,}/.test(content)) return true;
-    if (/goog_[a-zA-Z0-9]{10,}/.test(content)) return true;
-    for (const pattern of IAP_MANUAL_SETUP_SECRET_PATTERNS) {
-      if (content.includes(pattern)) return true;
-    }
-  }
-  return false;
+  const hygiene = runSecretHygieneScan();
+  return hygiene.findings.some(
+    (f) => f.kind === 'docs_real_key_value' || (f.kind === 'revenuecat_secret_key' && f.filePath.startsWith('docs/')),
+  );
 }
 
 export function buildIapManualSetupTracker(): CreviaIapManualSetupTrackerResult {
@@ -98,8 +75,20 @@ export function buildIapManualSetupTracker(): CreviaIapManualSetupTrackerResult 
     noSecretItem.status = secretCommitted ? 'blocked' : 'verified';
   }
 
-  const blockers = collectIapManualSetupBlockers(items, keysConfigured, secretCommitted, docsContainRealKey);
-  const warnings = collectIapManualSetupWarnings(items, keysConfigured, docsContainRealKey);
+  const rotationClosure = buildSecretRotationClosureResult();
+  const blockers = collectIapManualSetupBlockers(
+    items,
+    keysConfigured,
+    secretCommitted,
+    docsContainRealKey,
+    rotationClosure,
+  );
+  const warnings = collectIapManualSetupWarnings(
+    items,
+    keysConfigured,
+    docsContainRealKey,
+    rotationClosure,
+  );
   const platformStatuses = buildIapManualSetupPlatformStatus(items);
   const nextActions = buildIapManualSetupNextActions(items, keysConfigured, secretCommitted);
 
@@ -153,8 +142,42 @@ export function collectIapManualSetupBlockers(
   keysConfigured: boolean,
   secretCommitted: boolean,
   docsContainRealKey: boolean,
+  rotationClosure = buildSecretRotationClosureResult(),
 ): CreviaIapManualSetupBlocker[] {
   const blockers: CreviaIapManualSetupBlocker[] = [];
+
+  if (!rotationClosure.currentTreeSanitized) {
+    blockers.push({
+      id: 'security.current_tree_blocks_closure',
+      area: 'revenuecat_project',
+      title: 'Secret rotation closure blocked — current tree dirty',
+      message: 'Sanitize current tree before IAP sandbox execution.',
+      recommendation: 'Run verify:secret-hygiene first.',
+    });
+  }
+
+  if (rotationClosure.blockers.some((b) => b.id === 'closure.raw_key_evidence_blocked')) {
+    blockers.push({
+      id: 'security.raw_key_evidence_blocked',
+      area: 'revenuecat_project',
+      title: 'Rotation evidence contains raw key',
+      message: 'Evidence must not include key values.',
+      recommendation: 'Remove raw keys from evidence records.',
+    });
+  }
+
+  if (
+    rotationClosure.rotationRequired &&
+    !rotationClosure.rotationVerifiedClosed
+  ) {
+    blockers.push({
+      id: 'security.rotation_required_pending',
+      area: 'revenuecat_project',
+      title: 'Secret rotation closure pending',
+      message: `${rotationClosure.pendingRotationCount} exposure(s) await provider rotate/revoke.`,
+      recommendation: 'Complete docs/crevia-secret-rotation-closure.md checklist.',
+    });
+  }
 
   if (!keysConfigured) {
     blockers.push({
@@ -229,8 +252,29 @@ export function collectIapManualSetupWarnings(
   items: CreviaIapManualSetupItem[],
   keysConfigured: boolean,
   docsContainRealKey: boolean,
+  rotationClosure = buildSecretRotationClosureResult(),
 ): CreviaIapManualSetupWarning[] {
   const warnings: CreviaIapManualSetupWarning[] = [];
+
+  if (rotationClosure.rotationVerifiedClosed && rotationClosure.closureCanProceed) {
+    warnings.push({
+      id: 'security.rotation_verified_closed',
+      area: 'revenuecat_project',
+      title: 'Secret rotation closure verified',
+      message: 'No pending rotation exposures.',
+      recommendation: 'Proceed with IAP manual setup when ready.',
+    });
+  }
+
+  if (rotationClosure.warnings.length > 0) {
+    warnings.push({
+      id: 'security.rotation_closure_warnings',
+      area: 'revenuecat_project',
+      title: 'Rotation closure warnings',
+      message: rotationClosure.warnings.map((w) => w.title).slice(0, 2).join('; '),
+      recommendation: 'Review docs/crevia-secret-rotation-closure.md.',
+    });
+  }
 
   const nonBlockerPending = items.filter(
     (i) => !i.blockerIfMissing && (i.status === 'pending_manual' || i.status === 'not_started'),

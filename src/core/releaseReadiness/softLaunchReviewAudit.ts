@@ -21,6 +21,10 @@ import {
 import { IAP_SANDBOX_SMOKE_EXECUTION_DOCS_PATH } from '@/core/iapQa/iapSandboxSmokeExecutionConstants';
 import { buildIapManualSetupTracker } from '@/core/iapQa/iapManualSetupTrackerAudit';
 import { IAP_MANUAL_SETUP_TRACKER_DOCS_PATH } from '@/core/iapQa/iapManualSetupTrackerConstants';
+import { runSecretHygieneScan } from '@/core/security/secretHygieneAudit';
+import { SECRET_HYGIENE_DOCS_PATH } from '@/core/security/secretHygieneConstants';
+import { buildSecretRotationClosureResult } from '@/core/security/secretRotationClosureAudit';
+import { SECRET_ROTATION_CLOSURE_DOCS_PATH } from '@/core/security/secretRotationClosureConstants';
 import { REAL_DEVICE_PLAYTEST_DOCS_PATH } from '@/core/playtest/realDevicePlaytestConstants';
 import { buildRealDevicePlaytestPlan } from '@/core/playtest/realDevicePlaytestPlan';
 import { verifyPlayerFlowAuditScenario } from '@/core/playtest/verifyPlayerFlowAuditScenario';
@@ -1356,6 +1360,164 @@ function auditAreaReleaseStore(mode: CreviaSoftLaunchReviewMode): CreviaSoftLaun
       'Run verify:soft-launch-readiness.',
     ),
   );
+
+  const secretHygiene = runSecretHygieneScan();
+
+  if (existsSync(join(REPO_ROOT, SECRET_HYGIENE_DOCS_PATH))) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'security.secret_hygiene_scan_present',
+        'pass',
+        'Secret hygiene scan present',
+        `${secretHygiene.scannedFileCount} source + ${secretHygiene.scannedDocCount} doc files scanned.`,
+        SECRET_HYGIENE_DOCS_PATH,
+      ),
+    );
+  }
+
+  if (secretHygiene.findings.some((f) => f.kind === 'revenuecat_secret_key')) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'security.secret_pattern_found',
+        'blocker',
+        'Secret key pattern found in repo',
+        'Real secret key detected in source or docs.',
+        'Remove and rotate key in provider dashboard.',
+      ),
+    );
+  }
+
+  if (secretHygiene.findings.some((f) => f.kind === 'docs_real_key_value')) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'security.docs_real_key_found',
+        mode === 'internal_device_test' ? 'warn' : 'blocker',
+        'Real API key value found in docs',
+        'Public key value detected in documentation files.',
+        'Replace with placeholder; keys belong in EAS secrets only.',
+        false,
+      ),
+    );
+  }
+
+  if (secretHygiene.rotationPending) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'security.rotation_required',
+        mode === 'launch_candidate' || mode === 'soft_launch_candidate' ? 'blocker' : 'warn',
+        'Key rotation required',
+        'Secret key was found; provider-side rotation pending.',
+        'Rotate/revoke key in provider dashboard.',
+        false,
+      ),
+    );
+  }
+
+  if (secretHygiene.currentTreeSanitized) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'security.current_tree_sanitized',
+        'pass',
+        'Current tree sanitized',
+        'No secret patterns detected in working tree.',
+        SECRET_HYGIENE_DOCS_PATH,
+      ),
+    );
+  } else {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'security.current_tree_dirty',
+        'blocker',
+        'Current tree not sanitized',
+        'Secret patterns detected — closure and sandbox blocked.',
+        'Run verify:secret-hygiene and sanitize first.',
+        false,
+      ),
+    );
+  }
+
+  const rotationClosure = buildSecretRotationClosureResult();
+
+  if (existsSync(join(REPO_ROOT, SECRET_ROTATION_CLOSURE_DOCS_PATH))) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'security.secret_rotation_closure_present',
+        'pass',
+        'Secret rotation closure tracker present',
+        `${rotationClosure.exposureCount} exposure record(s); closure can proceed: ${rotationClosure.closureCanProceed}.`,
+        SECRET_ROTATION_CLOSURE_DOCS_PATH,
+      ),
+    );
+  }
+
+  if (
+    rotationClosure.rotationRequired &&
+    !rotationClosure.rotationVerifiedClosed
+  ) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'security.rotation_required_pending',
+        mode === 'internal_device_test' ? 'warn' : 'blocker',
+        'Secret rotation closure pending',
+        `${rotationClosure.pendingRotationCount} exposure(s) await provider rotate/revoke.`,
+        SECRET_ROTATION_CLOSURE_DOCS_PATH,
+        false,
+      ),
+    );
+  }
+
+  if (rotationClosure.blockers.some((b) => b.id === 'closure.rotation_evidence_missing')) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'security.rotation_evidence_missing',
+        mode === 'soft_launch_candidate' || mode === 'launch_candidate' ? 'blocker' : 'warn',
+        'Rotation evidence missing',
+        'Exposure requires manual evidence before launch.',
+        'Record evidence without raw key values.',
+        false,
+      ),
+    );
+  }
+
+  if (rotationClosure.rotationVerifiedClosed && rotationClosure.closureCanProceed) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'security.rotation_verified_closed',
+        'pass',
+        'Secret rotation verified closed',
+        'All required rotations closed or not required.',
+        SECRET_ROTATION_CLOSURE_DOCS_PATH,
+      ),
+    );
+  }
+
+  if (
+    mode === 'iap_sandbox_test' &&
+    rotationClosure.rotationRequired &&
+    !rotationClosure.rotationVerifiedClosed
+  ) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'security.rotation_blocks_sandbox',
+        'blocker',
+        'Rotation pending blocks IAP sandbox test',
+        'Complete rotation closure before sandbox execution.',
+        SECRET_ROTATION_CLOSURE_DOCS_PATH,
+        false,
+      ),
+    );
+  }
 
   return findings;
 }

@@ -134,6 +134,8 @@
     "verify:iap-sandbox-readiness": "npx tsx scripts/verify-iap-sandbox-readiness.ts",
     "verify:iap-sandbox-smoke-execution": "npx tsx scripts/verify-iap-sandbox-smoke-execution.ts",
     "verify:iap-manual-setup-tracker": "npx tsx scripts/verify-iap-manual-setup-tracker.ts",
+    "verify:secret-hygiene": "npx tsx scripts/verify-secret-hygiene.ts",
+    "verify:secret-rotation-closure": "npx tsx scripts/verify-secret-rotation-closure.ts",
     "verify:store-metadata-finalization": "npx tsx scripts/verify-store-metadata-finalization.ts",
     "verify:store-screenshot-readiness": "npx tsx scripts/verify-store-screenshot-readiness.ts",
     "verify:store-listing-readiness": "npx tsx scripts/verify-store-listing-readiness.ts",
