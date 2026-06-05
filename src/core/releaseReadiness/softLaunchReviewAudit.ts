@@ -15,6 +15,12 @@ import {
   containsForbiddenSeasonEndCopy,
   buildPeriodicReviewCopy,
 } from '@/core/openEndedProgression/openEndedProgressionPresentation';
+import {
+  buildIapSandboxSmokeExecutionResult,
+} from '@/core/iapQa/iapSandboxSmokeExecutionAudit';
+import { IAP_SANDBOX_SMOKE_EXECUTION_DOCS_PATH } from '@/core/iapQa/iapSandboxSmokeExecutionConstants';
+import { buildIapManualSetupTracker } from '@/core/iapQa/iapManualSetupTrackerAudit';
+import { IAP_MANUAL_SETUP_TRACKER_DOCS_PATH } from '@/core/iapQa/iapManualSetupTrackerConstants';
 import { REAL_DEVICE_PLAYTEST_DOCS_PATH } from '@/core/playtest/realDevicePlaytestConstants';
 import { buildRealDevicePlaytestPlan } from '@/core/playtest/realDevicePlaytestPlan';
 import { verifyPlayerFlowAuditScenario } from '@/core/playtest/verifyPlayerFlowAuditScenario';
@@ -39,6 +45,17 @@ import { MONETIZATION_COPY } from '@/core/monetization/monetizationConstants';
 import { SAVE_VERSION } from '@/store/gamePersist';
 
 import { runSoftLaunchReadinessAudit } from './softLaunchReadinessAudit';
+import { runPrivacyPolicyReadinessAudit } from './privacyPolicyReadinessAudit';
+import { runStoreMetadataFinalizationAudit } from './storeMetadataFinalizationAudit';
+import { STORE_METADATA_FINALIZATION_DOCS_PATH } from './storeMetadataFinalizationConstants';
+import { runStoreScreenshotReadinessAudit } from './storeScreenshotReadinessAudit';
+import { STORE_SCREENSHOT_READINESS_DOCS_PATH } from './storeScreenshotReadinessConstants';
+import {
+  DATA_SAFETY_DRAFT_DOCS_PATH,
+  PRIVACY_POLICY_DRAFT_DOCS_PATH,
+} from './privacyPolicyReadinessConstants';
+import { runStoreListingReadinessAudit } from './storeListingReadinessAudit';
+import { STORE_LISTING_READINESS_DOCS_PATH } from './storeListingReadinessConstants';
 import {
   SOFT_LAUNCH_REVIEW_AREAS,
   SOFT_LAUNCH_REVIEW_AREA_LABELS,
@@ -691,12 +708,190 @@ function auditAreaIap(mode: CreviaSoftLaunchReviewMode): CreviaSoftLaunchReviewF
       'iap_monetization',
       'iap.smoke_test_pending',
       mode === 'launch_candidate' || mode === 'soft_launch_candidate' ? 'blocker' : 'warn',
-      'Sandbox smoke test pending',
-      `${sandbox.smokeTestPlan.cases.filter((c) => c.status === 'pending').length} manual smoke cases.`,
+      'Sandbox smoke readiness pending',
+      `${sandbox.smokeTestPlan.cases.filter((c) => c.status === 'pending').length} readiness smoke cases.`,
       'Complete smoke matrix on EAS dev build.',
       false,
     ),
   );
+
+  const smokeExecution = buildIapSandboxSmokeExecutionResult();
+  if (existsSync(join(REPO_ROOT, IAP_SANDBOX_SMOKE_EXECUTION_DOCS_PATH))) {
+    findings.push(
+      makeFinding(
+        'iap_monetization',
+        'iap.smoke_execution_plan',
+        'pass',
+        'IAP sandbox smoke execution plan',
+        `${smokeExecution.plan.cases.length} execution cases; iOS/Android platform model.`,
+        IAP_SANDBOX_SMOKE_EXECUTION_DOCS_PATH,
+      ),
+    );
+  } else {
+    findings.push(
+      makeFinding(
+        'iap_monetization',
+        'iap.smoke_execution_plan_missing',
+        mode === 'launch_candidate' ? 'blocker' : 'warn',
+        'IAP smoke execution docs missing',
+        'Execution plan not documented.',
+        IAP_SANDBOX_SMOKE_EXECUTION_DOCS_PATH,
+      ),
+    );
+  }
+
+  if (smokeExecution.decision === 'failed_smoke_test') {
+    findings.push(
+      makeFinding(
+        'iap_monetization',
+        'iap.smoke_execution_failed',
+        'blocker',
+        'IAP sandbox smoke execution failed',
+        smokeExecution.blockers.map((b) => b.title).slice(0, 3).join('; '),
+        'Fix failed cases and re-run on device.',
+        false,
+      ),
+    );
+  } else if (!smokeExecution.sandboxSmokePassed) {
+    findings.push(
+      makeFinding(
+        'iap_monetization',
+        'iap.smoke_execution_pending',
+        mode === 'launch_candidate' || mode === 'soft_launch_candidate' ? 'blocker' : 'warn',
+        'IAP sandbox smoke execution pending',
+        `Decision: ${smokeExecution.decision}; manual results: ${smokeExecution.manualResultsPresent}.`,
+        IAP_SANDBOX_SMOKE_EXECUTION_DOCS_PATH,
+        false,
+      ),
+    );
+  }
+
+  if (smokeExecution.devMockOnlyPassed && !smokeExecution.manualResultsPresent) {
+    findings.push(
+      makeFinding(
+        'iap_monetization',
+        'iap.smoke_dev_mock_only',
+        'warn',
+        'Dev mock pass does not replace sandbox smoke',
+        'Automated mock/disabled cases pass; real store sandbox not logged.',
+        'Run EAS dev build sandbox matrix.',
+      ),
+    );
+  }
+
+  for (const pr of smokeExecution.platformResults) {
+    if (pr.status !== 'passed') {
+      findings.push(
+        makeFinding(
+          'iap_monetization',
+          `iap.smoke_platform_${pr.platform}_pending`,
+          mode === 'launch_candidate' ? 'blocker' : 'warn',
+          `${pr.platform.toUpperCase()} sandbox smoke pending`,
+          `pass=${pr.passedCount} pending=${pr.pendingCount} of ${pr.sandboxCaseCount}.`,
+          `Complete ${pr.platform} device smoke tests.`,
+          false,
+        ),
+      );
+    }
+  }
+
+  const manualSetup = buildIapManualSetupTracker();
+
+  if (existsSync(join(REPO_ROOT, IAP_MANUAL_SETUP_TRACKER_DOCS_PATH))) {
+    findings.push(
+      makeFinding(
+        'iap_monetization',
+        'iap.manual_setup_tracker_present',
+        'pass',
+        'IAP manual setup tracker present',
+        `${manualSetup.items.length} items across ${manualSetup.areas.length} areas.`,
+        IAP_MANUAL_SETUP_TRACKER_DOCS_PATH,
+      ),
+    );
+  }
+
+  if (!manualSetup.revenueCatKeysConfigured) {
+    findings.push(
+      makeFinding(
+        'iap_monetization',
+        'iap.revenuecat_keys_pending',
+        mode === 'internal_device_test' ? 'warn' : 'blocker',
+        'RevenueCat keys pending (tracker)',
+        'Manual setup tracker: public SDK keys not configured.',
+        'Create RC project and add appl_/goog_ keys to EAS secrets.',
+        false,
+      ),
+    );
+  }
+
+  if (manualSetup.entitlementMappingPending) {
+    findings.push(
+      makeFinding(
+        'iap_monetization',
+        'iap.entitlement_mapping_pending',
+        mode === 'iap_sandbox_test' || mode === 'launch_candidate' || mode === 'soft_launch_candidate' ? 'blocker' : 'warn',
+        'Entitlement mapping pending (tracker)',
+        'RevenueCat entitlement/offering not configured in dashboard.',
+        IAP_MANUAL_SETUP_TRACKER_DOCS_PATH,
+        false,
+      ),
+    );
+  }
+
+  if (manualSetup.storeProductsPending) {
+    findings.push(
+      makeFinding(
+        'iap_monetization',
+        'iap.store_products_pending',
+        mode === 'iap_sandbox_test' || mode === 'launch_candidate' || mode === 'soft_launch_candidate' ? 'blocker' : 'warn',
+        'Store products pending (tracker)',
+        'App Store Connect / Play Console products not configured.',
+        IAP_MANUAL_SETUP_TRACKER_DOCS_PATH,
+        false,
+      ),
+    );
+  }
+
+  if (manualSetup.easSecretsPending) {
+    findings.push(
+      makeFinding(
+        'iap_monetization',
+        'iap.eas_secrets_pending',
+        mode === 'iap_sandbox_test' || mode === 'launch_candidate' || mode === 'soft_launch_candidate' ? 'blocker' : 'warn',
+        'EAS secrets pending (tracker)',
+        'EXPO_PUBLIC_REVENUECAT_* not stored in EAS secrets.',
+        IAP_MANUAL_SETUP_TRACKER_DOCS_PATH,
+        false,
+      ),
+    );
+  }
+
+  if (manualSetup.sandboxTestersPending) {
+    findings.push(
+      makeFinding(
+        'iap_monetization',
+        'iap.sandbox_testers_pending',
+        mode === 'launch_candidate' || mode === 'soft_launch_candidate' ? 'blocker' : 'warn',
+        'Sandbox testers pending (tracker)',
+        'iOS sandbox tester / Android license tester not configured.',
+        IAP_MANUAL_SETUP_TRACKER_DOCS_PATH,
+        false,
+      ),
+    );
+  }
+
+  if (manualSetup.allVerified) {
+    findings.push(
+      makeFinding(
+        'iap_monetization',
+        'iap.manual_setup_verified',
+        'pass',
+        'IAP manual setup all verified',
+        'All manual setup items verified on device.',
+        IAP_MANUAL_SETUP_TRACKER_DOCS_PATH,
+      ),
+    );
+  }
 
   return findings;
 }
@@ -772,50 +967,377 @@ function auditAreaSaveMigration(): CreviaSoftLaunchReviewFinding[] {
   return findings;
 }
 
+function storeListingSeverity(
+  mode: CreviaSoftLaunchReviewMode,
+  wouldBlock: boolean,
+): CreviaSoftLaunchReviewSeverity {
+  if (!wouldBlock) return 'pass';
+  if (mode === 'launch_candidate') return 'blocker';
+  return 'warn';
+}
+
 function auditAreaReleaseStore(mode: CreviaSoftLaunchReviewMode): CreviaSoftLaunchReviewFinding[] {
   const findings: CreviaSoftLaunchReviewFinding[] = [];
   const softLaunch = runSoftLaunchReadinessAudit({
     mode: mode === 'launch_candidate' || mode === 'soft_launch_candidate' ? 'launch_candidate' : 'pre_sdk',
   });
+  const storeListing = runStoreListingReadinessAudit({ mode });
+  const privacyPolicy = runPrivacyPolicyReadinessAudit({ mode });
 
-  const iconReady = existsSync(join(REPO_ROOT, 'assets/icon.png'));
+  const iconReady =
+    existsSync(join(REPO_ROOT, 'assets/icon.png')) ||
+    existsSync(join(REPO_ROOT, 'assets/images/icon.png'));
+
+  if (existsSync(join(REPO_ROOT, STORE_LISTING_READINESS_DOCS_PATH))) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'store.listing_readiness_plan',
+        'pass',
+        'Store listing readiness pack',
+        `${storeListing.checklist.length} checklist items; ${storeListing.screenshots.length} screenshots; privacy matrix.`,
+        STORE_LISTING_READINESS_DOCS_PATH,
+      ),
+    );
+  }
+
   findings.push(
     makeFinding(
       'release_store_readiness',
       iconReady ? 'store.icon_present' : 'store.icon_pending',
       iconReady ? 'pass' : 'warn',
       iconReady ? 'App icon asset present' : 'App icon review pending',
-      'assets/icon.png',
+      'assets/images/icon.png',
       'Finalize store icon before submission.',
       false,
     ),
     makeFinding(
       'release_store_readiness',
-      'store.screenshots_pending',
-      'warn',
+      storeListing.copyForbiddenClaimsScanPassed
+        ? 'store.listing_copy_scan_pass'
+        : 'store.listing_copy_scan_fail',
+      storeListing.copyForbiddenClaimsScanPassed ? 'pass' : 'blocker',
+      storeListing.copyForbiddenClaimsScanPassed
+        ? 'Store copy false-claim scan passed'
+        : 'Store copy contains forbidden claim',
+      'Draft TR/EN descriptions scanned.',
+      'Remove GPS/official municipality/real-money claims.',
+    ),
+    makeFinding(
+      'release_store_readiness',
+      'store.listing_screenshots_pending',
+      storeListingSeverity(mode, !storeListing.screenshotsComplete),
       'Store screenshots pending',
-      'Manual App Store / Play screenshot capture.',
-      'Prepare 6.7" and phone screenshots.',
+      `${storeListing.screenshots.filter((s) => s.status === 'pending').length}/${storeListing.screenshots.length} screens not captured.`,
+      STORE_LISTING_READINESS_DOCS_PATH,
       false,
     ),
     makeFinding(
       'release_store_readiness',
-      'store.listing_pending',
-      'warn',
-      'Store listing copy pending',
-      'Localized listing text not auto-verified.',
-      'Draft listing from docs/crevia-soft-launch-readiness.md.',
+      'store.listing_metadata_pending',
+      storeListingSeverity(mode, !storeListing.storeMetadataReady),
+      'Store metadata draft / pending',
+      'TR+EN drafts in repo; store console entry manual.',
+      STORE_LISTING_READINESS_DOCS_PATH,
       false,
     ),
     makeFinding(
       'release_store_readiness',
-      'store.privacy_pending',
-      'warn',
-      'Privacy / data safety pending',
-      'Privacy policy and data safety form manual.',
-      'Align with analytics no-PII policy.',
+      'store.listing_privacy_policy_pending',
+      storeListingSeverity(mode, storeListing.privacyPolicyUrlIsPlaceholder),
+      storeListing.privacyPolicyUrlIsPlaceholder
+        ? 'Privacy policy URL placeholder'
+        : 'Privacy policy URL configured',
+      storeListing.metadataDraft.privacyPolicyUrl,
+      'Publish real privacy policy before launch_candidate.',
       false,
     ),
+    makeFinding(
+      'release_store_readiness',
+      'store.listing_iap_metadata_pending',
+      'warn',
+      'IAP store metadata placeholder',
+      'Product ids and price tier pending in dashboards.',
+      'docs/crevia-iap-sandbox-smoke-test.md',
+      false,
+    ),
+    makeFinding(
+      'release_store_readiness',
+      'store.listing_data_safety_pending',
+      'warn',
+      'Privacy / data safety forms pending',
+      'Apple Privacy Nutrition + Play Data safety manual.',
+      DATA_SAFETY_DRAFT_DOCS_PATH,
+      false,
+    ),
+  );
+
+  if (existsSync(join(REPO_ROOT, PRIVACY_POLICY_DRAFT_DOCS_PATH))) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'privacy.policy_draft_present',
+        'pass',
+        'Privacy policy draft present',
+        `${privacyPolicy.sections.length} sections; TR+EN in ${PRIVACY_POLICY_DRAFT_DOCS_PATH}.`,
+        'Legal review required before publication.',
+      ),
+    );
+  } else {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'privacy.policy_draft_missing',
+        storeListingSeverity(mode, mode === 'soft_launch_candidate'),
+        'Privacy policy draft missing',
+        PRIVACY_POLICY_DRAFT_DOCS_PATH,
+        'Create privacy policy draft before store submission.',
+        false,
+      ),
+    );
+  }
+
+  if (privacyPolicy.publishedPrivacyUrlIsPlaceholder) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'privacy.published_url_placeholder',
+        storeListingSeverity(mode, true),
+        'Published privacy policy URL placeholder',
+        privacyPolicy.publishedPrivacyUrlIsPlaceholder
+          ? 'Real hosted URL required for launch.'
+          : 'URL configured.',
+        PRIVACY_POLICY_DRAFT_DOCS_PATH,
+        false,
+      ),
+    );
+  }
+
+  if (!privacyPolicy.appStoreDraftComplete) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'privacy.app_store_answers_pending',
+        mode === 'launch_candidate' ? 'blocker' : 'warn',
+        'App Store privacy answers draft incomplete',
+        'Manual confirmation items remain.',
+        DATA_SAFETY_DRAFT_DOCS_PATH,
+        false,
+      ),
+    );
+  } else {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'privacy.app_store_answers_draft',
+        'pass',
+        'App Store privacy answer draft ready',
+        `${privacyPolicy.appStoreAnswers.length} categories documented.`,
+        DATA_SAFETY_DRAFT_DOCS_PATH,
+      ),
+    );
+  }
+
+  if (!privacyPolicy.googlePlayDraftComplete) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'privacy.google_play_safety_pending',
+        mode === 'launch_candidate' ? 'blocker' : 'warn',
+        'Google Play data safety draft incomplete',
+        'Manual confirmation items remain.',
+        DATA_SAFETY_DRAFT_DOCS_PATH,
+        false,
+      ),
+    );
+  } else {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'privacy.google_play_safety_draft',
+        'pass',
+        'Google Play data safety draft ready',
+        `${privacyPolicy.googlePlayAnswers.length} data types documented.`,
+        DATA_SAFETY_DRAFT_DOCS_PATH,
+      ),
+    );
+  }
+
+  if (privacyPolicy.thirdPartyConfirmationPending) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'privacy.third_party_sdk_pending',
+        'warn',
+        'Third-party SDK data confirmation pending',
+        'RevenueCat, analytics, crash SDK behavior manual.',
+        'docs/crevia-iap-sandbox-smoke-execution.md',
+        false,
+      ),
+    );
+  }
+
+  if (privacyPolicy.legalReviewPending) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'privacy.legal_review_pending',
+        'warn',
+        'Legal review pending',
+        'Draft is not legal advice; counsel review before publish.',
+        PRIVACY_POLICY_DRAFT_DOCS_PATH,
+        false,
+      ),
+    );
+  }
+
+  if (!privacyPolicy.riskyWordingScanPassed) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'privacy.risky_wording_fail',
+        mode === 'launch_candidate' ? 'blocker' : 'warn',
+        'Privacy copy risky wording detected',
+        'Remove absolute no-data or compliance claims.',
+        PRIVACY_POLICY_DRAFT_DOCS_PATH,
+      ),
+    );
+  }
+
+  const screenshotReadiness = runStoreScreenshotReadinessAudit({ mode });
+
+  if (existsSync(join(REPO_ROOT, STORE_SCREENSHOT_READINESS_DOCS_PATH))) {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'store.screenshot_capture_plan_present',
+        'pass',
+        'Screenshot capture plan present',
+        `${screenshotReadiness.screenshotsTotal} screenshots; ${screenshotReadiness.deviceProfiles.length} device profiles.`,
+        STORE_SCREENSHOT_READINESS_DOCS_PATH,
+      ),
+    );
+  } else {
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        'store.screenshot_capture_plan_missing',
+        storeListingSeverity(mode, mode === 'launch_candidate' || mode === 'soft_launch_candidate'),
+        'Screenshot capture plan missing',
+        STORE_SCREENSHOT_READINESS_DOCS_PATH,
+        'Create screenshot capture plan docs.',
+        false,
+      ),
+    );
+  }
+
+  findings.push(
+    makeFinding(
+      'release_store_readiness',
+      'store.screenshots_pending',
+      storeListingSeverity(mode, screenshotReadiness.screenshotsPending > 0),
+      `Screenshots pending: ${screenshotReadiness.screenshotsPending}/${screenshotReadiness.screenshotsTotal}`,
+      `${screenshotReadiness.screenshotsCaptured} captured, ${screenshotReadiness.screenshotsPending} pending.`,
+      STORE_SCREENSHOT_READINESS_DOCS_PATH,
+      false,
+    ),
+    makeFinding(
+      'release_store_readiness',
+      screenshotReadiness.copyGuard.passed
+        ? 'store.screenshots_false_claim_scan_pass'
+        : 'store.screenshots_false_claim_scan_fail',
+      screenshotReadiness.copyGuard.passed ? 'pass' : 'blocker',
+      screenshotReadiness.copyGuard.passed
+        ? 'Screenshot false claim scan passed'
+        : 'Screenshot false claim scan failed',
+      screenshotReadiness.copyGuard.passed
+        ? 'Overlay copy clean.'
+        : `Violations: ${screenshotReadiness.copyGuard.violations.join(', ')}`,
+      'Remove forbidden claims from screenshot overlay copy.',
+    ),
+    makeFinding(
+      'release_store_readiness',
+      'store.feature_graphic_pending',
+      storeListingSeverity(mode, !screenshotReadiness.assets.some((a) => a.assetType.includes('feature graphic') && a.status === 'present')),
+      'Feature graphic pending',
+      'Play Store feature graphic (1024×500) not exported.',
+      'Create feature graphic before store submission.',
+      false,
+    ),
+    makeFinding(
+      'release_store_readiness',
+      iconReady ? 'store.icon_ready' : 'store.icon_not_ready',
+      iconReady ? 'pass' : storeListingSeverity(mode, mode !== 'internal_device_test'),
+      iconReady ? 'App icon ready' : 'App icon pending',
+      iconReady ? 'assets/images/icon.png present.' : 'App icon asset not found.',
+      'Finalize store icon before submission.',
+      false,
+    ),
+  );
+
+  const metaFinalization = runStoreMetadataFinalizationAudit({ mode });
+
+  findings.push(
+    makeFinding(
+      'release_store_readiness',
+      metaFinalization.metadataDraftPresent
+        ? 'store.metadata_finalization_present'
+        : 'store.metadata_finalization_missing',
+      metaFinalization.metadataDraftPresent ? 'pass' : 'warn',
+      metaFinalization.metadataDraftPresent
+        ? 'Store metadata finalization draft present'
+        : 'Metadata finalization draft missing',
+      `TR+EN metadata, keywords, IAP draft in ${STORE_METADATA_FINALIZATION_DOCS_PATH}.`,
+      STORE_METADATA_FINALIZATION_DOCS_PATH,
+    ),
+    makeFinding(
+      'release_store_readiness',
+      metaFinalization.riskScan.passed
+        ? 'store.metadata_false_claim_scan_pass'
+        : 'store.metadata_false_claim_scan_fail',
+      metaFinalization.riskScan.passed ? 'pass' : 'blocker',
+      metaFinalization.riskScan.passed
+        ? 'Metadata false claim scan passed'
+        : 'Metadata false claim scan failed',
+      `${metaFinalization.riskScan.scannedTexts} texts scanned.`,
+      'Remove false claims from metadata drafts.',
+    ),
+    makeFinding(
+      'release_store_readiness',
+      metaFinalization.iapMetadataDraftPresent
+        ? 'store.iap_metadata_draft_present'
+        : 'store.iap_metadata_draft_missing',
+      metaFinalization.iapMetadataDraftPresent ? 'pass' : 'warn',
+      metaFinalization.iapMetadataDraftPresent
+        ? 'IAP metadata draft present'
+        : 'IAP metadata draft missing',
+      'Entitlement, offering, product type documented.',
+      STORE_METADATA_FINALIZATION_DOCS_PATH,
+    ),
+    makeFinding(
+      'release_store_readiness',
+      metaFinalization.reviewNotesDraftPresent
+        ? 'store.review_notes_draft_present'
+        : 'store.review_notes_draft_missing',
+      metaFinalization.reviewNotesDraftPresent ? 'pass' : 'warn',
+      metaFinalization.reviewNotesDraftPresent
+        ? 'App review notes draft present'
+        : 'App review notes draft missing',
+      'Day 8+ test instructions and sandbox placeholder.',
+      STORE_METADATA_FINALIZATION_DOCS_PATH,
+    ),
+    makeFinding(
+      'release_store_readiness',
+      'store.metadata_manual_console_entry_pending',
+      storeListingSeverity(mode, mode === 'launch_candidate' || mode === 'soft_launch_candidate'),
+      'Store console metadata entry pending',
+      'Metadata not entered in App Store Connect / Play Console.',
+      STORE_METADATA_FINALIZATION_DOCS_PATH,
+      false,
+    ),
+  );
+
+  findings.push(
     makeFinding(
       'release_store_readiness',
       'store.device_playtest_pending',
@@ -877,12 +1399,29 @@ function isIapStoreBlocker(id: string): boolean {
     id.startsWith('iap.public_keys') ||
     id.startsWith('iap.smoke_test') ||
     id.startsWith('iap.store_setup') ||
+    id.startsWith('iap.revenuecat_keys_pending') ||
+    id.startsWith('iap.entitlement_mapping_pending') ||
+    id.startsWith('iap.store_products_pending') ||
+    id.startsWith('iap.eas_secrets_pending') ||
+    id.startsWith('iap.sandbox_testers_pending') ||
     SOFT_LAUNCH_REVIEW_IAP_BLOCKER_IDS.some((b) => id.includes(b))
   );
 }
 
 function isPlaytestBlocker(id: string): boolean {
   return id.includes('device_playtest') || id.includes('manual_playtest');
+}
+
+function isStoreListingBlocker(id: string): boolean {
+  return (
+    id.startsWith('store.listing_') ||
+    id.startsWith('store.metadata_') ||
+    id.startsWith('store.screenshots_')
+  );
+}
+
+function isPrivacyPolicyBlocker(id: string): boolean {
+  return id.startsWith('privacy.');
 }
 
 export function collectSoftLaunchBlockers(
@@ -892,10 +1431,22 @@ export function collectSoftLaunchBlockers(
   const blockers: CreviaSoftLaunchReviewBlocker[] = [];
 
   for (const f of findings.filter((x) => x.severity === 'blocker')) {
-    if (mode === 'internal_device_test' && (isIapStoreBlocker(f.id) || isPlaytestBlocker(f.id))) {
+    if (
+      mode === 'internal_device_test' &&
+      (isIapStoreBlocker(f.id) ||
+        isPlaytestBlocker(f.id) ||
+        isStoreListingBlocker(f.id) ||
+        isPrivacyPolicyBlocker(f.id))
+    ) {
       continue;
     }
-    if (mode === 'iap_sandbox_test' && isPlaytestBlocker(f.id)) {
+    if (
+      mode === 'iap_sandbox_test' &&
+      (isPlaytestBlocker(f.id) || isStoreListingBlocker(f.id) || isPrivacyPolicyBlocker(f.id))
+    ) {
+      continue;
+    }
+    if (mode === 'soft_launch_candidate' && isStoreListingBlocker(f.id)) {
       continue;
     }
 
