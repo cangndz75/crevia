@@ -93,6 +93,8 @@ export function verifyPerformanceSelectorPassTwoScenario(): VerifyPerformanceSel
 
   const files = {
     hubHome: readRepo('src/features/hub/components/HubReferenceHome.tsx'),
+    hubScreen: readRepo('src/features/hub/screens/HubScreen.tsx'),
+    hubOpenEndedCard: readRepo('src/features/hub/components/HubOpenEndedOperationCard.tsx'),
     mapScreen: readRepo('src/features/map/screens/MapScreen.tsx'),
     dispatchPhase: readRepo('src/features/events/components/event-workflow/dispatch/EventDispatchPhase.tsx'),
     fieldPhase: readRepo('src/features/events/components/event-workflow/field/EventFieldPhase.tsx'),
@@ -105,12 +107,18 @@ export function verifyPerformanceSelectorPassTwoScenario(): VerifyPerformanceSel
     profilePresentation: readRepo('src/core/profile/profileCareerShowcasePresentation.ts'),
   };
 
+  const hubOpenEndedMemoOk =
+    (hasMemoizedBuilder(files.hubHome, 'buildHubOpenEndedIntegrationModel') &&
+      hasMemoizedContext(files.hubHome, 'analyticsContext')) ||
+    (hasMemoizedBuilder(files.hubScreen, 'buildHubCarryOverMemory') &&
+      files.hubOpenEndedCard.includes('analyticsContext') &&
+      files.hubOpenEndedCard.includes('useEffect'));
+
   ok = record(
     checks,
     'FAIL',
-    hasMemoizedBuilder(files.hubHome, 'buildHubOpenEndedIntegrationModel') &&
-      hasMemoizedContext(files.hubHome, 'analyticsContext'),
-    'Hub open-ended model and analytics context are memoized',
+    hubOpenEndedMemoOk,
+    'Hub open-ended/card analytics in effects; hub screen memoizes carry-over integration',
     'Hub open-ended model/context memoization missing',
   ) && ok;
 

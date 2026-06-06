@@ -127,6 +127,13 @@ export function PostPilotOfferScreen() {
       setIapErrorMessage(undefined);
       try {
         const status = await initializeIapRuntime();
+        if (cancelled) return;
+
+        if (status.mode === 'disabled' && !model.isFullAccess) {
+          setIapStatusMessage(IAP_STATUS_COPY.purchaseUnavailable);
+          return;
+        }
+
         const list = await fetchIapProducts();
         if (cancelled) return;
 

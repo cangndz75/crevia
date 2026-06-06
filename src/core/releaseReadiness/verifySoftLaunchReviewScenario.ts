@@ -223,6 +223,24 @@ export function verifySoftLaunchReviewScenario(): VerifySoftLaunchReviewOutcome 
       'Missing day1.hub_density_guard_pass',
     ) && ok;
 
+  const iapConversionFindingIds = [
+    'iap_conversion.readiness_pass_present',
+    'iap_conversion.offer_copy_guard_pass',
+    'iap_conversion.limited_mode_playable',
+    'iap_conversion.restore_cta_present',
+    'iap_conversion.product_metadata_pending_safe',
+    'iap_conversion.paywall_pressure_guard_pass',
+  ] as const;
+  for (const id of iapConversionFindingIds) {
+    ok =
+      assert(
+        checks,
+        internal.findings.some((f) => f.id === id),
+        `IAP conversion finding ${id} present`,
+        `Missing ${id}`,
+      ) && ok;
+  }
+
   ok =
     assert(
       checks,

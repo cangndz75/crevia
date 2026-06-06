@@ -1,10 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
-import { REGION_CARDS } from '@/features/onboarding/data/onboardingData';
 import { PilotRegionCard } from '@/features/onboarding/components/onboarding/PilotRegionCard';
-import { PillTag } from '@/features/onboarding/components/onboarding/PillTag';
-import { spacing } from '@/ui/theme/spacing';
+import { REGION_CARDS } from '@/features/onboarding/data/onboardingData';
 
 type RegionOnboardingPageProps = {
   selectedId: PilotDistrictId;
@@ -14,18 +12,15 @@ type RegionOnboardingPageProps = {
 export function RegionOnboardingPage({ selectedId, onSelect }: RegionOnboardingPageProps) {
   return (
     <View style={styles.wrap}>
-      <PillTag label="3 farklı başlangıç" icon="star-outline" />
-      <View style={styles.list}>
-        {REGION_CARDS.map((region, index) => (
-          <PilotRegionCard
-            key={region.id}
-            region={region}
-            selected={selectedId === region.id}
-            onPress={() => onSelect(region.id)}
-            index={index}
-          />
-        ))}
-      </View>
+      {REGION_CARDS.map((region, index) => (
+        <PilotRegionCard
+          key={region.id}
+          region={region}
+          selected={selectedId === region.id}
+          onPress={() => onSelect(region.id)}
+          index={index}
+        />
+      ))}
     </View>
   );
 }
@@ -33,12 +28,8 @@ export function RegionOnboardingPage({ selectedId, onSelect }: RegionOnboardingP
 const styles = StyleSheet.create({
   wrap: {
     width: '100%',
-    gap: spacing.md,
+    gap: 12,
     alignItems: 'center',
-    paddingBottom: spacing.md,
-  },
-  list: {
-    width: '100%',
-    gap: spacing.md,
+    paddingBottom: 10,
   },
 });

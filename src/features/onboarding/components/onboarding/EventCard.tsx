@@ -1,32 +1,28 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
 import {
   EVENT_DECISIONS,
-  TUTORIAL_EVENT,
   type EventDecisionOption,
 } from '@/features/onboarding/data/onboardingData';
-import { onboardingAssets } from '@/features/onboarding/data/onboardingAssets';
 import { onboardingRadii, onboardingTokens } from '@/features/onboarding/theme/onboardingTokens';
-import { spacing } from '@/ui/theme/spacing';
 
 const TONE_STYLES = {
   mint: {
-    bg: 'rgba(126, 223, 162, 0.18)',
-    border: onboardingTokens.mint,
-    icon: '#2D9B5A',
+    bg: 'rgba(234, 251, 242, 0.95)',
+    border: onboardingTokens.green,
+    icon: onboardingTokens.green,
   },
   blue: {
-    bg: 'rgba(123, 167, 255, 0.2)',
+    bg: 'rgba(236, 243, 255, 0.95)',
     border: onboardingTokens.blue,
-    icon: onboardingTokens.primary,
+    icon: onboardingTokens.blue,
   },
   orange: {
-    bg: 'rgba(255, 182, 110, 0.22)',
+    bg: 'rgba(255, 244, 229, 0.95)',
     border: onboardingTokens.orange,
-    icon: '#D97706',
+    icon: onboardingTokens.orange,
   },
 } as const;
 
@@ -37,34 +33,17 @@ type EventCardProps = {
 
 export function EventCard({ selectedDecisionId, onSelectDecision }: EventCardProps) {
   return (
-    <Animated.View entering={FadeIn.duration(400).springify()} style={styles.card}>
-      <View style={styles.header}>
-        <View style={styles.chip}>
-          <Ionicons name="megaphone-outline" size={12} color={onboardingTokens.primary} />
-          <Text style={styles.chipText}>{TUTORIAL_EVENT.chip}</Text>
-        </View>
-        <Text style={styles.time}>{TUTORIAL_EVENT.time}</Text>
-      </View>
-
-      <View style={styles.hero}>
-        <Image source={onboardingAssets.eventHero} style={styles.heroImage} contentFit="cover" />
-      </View>
-
-      <Text style={styles.title}>{TUTORIAL_EVENT.title}</Text>
-      <Text style={styles.desc}>{TUTORIAL_EVENT.description}</Text>
-
-      <View style={styles.options}>
-        {EVENT_DECISIONS.map((option, index) => (
-          <DecisionRow
-            key={option.id}
-            option={option}
-            index={index}
-            selected={selectedDecisionId === option.id}
-            onPress={() => onSelectDecision(option.id)}
-          />
-        ))}
-      </View>
-    </Animated.View>
+    <View style={styles.options}>
+      {EVENT_DECISIONS.map((option, index) => (
+        <DecisionRow
+          key={option.id}
+          option={option}
+          index={index}
+          selected={selectedDecisionId === option.id}
+          onPress={() => onSelectDecision(option.id)}
+        />
+      ))}
+    </View>
   );
 }
 
@@ -82,122 +61,118 @@ function DecisionRow({
   const tone = TONE_STYLES[option.tone];
 
   return (
-    <Animated.View entering={FadeInUp.delay(360 + index * 70).springify()}>
+    <Animated.View entering={FadeInUp.delay(index * 70).springify()}>
       <Pressable
         onPress={onPress}
-        style={[
+        accessibilityRole="button"
+        accessibilityLabel={option.title}
+        accessibilityState={{ selected }}
+        style={({ pressed }) => [
           styles.option,
-          { backgroundColor: tone.bg, borderColor: tone.border },
+          { backgroundColor: tone.bg, borderColor: selected ? tone.border : onboardingTokens.border },
           selected && styles.optionSelected,
+          pressed && styles.pressed,
         ]}>
-        <Ionicons name={option.icon} size={18} color={tone.icon} />
-        <View style={styles.optionText}>
-          <Text style={styles.optionTitle}>{option.title}</Text>
-          <Text style={styles.optionSub}>{option.subtitle}</Text>
+        <View style={[styles.iconWrap, { backgroundColor: tone.border }]}>
+          <Ionicons name={option.icon} size={24} color="#FFFFFF" />
         </View>
-        {selected ? (
-          <Ionicons name="checkmark-circle" size={20} color={onboardingTokens.primary} />
-        ) : null}
+        <View style={styles.optionText}>
+          <View style={styles.optionTitleRow}>
+            <Text style={styles.optionTitle} numberOfLines={1} ellipsizeMode="tail">
+              {option.title}
+            </Text>
+            <View style={[styles.badge, { borderColor: tone.border }]}>
+              <Text
+                style={[styles.badgeText, { color: tone.icon }]}
+                numberOfLines={1}
+                ellipsizeMode="tail">
+                {option.badge}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.optionSub} numberOfLines={2} ellipsizeMode="tail">
+            {option.subtitle}
+          </Text>
+        </View>
+        <Ionicons
+          name={selected ? 'checkmark-circle' : 'chevron-forward'}
+          size={22}
+          color={selected ? onboardingTokens.primary : onboardingTokens.textMuted}
+        />
       </Pressable>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    width: '100%',
-    maxWidth: 328,
-    alignSelf: 'center',
-    backgroundColor: onboardingTokens.card,
-    borderRadius: onboardingRadii.xl,
-    borderWidth: 1,
-    borderColor: onboardingTokens.border,
-    padding: spacing.lg,
-    gap: spacing.sm,
-    shadowColor: onboardingTokens.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 5,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: onboardingRadii.sm,
-    backgroundColor: 'rgba(169, 156, 255, 0.2)',
-  },
-  chipText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: onboardingTokens.primaryDark,
-    letterSpacing: 0.5,
-  },
-  time: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: onboardingTokens.textMuted,
-  },
-  hero: {
-    height: 108,
-    borderRadius: onboardingRadii.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: onboardingTokens.border,
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-  },
-  title: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: onboardingTokens.textMain,
-  },
-  desc: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: onboardingTokens.textMuted,
-    fontWeight: '500',
-  },
   options: {
-    gap: spacing.sm,
-    marginTop: spacing.xs,
+    gap: 12,
   },
   option: {
+    minHeight: 88,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
-    borderRadius: onboardingRadii.lg,
-    borderWidth: 1.5,
+    gap: 12,
+    padding: 14,
+    borderRadius: 22,
+    borderWidth: 2,
+    shadowColor: onboardingTokens.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 3,
   },
   optionSelected: {
-    borderWidth: 2.5,
     shadowColor: onboardingTokens.primary,
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 5,
+  },
+  iconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   optionText: {
     flex: 1,
-    gap: 2,
+    minWidth: 0,
+    gap: 5,
+  },
+  optionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minWidth: 0,
   },
   optionTitle: {
-    fontSize: 14,
-    fontWeight: '800',
+    flex: 1,
+    minWidth: 0,
+    fontSize: 19,
+    fontWeight: '900',
     color: onboardingTokens.textMain,
   },
+  badge: {
+    maxWidth: 80,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    backgroundColor: '#FFFFFF',
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+  },
   optionSub: {
-    fontSize: 11,
+    fontSize: 14,
+    lineHeight: 19,
     color: onboardingTokens.textMuted,
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  pressed: {
+    opacity: 0.8,
   },
 });

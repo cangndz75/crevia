@@ -97,3 +97,38 @@ export {
 } from './verifyStoryChainRuntimeHintScenario';
 
 export { verifyStoryChainScenario, type VerifyStoryChainOutcome } from './verifyStoryChainScenario';
+
+export type {
+  CreviaStoryChainMigrationRisk,
+  CreviaStoryChainPersistenceOption,
+  CreviaStoryChainPersistenceRecommendation,
+  CreviaStoryChainPersistenceRisk,
+  CreviaStoryChainPersistentRuntimeHealthStatus,
+  CreviaStoryChainPersistentRuntimeReviewResult,
+  CreviaStoryChainPersistentRuntimeSoftLaunchFindings,
+  CreviaStoryChainRuntimeReadinessArea,
+  CreviaStoryChainRuntimeReadinessAreaResult,
+  CreviaStoryChainSaveImpact,
+  CreviaStoryChainTelemetryQuestion,
+  RunStoryChainPersistentRuntimeReviewOptions,
+} from './storyChainPersistentRuntimeReviewTypes';
+
+export {
+  STORY_CHAIN_PERSISTENT_RUNTIME_REVIEW_DOCS_PATH,
+  buildStoryChainPersistentRuntimeSoftLaunchFindings,
+  runStoryChainPersistentRuntimeReviewAudit,
+} from './storyChainPersistentRuntimeReviewAudit';
+
+export {
+  buildStoryChainPersistenceOptionsTable,
+  buildStoryChainPersistenceRiskTable,
+  buildStoryChainPersistentRuntimeConsoleSummary,
+  buildStoryChainPersistentRuntimeReviewMarkdown,
+  buildStoryChainTelemetryQuestionList,
+  buildStoryChainV11BacklogTable,
+} from './storyChainPersistentRuntimeReviewPresentation';
+
+export {
+  verifyStoryChainPersistentRuntimeReviewScenario,
+  type VerifyStoryChainPersistentRuntimeReviewOutcome,
+} from './verifyStoryChainPersistentRuntimeReviewScenario';

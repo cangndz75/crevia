@@ -18,10 +18,12 @@ export function MetricBadge({ metric, compact }: MetricBadgeProps) {
       <View style={[styles.iconWrap, { backgroundColor: metric.accentMuted }]}>
         <Ionicons name={metric.icon} size={compact ? 12 : 14} color={metric.accent} />
       </View>
-      <Text style={styles.label} numberOfLines={1}>
+      <Text style={styles.label} numberOfLines={1} ellipsizeMode="tail">
         {metric.label}
       </Text>
-      <Text style={styles.value}>{metric.value}</Text>
+      <Text style={styles.value} numberOfLines={1} ellipsizeMode="tail">
+        {metric.value}
+      </Text>
       {metric.trend ? (
         <View style={styles.trendRow}>
           <Text
@@ -42,6 +44,8 @@ export function MetricBadge({ metric, compact }: MetricBadgeProps) {
 
 const styles = StyleSheet.create({
   card: {
+    flex: 1,
+    minWidth: 0,
     backgroundColor: onboardingTokens.card,
     borderRadius: onboardingRadii.md,
     borderWidth: 1,
@@ -52,11 +56,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 4,
-    minWidth: 96,
   },
   compact: {
-    minWidth: 88,
-    padding: 6,
+    minWidth: 0,
+    padding: 8,
   },
   iconWrap: {
     width: 26,
@@ -70,12 +73,14 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '600',
     color: onboardingTokens.textMuted,
+    minWidth: 0,
   },
   value: {
     fontSize: 13,
     fontWeight: '800',
     color: onboardingTokens.textMain,
     letterSpacing: -0.2,
+    minWidth: 0,
   },
   trendRow: {
     flexDirection: 'row',

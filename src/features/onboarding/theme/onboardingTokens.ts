@@ -1,22 +1,26 @@
 /** Premium onboarding design tokens */
 export const onboardingTokens = {
-  background: '#F7F8FF',
-  backgroundGradientEnd: '#EDE9FF',
-  primary: '#625BFF',
-  primaryDark: '#312A84',
-  lavender: '#A99CFF',
-  mint: '#7EDFA2',
-  blue: '#7BA7FF',
-  orange: '#FFB66E',
+  background: '#F7F3FF',
+  backgroundGradientEnd: '#EFE8FF',
+  primary: '#6D42F5',
+  primaryDark: '#4D2DD8',
+  lavender: '#ECE6FF',
+  mint: '#EAFBF2',
+  green: '#29B96F',
+  blue: '#3B7CFF',
+  gold: '#E5B84A',
+  orange: '#E69A22',
+  red: '#E24B4B',
   cream: '#FFF8E8',
-  dangerSoft: '#FF8C7A',
-  textMain: '#24204E',
-  textMuted: '#6F6B8C',
-  card: 'rgba(255,255,255,0.88)',
-  border: 'rgba(130,120,255,0.22)',
-  shadow: 'rgba(98, 91, 255, 0.18)',
-  success: '#3BAF7A',
-  successMuted: '#E8F7F0',
+  dangerSoft: '#E24B4B',
+  textMain: '#19143D',
+  textMuted: '#6F6A86',
+  card: '#FFFFFF',
+  cardSoft: 'rgba(255,255,255,0.88)',
+  border: 'rgba(100, 80, 180, 0.15)',
+  shadow: '#4B32A8',
+  success: '#29B96F',
+  successMuted: '#EAFBF2',
   warningMuted: '#FFF4E5',
 } as const;
 
@@ -30,7 +34,7 @@ export const onboardingRadii = {
 } as const;
 
 export const onboardingLayout = {
-  buttonHeight: 60,
+  buttonHeight: 66,
   maxContentWidth: 360,
   pageWidth: 390,
 } as const;

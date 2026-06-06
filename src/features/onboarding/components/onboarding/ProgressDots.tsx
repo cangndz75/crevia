@@ -68,8 +68,8 @@ const styles = StyleSheet.create({
     backgroundColor: onboardingTokens.primary,
   },
   counter: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
     color: onboardingTokens.textMuted,
   },
 });

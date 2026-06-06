@@ -61,8 +61,8 @@ export const WELCOME_METRICS: FloatingMetricData[] = [
     value: '86%',
     trend: '+6%',
     trendUp: true,
-    accent: '#3BAF7A',
-    accentMuted: '#E8F7F0',
+    accent: '#29B96F',
+    accentMuted: '#EAFBF2',
     icon: 'happy-outline',
     position: 'tl',
   },
@@ -72,32 +72,21 @@ export const WELCOME_METRICS: FloatingMetricData[] = [
     value: '₺3.42M',
     trend: '+120K',
     trendUp: true,
-    accent: '#5B8FD4',
-    accentMuted: '#EBF2FA',
+    accent: '#3B7CFF',
+    accentMuted: '#ECF3FF',
     icon: 'cash-outline',
     position: 'tr',
   },
   {
-    id: 'morale',
-    label: 'Personel Morali',
-    value: '78%',
-    trend: '-3%',
-    trendUp: false,
-    accent: '#7B5BB8',
-    accentMuted: '#F0EBFA',
-    icon: 'people-outline',
+    id: 'service',
+    label: 'Hizmet Etkinliği',
+    value: '92%',
+    trend: '+4%',
+    trendUp: true,
+    accent: '#29B96F',
+    accentMuted: '#EAFBF2',
+    icon: 'sparkles-outline',
     position: 'bl',
-  },
-  {
-    id: 'risk',
-    label: 'Operasyon Riski',
-    value: 'Düşük',
-    trend: '+1%',
-    trendUp: false,
-    accent: '#F59E0B',
-    accentMuted: '#FEF3C7',
-    icon: 'shield-outline',
-    position: 'br',
   },
 ];
 
@@ -142,10 +131,9 @@ export const REGION_CARDS: RegionCardData[] = [
     recommended: true,
     badges: [
       { label: 'Dengeli', icon: 'scale-outline' },
-      { label: 'Orta Hizmet', icon: 'eye-outline' },
+      { label: 'Orta Hizmet', icon: 'business-outline' },
     ],
-    description:
-      'Esnaf canlı, yollar düzenli. Hizmet yükü dengeli bir merkez.',
+    description: 'Esnaf canlı, yollar düzenli. Hizmet yükü dengeli bir merkez.',
     metrics: {
       socialRisk: { label: 'Sosyal Risk', value: 'Düşük', tone: 'low' },
       staffPace: { label: 'Personel Temposu', value: 'Orta', tone: 'mid' },
@@ -156,29 +144,13 @@ export const REGION_CARDS: RegionCardData[] = [
     id: 'cumhuriyet',
     title: 'Cumhuriyet Mahallesi',
     badges: [
-      { label: 'Sosyal Baskı', icon: 'megaphone-outline' },
-      { label: 'Hızlı Tepki', icon: 'flash-outline' },
+      { label: 'Hareketli', icon: 'pulse-outline' },
+      { label: 'Yüksek Talep', icon: 'flash-outline' },
     ],
-    description:
-      'Vatandaş talepleri yoğun, olayları hızlı çözüme bağlaman gerekir.',
-    metrics: {
-      socialRisk: { label: 'Sosyal Risk', value: 'Yüksek', tone: 'high' },
-      staffPace: { label: 'Personel Temposu', value: 'Yüksek', tone: 'high' },
-      difficulty: { label: 'Operasyon Zorluğu', value: 'Orta', tone: 'mid' },
-    },
-  },
-  {
-    id: 'industrial_market',
-    title: 'Sanayi & Pazar Bölgesi',
-    badges: [
-      { label: 'Operasyon', icon: 'bus-outline' },
-      { label: 'Rota Baskısı', icon: 'navigate-outline' },
-    ],
-    description:
-      'Araç trafiği yoğun, temizlik ve koordinasyon ön planda olacak.',
+    description: 'Nüfusu yoğun, talepleri yüksek. Hızlı karar alma gerekir.',
     metrics: {
       socialRisk: { label: 'Sosyal Risk', value: 'Orta', tone: 'mid' },
-      staffPace: { label: 'Personel Temposu', value: 'Orta', tone: 'mid' },
+      staffPace: { label: 'Personel Temposu', value: 'Yüksek', tone: 'high' },
       difficulty: { label: 'Operasyon Zorluğu', value: 'Yüksek', tone: 'high' },
     },
   },
@@ -188,8 +160,7 @@ export const TUTORIAL_EVENT = {
   chip: 'OLAY KARTI',
   time: '09:20',
   title: 'Pazar Sonrası Yoğunluk',
-  description:
-    'Pazar alanında temizlik gecikti. Esnaf ve vatandaşlar sabah yoğunluğundan önce müdahale bekliyor.',
+  description: 'Pazar alanında temizlik gecikti. Esnaf ve vatandaşlar sabah yoğunluğundan önce müdahale bekliyor.',
   advisorName: 'Saha Şefi',
   advisorTip: 'Hızlı çözüm güven kazandırır ama ekibi yorabilir.',
   swipeHint: 'Kartı kaydırarak diğer olaylara göz at',
@@ -201,6 +172,7 @@ export type EventDecisionOption = {
   subtitle: string;
   icon: keyof typeof Ionicons.glyphMap;
   tone: 'mint' | 'blue' | 'orange';
+  badge: string;
 };
 
 export const EVENT_DECISIONS: EventDecisionOption[] = [
@@ -210,6 +182,7 @@ export const EVENT_DECISIONS: EventDecisionOption[] = [
     subtitle: 'Hemen ekip yönlendir, hızlı çöz.',
     icon: 'flash-outline',
     tone: 'mint',
+    badge: 'Önerilen',
   },
   {
     id: 'planned',
@@ -217,60 +190,15 @@ export const EVENT_DECISIONS: EventDecisionOption[] = [
     subtitle: 'Programı düzenle, kalıcı çözüm üret.',
     icon: 'calendar-outline',
     tone: 'blue',
+    badge: 'Dengeli',
   },
   {
     id: 'partial',
     title: 'Kısmi Müdahale',
-    subtitle: 'Geçici müdahale ile durumu idare et.',
+    subtitle: 'Kaynakları koru, durumu izle.',
     icon: 'shield-outline',
     tone: 'orange',
-  },
-];
-
-export const EVENT_FLOATING_STATS: FloatingMetricData[] = [
-  {
-    id: 'sat-e',
-    label: 'Halk Memnuniyeti',
-    value: '86%',
-    trend: '+6%',
-    trendUp: true,
-    accent: '#3BAF7A',
-    accentMuted: '#E8F7F0',
-    icon: 'happy-outline',
-    position: 'tl',
-  },
-  {
-    id: 'budget-e',
-    label: 'Bütçe',
-    value: '₺3.42M',
-    trend: '-120K',
-    trendUp: false,
-    accent: '#5B8FD4',
-    accentMuted: '#EBF2FA',
-    icon: 'cash-outline',
-    position: 'tr',
-  },
-  {
-    id: 'morale-e',
-    label: 'Personel Morali',
-    value: '78%',
-    trend: '-3%',
-    trendUp: false,
-    accent: '#7B5BB8',
-    accentMuted: '#F0EBFA',
-    icon: 'people-outline',
-    position: 'bl',
-  },
-  {
-    id: 'risk-e',
-    label: 'Operasyon Riski',
-    value: 'Düşük',
-    trend: '+1%',
-    trendUp: false,
-    accent: '#F59E0B',
-    accentMuted: '#FEF3C7',
-    icon: 'shield-outline',
-    position: 'br',
+    badge: 'Riskli',
   },
 ];
 
@@ -288,14 +216,15 @@ export const ROADMAP_HIGHLIGHT_DAY = 4;
 
 export const OUTCOME_SUMMARY = {
   title: 'Pilot Bölge Sonucu',
-  status: 'Bölge pozitif döndü!',
+  status: 'Bölge pozitif döndü! 🎉',
+  note: 'Doğru kararlar aldın, mahalle güçlendi. Böyle devam et!',
   stats: [
     { icon: 'pulse-outline' as const, label: 'Mahalle Nabzı', value: 'Kontrollü', positive: true },
     { icon: 'heart-outline' as const, label: 'Güven', value: '+12', positive: true },
     { icon: 'shield-outline' as const, label: 'Risk', value: '-8', positive: true },
   ],
-  mapBadge: 'Pilot sonrası ilçe geneline açıl',
-  progress: 0.78,
+  mapBadge: 'Pilot sonuç hazır',
+  progress: 0.86,
 };
 
 export const OUTCOME_MINI_CARDS = [
@@ -329,3 +258,5 @@ export const OUTCOME_MINI_CARDS = [
     progress: 650 / 900,
   },
 ] as const;
+
+export type OnboardingIconName = ComponentProps<typeof Ionicons>['name'];

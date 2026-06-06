@@ -85,6 +85,33 @@ export {
   summarizeEchoCompleteness,
 } from './contentEchoCompleteness';
 
+export type {
+  CreviaContentPackActivationAreaResult,
+  CreviaContentPackActivationBlocker,
+  CreviaContentPackActivationDecision,
+  CreviaContentPackActivationHealthStatus,
+  CreviaContentPackActivationPackSummary,
+  CreviaContentPackActivationReadinessArea,
+  CreviaContentPackActivationRecommendation,
+  CreviaContentPackActivationRisk,
+  CreviaContentPackActivationSoftLaunchFindings,
+  CreviaContentPackActivationWarning,
+  CreviaContentPackRuntimeActivationReviewResult,
+  CreviaContentPackV11BacklogItem,
+  RunContentPackRuntimeActivationReviewOptions,
+} from './contentPackRuntimeActivationReviewTypes';
+
+export { runContentPackRuntimeActivationReviewAudit } from './contentPackRuntimeActivationReviewAudit';
+
+export {
+  buildContentPackActivationAreaTable,
+  buildContentPackActivationConsoleSummary,
+  buildContentPackActivationPackTable,
+  buildContentPackActivationReviewMarkdown,
+  buildContentPackActivationSoftLaunchFindings,
+  buildContentPackActivationV11BacklogList,
+} from './contentPackRuntimeActivationReviewPresentation';
+
 export {
   buildContentPackReleaseReadinessLine,
   buildContentProductionAuditResult,

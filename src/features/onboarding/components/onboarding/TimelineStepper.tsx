@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   FadeInUp,
   useAnimatedStyle,
@@ -14,6 +14,8 @@ import { spacing } from '@/ui/theme/spacing';
 
 export function TimelineStepper() {
   const lineProgress = useSharedValue(0);
+  const { width } = useWindowDimensions();
+  const small = width <= 370;
 
   useEffect(() => {
     lineProgress.value = withTiming(1, { duration: 900 });
@@ -37,6 +39,7 @@ export function TimelineStepper() {
               <View
                 style={[
                   styles.dayCard,
+                  small && styles.dayCardSmall,
                   active && styles.dayCardActive,
                   highlighted && styles.dayCardHighlight,
                 ]}>
@@ -47,7 +50,10 @@ export function TimelineStepper() {
                   color={active ? onboardingTokens.primary : onboardingTokens.textMuted}
                 />
               </View>
-              <Text style={styles.dayLabel} numberOfLines={2}>
+              <Text
+                style={[styles.dayLabel, small && styles.dayLabelSmall]}
+                numberOfLines={2}
+                ellipsizeMode="tail">
                 {day.label}
               </Text>
             </Animated.View>
@@ -75,6 +81,7 @@ export function TimelineStepper() {
 const styles = StyleSheet.create({
   wrap: {
     gap: spacing.sm,
+    minWidth: 0,
   },
   daysRow: {
     flexDirection: 'row',
@@ -98,6 +105,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 2,
   },
+  dayCardSmall: {
+    width: 36,
+    height: 40,
+  },
   dayCardActive: {
     backgroundColor: 'rgba(169, 156, 255, 0.25)',
   },
@@ -116,9 +127,15 @@ const styles = StyleSheet.create({
   },
   dayLabel: {
     fontSize: 8,
-    fontWeight: '700',
+    lineHeight: 10,
+    fontWeight: '800',
     color: onboardingTokens.textMain,
     textAlign: 'center',
+    minWidth: 0,
+  },
+  dayLabelSmall: {
+    fontSize: 7,
+    lineHeight: 9,
   },
   track: {
     height: 6,

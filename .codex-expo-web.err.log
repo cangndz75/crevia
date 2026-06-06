@@ -14,7 +14,3 @@ Require cycles are allowed, but can result in uninitialized values. Consider ref
 Error: Premature close
     at onclose (node:internal/streams/end-of-stream:159:30)
     at processTicksAndRejections (node:internal/process/task_queues:77:11)
-"shadow*" style props are deprecated. Use "boxShadow".
-Require cycle: src/core/personnel/personnelEngine.ts -> src/core/personnel/personnelCompetency.ts -> src/core/personnel/personnelEngine.ts
-
-Require cycles are allowed, but can result in uninitialized values. Consider refactoring to remove the need for a cycle.

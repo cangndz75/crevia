@@ -185,6 +185,22 @@ function auditLimitedFullClarity(): CreviaIapConversionReadinessFinding[] {
     );
   }
 
+  const allCopy = collectAllOfferCopy().toLocaleLowerCase('tr-TR');
+  const missingSignals = IAP_CONVERSION_REQUIRED_OFFER_SIGNALS.filter(
+    (signal) => !allCopy.includes(signal.toLocaleLowerCase('tr-TR')),
+  );
+  findings.push(
+    makeFinding('limited_full_clarity', 'clarity.required_signals',
+      missingSignals.length === 0 ? 'pass' : 'fail',
+      missingSignals.length === 0
+        ? 'Required offer copy signals present'
+        : 'Required offer copy signals missing',
+      missingSignals.length === 0
+        ? `Signals: ${IAP_CONVERSION_REQUIRED_OFFER_SIGNALS.join(', ')}`
+        : `Missing: ${missingSignals.join(', ')}`,
+      'Offer copy must mention limited mode, restore, and main operation.'),
+  );
+
   const limited = selectLimitedContinue(monetization, 8);
   const limitedModel = buildPostPilotOfferViewModel(gs, limited);
   findings.push(

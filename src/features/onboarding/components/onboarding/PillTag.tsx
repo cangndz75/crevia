@@ -15,7 +15,9 @@ export function PillTag({ label, icon }: PillTagProps) {
       {icon ? (
         <Ionicons name={icon} size={13} color={onboardingTokens.textMuted} />
       ) : null}
-      <Text style={styles.text}>{label}</Text>
+      <Text style={styles.text} numberOfLines={1} ellipsizeMode="tail">
+        {label}
+      </Text>
     </View>
   );
 }
@@ -31,10 +33,14 @@ const styles = StyleSheet.create({
     backgroundColor: onboardingTokens.card,
     borderWidth: 1,
     borderColor: onboardingTokens.border,
+    maxWidth: '100%',
+    minWidth: 0,
   },
   text: {
+    flexShrink: 1,
+    minWidth: 0,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '800',
     color: onboardingTokens.textMuted,
   },
 });

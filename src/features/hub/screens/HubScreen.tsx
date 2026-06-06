@@ -120,14 +120,17 @@ export function HubScreen() {
 
   return (
     <GameScreenShell
+      scrollable={false}
       headerVariant="none"
       backgroundColor="#F7F1E6"
-      contentStyle={{ paddingHorizontal: 0, paddingTop: 0, gap: 0, paddingBottom: 118 }}>
+      contentStyle={{ paddingHorizontal: 0, paddingTop: 0, gap: 0 }}>
       <HubReferenceHome
         hubCarryOverMemory={hubCarryOverMemory}
         showHubCarryOver={showHubCarryOver}
+        scrollFooter={
+          __DEV__ && !hubCardVisibility.suppressDevTools ? <HubDevTools /> : undefined
+        }
       />
-      {__DEV__ && !hubCardVisibility.suppressDevTools ? <HubDevTools /> : null}
       <TutorialCoachOverlay screen="hub" />
       {coachHint && !hubTutorialStep && tutorialActive ? (
         <OnboardingCoachBubble

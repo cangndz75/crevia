@@ -294,10 +294,17 @@ export function verifyCarryOverMemoryScenario(): VerifyCarryOverMemoryOutcome {
   record(assert(checks, eventCard.includes('numberOfLines'), 'Event card numberOfLines', 'event lines'));
   record(assert(checks, reportCard.includes('flexShrink'), 'Report card flexShrink', 'report shrink'));
 
+  const hubHome = readRepo('src/features/hub/components/HubReferenceHome.tsx');
+  const hubScreen = readRepo('src/features/hub/screens/HubScreen.tsx');
+  const hubCarryOverIntegrated =
+    (hubHome.includes('HubCarryOverMemoryCard') ||
+      (hubHome.includes('PreviousDecisionEffectCard') && hubHome.includes('hubCarryOverMemory'))) &&
+    hubScreen.includes('buildHubCarryOverMemory') &&
+    hubScreen.includes('hubCarryOverMemory');
   record(
     assert(
       checks,
-      readRepo('src/features/hub/components/HubReferenceHome.tsx').includes('HubCarryOverMemoryCard'),
+      hubCarryOverIntegrated,
       'HubReferenceHome integration',
       'hub home',
     ),

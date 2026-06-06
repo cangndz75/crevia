@@ -47,37 +47,21 @@ import {
   VEHICLE_ROUTE_PACK_ONE_CONTENT_PACK,
   VEHICLE_ROUTE_PACK_ONE_FAMILIES,
 } from '@/core/contentProduction/contentPacks';
-function getContentPackActivationFindings(): { activationReviewPresent: boolean; runtimeActivationBlockedByFreeze: boolean; packCoverageSufficient: boolean; v11BacklogDefined: boolean; activationNotRequiredForSoftLaunch: boolean; decision: string; totalFamilyCount: number; totalVariantCount: number; v11BacklogLength: number } {
-  const allFamilies = [
-    ...DISTRICT_PACK_ONE_FAMILIES,
-    ...VEHICLE_ROUTE_PACK_ONE_FAMILIES,
-    ...CONTAINER_ENVIRONMENT_PACK_ONE_FAMILIES,
-    ...SOCIAL_TRUST_PACK_ONE_FAMILIES,
-    ...CRISIS_ADJACENT_PACK_ONE_FAMILIES,
-  ];
-  const totalFamilyCount = allFamilies.length;
-  const totalVariantCount = allFamilies.reduce((sum, f) => sum + f.variantCopies.length, 0);
-  const freezeActive = isNoNewSystemFreezeActive('internal_device_test');
-  const packCoverageSufficient = totalFamilyCount >= 80 && totalVariantCount >= 300;
-
-  return {
-    activationReviewPresent: true,
-    runtimeActivationBlockedByFreeze: freezeActive,
-    packCoverageSufficient,
-    v11BacklogDefined: true,
-    activationNotRequiredForSoftLaunch: true,
-    decision: freezeActive ? 'blocked_by_freeze' : 'ready_for_v11_review',
-    totalFamilyCount,
-    totalVariantCount,
-    v11BacklogLength: 10,
-  };
-}
+import { runContentPackRuntimeActivationReviewAudit } from '@/core/contentProduction/contentPackRuntimeActivationReviewAudit';
 import { buildContentProductionAuditResult } from '@/core/contentProduction/contentProductionPresentation';
 import { buildReportSystemsIntegrationModel } from '@/core/reports/reportSystemsIntegrationPresentation';
 import { runQualityAudit } from '@/core/quality/qualityAuditPresentation';
 import { runSelectorAudit } from '@/core/quality/performanceSelectors/selectorAuditEngine';
 import { verifyPerformanceSelectorPassTwoScenario } from '@/core/quality/verifyPerformanceSelectorPassTwoScenario';
 import { MONETIZATION_COPY } from '@/core/monetization/monetizationConstants';
+import {
+  DISTRICT_OPERATION_ACTION_PERSISTENCE_REVIEW_DOCS_PATH,
+  runDistrictOperationActionPersistenceReviewAudit,
+} from '@/core/districtOperationActions/districtOperationActionPersistenceReviewAudit';
+import {
+  STORY_CHAIN_PERSISTENT_RUNTIME_REVIEW_DOCS_PATH,
+  runStoryChainPersistentRuntimeReviewAudit,
+} from '@/core/storyChains/storyChainPersistentRuntimeReviewAudit';
 import { runIapConversionReadinessAudit } from '@/core/monetization/iapConversionReadinessAudit';
 import { IAP_CONVERSION_READINESS_DOCS_PATH } from '@/core/monetization/iapConversionReadinessConstants';
 import { buildIapConversionSoftLaunchFindings } from '@/core/monetization/iapConversionReadinessPresentation';
@@ -540,6 +524,10 @@ function auditAreaDay8OpenEnded(): CreviaSoftLaunchReviewFinding[] {
 function auditAreaDistrictRuntime(): CreviaSoftLaunchReviewFinding[] {
   const findings: CreviaSoftLaunchReviewFinding[] = [];
   const mapIntel = readRepo('src/core/map/mapDistrictIntelligencePresentation.ts');
+  const actionPersistence = runDistrictOperationActionPersistenceReviewAudit({ mode: 'review_only' });
+  const ap = actionPersistence.softLaunchFindings;
+  const storyChainPersistence = runStoryChainPersistentRuntimeReviewAudit({ mode: 'review_only' });
+  const sc = storyChainPersistence.softLaunchFindings;
 
   findings.push(
     makeFinding(
@@ -577,6 +565,116 @@ function auditAreaDistrictRuntime(): CreviaSoftLaunchReviewFinding[] {
         : 'Map density cap review',
       'Map strip uses line limits.',
       'Manual map readability test on small screen.',
+    ),
+    makeFinding(
+      'district_runtime_systems',
+      'district_action.persistence_review_present',
+      ap.persistenceReviewPresent ? 'pass' : 'warn',
+      ap.persistenceReviewPresent
+        ? 'District action persistence review present'
+        : 'District action persistence review missing',
+      DISTRICT_OPERATION_ACTION_PERSISTENCE_REVIEW_DOCS_PATH,
+      'Run verify:district-operation-action-persistence-review.',
+    ),
+    makeFinding(
+      'district_runtime_systems',
+      'district_action.session_only_current',
+      ap.sessionOnlyCurrent ? 'pass' : 'blocker',
+      ap.sessionOnlyCurrent
+        ? 'District action state session-only'
+        : 'District action state in persist shape',
+      actionPersistence.currentBehaviorSummary.slice(0, 120),
+      'Do not persist during freeze; V1.1 telemetry decision.',
+    ),
+    makeFinding(
+      'district_runtime_systems',
+      'district_action.persist_not_required_for_soft_launch',
+      ap.persistNotRequiredForSoftLaunch ? 'pass' : 'warn',
+      ap.persistNotRequiredForSoftLaunch
+        ? 'Persist not required for soft launch'
+        : 'Persist unexpectedly required',
+      'Small-effect optional action; restart continuity acceptable.',
+      DISTRICT_OPERATION_ACTION_PERSISTENCE_REVIEW_DOCS_PATH,
+    ),
+    makeFinding(
+      'district_runtime_systems',
+      'district_action.v11_persistence_backlog_defined',
+      ap.v11PersistenceBacklogDefined ? 'pass' : 'warn',
+      ap.v11PersistenceBacklogDefined
+        ? 'V1.1 persistence backlog defined'
+        : 'V1.1 persistence backlog incomplete',
+      `${actionPersistence.v11Backlog.length} backlog items.`,
+      'Evaluate Option B after telemetry.',
+    ),
+    makeFinding(
+      'district_runtime_systems',
+      'district_action.save_version_unchanged',
+      ap.saveVersionUnchanged ? 'pass' : 'blocker',
+      ap.saveVersionUnchanged
+        ? `SAVE_VERSION ${actionPersistence.saveImpact.currentSaveVersion} unchanged`
+        : 'SAVE_VERSION changed during persistence review',
+      `Expected ${actionPersistence.saveImpact.expectedSaveVersion}.`,
+      'Separate migration patch if V1.1 persist approved.',
+    ),
+    makeFinding(
+      'district_runtime_systems',
+      'story_chain.persistence_review_present',
+      sc.persistenceReviewPresent ? 'pass' : 'warn',
+      sc.persistenceReviewPresent
+        ? 'Story chain persistence review present'
+        : 'Story chain persistence review missing',
+      STORY_CHAIN_PERSISTENT_RUNTIME_REVIEW_DOCS_PATH,
+      'Run verify:story-chain-persistent-runtime-review.',
+    ),
+    makeFinding(
+      'district_runtime_systems',
+      'story_chain.presentation_only_current',
+      sc.presentationOnlyCurrent ? 'pass' : 'blocker',
+      sc.presentationOnlyCurrent
+        ? 'Story chain hints presentation-only'
+        : 'Story chain persist shape detected',
+      storyChainPersistence.currentBehaviorSummary.slice(0, 120),
+      'Keep derived hints during freeze; V1.1 telemetry decision.',
+    ),
+    makeFinding(
+      'district_runtime_systems',
+      'story_chain.persist_not_required_for_soft_launch',
+      sc.persistNotRequiredForSoftLaunch ? 'pass' : 'warn',
+      sc.persistNotRequiredForSoftLaunch
+        ? 'Story chain persist not required for soft launch'
+        : 'Story chain persist unexpectedly required',
+      'Felt context only; restart continuity acceptable.',
+      STORY_CHAIN_PERSISTENT_RUNTIME_REVIEW_DOCS_PATH,
+    ),
+    makeFinding(
+      'district_runtime_systems',
+      'story_chain.v11_persistence_backlog_defined',
+      sc.v11PersistenceBacklogDefined ? 'pass' : 'warn',
+      sc.v11PersistenceBacklogDefined
+        ? 'Story chain V1.1 persistence backlog defined'
+        : 'Story chain V1.1 persistence backlog incomplete',
+      `${storyChainPersistence.v11Backlog.length} backlog items.`,
+      'Evaluate Option B after telemetry.',
+    ),
+    makeFinding(
+      'district_runtime_systems',
+      'story_chain.save_version_unchanged',
+      sc.saveVersionUnchanged ? 'pass' : 'blocker',
+      sc.saveVersionUnchanged
+        ? `SAVE_VERSION ${storyChainPersistence.saveImpact.currentSaveVersion} unchanged`
+        : 'SAVE_VERSION changed during story chain persistence review',
+      `Expected ${storyChainPersistence.saveImpact.expectedSaveVersion}.`,
+      'Separate migration patch if V1.1 persist approved.',
+    ),
+    makeFinding(
+      'district_runtime_systems',
+      'story_chain.runtime_activation_not_done',
+      sc.runtimeActivationNotDone ? 'pass' : 'blocker',
+      sc.runtimeActivationNotDone
+        ? 'Story chain runtime activation not done'
+        : 'Story chain runtime activation detected',
+      `isRuntimeLinked=${storyChainPersistence.isRuntimeLinked}`,
+      'Full runtime engine deferred to V2 backlog.',
     ),
   );
 
@@ -697,7 +795,14 @@ function auditAreaContentCoverage(): CreviaSoftLaunchReviewFinding[] {
     ),
   );
 
-  const af = getContentPackActivationFindings();
+  const activationReview = runContentPackRuntimeActivationReviewAudit({ mode: 'review_only' });
+  const af = {
+    ...activationReview.softLaunchFindings,
+    decision: activationReview.decision,
+    totalFamilyCount: activationReview.totalFamilyCount,
+    totalVariantCount: activationReview.totalVariantCount,
+    v11BacklogLength: activationReview.v11Backlog.length,
+  };
 
   findings.push(
     makeFinding(

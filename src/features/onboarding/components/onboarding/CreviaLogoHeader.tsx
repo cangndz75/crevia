@@ -4,10 +4,17 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { CreviaGameLogo } from '@/ui/components/CreviaGameLogo';
 import { spacing } from '@/ui/theme/spacing';
 
-export function CreviaLogoHeader() {
+type CreviaLogoHeaderProps = {
+  compact?: boolean;
+  size?: number;
+};
+
+export function CreviaLogoHeader({ compact = false, size }: CreviaLogoHeaderProps) {
+  const width = size ?? (compact ? 148 : 204);
+
   return (
     <Animated.View entering={FadeInDown.duration(500)} style={styles.wrap}>
-      <CreviaGameLogo width={200} />
+      <CreviaGameLogo width={width} />
     </Animated.View>
   );
 }

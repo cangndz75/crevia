@@ -30,6 +30,7 @@ type PrimaryGameButtonProps = {
   disabled?: boolean;
   icon?: keyof typeof Ionicons.glyphMap;
   style?: ViewStyle;
+  height?: number;
 };
 
 export function PrimaryGameButton({
@@ -39,6 +40,7 @@ export function PrimaryGameButton({
   disabled = false,
   icon,
   style,
+  height,
 }: PrimaryGameButtonProps) {
   const scale = useSharedValue(1);
   const breathe = useSharedValue(1);
@@ -70,6 +72,8 @@ export function PrimaryGameButton({
     <AnimatedPressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={title}
       onPressIn={() => {
         scale.value = withSpring(0.97, { damping: 14 });
       }}
@@ -85,12 +89,17 @@ export function PrimaryGameButton({
         }
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.btn, disabled && styles.btnDisabled]}>
+        style={[styles.btn, height ? { minHeight: height } : null, disabled && styles.btnDisabled]}>
         <View style={styles.left}>
           {leftIcon ? (
             <Ionicons name={leftIcon} size={18} color="#FFFFFF" style={styles.sparkle} />
           ) : null}
-          <Text style={[styles.label, isContinue && styles.labelContinue]}>{title}</Text>
+          <Text
+            style={[styles.label, isContinue && styles.labelContinue]}
+            numberOfLines={1}
+            ellipsizeMode="tail">
+            {title}
+          </Text>
         </View>
         <View style={[styles.arrowCircle, { width: circleSize, height: circleSize, borderRadius: circleSize / 2 }]}>
           <Ionicons name="arrow-forward" size={arrowSize} color={onboardingTokens.primary} />
@@ -103,11 +112,11 @@ export function PrimaryGameButton({
 const styles = StyleSheet.create({
   outer: {
     borderRadius: onboardingRadii.button,
-    shadowColor: onboardingTokens.shadow,
+    shadowColor: onboardingTokens.primary,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    elevation: 7,
   },
   outerGlow: {
     shadowOpacity: 0.65,
@@ -131,6 +140,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     flex: 1,
+    minWidth: 0,
   },
   sparkle: {
     opacity: 0.95,
@@ -140,6 +150,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.15,
+    flexShrink: 1,
+    minWidth: 0,
   },
   labelContinue: {
     fontSize: 17,

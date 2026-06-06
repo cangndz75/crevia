@@ -1,12 +1,12 @@
+import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { WELCOME_METRICS, WELCOME_PILLS } from '@/features/onboarding/data/onboardingData';
-import { CharacterAvatarRow } from '@/features/onboarding/components/onboarding/CharacterAvatarRow';
-import { FloatingStatCard } from '@/features/onboarding/components/onboarding/FloatingStatCard';
-import { IsometricNeighborhoodCard } from '@/features/onboarding/components/onboarding/IsometricNeighborhoodCard';
+import { MetricBadge } from '@/features/onboarding/components/onboarding/MetricBadge';
 import { PillTag } from '@/features/onboarding/components/onboarding/PillTag';
-import { spacing } from '@/ui/theme/spacing';
+import { onboardingAssets } from '@/features/onboarding/data/onboardingAssets';
+import { WELCOME_METRICS, WELCOME_PILLS } from '@/features/onboarding/data/onboardingData';
+import { onboardingRadii, onboardingTokens } from '@/features/onboarding/theme/onboardingTokens';
 
 export function WelcomeOnboardingPage() {
   return (
@@ -17,14 +17,20 @@ export function WelcomeOnboardingPage() {
         ))}
       </Animated.View>
 
-      <View style={styles.mapScene}>
-        {WELCOME_METRICS.map((metric, index) => (
-          <FloatingStatCard key={metric.id} metric={metric} index={index} />
-        ))}
-        <IsometricNeighborhoodCard />
+      <View style={styles.heroCard}>
+        <View style={styles.heroGlow} />
+        <Image
+          source={onboardingAssets.neighborhoodMap}
+          style={styles.heroImage}
+          contentFit="contain"
+        />
       </View>
 
-      <CharacterAvatarRow />
+      <View style={styles.metricsRow}>
+        {WELCOME_METRICS.map((metric) => (
+          <MetricBadge key={metric.id} metric={metric} compact />
+        ))}
+      </View>
     </View>
   );
 }
@@ -32,22 +38,50 @@ export function WelcomeOnboardingPage() {
 const styles = StyleSheet.create({
   wrap: {
     width: '100%',
-    gap: spacing.md,
+    gap: 14,
     alignItems: 'center',
-    paddingBottom: spacing.sm,
+    paddingBottom: 8,
   },
   pills: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: spacing.sm,
+    gap: 8,
+    minWidth: 0,
   },
-  mapScene: {
+  heroCard: {
     width: '100%',
-    minHeight: 220,
+    minHeight: 190,
+    maxHeight: 224,
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.lg,
+    backgroundColor: onboardingTokens.cardSoft,
+    borderRadius: onboardingRadii.xl,
+    borderWidth: 1,
+    borderColor: onboardingTokens.border,
+    overflow: 'hidden',
+    shadowColor: onboardingTokens.shadow,
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  },
+  heroGlow: {
+    position: 'absolute',
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    backgroundColor: 'rgba(109,66,245,0.08)',
+  },
+  heroImage: {
+    width: '92%',
+    height: 190,
+  },
+  metricsRow: {
+    width: '100%',
+    flexDirection: 'row',
+    gap: 8,
+    minWidth: 0,
   },
 });

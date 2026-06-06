@@ -1,33 +1,30 @@
 import { useCallback, useRef, useState } from 'react';
 import {
-  Dimensions,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   DEFAULT_PILOT_DISTRICT_ID,
   type PilotDistrictId,
 } from '@/core/models/DistrictProfile';
-import { ONBOARDING_STEPS } from '@/features/onboarding/data/onboardingData';
 import { CreviaLogoHeader } from '@/features/onboarding/components/onboarding/CreviaLogoHeader';
 import { OnboardingBackground } from '@/features/onboarding/components/onboarding/OnboardingBackground';
-import { PrimaryGameButton } from '@/features/onboarding/components/onboarding/PrimaryGameButton';
-import { ProgressDots } from '@/features/onboarding/components/onboarding/ProgressDots';
+import { OnboardingBottomControls } from '@/features/onboarding/components/onboarding/OnboardingBottomControls';
 import { EventsOnboardingPage } from '@/features/onboarding/components/onboarding/steps/EventsOnboardingPage';
 import { RegionOnboardingPage } from '@/features/onboarding/components/onboarding/steps/RegionOnboardingPage';
 import { RoadmapOnboardingPage } from '@/features/onboarding/components/onboarding/steps/RoadmapOnboardingPage';
 import { WelcomeOnboardingPage } from '@/features/onboarding/components/onboarding/steps/WelcomeOnboardingPage';
+import { ONBOARDING_STEPS } from '@/features/onboarding/data/onboardingData';
 import { onboardingTokens } from '@/features/onboarding/theme/onboardingTokens';
-import { spacing } from '@/ui/theme/spacing';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TOTAL = ONBOARDING_STEPS.length;
 
 export type CreviaOnboardingScreenProps = {
@@ -36,21 +33,37 @@ export type CreviaOnboardingScreenProps = {
 
 export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps) {
   const pagerRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isSmallPhone = width <= 370;
+  const horizontalPadding = isSmallPhone ? 20 : 26;
+  const titleFont = isSmallPhone ? 28 : 34;
+  const subtitleFont = isSmallPhone ? 14 : 16;
+  const ctaHeight = isSmallPhone ? 62 : 70;
   const [stepIndex, setStepIndex] = useState(0);
   const [selectedRegionId, setSelectedRegionId] =
     useState<PilotDistrictId>(DEFAULT_PILOT_DISTRICT_ID);
-  const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(null);
+  const [selectedDecisionId, setSelectedDecisionId] = useState('fast');
 
   const step = ONBOARDING_STEPS[stepIndex]!;
   const isLast = stepIndex === TOTAL - 1;
+  const logoSize = isSmallPhone
+    ? stepIndex === 0
+      ? 170
+      : 132
+    : stepIndex === 0
+      ? 210
+      : 154;
 
-  const scrollToStep = useCallback((index: number) => {
-    pagerRef.current?.scrollTo({ x: index * SCREEN_WIDTH, animated: true });
-    setStepIndex(index);
-  }, []);
+  const scrollToStep = useCallback(
+    (index: number) => {
+      pagerRef.current?.scrollTo({ x: index * width, animated: true });
+      setStepIndex(index);
+    },
+    [width],
+  );
 
   const handleFinish = () => {
-    // TODO: Navigate to main game dashboard (hub) after onboarding storage + store init.
     void onFinish(selectedRegionId);
   };
 
@@ -67,15 +80,11 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
   };
 
   const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    const index = Math.round(e.nativeEvent.contentOffset.x / width);
     if (index !== stepIndex && index >= 0 && index < TOTAL) {
       setStepIndex(index);
     }
   };
-
-  const primaryDisabled = step.id === 'events' && selectedDecisionId == null;
-  const primaryLabel = isLast ? 'Oyuna Devam Et' : 'Devam';
-  const primaryVariant = isLast ? 'continueGame' : 'default';
 
   const titleLines = step.titleLines ?? [step.title];
 
@@ -83,15 +92,27 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
     <View style={styles.root}>
       <OnboardingBackground />
 
-      <View style={styles.header}>
-        <CreviaLogoHeader />
-        <Animated.View key={`title-${stepIndex}`} entering={FadeInDown.duration(360)} style={styles.headerText}>
+      <View style={[styles.header, { paddingHorizontal: horizontalPadding }]}>
+        <CreviaLogoHeader compact={stepIndex > 0} size={logoSize} />
+        <Animated.View
+          key={`title-${stepIndex}`}
+          entering={FadeInDown.duration(360)}
+          style={styles.headerText}>
           {titleLines.map((line) => (
-            <Text key={line} style={styles.title}>
+            <Text
+              key={line}
+              style={[styles.title, { fontSize: titleFont, lineHeight: titleFont + 6 }]}
+              numberOfLines={1}
+              ellipsizeMode="tail">
               {line}
             </Text>
           ))}
-          <Text style={styles.body}>{step.body}</Text>
+          <Text
+            style={[styles.body, { fontSize: subtitleFont, lineHeight: subtitleFont + 7 }]}
+            numberOfLines={3}
+            ellipsizeMode="tail">
+            {step.body}
+          </Text>
         </Animated.View>
       </View>
 
@@ -104,57 +125,60 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
         scrollEventThrottle={16}
         style={styles.pager}
         contentContainerStyle={styles.pagerContent}>
-        <View style={[styles.page, { width: SCREEN_WIDTH }]}>
+        <View style={[styles.page, { width }]}>
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.pageScroll}>
+            contentContainerStyle={[styles.pageScroll, { paddingHorizontal: horizontalPadding }]}>
             <WelcomeOnboardingPage />
           </ScrollView>
         </View>
-        <View style={[styles.page, { width: SCREEN_WIDTH }]}>
+        <View style={[styles.page, { width }]}>
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.pageScroll}>
+            contentContainerStyle={[styles.pageScroll, { paddingHorizontal: horizontalPadding }]}>
             <RegionOnboardingPage
               selectedId={selectedRegionId}
               onSelect={setSelectedRegionId}
             />
           </ScrollView>
         </View>
-        <View style={[styles.page, { width: SCREEN_WIDTH }]}>
+        <View style={[styles.page, { width }]}>
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.pageScroll}>
+            contentContainerStyle={[styles.pageScroll, { paddingHorizontal: horizontalPadding }]}>
             <EventsOnboardingPage
               selectedDecisionId={selectedDecisionId}
               onSelectDecision={setSelectedDecisionId}
             />
           </ScrollView>
         </View>
-        <View style={[styles.page, { width: SCREEN_WIDTH }]}>
+        <View style={[styles.page, { width }]}>
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.pageScroll}>
+            contentContainerStyle={[styles.pageScroll, { paddingHorizontal: horizontalPadding }]}>
             <RoadmapOnboardingPage />
           </ScrollView>
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
-        <PrimaryGameButton
-          title={primaryLabel}
-          variant={primaryVariant}
-          onPress={handlePrimary}
-          disabled={primaryDisabled}
+      <View
+        style={[
+          styles.footer,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: Math.max(insets.bottom, 10),
+          },
+        ]}>
+        <OnboardingBottomControls
+          activeIndex={stepIndex}
+          total={TOTAL}
+          primaryLabel={isLast ? 'Oyuna Devam Et' : 'Devam'}
+          onPrimaryPress={handlePrimary}
+          onBackPress={handleBack}
+          showBack={stepIndex > 0}
+          isFinal={isLast}
+          ctaHeight={ctaHeight}
         />
-        {stepIndex > 0 ? (
-          <Pressable onPress={handleBack} style={styles.backBtn}>
-            <Text style={styles.backText}>Geri</Text>
-          </Pressable>
-        ) : (
-          <View style={styles.backSpacer} />
-        )}
-        <ProgressDots current={stepIndex + 1} total={TOTAL} />
       </View>
     </View>
   );
@@ -166,32 +190,28 @@ const styles = StyleSheet.create({
     backgroundColor: onboardingTokens.background,
   },
   header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xs,
-    gap: spacing.sm,
+    paddingTop: 4,
+    gap: 7,
     alignItems: 'center',
   },
   headerText: {
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: 0,
+    minWidth: 0,
   },
   title: {
-    fontSize: 30,
-    fontWeight: '800',
+    fontWeight: '900',
     color: onboardingTokens.textMain,
     textAlign: 'center',
-    letterSpacing: -0.6,
-    lineHeight: 36,
+    letterSpacing: 0,
   },
   body: {
-    marginTop: spacing.xs,
-    fontSize: 14,
-    lineHeight: 21,
+    marginTop: 6,
     color: onboardingTokens.textMuted,
     textAlign: 'center',
-    fontWeight: '500',
-    paddingHorizontal: spacing.sm,
+    fontWeight: '600',
+    minWidth: 0,
   },
   pager: {
     flex: 1,
@@ -203,25 +223,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   pageScroll: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xl,
+    paddingTop: 10,
+    paddingBottom: 18,
   },
   footer: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-    gap: spacing.sm,
-  },
-  backBtn: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  backText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: onboardingTokens.textMuted,
-  },
-  backSpacer: {
-    height: 36,
+    paddingTop: 6,
   },
 });

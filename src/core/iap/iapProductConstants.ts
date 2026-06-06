@@ -55,6 +55,8 @@ export const IAP_STATUS_COPY = {
   purchaseCancelled: 'İşlem iptal edildi.',
   purchaseFailed: 'Erişim kontrolü tamamlanamadı. Daha sonra tekrar deneyebilirsin.',
   purchasePending: 'Erişim kontrol ediliyor',
+  purchaseUnavailable:
+    'Mağaza bağlantısı henüz hazır değil. Sınırlı gündemle devam edebilirsin.',
 } as const;
 
 export const IAP_INTEGRATION_ADAPTER_CONTRACT: IapIntegrationAdapterContract = {

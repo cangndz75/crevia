@@ -1,524 +1,577 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image, type ImageSource } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
-import { ReactNode, useEffect, useMemo, useRef } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { useMemo, type ReactNode } from 'react';
 import {
-  Animated,
-  Easing,
+  Platform,
   Pressable,
+  ScrollView,
+  StatusBar as RNStatusBar,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
+  type ImageStyle,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { buildActiveTaskRouteUiModel } from '@/core/activeTaskRoutes';
-import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import type { CarryOverMemoryModel } from '@/core/carryOver';
-import { buildHubOpenEndedIntegrationModel } from '@/core/hub/hubOpenEndedIntegrationPresentation';
-import { buildHubCardVisibilityModel } from '@/core/onboarding/firstTenMinutesPresentation';
-import { DAY1_DAILY_PLAN_COPY } from '@/core/onboarding/firstTenMinutesConstants';
+import { creviaAssets } from '@/core/assets/creviaAssets';
+import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import { getTimeGreeting } from '@/core/utils/timeGreeting';
+import { hubAssets } from '@/features/hub/utils/hubAssets';
 import { useGameStatus } from '@/store/gameSelectors';
 import { useGameStore } from '@/store/useGameStore';
-import { creviaAssets } from '@/core/assets/creviaAssets';
-import { hubAssets } from '@/features/hub/utils/hubAssets';
+import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
 import { HeaderAvatar } from '@/ui/components/game-header/HeaderAvatar';
 
-import { HubCarryOverMemoryCard } from './HubCarryOverMemoryCard';
-import { HubOpenEndedOperationCard } from './HubOpenEndedOperationCard';
+const COMPACT_BREAKPOINT = 370;
 
 const eceImage = hubAssets.advisorPortrait;
+const buildingThumb = creviaAssets.buildings.statusSquare;
 const municipalImage = creviaAssets.buildings.municipalHall3d;
-const teamImage = require('../../../../assets/b3.png');
-const planImage = require('../../../../assets/b4.png');
-const routeImage = require('../../../../assets/b5.png');
-const protocolImage = require('../../../../assets/b6.png');
-const personnelImage = require('../../../../assets/b7.png');
-const reportImage = require('../../../../assets/b8.png');
-const vehicleImage = require('../../../../assets/b9.png');
-const learningImage = require('../../../../assets/c1.png');
+const teamImage = hubAssets.quickActions.team;
+const routeImage = hubAssets.quickActions.route;
+const protocolImage = hubAssets.quickActions.announce;
+const reportImage = creviaAssets.reports.icons.chartSuccess;
+const personnelImage = creviaAssets.socialPulse.teamStatus;
+const vehicleImage = creviaAssets.vehicles.fieldOperatorTruck;
 
 const palette = {
   background: '#F7F1E6',
-  card: '#FFFDF7',
-  tealDark: '#0E5F5B',
-  teal: '#0F8F86',
-  tealSoft: '#BDEFE7',
-  gold: '#D9AA2B',
-  goldSoft: '#F2D479',
-  textDark: '#183B3A',
-  textMuted: '#6C7A78',
-  border: 'rgba(20, 70, 66, 0.10)',
+  teal: '#07534C',
+  tealDark: '#063F3A',
+  mint: '#E9F7F2',
+  mintSoft: '#F2FBF7',
+  gold: '#D8AE2F',
+  goldSoft: '#F5E7B7',
+  card: '#FFFDF8',
+  text: '#173D3A',
+  muted: '#63706D',
+  border: 'rgba(7, 83, 76, 0.10)',
   white: '#FFFFFF',
 } as const;
 
-type AnimatedCardProps = {
-  delay: number;
-  style?: object;
-  children: ReactNode;
-};
+function useHubLayoutMetrics() {
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useAppTabBarHeight();
+  const isCompact = width <= COMPACT_BREAKPOINT;
+  const topInset =
+    Platform.OS === 'android'
+      ? Math.max(insets.top, RNStatusBar.currentHeight ?? 24)
+      : insets.top;
 
-type PressScaleProps = {
-  onPress?: () => void;
-  style?: object;
-  children: ReactNode;
-  accessibilityLabel: string;
-  disabled?: boolean;
-};
-
-function useEntrance(delay: number) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(14)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 360,
-        delay,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 360,
-        delay,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [delay, opacity, translateY]);
-
-  return { opacity, transform: [{ translateY }] };
+  return {
+    width,
+    isCompact,
+    insets,
+    topInset,
+    scrollBottomPadding: tabBarHeight + (isCompact ? 148 : 136),
+    headerTitleSize: isCompact ? 22 : 24,
+  };
 }
 
-function AnimatedCard({ delay, style, children }: AnimatedCardProps) {
-  const animatedStyle = useEntrance(delay);
-  return <Animated.View style={[animatedStyle, style]}>{children}</Animated.View>;
+function shadowStyle() {
+  return {
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3,
+  } as const;
 }
 
-function PressScale({
-  onPress,
+function CardAssetImage({
+  source,
   style,
-  children,
-  accessibilityLabel,
-  disabled = false,
-}: PressScaleProps) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const pressIn = () => {
-    Animated.spring(scale, {
-      toValue: 0.97,
-      speed: 24,
-      bounciness: 0,
-      useNativeDriver: true,
-    }).start();
-  };
-  const pressOut = () => {
-    Animated.spring(scale, {
-      toValue: 1,
-      speed: 22,
-      bounciness: 4,
-      useNativeDriver: true,
-    }).start();
-  };
+  containerStyle,
+  backgroundColor = palette.card,
+}: {
+  source: ImageSource;
+  style?: StyleProp<ImageStyle>;
+  containerStyle?: StyleProp<ViewStyle>;
+  backgroundColor?: string;
+}) {
+  return (
+    <View
+      style={[styles.assetClip, { backgroundColor }, containerStyle]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants">
+      <Image source={source} style={[styles.assetImage, style]} contentFit="contain" />
+    </View>
+  );
+}
 
+type HubReferenceHomeProps = {
+  hubCarryOverMemory?: CarryOverMemoryModel | null;
+  showHubCarryOver?: boolean;
+  scrollFooter?: ReactNode;
+};
+
+type IconName = keyof typeof Ionicons.glyphMap;
+
+function metaDistrictName(name: string | null | undefined) {
+  const short = name?.split(' ')[0];
+  return short && short.length > 0 ? short : 'Merkez';
+}
+
+function IconButton({
+  icon,
+  label,
+  onPress,
+  active = false,
+  notification = false,
+  size = 44,
+}: {
+  icon: IconName;
+  label: string;
+  onPress: () => void;
+  active?: boolean;
+  notification?: boolean;
+  size?: number;
+}) {
   return (
     <Pressable
-      disabled={disabled}
       onPress={onPress}
-      onPressIn={pressIn}
-      onPressOut={pressOut}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}>
-      <Animated.View style={[style, { transform: [{ scale }] }, disabled && styles.disabled]}>
-        {children}
-      </Animated.View>
+      accessibilityLabel={label}
+      style={({ pressed }) => [
+        styles.headerIconButton,
+        { width: size, height: size, borderRadius: size / 2 - 4 },
+        active ? styles.headerIconButtonActive : styles.headerIconButtonGhost,
+        pressed && styles.pressed,
+      ]}>
+      <Ionicons
+        name={icon}
+        size={active ? 20 : 18}
+        color={active ? palette.tealDark : palette.white}
+      />
+      {notification ? <View style={styles.notificationDot} /> : null}
     </Pressable>
   );
 }
 
-function ProgressRing({ value, size = 56 }: { value: number; size?: number }) {
-  const progress = useRef(new Animated.Value(0)).current;
-  const clamped = Math.max(0, Math.min(100, Math.round(value)));
-
-  useEffect(() => {
-    Animated.timing(progress, {
-      toValue: clamped,
-      duration: 800,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-  }, [clamped, progress]);
-
-  const rotate = progress.interpolate({
-    inputRange: [0, 100],
-    outputRange: ['0deg', '360deg'],
-  });
-
-  return (
-    <View style={[styles.ring, { width: size, height: size, borderRadius: size / 2 }]}>
-      <Animated.View
-        style={[
-          styles.ringArc,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            transform: [{ rotate }],
-          },
-        ]}
-      />
-      <View style={styles.ringInner}>
-        <Text style={styles.ringText} numberOfLines={1}>
-          {clamped}%
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-function Chip({
-  icon,
-  label,
-  tone = 'mint',
-}: {
-  icon?: keyof typeof Ionicons.glyphMap;
-  label: string;
-  tone?: 'mint' | 'gold' | 'ghost';
-}) {
-  const toneStyle =
-    tone === 'gold'
-      ? styles.chip_gold
-      : tone === 'ghost'
-        ? styles.chip_ghost
-        : styles.chip_mint;
-
-  return (
-    <View style={[styles.chip, toneStyle]}>
-      {icon ? (
-        <Ionicons
-          name={icon}
-          size={12}
-          color={tone === 'gold' ? palette.gold : palette.tealDark}
-        />
-      ) : null}
-      <Text style={styles.chipText} numberOfLines={1}>
-        {label}
-      </Text>
-    </View>
-  );
-}
-
-function HeaderBlock() {
-  const insets = useSafeAreaInsets();
+function PremiumHubHeader() {
   const router = useRouter();
+  const { topInset, headerTitleSize } = useHubLayoutMetrics();
   const status = useGameStatus();
   const greeting = useMemo(() => getTimeGreeting(), []);
-  const metaLine = `${status.currentDay}. Gün · ${status.selectedDistrictName.split(' ')[0] ?? 'Merkez'} · Sv.${status.level}`;
+  const title = `${greeting.title || 'İyi Akşamlar'}, ${status.playerName || 'Can'} ${
+    greeting.emoji || '🌙'
+  }`;
+  const meta = `${status.currentDay}. Gün · ${metaDistrictName(
+    status.selectedDistrictName,
+  )} · Sv.${status.level}`;
 
   return (
-    <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
-      <Image source={municipalImage} style={styles.headerBgImage} contentFit="cover" />
-      <View style={styles.headerTint} />
-      <View style={styles.headerTop}>
-        <PressScale
-          accessibilityLabel="Profili aç"
-          onPress={() => router.push('/profile' as Href)}
-          style={styles.avatarButton}>
-          <HeaderAvatar size={52} level={status.level} showLevelBadge />
-        </PressScale>
+    <LinearGradient
+      colors={[palette.tealDark, palette.teal, '#0A6A61']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[
+        styles.header,
+        {
+          paddingTop: topInset + 12,
+          minHeight: topInset + 198,
+        },
+      ]}>
+      <View style={styles.headerBuildingMask}>
+        <Image source={municipalImage} style={styles.headerBuilding} contentFit="cover" />
+      </View>
+      <View style={styles.headerCircleLarge} />
+      <View style={styles.headerCircleSmall} />
 
-        <View style={styles.headerCopy}>
-          <Text style={styles.greeting} numberOfLines={1}>
-            {greeting.title}, {status.playerName} {greeting.emoji}
+      <View style={styles.headerContent}>
+        <Pressable
+          onPress={() => router.push('/profile' as Href)}
+          accessibilityRole="button"
+          accessibilityLabel="Profili aç"
+          style={({ pressed }) => [styles.avatarPress, pressed && styles.pressed]}>
+          <HeaderAvatar
+            size={60}
+            level={status.level}
+            showLevelBadge
+            borderColor={palette.goldSoft}
+          />
+        </Pressable>
+
+        <View style={styles.headerTextCol}>
+          <Text
+            style={[styles.headerTitle, { fontSize: headerTitleSize, lineHeight: headerTitleSize + 4 }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            adjustsFontSizeToFit
+            minimumFontScale={0.82}>
+            {title}
           </Text>
-          <View style={styles.metaRow}>
-            <Ionicons name="location" size={12} color="rgba(255,255,255,0.84)" />
-            <Text style={styles.headerMeta} numberOfLines={1}>
-              {metaLine}
+          <View style={styles.headerMetaRow}>
+            <Ionicons name="location" size={13} color="rgba(255,255,255,0.82)" />
+            <Text
+              style={styles.headerMeta}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              adjustsFontSizeToFit
+              minimumFontScale={0.88}>
+              {meta}
             </Text>
           </View>
         </View>
 
         <View style={styles.headerActions}>
-          <View style={styles.resourceChips}>
-            <Chip icon="ellipse" label={status.sourceShort} tone="gold" />
-            <Chip icon="star" label={`${status.xp}/${status.xpTarget}`} tone="ghost" />
-          </View>
-          <View style={styles.headerButtons}>
-            <PressScale
-              accessibilityLabel="Raporları aç"
-              onPress={() => router.push('/reports' as Href)}
-              style={[styles.roundButton, styles.roundButtonActive]}>
-              <Ionicons name="bar-chart" size={17} color={palette.tealDark} />
-            </PressScale>
-            <PressScale
-              accessibilityLabel="Bildirimleri aç"
-              onPress={() => router.push('/social' as Href)}
-              style={[styles.roundButton, styles.roundButtonGhost]}>
-              <Ionicons name="notifications-outline" size={17} color={palette.white} />
-            </PressScale>
-          </View>
+          <IconButton
+            active
+            icon="bar-chart"
+            label="Raporları aç"
+            onPress={() => router.push('/reports' as Href)}
+          />
+          <IconButton
+            notification={status.notificationCount > 0}
+            icon="notifications-outline"
+            label="Bildirimleri aç"
+            onPress={() => router.push('/social' as Href)}
+          />
+        </View>
+      </View>
+    </LinearGradient>
+  );
+}
+
+function Pill({
+  label,
+  tone = 'mint',
+  compact = false,
+}: {
+  label: string;
+  tone?: 'mint' | 'gold';
+  compact?: boolean;
+}) {
+  return (
+    <View
+      style={[
+        styles.pill,
+        compact && styles.pillCompact,
+        tone === 'gold' ? styles.pillGold : styles.pillMint,
+      ]}>
+      <Text style={[styles.pillText, compact && styles.pillTextCompact]} numberOfLines={1}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function PreviousDecisionEffectCard({
+  memory,
+}: {
+  memory?: CarryOverMemoryModel | null;
+}) {
+  const body =
+    memory?.summary ??
+    memory?.detail ??
+    'Dünkü operasyon kararı bugün saha planında hala hissediliyor.';
+
+  return (
+    <View style={[styles.card, styles.previousCard]}>
+      <View style={styles.roundIcon}>
+        <Ionicons name="time-outline" size={22} color={palette.teal} />
+      </View>
+      <View style={styles.previousCopy}>
+        <Text style={styles.cardTitle} numberOfLines={1} ellipsizeMode="tail">
+          Önceki Kararın Etkisi
+        </Text>
+        <Text style={styles.bodyText} numberOfLines={2} ellipsizeMode="tail">
+          {body}
+        </Text>
+        <View style={styles.pillRow}>
+          <Pill label="Operasyon" compact />
+          <Pill label="İz" tone="gold" compact />
+        </View>
+      </View>
+      <View style={styles.previousImageWrap}>
+        <CardAssetImage source={buildingThumb} style={styles.previousImage} />
+        <View style={styles.checkBadge}>
+          <Ionicons name="checkmark" size={12} color={palette.tealDark} />
         </View>
       </View>
     </View>
   );
 }
 
-function EceWelcomeCard({ belowCarryOver = false }: { belowCarryOver?: boolean }) {
+function EceWelcomeCard() {
   const router = useRouter();
   const status = useGameStatus();
-  const width = useWindowDimensions().width;
-  const eceWidth = width <= 370 ? 150 : 176;
+  const { isCompact } = useHubLayoutMetrics();
+  const eceWidth = isCompact ? 130 : 150;
 
-  const handleAdvice = async () => {
+  const handlePress = () => {
     playLightImpactHaptic();
     router.push('/events' as Href);
   };
 
   return (
-    <AnimatedCard
-      delay={80}
-      style={belowCarryOver ? styles.overlapCardWrapBelowCarryOver : styles.overlapCardWrap}>
-      <View style={[styles.card, styles.eceCard]}>
-        <Image source={municipalImage} style={styles.eceBuilding} contentFit="contain" />
-        <View style={styles.sparkleA} />
-        <Text style={styles.sparkleText}>✦</Text>
-        <View style={styles.eceCopy}>
-          <Text style={styles.eceTitle} numberOfLines={1}>
-            Ece
+    <View style={[styles.card, styles.eceCard]}>
+      <View style={styles.eceDecor} />
+      <View style={styles.eceCopy}>
+        <Text style={styles.eceName} numberOfLines={1} ellipsizeMode="tail">
+          Ece
+        </Text>
+        <View style={styles.advisorBadge}>
+          <Text style={styles.advisorBadgeText} numberOfLines={1} ellipsizeMode="tail">
+            Stajyer Operasyon Asistanı
           </Text>
-          <View style={styles.assistantBadge}>
-            <Text style={styles.assistantBadgeText} numberOfLines={1}>
-              Stajyer Operasyon Asistanı
-            </Text>
-          </View>
-          <Text style={styles.eceLead} numberOfLines={1}>
-            Merkeze hoş geldin {status.playerName}!
+        </View>
+        <Text style={styles.eceLead} numberOfLines={1} ellipsizeMode="tail">
+          Merkeze hoş geldin {status.playerName || 'Can'}!
+        </Text>
+        <Text style={styles.bodyText} numberOfLines={2} ellipsizeMode="tail">
+          Bugün birlikte temel akışı öğrenip ilk kararlarını vermeye başlayalım.
+        </Text>
+        <Pressable
+          onPress={handlePress}
+          accessibilityRole="button"
+          accessibilityLabel="Kısa Öneri AI"
+          style={({ pressed }) => [styles.primaryCta, pressed && styles.pressed]}>
+          <Ionicons name="sparkles" size={16} color={palette.white} />
+          <Text style={styles.primaryCtaText} numberOfLines={1} ellipsizeMode="tail">
+            Kısa Öneri AI
           </Text>
-          <Text style={styles.eceDescription} numberOfLines={2}>
-            Bugün birlikte temel akışı öğrenip ilk kararlarını vermeye başlayalım.
-          </Text>
-          <PressScale
-            accessibilityLabel="Kısa öneri al"
-            onPress={handleAdvice}
-            style={styles.primaryButton}>
-            <Ionicons name="sparkles" size={14} color={palette.white} />
-            <Text style={styles.primaryButtonText} numberOfLines={1}>
-              Kısa Öneri Al
-            </Text>
-          </PressScale>
-        </View>
-        <Image
-          source={eceImage}
-          style={[styles.eceImage, { width: eceWidth }]}
-          contentFit="contain"
-        />
+          <Ionicons name="chevron-forward" size={16} color={palette.white} />
+        </Pressable>
       </View>
-    </AnimatedCard>
-  );
-}
-
-function LearningProgressCard() {
-  const steps = [
-    { label: 'Olayı İncele', done: true },
-    { label: 'Karar Ver', done: true },
-    { label: 'Akışı Takip Et', done: true },
-    { label: 'Raporu Oku', done: false },
-  ];
-
-  return (
-    <AnimatedCard delay={140}>
-      <View style={[styles.card, styles.learningCard]}>
-        <View style={styles.learningHeader}>
-          <Image source={learningImage} style={styles.learningIcon} contentFit="contain" />
-          <View style={styles.learningCopy}>
-            <Text style={styles.cardTitle} numberOfLines={1}>
-              Bugünkü Öğrenme Günü
-            </Text>
-            <Text style={styles.cardSubtitle} numberOfLines={1}>
-              İlk gün hedefin: temel müdahaleyi öğrenmek.
-            </Text>
-          </View>
-          <View style={styles.trophyRing}>
-            <ProgressRing value={100} size={58} />
-            <Ionicons name="trophy" size={16} color={palette.gold} />
-          </View>
-        </View>
-        <View style={styles.timeline}>
-          {steps.map((step, index) => (
-            <View key={step.label} style={styles.timelineItem}>
-              {index > 0 ? <View style={styles.timelineLine} /> : null}
-              <View style={[styles.timelineDot, step.done ? styles.timelineDotDone : styles.timelineDotLocked]}>
-                <Ionicons
-                  name={step.done ? 'checkmark' : 'lock-closed'}
-                  size={14}
-                  color={step.done ? palette.white : palette.textMuted}
-                />
-              </View>
-              <Text style={styles.timelineLabel} numberOfLines={1}>
-                {step.label}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </View>
-    </AnimatedCard>
-  );
-}
-
-function DailyGoalPlanGrid() {
-  const confirmDailyOperationsPlan = useGameStore((s) => s.confirmDailyOperationsPlan);
-  const dailyOperationsPlan = useGameStore((s) => s.dailyOperationsPlan);
-  const gameState = useGameStore((s) => s.gameState);
-  const currentDay = gameState.city.day;
-  const isDay1 = currentDay <= 1;
-  const planDescription = isDay1
-    ? DAY1_DAILY_PLAN_COPY.planDescriptionShort
-    : 'Seçilen plan bugün sinyallere yanıt verebilir; etki gün sonunda izlenir.';
-
-  const handleConfirm = () => {
-    playLightImpactHaptic();
-    confirmDailyOperationsPlan();
-  };
-
-  return (
-    <AnimatedCard delay={260}>
-      <View style={styles.focusPanel}>
-        <View style={[styles.card, styles.focusCard, styles.goalFocusCard]}>
-          <View style={styles.smallCardHeader}>
-            <Ionicons name="locate" size={18} color={palette.gold} />
-            <Text style={styles.goldTitle} numberOfLines={1}>
-              Günlük Hedef
-            </Text>
-          </View>
-          <View style={styles.goalBody}>
-            <View style={styles.goalCopy}>
-              <Text style={styles.goalTitle} numberOfLines={1}>
-                Ekibi yormadan müdahale et
-              </Text>
-              <Text style={styles.rewardLine} numberOfLines={1}>
-                +30 ilerleme  %100
-              </Text>
-              <View style={styles.goldProgressTrack}>
-                <Animated.View style={styles.goldProgressFill} />
-              </View>
-            </View>
-            <ProgressRing value={100} size={52} />
-          </View>
-        </View>
-
-        <View style={[styles.card, styles.focusCard, styles.planFocusCard]}>
-          <View style={styles.smallCardHeader}>
-            <Ionicons name="calendar" size={16} color={palette.teal} />
-            <Text style={styles.tealTitle} numberOfLines={1}>
-              {isDay1 ? DAY1_DAILY_PLAN_COPY.title : 'Bugünün Önerilen Planı'}
-            </Text>
-          </View>
-          <View style={styles.planBody}>
-            <View style={styles.planTextCol}>
-              <InfoRow label="Mahalle" value="Cumhuriyet" />
-              <InfoRow label="Personel" value="Dengeli" />
-              <Text style={styles.planDescription} numberOfLines={isDay1 ? 1 : 2}>
-                {planDescription}
-              </Text>
-            </View>
-            <Image source={planImage} style={styles.planArt} contentFit="contain" />
-          </View>
-          <PressScale
-            accessibilityLabel="Planı onayla"
-            onPress={handleConfirm}
-            disabled={dailyOperationsPlan.confirmedAtDay === currentDay}
-            style={styles.planButton}>
-            <Text style={styles.planButtonText} numberOfLines={1}>
-              {isDay1 ? DAY1_DAILY_PLAN_COPY.confirmCta : 'Planı Onayla'}
-            </Text>
-          </PressScale>
-        </View>
-      </View>
-    </AnimatedCard>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel} numberOfLines={1}>
-        {label}
-      </Text>
-      <Text style={styles.infoValue} numberOfLines={1}>
-        {value}
-      </Text>
+      <CardAssetImage
+        source={eceImage}
+        backgroundColor={palette.goldSoft}
+        containerStyle={[styles.eceImageWrap, { width: eceWidth, height: eceWidth + 12 }]}
+        style={styles.eceImageAsset}
+      />
     </View>
   );
 }
 
-function OperationSignalsCompactCard() {
-  const operationSignals = useGameStore((s) => s.operationSignals);
-  const personnelLabel =
-    operationSignals.personnel.status === 'stable' ? 'Dengeli' : 'İzlemede';
-  const vehicleLabel =
-    operationSignals.vehicles.status === 'stable' ? 'Dengeli' : 'İzlemede';
-
+function SectionHeader({
+  icon,
+  title,
+  badge,
+}: {
+  icon?: IconName;
+  title: string;
+  badge?: string;
+}) {
   return (
-    <AnimatedCard delay={260}>
-      <View style={[styles.card, styles.signalsCard]}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionTitleRow}>
-            <Ionicons name="radio-outline" size={18} color={palette.tealDark} />
-            <Text style={styles.sectionTitle} numberOfLines={1}>
-              Operasyon Sinyalleri
-            </Text>
-          </View>
-          <Chip label="İzlemede" tone="mint" />
-        </View>
-        <View style={styles.signalMiniRow}>
-          <SignalMiniCard
-            image={personnelImage}
-            title="Personel"
-            chip={personnelLabel}
-            body="Bugün personel odağı seçmek yorgunluğu azaltabilir."
-          />
-          <SignalMiniCard
-            image={vehicleImage}
-            title="Araç"
-            chip={vehicleLabel}
-            body="Araç filosu günlük operasyon için hazır görünüyor."
-          />
-        </View>
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionTitleRow}>
+        {icon ? <Ionicons name={icon} size={18} color={palette.gold} /> : null}
+        <Text style={styles.sectionTitle} numberOfLines={1} ellipsizeMode="tail">
+          {title}
+        </Text>
       </View>
-    </AnimatedCard>
+      {badge ? (
+        <View style={styles.sectionBadgeWrap}>
+          <Pill label={badge} tone="gold" compact />
+        </View>
+      ) : null}
+    </View>
   );
 }
 
-function SignalMiniCard({
+function OperationFocusCard() {
+  const { isCompact } = useHubLayoutMetrics();
+  const focusItems: {
+    title: string;
+    body: string;
+    icon: IconName;
+    tone: 'gold' | 'mint';
+  }[] = [
+    {
+      title: 'Kritik Takip',
+      body: 'Kritik sinyal sakin takipte; kaynak temposu dengeli tutulmalı.',
+      icon: 'pulse-outline',
+      tone: 'gold',
+    },
+    {
+      title: 'Aktif Rota',
+      body: 'Rota aktif: İstasyon takipte, ekip sahaya hazırlanıyor.',
+      icon: 'navigate-outline',
+      tone: 'mint',
+    },
+    {
+      title: 'Sınırlı Etki',
+      body: 'İstasyon günlük hamle olabilir; küçük etki, ölçülü trade-off.',
+      icon: 'refresh-outline',
+      tone: 'mint',
+    },
+  ];
+
+  const focusCards = focusItems.map((item) => (
+    <View
+      key={item.title}
+      style={[styles.focusMini, isCompact ? styles.focusMiniScroll : null]}>
+      <View
+        style={[
+          styles.focusIcon,
+          item.tone === 'gold' ? styles.focusIconGold : styles.focusIconMint,
+        ]}>
+        <Ionicons
+          name={item.icon}
+          size={18}
+          color={item.tone === 'gold' ? '#98731B' : palette.teal}
+        />
+      </View>
+      <Text style={styles.focusTitle} numberOfLines={1} ellipsizeMode="tail">
+        {item.title}
+      </Text>
+      <Text style={styles.focusBody} numberOfLines={3} ellipsizeMode="tail">
+        {item.body}
+      </Text>
+    </View>
+  ));
+
+  return (
+    <View style={[styles.card, styles.sectionCard]}>
+      <SectionHeader title="Bugünün Operasyon Odağı" badge="Mahalle Güveni" />
+      {isCompact ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.focusScroll}>
+          {focusCards}
+        </ScrollView>
+      ) : (
+        <View style={styles.focusRow}>{focusCards}</View>
+      )}
+    </View>
+  );
+}
+
+function QuickPreparationsCard() {
+  const router = useRouter();
+  const items: {
+    title: string;
+    image: ImageSource;
+    route: Href;
+  }[] = [
+    { title: 'Ekip Yönetimi', image: teamImage, route: '/events' as Href },
+    { title: 'Rota Planlama', image: routeImage, route: '/map' as Href },
+    { title: 'Saha Protokolleri', image: protocolImage, route: '/events' as Href },
+    { title: 'Raporlama', image: reportImage, route: '/reports' as Href },
+  ];
+
+  return (
+    <View style={[styles.card, styles.quickCard]}>
+      <View style={styles.quickHeader}>
+        <View style={styles.quickTitleBlock}>
+          <Ionicons name="flash" size={18} color={palette.gold} />
+          <Text style={styles.sectionTitle} numberOfLines={1} ellipsizeMode="tail">
+            Hızlı Hazırlıklar
+          </Text>
+          <View style={styles.quickDayBadge}>
+            <Pill label="Gün 2" tone="gold" compact />
+          </View>
+        </View>
+        <Pressable
+          onPress={() => router.push('/events' as Href)}
+          accessibilityRole="button"
+          accessibilityLabel="Tüm hazırlıkları gör"
+          style={styles.quickLinkPress}>
+          <Text style={styles.linkText} numberOfLines={1} ellipsizeMode="tail">
+            Tümünü Gör ›
+          </Text>
+        </Pressable>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.quickScroll}>
+        {items.map((item) => (
+          <Pressable
+            key={item.title}
+            onPress={() => router.push(item.route)}
+            accessibilityRole="button"
+            accessibilityLabel={item.title}
+            style={({ pressed }) => [styles.quickItem, pressed && styles.pressed]}>
+            <CardAssetImage
+              source={item.image}
+              backgroundColor="#F8F3E9"
+              containerStyle={styles.quickImageWrap}
+              style={styles.quickImage}
+            />
+            <Text style={styles.quickItemTitle} numberOfLines={2} ellipsizeMode="tail">
+              {item.title}
+            </Text>
+            <Text style={styles.quickItemDay} numberOfLines={1} ellipsizeMode="tail">
+              Gün 2
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+function signalLabel(status: string | undefined) {
+  return status === 'stable' ? 'Dengeli' : 'İzlemede';
+}
+
+function OperationSignalsCard() {
+  const operationSignals = useGameStore((s) => s.operationSignals);
+  const { isCompact } = useHubLayoutMetrics();
+
+  return (
+    <View style={[styles.card, styles.sectionCard]}>
+      <SectionHeader title="Operasyon Sinyalleri" badge="İzlemede" />
+      <View style={[styles.signalRow, isCompact && styles.signalRowStack]}>
+        <SignalCard
+          image={personnelImage}
+          title="Personel"
+          badge={signalLabel(operationSignals.personnel.status)}
+          body="Bugün personel odağı seçmek yorgunluğu azaltır."
+          stacked={isCompact}
+        />
+        <SignalCard
+          image={vehicleImage}
+          title="Araç"
+          badge={signalLabel(operationSignals.vehicles.status)}
+          body="Araç filosu günlük operasyon için hazır görünüyor."
+          stacked={isCompact}
+        />
+      </View>
+    </View>
+  );
+}
+
+function SignalCard({
   image,
   title,
-  chip,
+  badge,
   body,
+  stacked = false,
 }: {
   image: ImageSource;
   title: string;
-  chip: string;
+  badge: string;
   body: string;
+  stacked?: boolean;
 }) {
   return (
-    <View style={styles.signalMini}>
-      <Image source={image} style={styles.signalIcon} contentFit="contain" />
-      <View style={styles.signalTextCol}>
-        <View style={styles.signalTitleRow}>
-          <Text style={styles.signalTitle} numberOfLines={1}>
-            {title}
-          </Text>
-          <View style={styles.signalChip}>
-            <Text style={styles.signalChipText} numberOfLines={1}>
-              {chip}
-            </Text>
-          </View>
+    <View style={[styles.signalMini, stacked && styles.signalMiniStack]}>
+      <CardAssetImage
+        source={image}
+        backgroundColor={palette.mintSoft}
+        containerStyle={styles.signalImageWrap}
+        style={styles.signalImage}
+      />
+      <View style={styles.signalText}>
+        <Text style={styles.signalTitle} numberOfLines={1} ellipsizeMode="tail">
+          {title}
+        </Text>
+        <View style={styles.signalBadgeRow}>
+          <Pill label={badge} compact />
         </View>
-        <Text style={styles.signalBody} numberOfLines={2}>
+        <Text style={styles.signalBody} numberOfLines={2} ellipsizeMode="tail">
           {body}
         </Text>
       </View>
@@ -526,643 +579,448 @@ function SignalMiniCard({
   );
 }
 
-function QuickPreparationStrip() {
-  const router = useRouter();
-  const items = [
-    { title: 'Ekip Yönetimi', day: 'Gün 2', image: teamImage, route: '/events' as Href },
-    { title: 'Rota Planlama', day: 'Gün 2', image: routeImage, route: '/map' as Href },
-    { title: 'Saha Protokolleri', day: 'Gün 2', image: protocolImage, route: '/events' as Href },
-    { title: 'Raporlama', day: 'Gün 2', image: reportImage, route: '/reports' as Href },
-  ];
-
+function DailyGoalCard() {
   return (
-    <AnimatedCard delay={200}>
-      <View style={styles.quickWrap}>
-        <View style={styles.quickHeader}>
-          <View style={styles.sectionTitleRow}>
-            <Ionicons name="flash" size={18} color={palette.gold} />
-            <Text style={styles.quickTitle} numberOfLines={1}>
-              Hızlı Hazırlıklar
-            </Text>
-            <View style={styles.dayChip}>
-              <Text style={styles.dayChipText} numberOfLines={1}>
-                Gün 2
-              </Text>
-            </View>
-          </View>
-          <Pressable
-            onPress={() => router.push('/events' as Href)}
-            accessibilityRole="button"
-            accessibilityLabel="Tüm hazırlıkları gör">
-            <Text style={styles.viewAll} numberOfLines={1}>
-              Tümünü Gör ›
-            </Text>
-          </Pressable>
+    <View style={[styles.card, styles.dailyGoalCard]}>
+      <View style={styles.goalCopy}>
+        <Text style={styles.goldEyebrow} numberOfLines={1} ellipsizeMode="tail">
+          Günlük Hedef
+        </Text>
+        <Text style={styles.goalTitle} numberOfLines={1} ellipsizeMode="tail">
+          Ekibi yormadan müdahale et
+        </Text>
+        <View style={styles.goalMetaRow}>
+          <Text style={styles.goalReward} numberOfLines={1} ellipsizeMode="tail">
+            +30 İlerleme
+          </Text>
+          <Text style={styles.goalPercent} numberOfLines={1} ellipsizeMode="tail">
+            %100
+          </Text>
         </View>
-        <View style={styles.quickGrid}>
-          {items.map((item) => (
-            <PressScale
-              key={item.title}
-              accessibilityLabel={item.title}
-              onPress={() => router.push(item.route)}
-              style={styles.quickCard}>
-              <Image source={item.image} style={styles.quickImage} contentFit="contain" />
-              <Text style={styles.quickCardTitle} numberOfLines={1}>
-                {item.title}
-              </Text>
-              <Text style={styles.quickCardDay} numberOfLines={1}>
-                {item.day}
-              </Text>
-            </PressScale>
-          ))}
+        <View style={styles.progressTrack}>
+          <View style={styles.progressFill} />
         </View>
       </View>
-    </AnimatedCard>
-  );
-}
-
-type HubReferenceHomeProps = {
-  hubCarryOverMemory?: CarryOverMemoryModel | null;
-  showHubCarryOver?: boolean;
-};
-
-function HubOpenEndedOperationSlot({
-  hubCarryOverMemory,
-  showHubCarryOver,
-  showOpenEndedCard,
-}: HubReferenceHomeProps & { showOpenEndedCard: boolean }) {
-  const gameState = useGameStore((s) => s.gameState);
-  const operationSignals = useGameStore((s) => s.operationSignals);
-  const advisorState = useGameStore((s) => s.advisorState);
-  const crisisState = useGameStore((s) => s.crisisState);
-  const operationalResources = useGameStore((s) => s.operationalResources);
-  const playerProgress = useGameStore((s) => s.playerProgress);
-  const activeEvent = gameState.events[0];
-
-  const model = useMemo(() => {
-    const activeRoute = activeEvent
-      ? buildActiveTaskRouteUiModel({
-          day: gameState.city.day,
-          activeEvent,
-          operationSignals,
-          operationalResources,
-          crisisState,
-          eventPhase: 'dispatch',
-          isPostPilot: gameState.pilot.status === 'completed',
-        })
-      : null;
-
-    return buildHubOpenEndedIntegrationModel({
-      gameState,
-      day: gameState.city.day,
-      authorityState: gameState.pilot.authorityState,
-      currentTitle: gameState.pilot.authorityState?.formalRankId,
-      xp: playerProgress.totalXp,
-      operationSignals,
-      carryOverMemory: hubCarryOverMemory,
-      isCarryOverCardVisible: showHubCarryOver,
-      activeTaskRouteUiModel: activeRoute,
-      advisorState,
-      isAdvisorCardVisible: true,
-      crisisState,
-      operationalResources,
-    });
-  }, [
-    activeEvent,
-    advisorState,
-    crisisState,
-    gameState,
-    hubCarryOverMemory,
-    operationSignals,
-    operationalResources,
-    playerProgress.totalXp,
-    showHubCarryOver,
-  ]);
-  const analyticsContext = useMemo(
-    () => ({
-      day: gameState.city.day,
-      rankId: gameState.pilot.authorityState?.formalRankId,
-      isPostPilot: gameState.pilot.status === 'completed',
-      source: 'hub_open_ended_card',
-    }),
-    [
-      gameState.city.day,
-      gameState.pilot.authorityState?.formalRankId,
-      gameState.pilot.status,
-    ],
-  );
-
-  if (!showOpenEndedCard || !model?.visible) {
-    return null;
-  }
-
-  return (
-    <HubOpenEndedOperationCard
-      model={model}
-      analyticsContext={analyticsContext}
-    />
-  );
-}
-
-export function HubReferenceHome({
-  hubCarryOverMemory,
-  showHubCarryOver,
-}: HubReferenceHomeProps = {}) {
-  const gameState = useGameStore((s) => s.gameState);
-  const monetization = useGameStore((s) => s.monetization);
-  const hubVisibility = useMemo(
-    () => buildHubCardVisibilityModel(gameState, monetization),
-    [gameState, monetization],
-  );
-
-  return (
-    <View style={styles.root}>
-      <HeaderBlock />
-      <View style={styles.body}>
-        {showHubCarryOver && hubCarryOverMemory ? (
-          <HubCarryOverMemoryCard memory={hubCarryOverMemory} compact />
-        ) : null}
-        <EceWelcomeCard belowCarryOver={showHubCarryOver === true} />
-        {hubVisibility.showLearningProgressCard ? <LearningProgressCard /> : null}
-        <HubOpenEndedOperationSlot
-          hubCarryOverMemory={hubCarryOverMemory}
-          showHubCarryOver={showHubCarryOver}
-          showOpenEndedCard={hubVisibility.showOpenEndedCard}
-        />
-        {hubVisibility.showQuickPreparationStrip ? <QuickPreparationStrip /> : null}
-        {hubVisibility.showOperationSignalsCard ? <OperationSignalsCompactCard /> : null}
-        <DailyGoalPlanGrid />
+      <View style={styles.circularProgress}>
+        <Text style={styles.circularText} numberOfLines={1}>
+          100%
+        </Text>
       </View>
     </View>
   );
 }
 
-const softShadow = {
-  shadowColor: '#2C3D3A',
-  shadowOffset: { width: 0, height: 5 },
-  shadowOpacity: 0.09,
-  shadowRadius: 12,
-  elevation: 3,
-} as const;
+function SuggestedPlanCard() {
+  const router = useRouter();
+  const { isCompact } = useHubLayoutMetrics();
+  const currentDay = useGameStore((s) => s.gameState.city.day);
+  const dailyOperationsPlan = useGameStore((s) => s.dailyOperationsPlan);
+  const confirmDailyOperationsPlan = useGameStore((s) => s.confirmDailyOperationsPlan);
+  const confirmed = dailyOperationsPlan.confirmedAtDay === currentDay;
+
+  const handleConfirm = () => {
+    playLightImpactHaptic();
+    confirmDailyOperationsPlan();
+  };
+
+  return (
+    <View style={[styles.card, styles.suggestedCard]}>
+      <View style={styles.suggestedContent}>
+        <View style={styles.suggestedText}>
+          <Text style={styles.cardTitle} numberOfLines={1} ellipsizeMode="tail">
+            Bugünün Önerilen Planı
+          </Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel} numberOfLines={1}>
+              Mahalle:
+            </Text>
+            <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">
+              Cumhuriyet
+            </Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel} numberOfLines={1}>
+              Personel:
+            </Text>
+            <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">
+              Dengeli
+            </Text>
+          </View>
+          <Text style={styles.bodyText} numberOfLines={2} ellipsizeMode="tail">
+            Seçilen plan bugün sinyallere yanıt verebilir; etki gün sonunda izlenir.
+          </Text>
+        </View>
+        <CardAssetImage
+          source={buildingThumb}
+          containerStyle={styles.suggestedImageWrap}
+          style={styles.suggestedImage}
+        />
+      </View>
+
+      <View style={[styles.planButtons, isCompact && styles.planButtonsStack]}>
+        <Pressable
+          disabled={confirmed}
+          onPress={handleConfirm}
+          accessibilityRole="button"
+          accessibilityLabel="Planı Onayla"
+          style={({ pressed }) => [
+            styles.planPrimary,
+            confirmed && styles.disabled,
+            pressed && styles.pressed,
+          ]}>
+          <Text style={styles.planPrimaryText} numberOfLines={1} ellipsizeMode="tail">
+            {confirmed ? 'Plan Onaylandı' : 'Planı Onayla'}
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => router.push('/events' as Href)}
+          accessibilityRole="button"
+          accessibilityLabel="Planı Detaylı Gör"
+          style={({ pressed }) => [styles.planSecondary, pressed && styles.pressed]}>
+          <Text style={styles.planSecondaryText} numberOfLines={1} ellipsizeMode="tail">
+            Planı Detaylı Gör
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+export function HubReferenceHome({
+  hubCarryOverMemory,
+  scrollFooter,
+}: HubReferenceHomeProps = {}) {
+  const { scrollBottomPadding } = useHubLayoutMetrics();
+
+  return (
+    <View style={styles.root}>
+      <StatusBar style="light" />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollBottomPadding }]}>
+        <PremiumHubHeader />
+        <View style={styles.body}>
+          <PreviousDecisionEffectCard memory={hubCarryOverMemory} />
+          <EceWelcomeCard />
+          <OperationFocusCard />
+          <QuickPreparationsCard />
+          <OperationSignalsCard />
+          <DailyGoalCard />
+          <SuggestedPlanCard />
+        </View>
+        {scrollFooter ? <View style={styles.scrollFooter}>{scrollFooter}</View> : null}
+      </ScrollView>
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   root: {
+    flex: 1,
     backgroundColor: palette.background,
   },
-  header: {
-    minHeight: 132,
+  scrollContent: {
+    flexGrow: 1,
+  },
+  scrollFooter: {
     paddingHorizontal: 16,
-    paddingBottom: 18,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
+  assetClip: {
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  assetImage: {
+    width: '100%',
+    height: '100%',
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingBottom: 36,
+    borderBottomLeftRadius: 26,
+    borderBottomRightRadius: 26,
+    overflow: 'hidden',
+  },
+  headerBuildingMask: {
+    position: 'absolute',
+    right: -16,
+    bottom: -12,
+    width: 210,
+    height: 154,
+    opacity: 0.14,
     overflow: 'hidden',
     backgroundColor: palette.tealDark,
   },
-  headerBgImage: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.13,
+  headerBuilding: {
+    width: '100%',
+    height: '100%',
   },
-  headerTint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(6, 57, 54, 0.28)',
+  headerCircleLarge: {
+    position: 'absolute',
+    right: -44,
+    top: 38,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(223,244,237,0.13)',
   },
-  headerTop: {
+  headerCircleSmall: {
+    position: 'absolute',
+    left: 28,
+    bottom: 18,
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    backgroundColor: 'rgba(246,231,182,0.13)',
+  },
+  headerContent: {
+    flex: 1,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 10,
     minWidth: 0,
   },
-  avatarButton: {
+  avatarPress: {
     flexShrink: 0,
   },
-  headerCopy: {
+  headerTextCol: {
     flex: 1,
     minWidth: 0,
-    paddingTop: 8,
-    gap: 5,
+    gap: 7,
   },
-  greeting: {
-    fontSize: 16,
-    fontWeight: '800',
+  headerTitle: {
+    fontWeight: '900',
     color: palette.white,
+    flexShrink: 1,
+    minWidth: 0,
   },
-  metaRow: {
+  headerMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
     minWidth: 0,
   },
   headerMeta: {
     flex: 1,
     minWidth: 0,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.78)',
+    color: 'rgba(255,255,255,0.82)',
   },
   headerActions: {
-    alignItems: 'flex-end',
-    gap: 7,
-    flexShrink: 0,
-    maxWidth: 156,
-  },
-  resourceChips: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  headerButtons: {
     flexDirection: 'row',
     gap: 8,
+    flexShrink: 0,
   },
-  roundButton: {
-    width: 39,
-    height: 39,
-    borderRadius: 16,
+  headerIconButton: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  roundButtonActive: {
-    backgroundColor: '#FFF1B8',
+  headerIconButtonActive: {
+    backgroundColor: palette.goldSoft,
   },
-  roundButtonGhost: {
-    backgroundColor: 'rgba(255,255,255,0.10)',
+  headerIconButtonGhost: {
+    backgroundColor: 'rgba(255,255,255,0.11)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderColor: 'rgba(255,255,255,0.23)',
   },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    maxWidth: 74,
-    minWidth: 0,
-  },
-  chip_mint: {
-    backgroundColor: 'rgba(189, 239, 231, 0.55)',
-  },
-  chip_gold: {
-    backgroundColor: 'rgba(242, 212, 121, 0.92)',
-  },
-  chip_ghost: {
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-  },
-  chipText: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 10,
-    fontWeight: '800',
-    color: palette.tealDark,
+  notificationDot: {
+    position: 'absolute',
+    right: 8,
+    top: 8,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: palette.gold,
   },
   body: {
     paddingHorizontal: 16,
-    paddingBottom: 18,
-    gap: 10,
-  },
-  overlapCardWrap: {
-    marginTop: -18,
-  },
-  overlapCardWrapBelowCarryOver: {
-    marginTop: -8,
+    gap: 12,
+    marginTop: -28,
   },
   card: {
     backgroundColor: palette.card,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: palette.border,
-    ...softShadow,
+    ...shadowStyle(),
   },
-  eceCard: {
-    minHeight: 204,
-    padding: 18,
-    overflow: 'hidden',
-    flexDirection: 'row',
-    alignItems: 'stretch',
-  },
-  eceCopy: {
-    width: '58%',
-    minWidth: 0,
-    zIndex: 2,
-    justifyContent: 'center',
-    gap: 8,
-  },
-  eceTitle: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: palette.textDark,
-  },
-  assistantBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(189, 239, 231, 0.72)',
-    borderRadius: 999,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    maxWidth: '100%',
-  },
-  assistantBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: palette.tealDark,
-  },
-  eceLead: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: palette.textDark,
-  },
-  eceDescription: {
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '600',
-    color: palette.textMuted,
-  },
-  primaryButton: {
-    marginTop: 4,
-    minHeight: 42,
-    borderRadius: 14,
-    paddingHorizontal: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    backgroundColor: palette.tealDark,
-    alignSelf: 'flex-start',
-    maxWidth: '100%',
-  },
-  primaryButtonText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: palette.white,
-  },
-  eceImage: {
-    position: 'absolute',
-    right: 0,
-    bottom: -4,
-    top: 4,
-    zIndex: 3,
-  },
-  eceBuilding: {
-    position: 'absolute',
-    right: 48,
-    bottom: 12,
-    width: 142,
-    height: 110,
-    opacity: 0.62,
-  },
-  sparkleA: {
-    position: 'absolute',
-    right: 32,
-    top: 32,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: 'rgba(242, 212, 121, 0.72)',
-  },
-  sparkleText: {
-    position: 'absolute',
-    right: 104,
-    top: 30,
-    color: palette.gold,
-    opacity: 0.72,
-    fontSize: 16,
-  },
-  learningCard: {
+  previousCard: {
+    minHeight: 106,
     padding: 14,
-    gap: 12,
-  },
-  learningHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    minWidth: 0,
+    overflow: 'hidden',
   },
-  learningIcon: {
-    width: 36,
-    height: 36,
-  },
-  learningCopy: {
-    flex: 1,
-    minWidth: 0,
-    gap: 3,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '900',
-    color: palette.tealDark,
-  },
-  cardSubtitle: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: palette.textMuted,
-  },
-  trophyRing: {
+  roundIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
-    gap: 2,
+    justifyContent: 'center',
+    backgroundColor: palette.mintSoft,
     flexShrink: 0,
   },
-  ring: {
-    borderWidth: 5,
-    borderColor: 'rgba(217,170,43,0.24)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  ringArc: {
-    position: 'absolute',
-    borderWidth: 5,
-    borderColor: palette.gold,
-    borderLeftColor: 'transparent',
-    borderBottomColor: 'transparent',
-  },
-  ringInner: {
-    width: '74%',
-    height: '74%',
-    borderRadius: 999,
-    backgroundColor: palette.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ringText: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: palette.textDark,
-  },
-  timeline: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    minWidth: 0,
-  },
-  timelineItem: {
+  previousCopy: {
     flex: 1,
-    alignItems: 'center',
-    gap: 5,
     minWidth: 0,
+    gap: 6,
+  },
+  previousImageWrap: {
+    width: 80,
+    height: 80,
+    flexShrink: 0,
     position: 'relative',
   },
-  timelineLine: {
-    position: 'absolute',
-    left: '-50%',
-    right: '50%',
-    top: 13,
-    height: 2,
-    backgroundColor: 'rgba(14, 95, 91, 0.28)',
+  previousImage: {
+    width: 80,
+    height: 80,
   },
-  timelineDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  checkBadge: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: palette.goldSoft,
     borderWidth: 1,
-    zIndex: 1,
+    borderColor: palette.card,
   },
-  timelineDotDone: {
-    backgroundColor: palette.tealDark,
-    borderColor: palette.tealDark,
-  },
-  timelineDotLocked: {
-    backgroundColor: '#EEF0EA',
-    borderColor: 'rgba(20, 70, 66, 0.12)',
-  },
-  timelineLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: palette.textMuted,
-    textAlign: 'center',
-    maxWidth: 76,
-  },
-  focusPanel: {
-    gap: 10,
-    minWidth: 0,
-  },
-  focusCard: {
-    padding: 14,
-    minWidth: 0,
-    gap: 9,
-  },
-  goalFocusCard: {
-    minHeight: 116,
-  },
-  planFocusCard: {
-    minHeight: 154,
-  },
-  smallCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    minWidth: 0,
-  },
-  goldTitle: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 12,
-    fontWeight: '900',
-    color: palette.gold,
-  },
-  tealTitle: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 12,
-    fontWeight: '900',
-    color: palette.tealDark,
-  },
-  goalBody: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-    minWidth: 0,
-  },
-  goalCopy: {
-    flex: 1,
-    minWidth: 0,
-    gap: 7,
-  },
-  goalTitle: {
+  cardTitle: {
     fontSize: 16,
     lineHeight: 20,
     fontWeight: '900',
-    color: palette.textDark,
+    color: palette.text,
   },
-  rewardLine: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: palette.gold,
-  },
-  goldProgressTrack: {
-    height: 7,
-    borderRadius: 999,
-    backgroundColor: 'rgba(217, 170, 43, 0.20)',
-    overflow: 'hidden',
-  },
-  goldProgressFill: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: palette.gold,
-  },
-  planBody: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    flex: 1,
-    minWidth: 0,
-    gap: 10,
-  },
-  planTextCol: {
-    flex: 1,
-    minWidth: 0,
-    gap: 6,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    gap: 5,
-    minWidth: 0,
-  },
-  infoLabel: {
-    width: 58,
-    fontSize: 11,
-    fontWeight: '900',
-    color: palette.textMuted,
-  },
-  infoValue: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 11,
-    fontWeight: '900',
-    color: palette.textDark,
-  },
-  planDescription: {
-    fontSize: 11,
-    lineHeight: 15,
+  bodyText: {
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: '600',
-    color: palette.textMuted,
+    color: palette.muted,
   },
-  planArt: {
-    width: 104,
-    height: 92,
-    marginRight: -4,
-    marginTop: -6,
+  pillRow: {
+    flexDirection: 'row',
+    gap: 6,
+    minWidth: 0,
+  },
+  pill: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    maxWidth: 118,
     flexShrink: 0,
   },
-  planButton: {
-    minHeight: 38,
-    borderRadius: 12,
-    backgroundColor: palette.tealDark,
+  pillCompact: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    maxWidth: 92,
+  },
+  pillMint: {
+    backgroundColor: palette.mint,
+  },
+  pillGold: {
+    backgroundColor: palette.goldSoft,
+  },
+  pillText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: palette.tealDark,
+  },
+  pillTextCompact: {
+    fontSize: 9,
+  },
+  eceCard: {
+    minHeight: 218,
+    padding: 16,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  eceDecor: {
+    position: 'absolute',
+    right: 8,
+    top: 18,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: '#F8EED2',
+  },
+  eceCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 8,
+    zIndex: 2,
+    paddingRight: 8,
+  },
+  eceName: {
+    fontSize: 31,
+    lineHeight: 35,
+    fontWeight: '900',
+    color: palette.text,
+  },
+  advisorBadge: {
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: palette.mint,
+  },
+  advisorBadgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: palette.tealDark,
+  },
+  eceLead: {
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '900',
+    color: palette.text,
+  },
+  primaryCta: {
+    marginTop: 4,
+    minHeight: 48,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
+    gap: 6,
+    backgroundColor: palette.teal,
     alignSelf: 'flex-start',
-    minWidth: 138,
+    maxWidth: '100%',
   },
-  planButtonText: {
-    color: palette.white,
-    fontSize: 13,
+  primaryCtaText: {
+    flexShrink: 1,
+    minWidth: 0,
+    fontSize: 14,
     fontWeight: '900',
+    color: palette.white,
   },
-  signalsCard: {
-    padding: 13,
-    gap: 10,
-    backgroundColor: '#F5FCF8',
+  eceImageWrap: {
+    flexShrink: 0,
+    borderRadius: 18,
+    overflow: 'hidden',
+    alignSelf: 'flex-end',
+  },
+  eceImageAsset: {
+    width: '100%',
+    height: '100%',
+  },
+  sectionCard: {
+    padding: 15,
+    gap: 12,
+  },
+  sectionBadgeWrap: {
+    flexShrink: 0,
+    marginLeft: 8,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -1175,141 +1033,371 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
+    flex: 1,
     minWidth: 0,
   },
   sectionTitle: {
-    fontSize: 14,
+    flexShrink: 1,
+    minWidth: 0,
+    fontSize: 16,
+    lineHeight: 20,
     fontWeight: '900',
-    color: palette.tealDark,
+    color: palette.text,
   },
-  signalMiniRow: {
+  focusRow: {
+    flexDirection: 'row',
+    gap: 9,
+    minWidth: 0,
+  },
+  focusScroll: {
+    gap: 9,
+    paddingRight: 4,
+  },
+  focusMini: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 128,
+    borderRadius: 18,
+    padding: 12,
+    gap: 8,
+    backgroundColor: palette.mintSoft,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  focusMiniScroll: {
+    flex: 0,
+    width: 108,
+    minWidth: 108,
+  },
+  focusIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  focusIconGold: {
+    backgroundColor: palette.goldSoft,
+  },
+  focusIconMint: {
+    backgroundColor: palette.mint,
+  },
+  focusTitle: {
+    fontSize: 13,
+    lineHeight: 16,
+    fontWeight: '900',
+    color: palette.text,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  focusBody: {
+    flexShrink: 1,
+    minWidth: 0,
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600',
+    color: palette.muted,
+  },
+  miniTitle: {
+    fontSize: 12,
+    lineHeight: 15,
+    fontWeight: '900',
+    color: palette.text,
+  },
+  miniBody: {
+    flexShrink: 1,
+    minWidth: 0,
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '600',
+    color: palette.muted,
+  },
+  quickCard: {
+    padding: 15,
+    gap: 12,
+  },
+  quickHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 10,
+    minWidth: 0,
+  },
+  quickTitleBlock: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    flexWrap: 'wrap',
+  },
+  quickDayBadge: {
+    flexShrink: 0,
+  },
+  quickLinkPress: {
+    flexShrink: 0,
+    paddingTop: 2,
+  },
+  linkText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: palette.teal,
+  },
+  quickScroll: {
+    gap: 10,
+    paddingRight: 8,
+  },
+  quickItem: {
+    width: 110,
+    height: 122,
+    borderRadius: 18,
+    padding: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#F8F3E9',
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  quickImageWrap: {
+    width: 48,
+    height: 44,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  quickImage: {
+    width: 48,
+    height: 44,
+  },
+  quickItemTitle: {
+    alignSelf: 'stretch',
+    minWidth: 0,
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '900',
+    color: palette.text,
+    textAlign: 'center',
+  },
+  quickItemDay: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: palette.muted,
+  },
+  signalRow: {
     flexDirection: 'row',
     gap: 10,
     minWidth: 0,
+  },
+  signalRowStack: {
+    flexDirection: 'column',
+  },
+  signalMiniStack: {
+    flex: 0,
+    width: '100%',
   },
   signalMini: {
     flex: 1,
     minWidth: 0,
-    minHeight: 66,
-    backgroundColor: palette.white,
-    borderRadius: 17,
-    padding: 9,
+    minHeight: 88,
+    borderRadius: 16,
+    padding: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
+    backgroundColor: palette.mintSoft,
     borderWidth: 1,
-    borderColor: 'rgba(20, 70, 66, 0.06)',
+    borderColor: palette.border,
+    gap: 8,
   },
-  signalIcon: {
-    width: 32,
-    height: 32,
+  signalImageWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    overflow: 'hidden',
     flexShrink: 0,
   },
-  signalTextCol: {
-    flex: 1,
-    minWidth: 0,
-    gap: 3,
+  signalImage: {
+    width: 38,
+    height: 38,
   },
-  signalTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  signalText: {
+    flex: 1,
     gap: 4,
     minWidth: 0,
   },
   signalTitle: {
-    flex: 1,
+    flexShrink: 1,
     minWidth: 0,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '900',
-    color: palette.textDark,
+    color: palette.text,
   },
-  signalChip: {
-    borderRadius: 999,
-    backgroundColor: 'rgba(189, 239, 231, 0.62)',
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    maxWidth: 58,
-  },
-  signalChipText: {
-    fontSize: 7,
-    fontWeight: '900',
-    color: palette.tealDark,
+  signalBadgeRow: {
+    alignSelf: 'flex-start',
   },
   signalBody: {
-    fontSize: 9,
-    lineHeight: 12,
+    flexShrink: 1,
+    minWidth: 0,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '600',
-    color: palette.textMuted,
+    color: palette.muted,
   },
-  quickWrap: {
-    borderRadius: 24,
-    padding: 12,
-    backgroundColor: palette.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-    ...softShadow,
-    gap: 10,
-  },
-  quickHeader: {
+  dailyGoalCard: {
+    minHeight: 100,
+    padding: 15,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    minWidth: 0,
+    gap: 12,
   },
-  quickTitle: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: palette.textDark,
-  },
-  dayChip: {
-    borderRadius: 999,
-    backgroundColor: 'rgba(242, 212, 121, 0.45)',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-  },
-  dayChipText: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: '#9C7A12',
-  },
-  viewAll: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: palette.tealDark,
-  },
-  quickGrid: {
-    flexDirection: 'row',
-    gap: 8,
-    minWidth: 0,
-  },
-  quickCard: {
+  goalCopy: {
     flex: 1,
     minWidth: 0,
-    height: 84,
-    borderRadius: 16,
-    backgroundColor: '#F7F3EA',
+    gap: 6,
+  },
+  goldEyebrow: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#9C7418',
+  },
+  goalTitle: {
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '900',
+    color: palette.text,
+  },
+  goalMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    minWidth: 0,
+  },
+  goalReward: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 12,
+    fontWeight: '900',
+    color: palette.gold,
+  },
+  goalPercent: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: palette.teal,
+  },
+  progressTrack: {
+    height: 7,
+    borderRadius: 999,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(216,174,47,0.22)',
+    marginRight: 4,
+  },
+  progressFill: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: palette.gold,
+  },
+  circularProgress: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 6,
+    borderColor: palette.gold,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 5,
-    gap: 2,
+    backgroundColor: palette.card,
+    flexShrink: 0,
   },
-  quickImage: {
-    width: 42,
-    height: 38,
-  },
-  quickCardTitle: {
-    fontSize: 9,
+  circularText: {
+    fontSize: 11,
     fontWeight: '900',
-    color: palette.textDark,
-    textAlign: 'center',
+    color: palette.text,
   },
-  quickCardDay: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: palette.textMuted,
+  suggestedCard: {
+    padding: 16,
+    gap: 14,
+  },
+  suggestedContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minWidth: 0,
+  },
+  suggestedText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 7,
+  },
+  suggestedImageWrap: {
+    width: 88,
+    height: 80,
+    borderRadius: 14,
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  suggestedImage: {
+    width: 88,
+    height: 80,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    gap: 5,
+    minWidth: 0,
+  },
+  infoLabel: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: palette.muted,
+  },
+  infoValue: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 12,
+    fontWeight: '900',
+    color: palette.text,
+  },
+  planButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    minWidth: 0,
+  },
+  planButtonsStack: {
+    flexDirection: 'column',
+  },
+  planPrimary: {
+    flex: 1,
+    minWidth: 0,
+    height: 54,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    backgroundColor: palette.teal,
+  },
+  planPrimaryText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: palette.white,
+  },
+  planSecondary: {
+    flex: 1,
+    minWidth: 0,
+    height: 54,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    backgroundColor: palette.white,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  planSecondaryText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: palette.teal,
+  },
+  pressed: {
+    opacity: 0.86,
   },
   disabled: {
-    opacity: 0.75,
+    opacity: 0.7,
   },
 });

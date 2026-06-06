@@ -1,4 +1,13 @@
-import type { CreviaContentPackRuntimeActivationReviewResult } from './contentPackRuntimeActivationReviewTypes';
+import type {
+  CreviaContentPackActivationSoftLaunchFindings,
+  CreviaContentPackRuntimeActivationReviewResult,
+} from './contentPackRuntimeActivationReviewTypes';
+
+export function buildContentPackActivationSoftLaunchFindings(
+  result: CreviaContentPackRuntimeActivationReviewResult,
+): CreviaContentPackActivationSoftLaunchFindings {
+  return { ...result.softLaunchFindings };
+}
 
 export function buildContentPackActivationPackTable(
   result: CreviaContentPackRuntimeActivationReviewResult,
