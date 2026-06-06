@@ -17,6 +17,8 @@ import { buildActiveTaskRouteUiModel } from '@/core/activeTaskRoutes';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import type { CarryOverMemoryModel } from '@/core/carryOver';
 import { buildHubOpenEndedIntegrationModel } from '@/core/hub/hubOpenEndedIntegrationPresentation';
+import { buildHubCardVisibilityModel } from '@/core/onboarding/firstTenMinutesPresentation';
+import { DAY1_DAILY_PLAN_COPY } from '@/core/onboarding/firstTenMinutesConstants';
 import { getTimeGreeting } from '@/core/utils/timeGreeting';
 import { useGameStatus } from '@/store/gameSelectors';
 import { useGameStore } from '@/store/useGameStore';
@@ -370,7 +372,12 @@ function LearningProgressCard() {
 function DailyGoalPlanGrid() {
   const confirmDailyOperationsPlan = useGameStore((s) => s.confirmDailyOperationsPlan);
   const dailyOperationsPlan = useGameStore((s) => s.dailyOperationsPlan);
-  const currentDay = useGameStore((s) => s.gameState.city.day);
+  const gameState = useGameStore((s) => s.gameState);
+  const currentDay = gameState.city.day;
+  const isDay1 = currentDay <= 1;
+  const planDescription = isDay1
+    ? DAY1_DAILY_PLAN_COPY.planDescriptionShort
+    : 'Seçilen plan bugün sinyallere yanıt verebilir; etki gün sonunda izlenir.';
 
   const handleConfirm = () => {
     playLightImpactHaptic();
@@ -407,15 +414,15 @@ function DailyGoalPlanGrid() {
           <View style={styles.smallCardHeader}>
             <Ionicons name="calendar" size={16} color={palette.teal} />
             <Text style={styles.tealTitle} numberOfLines={1}>
-              Bugünün Önerilen Planı
+              {isDay1 ? DAY1_DAILY_PLAN_COPY.title : 'Bugünün Önerilen Planı'}
             </Text>
           </View>
           <View style={styles.planBody}>
             <View style={styles.planTextCol}>
               <InfoRow label="Mahalle" value="Cumhuriyet" />
               <InfoRow label="Personel" value="Dengeli" />
-              <Text style={styles.planDescription} numberOfLines={2}>
-                Seçilen plan bugün sinyallere yanıt verebilir; etki gün sonunda izlenir.
+              <Text style={styles.planDescription} numberOfLines={isDay1 ? 1 : 2}>
+                {planDescription}
               </Text>
             </View>
             <Image source={planImage} style={styles.planArt} contentFit="contain" />
@@ -426,7 +433,7 @@ function DailyGoalPlanGrid() {
             disabled={dailyOperationsPlan.confirmedAtDay === currentDay}
             style={styles.planButton}>
             <Text style={styles.planButtonText} numberOfLines={1}>
-              Planı Onayla
+              {isDay1 ? DAY1_DAILY_PLAN_COPY.confirmCta : 'Planı Onayla'}
             </Text>
           </PressScale>
         </View>
@@ -582,7 +589,8 @@ type HubReferenceHomeProps = {
 function HubOpenEndedOperationSlot({
   hubCarryOverMemory,
   showHubCarryOver,
-}: HubReferenceHomeProps) {
+  showOpenEndedCard,
+}: HubReferenceHomeProps & { showOpenEndedCard: boolean }) {
   const gameState = useGameStore((s) => s.gameState);
   const operationSignals = useGameStore((s) => s.operationSignals);
   const advisorState = useGameStore((s) => s.advisorState);
@@ -644,6 +652,10 @@ function HubOpenEndedOperationSlot({
     ],
   );
 
+  if (!showOpenEndedCard || !model?.visible) {
+    return null;
+  }
+
   return (
     <HubOpenEndedOperationCard
       model={model}
@@ -656,6 +668,13 @@ export function HubReferenceHome({
   hubCarryOverMemory,
   showHubCarryOver,
 }: HubReferenceHomeProps = {}) {
+  const gameState = useGameStore((s) => s.gameState);
+  const monetization = useGameStore((s) => s.monetization);
+  const hubVisibility = useMemo(
+    () => buildHubCardVisibilityModel(gameState, monetization),
+    [gameState, monetization],
+  );
+
   return (
     <View style={styles.root}>
       <HeaderBlock />
@@ -664,13 +683,14 @@ export function HubReferenceHome({
           <HubCarryOverMemoryCard memory={hubCarryOverMemory} compact />
         ) : null}
         <EceWelcomeCard belowCarryOver={showHubCarryOver === true} />
-        <LearningProgressCard />
+        {hubVisibility.showLearningProgressCard ? <LearningProgressCard /> : null}
         <HubOpenEndedOperationSlot
           hubCarryOverMemory={hubCarryOverMemory}
           showHubCarryOver={showHubCarryOver}
+          showOpenEndedCard={hubVisibility.showOpenEndedCard}
         />
-        <QuickPreparationStrip />
-        <OperationSignalsCompactCard />
+        {hubVisibility.showQuickPreparationStrip ? <QuickPreparationStrip /> : null}
+        {hubVisibility.showOperationSignalsCard ? <OperationSignalsCompactCard /> : null}
         <DailyGoalPlanGrid />
       </View>
     </View>

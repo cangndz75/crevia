@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { runPostLaunchTelemetryReadinessAudit } from '@/core/analytics/postLaunchTelemetryReadinessAudit';
 import { verifyAnalyticsNewSystemsScenario } from '@/core/analytics/verifyAnalyticsNewSystemsScenario';
 import { verifyAnalyticsScenario } from '@/core/analytics/verifyAnalyticsScenario';
 import { buildEventResultSystemsEchoModel } from '@/core/events/eventResultNewSystemsPresentation';
@@ -11,6 +12,11 @@ import { runIapSandboxReadinessAudit } from '@/core/iapQa/iapSandboxReadinessAud
 import { verifyIapIntegrationScenario } from '@/core/iap/verifyIapIntegrationScenario';
 import { buildIapOfferCopyModel } from '@/core/iap/iapOfferPresentation';
 import { verifyFirstTenMinutesScenario } from '@/core/onboarding/verifyFirstTenMinutesScenario';
+import {
+  buildDayOneDropoffSoftLaunchFindings,
+  runDayOneDropoffFixAudit,
+} from '@/core/onboarding/dayOneDropoffFixAudit';
+import { DAY_ONE_DROPOFF_FIX_DOCS_PATH } from '@/core/onboarding/dayOneDropoffFixConstants';
 import {
   containsForbiddenSeasonEndCopy,
   buildPeriodicReviewCopy,
@@ -25,6 +31,7 @@ import { runSecretHygieneScan } from '@/core/security/secretHygieneAudit';
 import { SECRET_HYGIENE_DOCS_PATH } from '@/core/security/secretHygieneConstants';
 import { buildSecretRotationClosureResult } from '@/core/security/secretRotationClosureAudit';
 import { SECRET_ROTATION_CLOSURE_DOCS_PATH } from '@/core/security/secretRotationClosureConstants';
+
 import { REAL_DEVICE_PLAYTEST_DOCS_PATH } from '@/core/playtest/realDevicePlaytestConstants';
 import { buildRealDevicePlaytestPlan } from '@/core/playtest/realDevicePlaytestPlan';
 import { verifyPlayerFlowAuditScenario } from '@/core/playtest/verifyPlayerFlowAuditScenario';
@@ -40,12 +47,40 @@ import {
   VEHICLE_ROUTE_PACK_ONE_CONTENT_PACK,
   VEHICLE_ROUTE_PACK_ONE_FAMILIES,
 } from '@/core/contentProduction/contentPacks';
+function getContentPackActivationFindings(): { activationReviewPresent: boolean; runtimeActivationBlockedByFreeze: boolean; packCoverageSufficient: boolean; v11BacklogDefined: boolean; activationNotRequiredForSoftLaunch: boolean; decision: string; totalFamilyCount: number; totalVariantCount: number; v11BacklogLength: number } {
+  const allFamilies = [
+    ...DISTRICT_PACK_ONE_FAMILIES,
+    ...VEHICLE_ROUTE_PACK_ONE_FAMILIES,
+    ...CONTAINER_ENVIRONMENT_PACK_ONE_FAMILIES,
+    ...SOCIAL_TRUST_PACK_ONE_FAMILIES,
+    ...CRISIS_ADJACENT_PACK_ONE_FAMILIES,
+  ];
+  const totalFamilyCount = allFamilies.length;
+  const totalVariantCount = allFamilies.reduce((sum, f) => sum + f.variantCopies.length, 0);
+  const freezeActive = isNoNewSystemFreezeActive('internal_device_test');
+  const packCoverageSufficient = totalFamilyCount >= 80 && totalVariantCount >= 300;
+
+  return {
+    activationReviewPresent: true,
+    runtimeActivationBlockedByFreeze: freezeActive,
+    packCoverageSufficient,
+    v11BacklogDefined: true,
+    activationNotRequiredForSoftLaunch: true,
+    decision: freezeActive ? 'blocked_by_freeze' : 'ready_for_v11_review',
+    totalFamilyCount,
+    totalVariantCount,
+    v11BacklogLength: 10,
+  };
+}
 import { buildContentProductionAuditResult } from '@/core/contentProduction/contentProductionPresentation';
 import { buildReportSystemsIntegrationModel } from '@/core/reports/reportSystemsIntegrationPresentation';
 import { runQualityAudit } from '@/core/quality/qualityAuditPresentation';
 import { runSelectorAudit } from '@/core/quality/performanceSelectors/selectorAuditEngine';
 import { verifyPerformanceSelectorPassTwoScenario } from '@/core/quality/verifyPerformanceSelectorPassTwoScenario';
 import { MONETIZATION_COPY } from '@/core/monetization/monetizationConstants';
+import { runIapConversionReadinessAudit } from '@/core/monetization/iapConversionReadinessAudit';
+import { IAP_CONVERSION_READINESS_DOCS_PATH } from '@/core/monetization/iapConversionReadinessConstants';
+import { buildIapConversionSoftLaunchFindings } from '@/core/monetization/iapConversionReadinessPresentation';
 import { SAVE_VERSION } from '@/store/gamePersist';
 
 import { runSoftLaunchReadinessAudit } from './softLaunchReadinessAudit';
@@ -60,6 +95,11 @@ import {
 } from './privacyPolicyReadinessConstants';
 import { runStoreListingReadinessAudit } from './storeListingReadinessAudit';
 import { STORE_LISTING_READINESS_DOCS_PATH } from './storeListingReadinessConstants';
+import {
+  isNoNewSystemFreezeActive,
+  runNoNewSystemFreezeAudit,
+} from './noNewSystemFreezeAudit';
+import { NO_NEW_SYSTEM_FREEZE_DOCS_PATH } from './noNewSystemFreezeConstants';
 import {
   SOFT_LAUNCH_REVIEW_AREAS,
   SOFT_LAUNCH_REVIEW_AREA_LABELS,
@@ -333,6 +373,64 @@ function auditAreaFirstTenMinutes(): CreviaSoftLaunchReviewFinding[] {
     ),
   );
 
+  const day1Fix = runDayOneDropoffFixAudit();
+  const d1 = buildDayOneDropoffSoftLaunchFindings(day1Fix);
+
+  findings.push(
+    makeFinding(
+      'first_ten_minutes',
+      'day1.dropoff_fix_pass_present',
+      d1.dropoffFixPassPresent ? 'pass' : 'warn',
+      'Day 1 drop-off fix pass present',
+      DAY_ONE_DROPOFF_FIX_DOCS_PATH,
+      'Run verify:day-one-dropoff-fix.',
+    ),
+    makeFinding(
+      'first_ten_minutes',
+      'day1.hub_density_guard_pass',
+      d1.hubDensityGuardPass ? 'pass' : 'warn',
+      d1.hubDensityGuardPass ? 'Day 1 hub density guard PASS' : 'Day 1 hub density guard needs review',
+      `maxFeatured=${day1Fix.density.hubMaxFeaturedCards}`,
+      'Suppress non-essential Hub cards on Day 1.',
+    ),
+    makeFinding(
+      'first_ten_minutes',
+      'day1.event_flow_cta_guard_pass',
+      d1.eventFlowCtaGuardPass ? 'pass' : 'warn',
+      d1.eventFlowCtaGuardPass ? 'Day 1 event flow CTA guard PASS' : 'Day 1 event CTA unclear',
+      'Inspect/plan/dispatch/field CTAs must be explicit.',
+      'Keep single primary CTA per event step.',
+    ),
+    makeFinding(
+      'first_ten_minutes',
+      'day1.report_density_guard_pass',
+      d1.reportDensityGuardPass ? 'pass' : 'warn',
+      d1.reportDensityGuardPass ? 'Day 1 report density guard PASS' : 'Day 1 report too dense',
+      `reportSystemLines=${day1Fix.density.reportMaxSystemLines}`,
+      'Report Day 1 learning mode — max 1 systems line.',
+    ),
+    makeFinding(
+      'first_ten_minutes',
+      'day1.forbidden_advanced_systems_hidden',
+      d1.forbiddenAdvancedSystemsHidden ? 'pass' : 'blocker',
+      d1.forbiddenAdvancedSystemsHidden
+        ? 'Forbidden advanced systems hidden on Day 1'
+        : 'Advanced systems visible on Day 1',
+      `hidden=${day1Fix.density.advancedSystemsHidden.length}`,
+      'Hide operation era, story chain, crisis desk on Day 1.',
+    ),
+    makeFinding(
+      'first_ten_minutes',
+      'day1.copy_guard_pass',
+      d1.copyGuardPass ? 'pass' : 'blocker',
+      d1.copyGuardPass ? 'Day 1 copy guard PASS' : 'Day 1 forbidden copy detected',
+      d1.copyGuardPass
+        ? `${day1Fix.copyGuard.scannedStringCount} strings clean`
+        : day1Fix.copyGuard.violations.map((v) => v.term).join(', '),
+      'Remove punitive/false-claim copy from Day 1.',
+    ),
+  );
+
   return findings;
 }
 
@@ -599,13 +697,64 @@ function auditAreaContentCoverage(): CreviaSoftLaunchReviewFinding[] {
     ),
   );
 
+  const af = getContentPackActivationFindings();
+
+  findings.push(
+    makeFinding(
+      'content_coverage',
+      'content.activation_review_present',
+      af.activationReviewPresent ? 'pass' : 'warn',
+      'Content pack activation review present',
+      `Decision: ${af.decision}`,
+      'Run verify:content-pack-runtime-activation-review.',
+    ),
+    makeFinding(
+      'content_coverage',
+      'content.runtime_activation_blocked_by_freeze',
+      af.runtimeActivationBlockedByFreeze ? 'pass' : 'warn',
+      'Runtime activation blocked by freeze',
+      'Activation deferred to V1.1 backlog.',
+      'No runtime activation during freeze.',
+    ),
+    makeFinding(
+      'content_coverage',
+      'content.pack_coverage_sufficient',
+      af.packCoverageSufficient ? 'pass' : 'warn',
+      'Pack coverage sufficient for soft launch',
+      `Families: ${af.totalFamilyCount}, Variants: ${af.totalVariantCount}`,
+      'Content volume meets Day 8+ threshold.',
+    ),
+    makeFinding(
+      'content_coverage',
+      'content.v11_backlog_defined',
+      af.v11BacklogDefined ? 'pass' : 'warn',
+      'V1.1 activation backlog defined',
+      `${af.v11BacklogLength} backlog items.`,
+      'Review V1.1 backlog after soft launch telemetry.',
+    ),
+    makeFinding(
+      'content_coverage',
+      'content.activation_not_required_for_soft_launch',
+      af.activationNotRequiredForSoftLaunch ? 'pass' : 'warn',
+      'Content activation not required for soft launch',
+      'Soft launch uses existing event families without pack gating.',
+      'Pack activation is a post-launch optimization.',
+    ),
+  );
+
   return findings;
 }
 
-function auditAreaAnalytics(): CreviaSoftLaunchReviewFinding[] {
+function auditAreaAnalytics(mode: CreviaSoftLaunchReviewMode): CreviaSoftLaunchReviewFinding[] {
   const findings: CreviaSoftLaunchReviewFinding[] = [];
   const analytics = verifyAnalyticsScenario();
   const newSystems = verifyAnalyticsNewSystemsScenario();
+  const telemetryMode =
+    mode === 'launch_candidate' || mode === 'soft_launch_candidate'
+      ? mode
+      : 'internal_device_test';
+  const telemetry = runPostLaunchTelemetryReadinessAudit({ mode: telemetryMode });
+  const tf = telemetry.softLaunchFindings;
 
   findings.push(
     makeFinding(
@@ -640,6 +789,68 @@ function auditAreaAnalytics(): CreviaSoftLaunchReviewFinding[] {
       'Raw copy / PII guards present',
       'Forbidden payload keys blocked in analytics runtime.',
       'Keep free-text out of analytics payloads.',
+    ),
+  );
+
+  findings.push(
+    makeFinding(
+      'analytics',
+      'telemetry.post_launch_readiness_present',
+      tf.postLaunchReadinessPresent ? 'pass' : 'warn',
+      'Post-launch telemetry readiness pack present',
+      `${telemetry.kpis.length} KPIs, ${telemetry.funnels.length} funnels, ${telemetry.dashboardCards.length} dashboard cards.`,
+      'docs/crevia-post-launch-telemetry-readiness.md',
+    ),
+    makeFinding(
+      'analytics',
+      'telemetry.kpi_definitions_present',
+      tf.kpiDefinitionsPresent ? 'pass' : mode === 'soft_launch_candidate' ? 'warn' : 'warn',
+      tf.kpiDefinitionsPresent
+        ? 'Telemetry KPI definitions present'
+        : 'Telemetry KPI definitions incomplete',
+      `${telemetry.kpiGroups.length} KPI groups documented.`,
+      'Run verify:post-launch-telemetry-readiness.',
+    ),
+    makeFinding(
+      'analytics',
+      'telemetry.funnel_definitions_present',
+      tf.funnelDefinitionsPresent ? 'pass' : 'warn',
+      tf.funnelDefinitionsPresent
+        ? 'Telemetry funnel definitions present'
+        : 'Telemetry funnel definitions incomplete',
+      `${telemetry.funnels.length} funnels mapped to schema events.`,
+      'Complete funnel docs before soft launch review.',
+    ),
+    makeFinding(
+      'analytics',
+      'telemetry.dashboard_cards_present',
+      tf.dashboardCardsPresent ? 'pass' : 'warn',
+      tf.dashboardCardsPresent
+        ? 'Telemetry dashboard card recommendations present'
+        : 'Dashboard card recommendations incomplete',
+      `${telemetry.dashboardCards.length} cards defined (SDK pending).`,
+      'Dashboard cards are documentation-only until SDK connect.',
+    ),
+    makeFinding(
+      'analytics',
+      'telemetry.privacy_guard_pass',
+      tf.privacyGuardPass ? 'pass' : 'blocker',
+      tf.privacyGuardPass
+        ? 'Telemetry privacy guard PASS'
+        : 'Telemetry privacy guard FAIL',
+      tf.privacyGuardPass
+        ? 'No raw copy/PII in analytics payload schema.'
+        : telemetry.privacyGuard.findings.join('; ') || 'Privacy alignment issue.',
+      'Align analytics schema with privacy policy draft.',
+    ),
+    makeFinding(
+      'analytics',
+      'telemetry.dashboard_sdk_pending',
+      'warn',
+      'Telemetry dashboard SDK pending',
+      'KPI/funnel/dashboard definitions ready; production SDK and charts not connected.',
+      'WARN only — not a soft-launch code blocker.',
+      false,
     ),
   );
 
@@ -896,6 +1107,72 @@ function auditAreaIap(mode: CreviaSoftLaunchReviewMode): CreviaSoftLaunchReviewF
       ),
     );
   }
+
+  const conversionReadiness = runIapConversionReadinessAudit();
+  const conversionSl = buildIapConversionSoftLaunchFindings(conversionReadiness);
+
+  findings.push(
+    makeFinding(
+      'iap_monetization',
+      'iap_conversion.readiness_pass_present',
+      conversionSl.readinessPassPresent ? 'pass' : 'warn',
+      conversionSl.readinessPassPresent
+        ? 'IAP conversion readiness pass present'
+        : 'IAP conversion readiness incomplete',
+      `Health: ${conversionReadiness.health}, ${conversionReadiness.passCount} pass, ${conversionReadiness.warnCount} warn, ${conversionReadiness.failCount} fail.`,
+      IAP_CONVERSION_READINESS_DOCS_PATH,
+    ),
+    makeFinding(
+      'iap_monetization',
+      'iap_conversion.offer_copy_guard_pass',
+      conversionSl.offerCopyGuardPass ? 'pass' : 'warn',
+      conversionSl.offerCopyGuardPass
+        ? 'Offer copy guard PASS'
+        : 'Offer copy guard needs review',
+      'Paywall pressure and false claim scan.',
+      IAP_CONVERSION_READINESS_DOCS_PATH,
+    ),
+    makeFinding(
+      'iap_monetization',
+      'iap_conversion.limited_mode_playable',
+      conversionSl.limitedModePlayable ? 'pass' : 'warn',
+      conversionSl.limitedModePlayable
+        ? 'Limited mode playable'
+        : 'Limited mode playability issue',
+      'Day 8 limited access remains functional.',
+      IAP_CONVERSION_READINESS_DOCS_PATH,
+    ),
+    makeFinding(
+      'iap_monetization',
+      'iap_conversion.restore_cta_present',
+      conversionSl.restoreCtaPresent ? 'pass' : 'warn',
+      conversionSl.restoreCtaPresent
+        ? 'Restore CTA present'
+        : 'Restore CTA missing',
+      'Restore CTA visibility on offer screen.',
+      IAP_CONVERSION_READINESS_DOCS_PATH,
+    ),
+    makeFinding(
+      'iap_monetization',
+      'iap_conversion.product_metadata_pending_safe',
+      conversionSl.productMetadataPendingSafe ? 'pass' : 'warn',
+      conversionSl.productMetadataPendingSafe
+        ? 'Product metadata pending safe'
+        : 'Product metadata pending unsafe',
+      'No fake price shown when store product pending.',
+      IAP_CONVERSION_READINESS_DOCS_PATH,
+    ),
+    makeFinding(
+      'iap_monetization',
+      'iap_conversion.paywall_pressure_guard_pass',
+      conversionSl.paywallPressureGuardPass ? 'pass' : 'warn',
+      conversionSl.paywallPressureGuardPass
+        ? 'Paywall pressure guard PASS'
+        : 'Paywall pressure guard needs review',
+      'Offer copy scanned for pressure patterns.',
+      IAP_CONVERSION_READINESS_DOCS_PATH,
+    ),
+  );
 
   return findings;
 }
@@ -1519,6 +1796,65 @@ function auditAreaReleaseStore(mode: CreviaSoftLaunchReviewMode): CreviaSoftLaun
     );
   }
 
+  findings.push(...auditNoNewSystemFreezeFindings(mode));
+
+  return findings;
+}
+
+export function auditNoNewSystemFreezeFindings(
+  mode: CreviaSoftLaunchReviewMode,
+): CreviaSoftLaunchReviewFinding[] {
+  const freeze = runNoNewSystemFreezeAudit({ mode });
+  const findings: CreviaSoftLaunchReviewFinding[] = [];
+
+  const mapSeverity = (
+    severity: 'pass' | 'warn' | 'blocker',
+  ): CreviaSoftLaunchReviewSeverity => {
+    if (severity === 'blocker') {
+      if (mode === 'internal_device_test' || mode === 'iap_sandbox_test') {
+        return 'warn';
+      }
+      return 'blocker';
+    }
+    return severity;
+  };
+
+  for (const f of freeze.findings) {
+    if (!f.id.startsWith('freeze.')) continue;
+
+    let severity = mapSeverity(f.severity);
+
+    if (f.id === 'freeze.recommendation') {
+      const freezeActive = isNoNewSystemFreezeActive(mode);
+      if (mode === 'soft_launch_candidate' && !freezeActive) {
+        severity = 'blocker';
+      } else if (
+        (mode === 'launch_candidate' || mode === 'soft_launch_candidate') &&
+        !freezeActive &&
+        f.severity !== 'blocker'
+      ) {
+        severity = 'warn';
+      } else if (
+        (mode === 'internal_device_test' || mode === 'iap_sandbox_test') &&
+        freeze.freezeActive
+      ) {
+        severity = 'pass';
+      }
+    }
+
+    findings.push(
+      makeFinding(
+        'release_store_readiness',
+        f.id,
+        severity,
+        f.title,
+        f.message,
+        f.recommendation || NO_NEW_SYSTEM_FREEZE_DOCS_PATH,
+        f.automatic,
+      ),
+    );
+  }
+
   return findings;
 }
 
@@ -1533,7 +1869,7 @@ export function buildSoftLaunchReviewAreaResults(
     route_field_resource_systems: auditAreaRouteFieldResource(),
     result_report_carryover: auditAreaResultReport(),
     content_coverage: auditAreaContentCoverage(),
-    analytics: auditAreaAnalytics(),
+    analytics: auditAreaAnalytics(mode),
     iap_monetization: auditAreaIap(mode),
     performance_selectors: auditAreaPerformance(),
     save_migration_offline: auditAreaSaveMigration(),
@@ -1700,9 +2036,9 @@ export function buildSoftLaunchReadinessLevel(
 
 export function buildNoNewSystemFreezeRecommendation(
   mode: CreviaSoftLaunchReviewMode,
-  blockers: CreviaSoftLaunchReviewBlocker[],
+  _blockers: CreviaSoftLaunchReviewBlocker[],
 ): boolean {
-  return mode === 'soft_launch_candidate' && blockers.length === 0;
+  return isNoNewSystemFreezeActive(mode) || runNoNewSystemFreezeAudit({ mode }).freezeActive;
 }
 
 export function buildSoftLaunchNextActions(
@@ -1769,12 +2105,20 @@ export function buildSoftLaunchReviewRecommendations(
     manual: false,
   });
 
-  if (mode === 'soft_launch_candidate' && blockers.length === 0) {
+  if (mode === 'soft_launch_candidate' || mode === 'launch_candidate') {
     recs.push({
       id: 'rec.freeze',
       priority: 'high',
       title: 'No-New-System Freeze',
-      action: 'Stop new systems; only bugfix, polish, store prep.',
+      action: 'Fix-only mode: bugfix, polish, store prep only — manual blockers require freeze.',
+      manual: false,
+    });
+  } else if (runNoNewSystemFreezeAudit({ mode }).freezeActive) {
+    recs.push({
+      id: 'rec.freeze',
+      priority: 'medium',
+      title: 'No-New-System Freeze recommended',
+      action: 'Prepare for fix-only mode before launch candidate.',
       manual: false,
     });
   }

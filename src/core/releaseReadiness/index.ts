@@ -93,6 +93,7 @@ export {
   buildSoftLaunchNextActions,
   buildNoNewSystemFreezeRecommendation,
   buildSoftLaunchReviewRecommendations,
+  auditNoNewSystemFreezeFindings,
 } from './softLaunchReviewAudit';
 
 export {
@@ -292,3 +293,54 @@ export {
   verifyStoreScreenshotReadinessScenario,
   type VerifyStoreScreenshotReadinessOutcome,
 } from './verifyStoreScreenshotReadinessScenario';
+
+export type {
+  CreviaFreezeAllowedScope,
+  CreviaFreezeForbiddenScope,
+  CreviaFreezeHealthStatus,
+  CreviaFreezeDecision,
+  CreviaFreezeFinding,
+  CreviaFreezeViolation,
+  CreviaFreezeRecommendation,
+  CreviaFreezePromptGuardItem,
+  CreviaFreezeManualBlocker,
+  CreviaNoNewSystemFreezeResult,
+  RunNoNewSystemFreezeAuditOptions,
+} from './noNewSystemFreezeTypes';
+
+export {
+  NO_NEW_SYSTEM_FREEZE_DOCS_PATH,
+  NO_NEW_SYSTEM_FREEZE_ALLOWED_SCOPES,
+  NO_NEW_SYSTEM_FREEZE_FORBIDDEN_SCOPES,
+  NO_NEW_SYSTEM_FREEZE_PROMPT_GUARD,
+  NO_NEW_SYSTEM_FREEZE_MANUAL_BLOCKERS,
+  NO_NEW_SYSTEM_FREEZE_V11_BACKLOG,
+  NO_NEW_SYSTEM_FREEZE_EXPECTED_SAVE_VERSION,
+} from './noNewSystemFreezeConstants';
+
+export {
+  runNoNewSystemFreezeAudit,
+  buildFreezeAllowedScopeList,
+  buildFreezeForbiddenScopeList,
+  buildFreezePromptGuardChecklist,
+  detectRecentSystemExpansionRisk,
+  collectFreezeViolations,
+  buildFreezeDecision,
+  buildFreezeNextActions,
+  isNoNewSystemFreezeActive,
+} from './noNewSystemFreezeAudit';
+
+export {
+  buildNoNewSystemFreezeMarkdown,
+  buildNoNewSystemFreezeConsoleSummary,
+  buildFreezeAllowedScopeTable,
+  buildFreezeForbiddenScopeTable,
+  buildFreezePromptGuardChecklist as buildFreezePromptGuardChecklistFormatted,
+  buildFreezeNextActionTable,
+  buildV11BacklogSummary,
+} from './noNewSystemFreezePresentation';
+
+export {
+  verifyNoNewSystemFreezeScenario,
+  type VerifyNoNewSystemFreezeOutcome,
+} from './verifyNoNewSystemFreezeScenario';

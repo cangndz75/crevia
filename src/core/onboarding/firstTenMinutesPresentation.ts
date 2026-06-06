@@ -190,6 +190,16 @@ export function shouldHideAdvancedSystemForFirstTenMinutes(
       return day <= 2;
     case 'profile_prestige':
       return day <= 1;
+    case 'operation_era':
+    case 'story_chain':
+    case 'district_operation_action':
+      return day <= 7;
+    case 'resource_fatigue_deep':
+      return day <= 2;
+    case 'profile_career_showcase':
+      return day <= 3;
+    case 'devtools_debug':
+      return day <= 1;
     default:
       return false;
   }
@@ -247,6 +257,11 @@ export function buildHubCardVisibilityModel(
       showPersonnelStrip: false,
       showRegionPulse: false,
       showOperationalResources: false,
+      showOpenEndedCard: false,
+      showQuickPreparationStrip: false,
+      showOperationSignalsCard: false,
+      showLearningProgressCard: true,
+      suppressDevTools: true,
       maxFeaturedCards: 2,
     };
   }
@@ -276,6 +291,11 @@ export function buildHubCardVisibilityModel(
       showPersonnelStrip: true,
       showRegionPulse: true,
       showOperationalResources: true,
+      showOpenEndedCard: true,
+      showQuickPreparationStrip: true,
+      showOperationSignalsCard: true,
+      showLearningProgressCard: true,
+      suppressDevTools: false,
       maxFeaturedCards: 3,
     };
   }
@@ -315,6 +335,11 @@ export function buildHubCardVisibilityModel(
       showPersonnelStrip: true,
       showRegionPulse: true,
       showOperationalResources: true,
+      showOpenEndedCard: true,
+      showQuickPreparationStrip: true,
+      showOperationSignalsCard: true,
+      showLearningProgressCard: false,
+      suppressDevTools: false,
       maxFeaturedCards: 4,
     };
   }
@@ -349,6 +374,11 @@ export function buildHubCardVisibilityModel(
     showPersonnelStrip: true,
     showRegionPulse: true,
     showOperationalResources: true,
+    showOpenEndedCard: true,
+    showQuickPreparationStrip: true,
+    showOperationSignalsCard: true,
+    showLearningProgressCard: false,
+    suppressDevTools: false,
     maxFeaturedCards: 6,
   };
 }

@@ -103,3 +103,50 @@ export {
   verifyAnalyticsRuntimeScenario,
   type VerifyAnalyticsRuntimeOutcome,
 } from './verifyAnalyticsRuntimeScenario';
+
+export type {
+  CreviaPostLaunchTelemetryReadinessResult,
+  CreviaTelemetryAlertThreshold,
+  CreviaTelemetryDashboardCard,
+  CreviaTelemetryEventCoverage,
+  CreviaTelemetryFunnelDefinition,
+  CreviaTelemetryKpiDefinition,
+  CreviaTelemetryReadinessBlocker,
+  CreviaTelemetryReadinessHealthStatus,
+  CreviaTelemetryReadinessWarning,
+  CreviaTelemetryReviewQuestion,
+  CreviaTelemetrySoftLaunchFindings,
+  RunPostLaunchTelemetryReadinessAuditOptions,
+} from './postLaunchTelemetryReadinessTypes';
+
+export {
+  POST_LAUNCH_TELEMETRY_ALERT_THRESHOLDS,
+  POST_LAUNCH_TELEMETRY_DASHBOARD_CARDS,
+  POST_LAUNCH_TELEMETRY_FUNNEL_DEFINITIONS,
+  POST_LAUNCH_TELEMETRY_KPI_DEFINITIONS,
+  POST_LAUNCH_TELEMETRY_KPI_GROUP_LABELS,
+  POST_LAUNCH_TELEMETRY_READINESS_DOCS_PATH,
+  POST_LAUNCH_TELEMETRY_REVIEW_QUESTIONS,
+  collectPostLaunchTelemetryRequiredEvents,
+} from './postLaunchTelemetryReadinessConstants';
+
+export {
+  buildTelemetryEventCoverageAudit,
+  buildTelemetrySoftLaunchFindings,
+  runPostLaunchTelemetryReadinessAudit,
+} from './postLaunchTelemetryReadinessAudit';
+
+export {
+  buildPostLaunchTelemetryConsoleSummary,
+  buildPostLaunchTelemetryReadinessMarkdown,
+  buildTelemetryCoverageGapTable,
+  buildTelemetryDashboardChecklist,
+  buildTelemetryFunnelTable,
+  buildTelemetryKpiTable,
+  buildTelemetryReviewQuestionList,
+} from './postLaunchTelemetryReadinessPresentation';
+
+export {
+  verifyPostLaunchTelemetryReadinessScenario,
+  type VerifyPostLaunchTelemetryReadinessOutcome,
+} from './verifyPostLaunchTelemetryReadinessScenario';

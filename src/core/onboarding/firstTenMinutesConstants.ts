@@ -5,6 +5,19 @@ export const FIRST_TEN_MINUTES_FORBIDDEN_WORDS = [
   'premium',
   'satın al',
   'kilitli',
+  'sezon finali',
+  '14 gün bitti',
+  '14 günlük sezon',
+  'oyun sonu',
+  'oyun bitti',
+  'panik',
+  'alarm',
+  'çöktü',
+  'başarısız oldun',
+  'gerçek zamanlı gps',
+  'canlı takip',
+  'kesin rota',
+  'resmi belediye uygulaması',
 ] as const;
 
 export const FIRST_TEN_MINUTES_MAX_LINE_LENGTH = 120;
@@ -15,7 +28,7 @@ export const DAY1_GUIDANCE_COPY = {
   primaryInstruction: 'Önerilen planı onayla ve ilk operasyonu tamamla.',
   secondaryNote:
     'Detaylı kriz, sezon ve canlı karar sistemleri sonraki günlerde açılır.',
-  guideCardLine: 'Önerilen planı onayla, ilk olayı çöz, raporu oku.',
+  guideCardLine: 'Planı onayla → ilk olayı çöz → raporu oku.',
 } as const;
 
 export const DAY2_GUIDANCE_COPY = {
@@ -39,8 +52,8 @@ export const DAY1_ADVISOR_SHORT_COPY = {
 export const DAY1_DAILY_PLAN_COPY = {
   title: 'Bugünün Önerilen Planı',
   confirmCta: 'Planı Onayla',
-  editDisabledNote:
-    'İlk gün düzenleme kapalı; önerilen planla temel akışı öğreniyorsun.',
+  planDescriptionShort: 'Önerilen plan bugünkü sinyale yanıt verir.',
+  editDisabledNote: 'İlk gün düzenleme kapalı; önerilen planla akışı öğreniyorsun.',
 } as const;
 
 export const DAY1_ASSIGNMENT_COPY = {
@@ -50,7 +63,7 @@ export const DAY1_ASSIGNMENT_COPY = {
 } as const;
 
 export const DAY1_EVENT_PLAN_COPY = {
-  planSupport: 'Bugünkü plan bu kararı destekler.',
+  planSupport: 'Plan bu kararı destekler.',
 } as const;
 
 export const DAY1_REPORT_EDUCATIONAL_LINES = [

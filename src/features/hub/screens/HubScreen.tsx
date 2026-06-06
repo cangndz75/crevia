@@ -127,7 +127,7 @@ export function HubScreen() {
         hubCarryOverMemory={hubCarryOverMemory}
         showHubCarryOver={showHubCarryOver}
       />
-      {__DEV__ ? <HubDevTools /> : null}
+      {__DEV__ && !hubCardVisibility.suppressDevTools ? <HubDevTools /> : null}
       <TutorialCoachOverlay screen="hub" />
       {coachHint && !hubTutorialStep && tutorialActive ? (
         <OnboardingCoachBubble

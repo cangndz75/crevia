@@ -37,7 +37,13 @@ export type FirstTenMinutesSystemKey =
   | 'advanced_operation_impacts'
   | 'social_deep_dive'
   | 'leaderboard'
-  | 'profile_prestige';
+  | 'profile_prestige'
+  | 'operation_era'
+  | 'story_chain'
+  | 'district_operation_action'
+  | 'resource_fatigue_deep'
+  | 'profile_career_showcase'
+  | 'devtools_debug';
 
 export type FirstTenMinutesSurfaceRule = {
   surface: FirstTenMinutesSurface;
@@ -71,6 +77,11 @@ export type HubCardVisibilityModel = {
   showPersonnelStrip: boolean;
   showRegionPulse: boolean;
   showOperationalResources: boolean;
+  showOpenEndedCard: boolean;
+  showQuickPreparationStrip: boolean;
+  showOperationSignalsCard: boolean;
+  showLearningProgressCard: boolean;
+  suppressDevTools: boolean;
   maxFeaturedCards: number;
 };
 

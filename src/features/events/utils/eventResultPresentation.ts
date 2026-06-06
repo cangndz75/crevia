@@ -23,6 +23,9 @@ export const EVENT_RESULT_UI_FORBIDDEN_WORDS = [
   'yetkin yetersiz',
   'premium',
   'satın al',
+  'başarısız oldun',
+  'başarısız',
+  'yanlış karar',
   'paywall',
 ] as const;
 

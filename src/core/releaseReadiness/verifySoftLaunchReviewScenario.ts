@@ -180,6 +180,20 @@ export function verifySoftLaunchReviewScenario(): VerifySoftLaunchReviewOutcome 
   ok =
     assert(
       checks,
+      internal.findings.some((f) => f.id === 'telemetry.post_launch_readiness_present'),
+      'Telemetry readiness finding present',
+      'Missing telemetry.post_launch_readiness_present',
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      internal.findings.some((f) => f.id === 'telemetry.dashboard_sdk_pending' && f.severity === 'warn'),
+      'Telemetry dashboard SDK WARN listed',
+      'Missing telemetry.dashboard_sdk_pending',
+    ) && ok;
+  ok =
+    assert(
+      checks,
       !internal.blockers.some((b) => b.area === 'analytics'),
       'Analytics WARN not blocker',
       'Analytics incorrectly blocker',
@@ -196,17 +210,47 @@ export function verifySoftLaunchReviewScenario(): VerifySoftLaunchReviewOutcome 
   ok =
     assert(
       checks,
-      launch.blockers.some((b) => b.id.includes('device_playtest')),
-      'Real device playtest blocker in launch mode',
-      'Missing playtest blocker',
+      internal.findings.some((f) => f.id === 'day1.dropoff_fix_pass_present'),
+      'Day 1 drop-off fix pass finding present',
+      'Missing day1.dropoff_fix_pass_present',
+    ) && ok;
+
+  ok =
+    assert(
+      checks,
+      internal.findings.some((f) => f.id === 'day1.hub_density_guard_pass'),
+      'Day 1 hub density guard finding present',
+      'Missing day1.hub_density_guard_pass',
+    ) && ok;
+
+  ok =
+    assert(
+      checks,
+      launch.findings.some((f) => f.id === 'freeze.no_new_system_gate_present'),
+      'Freeze gate finding in launch review',
+      'Missing freeze gate finding',
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      launch.findings.some((f) => f.id === 'freeze.recommendation'),
+      'Freeze recommendation in launch review',
+      'Missing freeze recommendation',
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      launch.noNewSystemFreezeRecommended,
+      'Launch candidate freeze recommended/active',
+      'Freeze not recommended for launch',
     ) && ok;
 
   if (
     !warn(
       checks,
-      !internal.noNewSystemFreezeRecommended,
-      'Freeze not recommended with blockers',
-      'Freeze should wait until blockers cleared',
+      internal.noNewSystemFreezeRecommended,
+      'Internal mode freeze recommended with manual blockers',
+      'Freeze should be recommended even with blockers open',
     )
   ) {
     hasWarn = true;
