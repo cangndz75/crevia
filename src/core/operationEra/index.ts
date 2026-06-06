@@ -119,6 +119,40 @@ export {
   type VerifyOperationEraRuntimePreviewOutcome,
 } from './verifyOperationEraRuntimePreviewScenario';
 
+export type {
+  CreviaOperationEraExpansionOption,
+  CreviaOperationEraExpansionRecommendation,
+  CreviaOperationEraExpansionRisk,
+  CreviaOperationEraMigrationRisk,
+  CreviaOperationEraRuntimeExpansionHealthStatus,
+  CreviaOperationEraRuntimeExpansionReviewResult,
+  CreviaOperationEraRuntimeExpansionSoftLaunchFindings,
+  CreviaOperationEraRuntimeReadinessArea,
+  CreviaOperationEraSaveImpact,
+  CreviaOperationEraTelemetryQuestion,
+  RunOperationEraRuntimeExpansionReviewOptions,
+} from './operationEraRuntimeExpansionReviewTypes';
+
+export {
+  OPERATION_ERA_RUNTIME_EXPANSION_REVIEW_DOCS_PATH,
+  buildOperationEraRuntimeExpansionSoftLaunchFindings,
+  runOperationEraRuntimeExpansionReviewAudit,
+} from './operationEraRuntimeExpansionReviewAudit';
+
+export {
+  buildOperationEraExpansionOptionsTable,
+  buildOperationEraExpansionRiskTable,
+  buildOperationEraRuntimeExpansionConsoleSummary,
+  buildOperationEraRuntimeExpansionReviewMarkdown,
+  buildOperationEraTelemetryQuestionList,
+  buildOperationEraV11BacklogTable,
+} from './operationEraRuntimeExpansionReviewPresentation';
+
+export {
+  verifyOperationEraRuntimeExpansionReviewScenario,
+  type VerifyOperationEraRuntimeExpansionReviewOutcome,
+} from './verifyOperationEraRuntimeExpansionReviewScenario';
+
 export {
   buildOperationEraCadenceLabel,
   buildOperationEraCompactLine,

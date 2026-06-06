@@ -12,6 +12,10 @@ import {
   trackOncePerRuntime,
 } from '@/core/analytics/analyticsRuntime';
 import { normalizeAuthorityState } from '@/core/authority/authoritySeed';
+import {
+  buildDecisionImpactExplanation,
+  buildDecisionImpactReportEcho,
+} from '@/core/decisionImpactExplanation';
 import { buildSeasonEndEvaluationModel, buildSeasonEndReportCardModel } from '@/core/seasonEnd';
 import type { DailyReport } from '@/core/models/DailyReport';
 import type { GameMetrics } from '@/core/models/GameMetrics';
@@ -36,6 +40,7 @@ import {
   isReportTomorrowPreviewDuplicateOf,
   shouldShowReportTomorrowPreview,
 } from '@/core/reports/reportTomorrowPreviewPresentation';
+import { buildTomorrowRiskPresentation } from '@/core/tomorrowRisk';
 import { buildSocialDecisionEcho } from '@/core/socialEcho/socialEchoSelectors';
 import { buildSocialEchoContextFromPulseArgs } from '@/core/socialEcho/socialEchoPresentation';
 import { buildEventDomainFocusModel } from '@/core/events/eventDomainPresentation';
@@ -46,6 +51,7 @@ import {
 } from '@/core/resources';
 import { ResourceFatigueStateChip } from '@/features/resources/components/ResourceFatigueStateChip';
 import { ReportTomorrowPreviewCard } from '@/features/reports/components/ReportTomorrowPreviewCard';
+import { ReportTomorrowRiskCard } from '@/features/reports/components/ReportTomorrowRiskCard';
 import { ReportTomorrowNotesCard } from '@/features/reports/components/end-of-day/premium/ReportTomorrowNotesCard';
 import { ReportAdvisorCommentCard } from '@/features/reports/components/ReportAdvisorCommentCard';
 import { ReportAssignmentBalanceCard } from '@/features/reports/components/ReportAssignmentBalanceCard';
@@ -257,6 +263,44 @@ export function EndOfDayReportView({
     [decisionHistory, lastDecisionForDay, report],
   );
 
+  const decisionImpactReportEcho = useMemo(() => {
+    if (!lastDecisionForDay) return null;
+    return buildDecisionImpactReportEcho(
+      buildDecisionImpactExplanation({
+        day: report.day,
+        snapshot: {
+          id: `report-${lastDecisionForDay.id}`,
+          day: lastDecisionForDay.day,
+          eventId: lastDecisionForDay.eventId,
+          eventTitle: lastDecisionForDay.eventTitle,
+          neighborhoodId: lastDecisionForDay.neighborhoodId,
+          neighborhoodName: lastDecisionForDay.neighborhoodName,
+          decisionId: lastDecisionForDay.decisionId,
+          decisionTitle: lastDecisionForDay.decisionLabel,
+          decisionTone: 'balanced',
+          createdAt: Date.parse(lastDecisionForDay.createdAt) || Date.now(),
+          summaryTitle: lastDecisionForDay.eventTitle,
+          summaryText: lastDecisionForDay.decisionLabel,
+          resultTone: 'mixed',
+          metricChanges: [],
+          subsystemOutcomes: [],
+          highlightLines: [],
+          riskLines: [],
+        },
+        operationSignals,
+        resourceFatigue: operationalResources,
+        carryOverSummary: reportCarryOverMemory?.summary,
+        dailyReport: report,
+      }),
+    );
+  }, [
+    lastDecisionForDay,
+    operationSignals,
+    operationalResources,
+    report,
+    reportCarryOverMemory?.summary,
+  ]);
+
   const eventDomainFocus = useMemo(() => {
     if (!lastDecisionForDay) return null;
     return buildEventDomainFocusModel({
@@ -309,6 +353,7 @@ export function EndOfDayReportView({
       socialEchoForReport?.mention ?? '',
       eventDomainFocus?.reportEchoLine ?? '',
       districtOperationActionReportLine ?? '',
+      decisionImpactReportEcho ?? '',
     ].filter(Boolean);
 
     const previewInput = {
@@ -338,6 +383,7 @@ export function EndOfDayReportView({
   }, [
     eventDomainFocus,
     districtOperationActionReportLine,
+    decisionImpactReportEcho,
     lastDecisionForDay,
     model.tomorrowNotes,
     operationSignals,
@@ -385,16 +431,67 @@ export function EndOfDayReportView({
     tomorrowPreviewBundle.summary.preview,
   ]);
 
+  const tomorrowRiskPresentation = useMemo(
+    () =>
+      buildTomorrowRiskPresentation({
+        day: report.day,
+        carryOver: reportCarryOverMemory ?? undefined,
+        tomorrowHint: tomorrowPreviewBundle.summary.preview?.summary,
+        reportTomorrowPreview: tomorrowPreviewBundle.summary.preview
+          ? {
+              summary: tomorrowPreviewBundle.summary.preview.summary,
+              domain: tomorrowPreviewBundle.summary.preview.domain,
+              visible: tomorrowPreviewBundle.showPreview,
+            }
+          : undefined,
+        operationSignals,
+        resourceFatigue: operationalResources,
+        socialPulse: {
+          globalPulseScore: socialPulseState.globalPulseScore,
+        },
+        postPilotOperation: postPilotOperation ?? undefined,
+        existingLines: [
+          ...(model.tomorrowNotes ?? []),
+          ...(report.summaryLines ?? []),
+          ...(report.carryOverSummaryLines ?? []),
+          reportCarryOverMemory?.summary ?? '',
+          socialEchoForReport?.mention ?? '',
+          eventDomainFocus?.reportEchoLine ?? '',
+          districtOperationActionReportLine ?? '',
+          tomorrowPreviewBundle.summary.preview?.summary ?? '',
+        ].filter(Boolean),
+      }),
+    [
+      districtOperationActionReportLine,
+      eventDomainFocus?.reportEchoLine,
+      model.tomorrowNotes,
+      operationSignals,
+      operationalResources,
+      postPilotOperation,
+      report.carryOverSummaryLines,
+      report.day,
+      report.summaryLines,
+      reportCarryOverMemory,
+      socialEchoForReport?.mention,
+      socialPulseState.globalPulseScore,
+      tomorrowPreviewBundle.showPreview,
+      tomorrowPreviewBundle.summary.preview,
+    ],
+  );
+
   const reportSystemsIntegration = useMemo(() => {
     const existingEchoLines: string[] = [
       ...(model.tomorrowNotes ?? []),
       ...(report.summaryLines ?? []),
       ...(report.carryOverSummaryLines ?? []),
       reportCarryOverMemory?.summary ?? '',
+      decisionImpactReportEcho ?? '',
       socialEchoForReport?.mention ?? '',
       eventDomainFocus?.reportEchoLine ?? '',
       districtOperationActionReportLine ?? '',
       tomorrowPreviewBundle.summary.preview?.summary ?? '',
+      tomorrowRiskPresentation.report?.mainLine ?? '',
+      tomorrowRiskPresentation.report?.supportLine ?? '',
     ].filter(Boolean);
 
     const fatiguePanelLine = reportFatigueState
@@ -499,6 +596,7 @@ export function EndOfDayReportView({
     authorityState?.unlockedPermissionIds,
     crisisState,
     districtOperationActionReportLine,
+    decisionImpactReportEcho,
     eventDomainFocus?.focus,
     eventDomainFocus?.reportEchoLine,
     eventDomainFocus?.summary,
@@ -511,6 +609,8 @@ export function EndOfDayReportView({
     reportCarryOverMemory,
     reportFatigueState,
     socialEchoForReport?.mention,
+    tomorrowRiskPresentation.report?.mainLine,
+    tomorrowRiskPresentation.report?.supportLine,
     tomorrowPreviewBundle.summary,
     tomorrowPreviewBundle.summary.preview?.summary,
   ]);
@@ -691,6 +791,17 @@ export function EndOfDayReportView({
         <ReportPrimaryImpactSection model={impactModel} />
       </Animated.View>
 
+      {decisionImpactReportEcho ? (
+        <View style={styles.decisionImpactReportRow}>
+          <Text style={styles.decisionImpactReportLabel} numberOfLines={1}>
+            Kararın etkisi
+          </Text>
+          <Text style={styles.decisionImpactReportText} numberOfLines={2}>
+            {decisionImpactReportEcho}
+          </Text>
+        </View>
+      ) : null}
+
       {tomorrowPreviewBundle.showPreview && tomorrowPreviewBundle.summary.preview ? (
         <ReportTomorrowPreviewCard
           preview={tomorrowPreviewBundle.summary.preview}
@@ -736,6 +847,13 @@ export function EndOfDayReportView({
         <ReportSystemsIntegrationCard
           model={reportSystemsIntegration}
           analyticsContext={reportSystemsAnalyticsContext}
+        />
+      ) : null}
+
+      {tomorrowRiskPresentation.report ? (
+        <ReportTomorrowRiskCard
+          model={tomorrowRiskPresentation.report}
+          compact={tomorrowRiskPresentation.report.shouldShowAsCompact}
         />
       ) : null}
 
@@ -862,6 +980,23 @@ const styles = StyleSheet.create({
     color: '#0E5F5B',
   },
   districtActionReportText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    color: '#3D4F4C',
+    flexShrink: 1,
+  },
+  decisionImpactReportRow: {
+    gap: 4,
+    minWidth: 0,
+    paddingHorizontal: 4,
+  },
+  decisionImpactReportLabel: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#0E5F5B',
+  },
+  decisionImpactReportText: {
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '600',

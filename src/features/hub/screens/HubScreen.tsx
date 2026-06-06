@@ -8,11 +8,16 @@ import {
   buildCommonAnalyticsBase,
   trackOncePerRuntime,
 } from '@/core/analytics/analyticsRuntime';
+import {
+  buildDecisionImpactExplanationForHub,
+  buildDecisionImpactHubEcho,
+} from '@/core/decisionImpactExplanation';
 import { buildHubCardVisibilityModel } from '@/core/onboarding/firstTenMinutesPresentation';
 import {
   buildHubCarryOverMemory,
   shouldShowCarryOverMemory,
 } from '@/core/carryOver/carryOverMemoryPresentation';
+import { buildTomorrowRiskPresentation } from '@/core/tomorrowRisk';
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
 import { HubReferenceHome } from '@/features/hub/components/HubReferenceHome';
 import { buildHubScreenLayoutModel } from '@/features/hub/utils/hubScreenPresentation';
@@ -26,7 +31,10 @@ import {
   selectActiveTutorialStepForScreen,
   selectIsDay1TutorialActive,
 } from '@/features/tutorial/tutorialSelectors';
-import { useGameStore } from '@/store/useGameStore';
+import {
+  selectDecisionHistory,
+  useGameStore,
+} from '@/store/useGameStore';
 import { GameScreenShell } from '@/ui/components/GameScreenShell';
 
 /**
@@ -38,6 +46,9 @@ export function HubScreen() {
   const monetization = useGameStore((s) => s.monetization);
   const crisisState = useGameStore((s) => s.crisisState);
   const operationalResources = useGameStore((s) => s.operationalResources);
+  const operationSignals = useGameStore((s) => s.operationSignals);
+  const decisionHistory = useGameStore(selectDecisionHistory);
+  const socialPulseState = useGameStore((s) => s.socialPulseState);
   const tutorialActive = useGameStore(selectIsDay1TutorialActive);
   const hubTutorialStep = useGameStore((s) =>
     selectActiveTutorialStepForScreen(s, 'hub'),
@@ -66,6 +77,53 @@ export function HubScreen() {
   const showHubCarryOver =
     hubCarryOverMemory?.visible === true &&
     shouldShowCarryOverMemory(hubDay, 'hub', { day: hubDay });
+
+  const hubImpactExplanationLine = useMemo(
+    () =>
+      buildDecisionImpactHubEcho(
+        buildDecisionImpactExplanationForHub({
+          day: hubDay,
+          recentDecisions: decisionHistory,
+          operationSignals,
+          resourceFatigue: operationalResources,
+          carryOverSummary: hubCarryOverMemory?.summary,
+        }),
+      ),
+    [
+      decisionHistory,
+      hubCarryOverMemory?.summary,
+      hubDay,
+      operationSignals,
+      operationalResources,
+    ],
+  );
+
+  const tomorrowRiskPresentation = useMemo(
+    () =>
+      buildTomorrowRiskPresentation({
+        day: hubDay,
+        carryOver: hubCarryOverMemory ?? undefined,
+        operationSignals,
+        resourceFatigue: operationalResources,
+        socialPulse: {
+          globalPulseScore: socialPulseState.globalPulseScore,
+        },
+        postPilotOperation: gameState.pilot.postPilotOperation ?? undefined,
+        existingLines: [
+          showHubCarryOver ? hubCarryOverMemory?.summary ?? '' : '',
+          showHubCarryOver ? hubCarryOverMemory?.detail ?? '' : '',
+        ].filter(Boolean),
+      }),
+    [
+      gameState.pilot.postPilotOperation,
+      hubCarryOverMemory,
+      hubDay,
+      operationSignals,
+      operationalResources,
+      showHubCarryOver,
+      socialPulseState.globalPulseScore,
+    ],
+  );
 
   useEffect(() => {
     const base = buildCommonAnalyticsBase(gameState, 'hub', monetization);
@@ -126,6 +184,8 @@ export function HubScreen() {
       contentStyle={{ paddingHorizontal: 0, paddingTop: 0, gap: 0 }}>
       <HubReferenceHome
         hubCarryOverMemory={hubCarryOverMemory}
+        hubImpactExplanationLine={hubImpactExplanationLine}
+        hubTomorrowRisk={tomorrowRiskPresentation.hub}
         showHubCarryOver={showHubCarryOver}
         scrollFooter={
           __DEV__ && !hubCardVisibility.suppressDevTools ? <HubDevTools /> : undefined

@@ -7,6 +7,7 @@ import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { buildEventResultAnalyticsPayload } from '@/core/analytics/analyticsPayloadBuilders';
+import { buildDecisionImpactExplanation } from '@/core/decisionImpactExplanation';
 import { getEventAssignment } from '@/core/assignments/assignmentState';
 import {
   buildResultCarryOverMemory,
@@ -22,6 +23,7 @@ import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventC
 import { EventCarryOverHintCard } from '@/features/events/components/EventCarryOverHintCard';
 import { EventDomainFocusStrip } from '@/features/events/components/EventDomainFocusStrip';
 import { EventMapImpactSummaryCard } from '@/features/events/components/EventMapImpactSummaryCard';
+import { EventResultImpactExplanationCard } from '@/features/events/components/EventResultImpactExplanationCard';
 import { EventResultSystemsEchoStrip } from '@/features/events/components/result/EventResultSystemsEchoStrip';
 import {
   buildResourceFatiguePanelLine,
@@ -578,6 +580,26 @@ export function DecisionResultScreen() {
       suppressEchoDuplicate: Boolean(showDomainResult && domainResultFocus?.echoLine),
     });
 
+  const impactExplanation = useMemo(
+    () =>
+      buildDecisionImpactExplanation({
+        snapshot: result,
+        event: relatedEvent,
+        day: result.day ?? currentDay,
+        operationSignals,
+        resourceFatigue: operationalResources,
+        carryOverSummary: resultCarryOver?.summary,
+      }),
+    [
+      currentDay,
+      operationalResources,
+      operationSignals,
+      relatedEvent,
+      result,
+      resultCarryOver?.summary,
+    ],
+  );
+
   const mapBeforeAfterSummary = useMemo(() => {
     if (isMissing) return null;
     const day = result.day ?? currentDay;
@@ -775,6 +797,8 @@ export function DecisionResultScreen() {
           <Animated.View entering={ZoomIn.delay(80).duration(300)}>
             <RewardHero result={result} />
           </Animated.View>
+
+          <EventResultImpactExplanationCard explanation={impactExplanation} compact />
 
           <BeforeAfterPanel result={result} />
           <ResultStatCards result={result} />

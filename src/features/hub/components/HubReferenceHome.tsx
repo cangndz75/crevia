@@ -20,6 +20,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { CarryOverMemoryModel } from '@/core/carryOver';
+import type { TomorrowRiskModel } from '@/core/tomorrowRisk';
 import { creviaAssets } from '@/core/assets/creviaAssets';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import { getTimeGreeting } from '@/core/utils/timeGreeting';
@@ -28,6 +29,7 @@ import { useGameStatus } from '@/store/gameSelectors';
 import { useGameStore } from '@/store/useGameStore';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
 import { HeaderAvatar } from '@/ui/components/game-header/HeaderAvatar';
+import { HubTomorrowRiskStrip } from './HubTomorrowRiskStrip';
 
 const COMPACT_BREAKPOINT = 370;
 
@@ -109,6 +111,8 @@ function CardAssetImage({
 
 type HubReferenceHomeProps = {
   hubCarryOverMemory?: CarryOverMemoryModel | null;
+  hubImpactExplanationLine?: string | null;
+  hubTomorrowRisk?: TomorrowRiskModel | null;
   showHubCarryOver?: boolean;
   scrollFooter?: ReactNode;
 };
@@ -266,8 +270,10 @@ function Pill({
 
 function PreviousDecisionEffectCard({
   memory,
+  impactExplanationLine,
 }: {
   memory?: CarryOverMemoryModel | null;
+  impactExplanationLine?: string | null;
 }) {
   const body =
     memory?.summary ??
@@ -286,6 +292,11 @@ function PreviousDecisionEffectCard({
         <Text style={styles.bodyText} numberOfLines={2} ellipsizeMode="tail">
           {body}
         </Text>
+        {impactExplanationLine ? (
+          <Text style={styles.previousImpactLine} numberOfLines={1} ellipsizeMode="tail">
+            {impactExplanationLine}
+          </Text>
+        ) : null}
         <View style={styles.pillRow}>
           <Pill label="Operasyon" compact />
           <Pill label="İz" tone="gold" compact />
@@ -688,6 +699,8 @@ function SuggestedPlanCard() {
 
 export function HubReferenceHome({
   hubCarryOverMemory,
+  hubImpactExplanationLine,
+  hubTomorrowRisk,
   scrollFooter,
 }: HubReferenceHomeProps = {}) {
   const { scrollBottomPadding } = useHubLayoutMetrics();
@@ -701,7 +714,11 @@ export function HubReferenceHome({
         contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollBottomPadding }]}>
         <PremiumHubHeader />
         <View style={styles.body}>
-          <PreviousDecisionEffectCard memory={hubCarryOverMemory} />
+          <PreviousDecisionEffectCard
+            memory={hubCarryOverMemory}
+            impactExplanationLine={hubImpactExplanationLine}
+          />
+          <HubTomorrowRiskStrip model={hubTomorrowRisk} />
           <EceWelcomeCard />
           <OperationFocusCard />
           <QuickPreparationsCard />
@@ -904,6 +921,14 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: '600',
     color: palette.muted,
+  },
+  previousImpactLine: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '800',
+    color: palette.teal,
+    flexShrink: 1,
+    minWidth: 0,
   },
   pillRow: {
     flexDirection: 'row',

@@ -59,6 +59,10 @@ import {
   runDistrictOperationActionPersistenceReviewAudit,
 } from '@/core/districtOperationActions/districtOperationActionPersistenceReviewAudit';
 import {
+  OPERATION_ERA_RUNTIME_EXPANSION_REVIEW_DOCS_PATH,
+  runOperationEraRuntimeExpansionReviewAudit,
+} from '@/core/operationEra/operationEraRuntimeExpansionReviewAudit';
+import {
   STORY_CHAIN_PERSISTENT_RUNTIME_REVIEW_DOCS_PATH,
   runStoryChainPersistentRuntimeReviewAudit,
 } from '@/core/storyChains/storyChainPersistentRuntimeReviewAudit';
@@ -480,6 +484,8 @@ function auditAreaDay8OpenEnded(): CreviaSoftLaunchReviewFinding[] {
   const findings = scanPlayerFacingLegacyLanguage();
   const hubDay8 = buildHubOpenEndedIntegrationModel({ day: 8 });
   const reportDay8 = buildReportSystemsIntegrationModel({ day: 8 });
+  const operationEraExpansion = runOperationEraRuntimeExpansionReviewAudit({ mode: 'review_only' });
+  const oe = operationEraExpansion.softLaunchFindings;
 
   if (hubDay8.visible) {
     findings.push(
@@ -517,6 +523,69 @@ function auditAreaDay8OpenEnded(): CreviaSoftLaunchReviewFinding[] {
       ),
     );
   }
+
+  findings.push(
+    makeFinding(
+      'day8_open_ended_operation',
+      'operation_era.expansion_review_present',
+      oe.expansionReviewPresent ? 'pass' : 'warn',
+      oe.expansionReviewPresent
+        ? 'Operation era expansion review present'
+        : 'Operation era expansion review missing',
+      OPERATION_ERA_RUNTIME_EXPANSION_REVIEW_DOCS_PATH,
+      'Run verify:operation-era-runtime-expansion-review.',
+    ),
+    makeFinding(
+      'day8_open_ended_operation',
+      'operation_era.runtime_lite_current',
+      oe.runtimeLiteCurrent ? 'pass' : 'blocker',
+      oe.runtimeLiteCurrent
+        ? 'Operation era runtime-lite preview current'
+        : 'Operation era persist shape detected',
+      operationEraExpansion.currentBehaviorSummary.slice(0, 120),
+      'Keep runtime-lite preview during freeze; V1.1 telemetry decision.',
+    ),
+    makeFinding(
+      'day8_open_ended_operation',
+      'operation_era.expansion_not_required_for_soft_launch',
+      oe.expansionNotRequiredForSoftLaunch ? 'pass' : 'warn',
+      oe.expansionNotRequiredForSoftLaunch
+        ? 'Operation era expansion not required for soft launch'
+        : 'Operation era expansion unexpectedly required',
+      'Presentation/context layer only; restart continuity acceptable.',
+      OPERATION_ERA_RUNTIME_EXPANSION_REVIEW_DOCS_PATH,
+    ),
+    makeFinding(
+      'day8_open_ended_operation',
+      'operation_era.v11_expansion_backlog_defined',
+      oe.v11ExpansionBacklogDefined ? 'pass' : 'warn',
+      oe.v11ExpansionBacklogDefined
+        ? 'Operation era V1.1 expansion backlog defined'
+        : 'Operation era V1.1 expansion backlog incomplete',
+      `${operationEraExpansion.v11Backlog.length} backlog items.`,
+      'Evaluate Option B after telemetry.',
+    ),
+    makeFinding(
+      'day8_open_ended_operation',
+      'operation_era.save_version_unchanged',
+      oe.saveVersionUnchanged ? 'pass' : 'blocker',
+      oe.saveVersionUnchanged
+        ? `SAVE_VERSION ${operationEraExpansion.saveImpact.currentSaveVersion} unchanged`
+        : 'SAVE_VERSION changed during expansion review',
+      `Expected ${operationEraExpansion.saveImpact.expectedSaveVersion}.`,
+      'Separate migration patch if V1.1 persist approved.',
+    ),
+    makeFinding(
+      'day8_open_ended_operation',
+      'operation_era.runtime_activation_not_done',
+      oe.runtimeActivationNotDone ? 'pass' : 'blocker',
+      oe.runtimeActivationNotDone
+        ? 'Operation era runtime activation not done'
+        : 'Operation era runtime activation detected',
+      'isRuntimeLinked false; event generation unchanged.',
+      'Do not activate during freeze.',
+    ),
+  );
 
   return findings;
 }
