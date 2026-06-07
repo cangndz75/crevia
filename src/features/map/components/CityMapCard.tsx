@@ -43,6 +43,7 @@ type Props = {
   selectedPinId?: string | null;
   crisisHighlightDistrictIds?: MapDistrictId[];
   resourceHighlightDistrictIds?: MapDistrictId[];
+  reactionHighlightDistrictIds?: MapDistrictId[];
   mapPresenceViewModel?: MapPresenceViewModel | null;
   activeOperationOverlay?: MapActiveOperationOverlayModel | null;
   onLayersPress: () => void;
@@ -74,6 +75,7 @@ export function CityMapCard({
   selectedPinId = null,
   crisisHighlightDistrictIds,
   resourceHighlightDistrictIds,
+  reactionHighlightDistrictIds,
   mapPresenceViewModel = null,
   activeOperationOverlay = null,
   onLayersPress,
@@ -133,6 +135,7 @@ export function CityMapCard({
             selectedPinId={selectedPinId}
             crisisHighlightDistrictIds={crisisHighlightDistrictIds}
             resourceHighlightDistrictIds={resourceHighlightDistrictIds}
+            reactionHighlightDistrictIds={reactionHighlightDistrictIds}
             mapPresenceViewModel={mapPresenceViewModel}
             onDistrictPress={handleDistrictPress}
             onPinPress={onPinPress}

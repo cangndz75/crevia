@@ -13,12 +13,20 @@ import {
   buildOperationalResourceDetailSheetModel,
   buildOperationalResourceEngineInputFromStore,
 } from '@/core/operationalResources/operationalResourcePresentation';
+import {
+  buildOperationalResourcePresenceDetailTeamCards,
+  buildOperationalResourcePresenceDetailVehicleCards,
+  buildOperationalResourcePresenceLiteInputFromEngine,
+  buildOperationalResourcePresenceLiteModel,
+} from '@/core/operationalResourcePresence';
+import type { OperationalResourcePresenceDetailCard } from '@/core/operationalResourcePresence';
 import type {
   OperationalContainerNetworkDetailRow,
   OperationalPersonnelDetailRow,
   OperationalResourceDetailTabId,
   OperationalVehicleDetailRow,
 } from '@/core/operationalResources/operationalResourceTypes';
+import { deriveMainOperationAccessMode } from '@/core/mainOperation/mainOperationEngine';
 import { resolveIoniconForRegistryKey } from '@/core/presentation/creviaIconPresentation';
 import {
   HUB_PREMIUM_COLORS,
@@ -31,6 +39,7 @@ import { spacing } from '@/ui/theme/spacing';
 type Props = {
   visible: boolean;
   onClose: () => void;
+  defaultTabOverride?: OperationalResourceDetailTabId;
 };
 
 const TONE_COLORS = {
@@ -52,6 +61,9 @@ const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
   factory: 'construct-outline',
   route: 'git-branch-outline',
   leaf: 'leaf-outline',
+  flash: 'flash-outline',
+  people: 'people-outline',
+  cube: 'cube-outline',
 };
 
 function resolveIcon(iconKey: string): keyof typeof Ionicons.glyphMap {
@@ -62,6 +74,32 @@ type DetailRow =
   | OperationalPersonnelDetailRow
   | OperationalVehicleDetailRow
   | OperationalContainerNetworkDetailRow;
+
+function PresenceDetailRowCard({ card }: { card: OperationalResourcePresenceDetailCard }) {
+  const palette = TONE_COLORS[card.tone === 'critical' ? 'critical' : card.tone];
+  return (
+    <View style={[styles.detailRow, { backgroundColor: palette.bg }]}>
+      <View style={styles.detailHeader}>
+        <View style={styles.detailTitleRow}>
+          <Ionicons name={resolveIcon(card.iconKey)} size={18} color={palette.pill} />
+          <Text style={[styles.detailLabel, { color: palette.text }]} numberOfLines={1}>
+            {card.label}
+          </Text>
+        </View>
+        <View style={[styles.statusPill, { borderColor: palette.pill }]}>
+          <Text style={[styles.statusPillText, { color: palette.pill }]} numberOfLines={1}>
+            {card.statusLabel}
+          </Text>
+        </View>
+      </View>
+      {card.lines.map((line) => (
+        <Text key={line} style={styles.summary} numberOfLines={2}>
+          {line}
+        </Text>
+      ))}
+    </View>
+  );
+}
 
 function ResourceDetailRowCard({ row }: { row: DetailRow }) {
   const palette = TONE_COLORS[row.tone];
@@ -111,7 +149,11 @@ function ResourceDetailRowCard({ row }: { row: DetailRow }) {
   );
 }
 
-export function OperationalResourcesDetailSheet({ visible, onClose }: Props) {
+export function OperationalResourcesDetailSheet({
+  visible,
+  onClose,
+  defaultTabOverride,
+}: Props) {
   const gameState = useGameStore((s) => s.gameState);
   const monetization = useGameStore((s) => s.monetization);
   const operationSignals = useGameStore((s) => s.operationSignals);
@@ -148,13 +190,43 @@ export function OperationalResourcesDetailSheet({ visible, onClose }: Props) {
     operationalResources,
   ]);
 
+  const presenceCards = useMemo(() => {
+    if (!visible) return { team: [] as OperationalResourcePresenceDetailCard[], vehicle: [] as OperationalResourcePresenceDetailCard[] };
+    const presenceInput = buildOperationalResourcePresenceLiteInputFromEngine({
+      day: gameState.city.day,
+      isPostPilot: gameState.city.day > 7,
+      accessMode: deriveMainOperationAccessMode(gameState, monetization),
+      operationalResources,
+      operationSignals: {
+        dailyFocus: operationSignals.dailyFocus,
+        priorityDistrictId: operationSignals.priorityDistrictId,
+        containers: operationSignals.containers,
+        vehicles: operationSignals.vehicles,
+        personnel: operationSignals.personnel,
+        districts: operationSignals.districts,
+        overall: operationSignals.overall,
+      },
+    });
+    const presenceModel = buildOperationalResourcePresenceLiteModel(presenceInput);
+    return {
+      team: buildOperationalResourcePresenceDetailTeamCards(presenceModel),
+      vehicle: buildOperationalResourcePresenceDetailVehicleCards(presenceModel),
+    };
+  }, [
+    visible,
+    gameState.city.day,
+    deriveMainOperationAccessMode(gameState, monetization),
+    operationalResources,
+    operationSignals,
+  ]);
+
   const [activeTab, setActiveTab] = useState<OperationalResourceDetailTabId>('personnel');
 
   useEffect(() => {
     if (visible && sheetModel) {
-      setActiveTab(sheetModel.defaultTabId);
+      setActiveTab(defaultTabOverride ?? sheetModel.defaultTabId);
     }
-  }, [visible, sheetModel]);
+  }, [defaultTabOverride, visible, sheetModel]);
 
   if (!visible || !sheetModel) {
     return null;
@@ -168,6 +240,13 @@ export function OperationalResourcesDetailSheet({ visible, onClose }: Props) {
       : tabId === 'vehicles'
         ? sheetModel.vehicleRows
         : sheetModel.containerRows;
+
+  const presenceRows =
+    tabId === 'personnel'
+      ? presenceCards.team
+      : tabId === 'vehicles'
+        ? presenceCards.vehicle
+        : [];
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -216,12 +295,16 @@ export function OperationalResourcesDetailSheet({ visible, onClose }: Props) {
             style={styles.bodyScroll}
             contentContainerStyle={styles.bodyContent}
             showsVerticalScrollIndicator={false}>
-            {activeRows.map((row) => (
-              <ResourceDetailRowCard
-                key={'id' in row ? row.id : row.districtId}
-                row={row}
-              />
-            ))}
+            {presenceRows.length > 0
+              ? presenceRows.map((card) => (
+                  <PresenceDetailRowCard key={card.id} card={card} />
+                ))
+              : activeRows.map((row) => (
+                  <ResourceDetailRowCard
+                    key={'id' in row ? row.id : row.districtId}
+                    row={row}
+                  />
+                ))}
             <Text style={styles.footerNote} numberOfLines={3}>
               {sheetModel.footerNote}
             </Text>

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { NewSystemsAnalyticsContext } from '@/core/analytics/analyticsPayloadBuilders';
 import { resolveIoniconForRegistryKey } from '@/core/presentation/creviaIconPresentation';
+import type { DistrictReportCardMapPresentation } from '@/core/districtReportCard/districtReportCardTypes';
 import type { CreviaActiveTaskRouteUiModel } from '@/core/activeTaskRoutes/activeTaskRouteUiTypes';
 import type { CreviaMapDistrictIntelligenceModel } from '@/core/map/mapDistrictIntelligencePresentation';
 import type { MapBeforeAfterImpactModel } from '@/core/mapPresence/mapBeforeAfterTypes';
@@ -10,6 +11,7 @@ import { ActiveTaskRoutePreviewStrip } from '@/features/events/components/Active
 import { DistrictOperationActionCard } from '@/features/districtOperationActions/components/DistrictOperationActionCard';
 import { MapBeforeAfterImpactStrip } from '@/features/map/components/MapBeforeAfterImpactStrip';
 import { MapDistrictIntelligenceStrip } from '@/features/map/components/MapDistrictIntelligenceStrip';
+import { MapDistrictReportCard } from '@/features/map/components/MapDistrictReportCard';
 import type {
   DistrictRiskSummaryMetric,
   MapCrisisPanelLine,
@@ -23,6 +25,7 @@ import { shadows } from '@/ui/theme/shadows';
 type Props = {
   model: MapOperationPanelModel;
   districtIntelligence?: CreviaMapDistrictIntelligenceModel | null;
+  districtReportCard?: DistrictReportCardMapPresentation | null;
   activeTaskRoutePreview?: CreviaActiveTaskRouteUiModel | null;
   mapBeforeAfterImpact?: MapBeforeAfterImpactModel | null;
   analyticsContext?: NewSystemsAnalyticsContext;
@@ -151,6 +154,7 @@ function DistrictRiskMetricCard({ metric }: { metric: DistrictRiskSummaryMetric 
 export function MapOperationBottomPanel({
   model,
   districtIntelligence,
+  districtReportCard,
   activeTaskRoutePreview,
   mapBeforeAfterImpact,
   analyticsContext,
@@ -207,6 +211,15 @@ export function MapOperationBottomPanel({
         </View>
       ) : null}
 
+      {model.mapReactionHintLine ? (
+        <View style={styles.reactionHintRow}>
+          <Ionicons name="sparkles-outline" size={14} color={mapUi.teal} />
+          <Text style={styles.reactionHintText} numberOfLines={2}>
+            {model.mapReactionHintLine}
+          </Text>
+        </View>
+      ) : null}
+
       {model.crisisLines?.map((line) => (
         <CrisisMapLineRow key={line.id} line={line} />
       ))}
@@ -237,6 +250,8 @@ export function MapOperationBottomPanel({
           analyticsContext={analyticsContext}
         />
       ) : null}
+
+      {districtReportCard ? <MapDistrictReportCard presentation={districtReportCard} /> : null}
 
       <DistrictOperationActionCard
         districtId={districtIntelligence?.districtId}
@@ -393,8 +408,30 @@ const styles = StyleSheet.create({
     minWidth: 0,
     fontSize: 12,
     lineHeight: 17,
-    fontWeight: '700',
+    fontWeight: '600',
     color: mapUi.teal,
+    flexShrink: 1,
+  },
+  reactionHintRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    backgroundColor: 'rgba(91, 181, 170, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(15, 143, 134, 0.15)',
+    minWidth: 0,
+  },
+  reactionHintText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '600',
+    color: '#3D4F4C',
+    flexShrink: 1,
   },
   crisisRow: {
     flexDirection: 'row',

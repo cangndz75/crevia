@@ -55,6 +55,7 @@ export type CityOverviewMapProps = {
   selectedPinId?: string | null;
   crisisHighlightDistrictIds?: MapDistrictId[];
   resourceHighlightDistrictIds?: MapDistrictId[];
+  reactionHighlightDistrictIds?: MapDistrictId[];
   mapPresenceViewModel?: MapPresenceViewModel | null;
   onDistrictPress?: (districtId: MapDistrictId) => void;
   onPinPress?: (pinId: string) => void;
@@ -76,6 +77,7 @@ export function CityOverviewMap({
   selectedPinId = null,
   crisisHighlightDistrictIds,
   resourceHighlightDistrictIds,
+  reactionHighlightDistrictIds,
   mapPresenceViewModel = null,
   onDistrictPress,
   onPinPress,
@@ -149,6 +151,7 @@ export function CityOverviewMap({
         selectedPinId={selectedPinId}
         crisisHighlightDistrictIds={crisisHighlightDistrictIds}
         resourceHighlightDistrictIds={resourceHighlightDistrictIds}
+        reactionHighlightDistrictIds={reactionHighlightDistrictIds}
         mapPresenceViewModel={mapPresenceViewModel}
         onDistrictPress={onDistrictPress}
         onPinPress={onPinPress}
@@ -165,6 +168,7 @@ type OverlayProps = {
   selectedPinId?: string | null;
   crisisHighlightDistrictIds?: MapDistrictId[];
   resourceHighlightDistrictIds?: MapDistrictId[];
+  reactionHighlightDistrictIds?: MapDistrictId[];
   mapPresenceViewModel?: MapPresenceViewModel | null;
   showHeat: boolean;
   showRoutes: boolean;
@@ -180,6 +184,7 @@ function CityOverviewOverlay({
   selectedPinId = null,
   crisisHighlightDistrictIds,
   resourceHighlightDistrictIds,
+  reactionHighlightDistrictIds,
   mapPresenceViewModel = null,
   showHeat,
   showRoutes,
@@ -191,6 +196,10 @@ function CityOverviewOverlay({
   const resourceDistrictSet = useMemo(
     () => new Set(resourceHighlightDistrictIds ?? []),
     [resourceHighlightDistrictIds],
+  );
+  const reactionDistrictSet = useMemo(
+    () => new Set(reactionHighlightDistrictIds ?? []),
+    [reactionHighlightDistrictIds],
   );
 
   if (mapWidth <= 0 || mapHeight <= 0) return null;
@@ -216,6 +225,10 @@ function CityOverviewOverlay({
         const isCrisisDistrict = crisisHighlightDistrictIds?.includes(region.id);
         const isResourceDistrict =
           !isCrisisDistrict && resourceDistrictSet.has(region.id);
+        const isReactionDistrict =
+          !isCrisisDistrict &&
+          !isResourceDistrict &&
+          reactionDistrictSet.has(region.id);
         const signal = containerSignals.find(
           (entry) => entry.neighborhoodId === region.id,
         );
@@ -248,16 +261,46 @@ function CityOverviewOverlay({
               d={region.path}
               fill={region.color}
               fillOpacity={
-                isActive ? 0.2 : isCrisisDistrict ? 0.12 : isResourceDistrict ? 0.1 : 0.06
+                isActive
+                  ? 0.2
+                  : isCrisisDistrict
+                    ? 0.12
+                    : isResourceDistrict
+                      ? 0.1
+                      : isReactionDistrict
+                        ? 0.09
+                        : 0.06
               }
               stroke={
-                isCrisisDistrict ? '#E59A22' : isResourceDistrict ? '#7BC4B8' : region.color
+                isCrisisDistrict
+                  ? '#E59A22'
+                  : isResourceDistrict
+                    ? '#7BC4B8'
+                    : isReactionDistrict
+                      ? '#5BB5AA'
+                      : region.color
               }
               strokeWidth={
-                isCrisisDistrict ? 0.007 : isResourceDistrict ? 0.006 : isActive ? 0.006 : 0.003
+                isCrisisDistrict
+                  ? 0.007
+                  : isResourceDistrict
+                    ? 0.006
+                    : isReactionDistrict
+                      ? 0.0055
+                      : isActive
+                        ? 0.006
+                        : 0.003
               }
               strokeOpacity={
-                isCrisisDistrict ? 0.7 : isResourceDistrict ? 0.65 : isActive ? 0.95 : 0.35
+                isCrisisDistrict
+                  ? 0.7
+                  : isResourceDistrict
+                    ? 0.65
+                    : isReactionDistrict
+                      ? 0.55
+                      : isActive
+                        ? 0.95
+                        : 0.35
               }
               onPress={() => onDistrictPress?.(region.id)}
             />

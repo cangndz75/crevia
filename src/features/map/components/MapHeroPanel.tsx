@@ -28,6 +28,7 @@ type Props = {
   selectedPinId?: string | null;
   crisisHighlightDistrictIds?: MapDistrictId[];
   resourceHighlightDistrictIds?: MapDistrictId[];
+  reactionHighlightDistrictIds?: MapDistrictId[];
   mapPresenceViewModel?: MapPresenceViewModel | null;
   activeOperationOverlay?: MapActiveOperationOverlayModel | null;
   onLayersPress: () => void;

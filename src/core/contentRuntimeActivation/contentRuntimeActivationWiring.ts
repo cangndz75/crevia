@@ -139,6 +139,7 @@ export function resolveContentPackMetaForWiring(args: {
   districtId?: string | null;
   day?: number;
   eventPool?: EventCard[];
+  postPilotCatalog?: EventCard[];
   contentPackMeta?: ContentRuntimeActivationEventMeta | null;
 }): ContentRuntimeActivationEventMeta | undefined {
   const direct =
@@ -150,8 +151,9 @@ export function resolveContentPackMetaForWiring(args: {
   const eventId = args.eventId ?? args.event?.id;
   if (!eventId) return undefined;
 
+  const lookupCards = mergeContentPackLookupCards(args.eventPool, args.postPilotCatalog);
   const pooled =
-    args.eventPool?.find((card) => card.id === eventId) ??
+    lookupCards.find((card) => card.id === eventId) ??
     (args.event?.id === eventId ? args.event : undefined);
   const pooledMeta = readContentRuntimeActivationMetaFromEvent(pooled);
   if (pooledMeta) return pooledMeta;
@@ -165,6 +167,20 @@ export function resolveContentPackMetaForWiring(args: {
     familyId: parsed.familyId,
     districtId: args.districtId ?? args.event?.neighborhoodId ?? undefined,
   });
+}
+
+export function mergeContentPackLookupCards(
+  eventPool: EventCard[] | undefined,
+  postPilotCatalog: EventCard[] | undefined,
+): EventCard[] {
+  const seen = new Set<string>();
+  const merged: EventCard[] = [];
+  for (const card of [...(eventPool ?? []), ...(postPilotCatalog ?? [])]) {
+    if (seen.has(card.id)) continue;
+    seen.add(card.id);
+    merged.push(card);
+  }
+  return merged;
 }
 
 export function makeContentPackDuplicateKey(
@@ -374,6 +390,8 @@ export function tryBuildDecisionImpactFromPackMeta(
     eventId: input.snapshot?.eventId,
     districtId: input.snapshot?.neighborhoodId ?? input.event?.neighborhoodId,
     day,
+    eventPool: input.eventPool,
+    postPilotCatalog: input.postPilotCatalog,
   });
   if (!meta) return null;
 
@@ -439,12 +457,14 @@ export function buildTomorrowRiskFromPackMeta(
     input.contentPackMeta ??
     resolveContentPackMetaForWiring({
       event: input.event,
-      eventId: input.event?.id,
+      eventId: input.eventId ?? input.event?.id,
       districtId:
         input.carryOver?.districtId ??
         input.operationSignals?.priorityDistrictId ??
         input.event?.neighborhoodId,
       day: input.day,
+      eventPool: input.eventPool,
+      postPilotCatalog: input.postPilotCatalog,
     });
   if (!meta) return null;
 

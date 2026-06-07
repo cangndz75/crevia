@@ -103,4 +103,6 @@ export type CityEchoBindingInput = {
   event?: EventCard | null;
   contentPackMeta?: ContentRuntimeActivationEventMeta | null;
   existingLines?: string[];
+  eventPool?: EventCard[];
+  postPilotCatalog?: EventCard[];
 };

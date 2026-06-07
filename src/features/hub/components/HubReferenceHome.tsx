@@ -20,6 +20,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { CarryOverMemoryModel } from '@/core/carryOver';
+import type { CityJournalHubPresentation } from '@/core/cityJournal';
 import type { TomorrowRiskModel } from '@/core/tomorrowRisk';
 import { creviaAssets } from '@/core/assets/creviaAssets';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
@@ -29,6 +30,7 @@ import { useGameStatus } from '@/store/gameSelectors';
 import { useGameStore } from '@/store/useGameStore';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
 import { HeaderAvatar } from '@/ui/components/game-header/HeaderAvatar';
+import { HubCityJournalStrip } from './HubCityJournalStrip';
 import { HubMainOperationFeelCard } from './HubMainOperationFeelCard';
 import { HubTomorrowRiskStrip } from './HubTomorrowRiskStrip';
 
@@ -114,6 +116,7 @@ type HubReferenceHomeProps = {
   hubCarryOverMemory?: CarryOverMemoryModel | null;
   hubImpactExplanationLine?: string | null;
   hubTomorrowRisk?: TomorrowRiskModel | null;
+  hubCityJournal?: CityJournalHubPresentation | null;
   hubEceContextLine?: string | null;
   hubMainOperationFeelExistingLines?: string[];
   showHubCarryOver?: boolean;
@@ -708,6 +711,7 @@ export function HubReferenceHome({
   hubCarryOverMemory,
   hubImpactExplanationLine,
   hubTomorrowRisk,
+  hubCityJournal,
   hubEceContextLine,
   hubMainOperationFeelExistingLines,
   scrollFooter,
@@ -728,6 +732,7 @@ export function HubReferenceHome({
             impactExplanationLine={hubImpactExplanationLine}
           />
           <HubTomorrowRiskStrip model={hubTomorrowRisk} />
+          <HubCityJournalStrip presentation={hubCityJournal} />
           <HubMainOperationFeelCard existingLines={hubMainOperationFeelExistingLines} />
           <EceWelcomeCard contextLine={hubEceContextLine} />
           <OperationFocusCard />

@@ -13,6 +13,12 @@ import {
   buildOperationalResourceEngineInputFromStore,
   buildOperationalResourceHubModel,
 } from '@/core/operationalResources/operationalResourcePresentation';
+import {
+  buildOperationalResourcePresenceHubPresentation,
+  buildOperationalResourcePresenceLiteInputFromEngine,
+  buildOperationalResourcePresenceLiteModel,
+} from '@/core/operationalResourcePresence';
+import { deriveMainOperationAccessMode } from '@/core/mainOperation/mainOperationEngine';
 import { OperationalResourcesDetailSheet } from '@/features/hub/components/OperationalResourcesDetailSheet';
 import {
   HUB_PREMIUM_COLORS,
@@ -83,6 +89,37 @@ export function HubOperationalResourcesCard() {
     [gameState.city.day, operationalResources, operationSignals],
   );
 
+  const presencePresentation = useMemo(() => {
+    const presenceInput = buildOperationalResourcePresenceLiteInputFromEngine({
+      day: gameState.city.day,
+      isPostPilot: gameState.city.day > 7,
+      accessMode: deriveMainOperationAccessMode(gameState, monetization),
+      operationalResources,
+      operationSignals: {
+        dailyFocus: operationSignals.dailyFocus,
+        priorityDistrictId: operationSignals.priorityDistrictId,
+        containers: operationSignals.containers,
+        vehicles: operationSignals.vehicles,
+        personnel: operationSignals.personnel,
+        districts: operationSignals.districts,
+        overall: operationSignals.overall,
+      },
+      resourceFatigueSummaryLine:
+        fatigueSummary?.primaryState?.summary ?? fatigueSummary?.warnings?.[0],
+    });
+    const presenceModel = buildOperationalResourcePresenceLiteModel(presenceInput);
+    return buildOperationalResourcePresenceHubPresentation(presenceModel, [
+      fatigueSummary?.primaryState?.summary ?? fatigueSummary?.warnings?.[0] ?? '',
+    ]);
+  }, [
+    fatigueSummary?.primaryState?.summary,
+    fatigueSummary?.warnings,
+    gameState.city.day,
+    deriveMainOperationAccessMode(gameState, monetization),
+    operationalResources,
+    operationSignals,
+  ]);
+
   if (!model.visible) {
     return null;
   }
@@ -107,21 +144,37 @@ export function HubOperationalResourcesCard() {
               </Text>
             ) : null}
           </View>
-          {model.rows.map((row) => {
-            const palette = TONE_COLORS[row.tone];
-            return (
-              <View
-                key={row.key}
-                style={[styles.row, { backgroundColor: palette.bg }]}>
-                <Text style={[styles.rowLabel, { color: palette.text }]} numberOfLines={1}>
-                  {row.label}
-                </Text>
-                <Text style={[styles.rowValue, { color: palette.text }]} numberOfLines={1}>
-                  {row.value}
-                </Text>
-              </View>
-            );
-          })}
+          {presencePresentation ? (
+            <View style={[styles.row, { backgroundColor: TONE_COLORS.neutral.bg }]}>
+              <Text style={[styles.presenceSummary, { color: TONE_COLORS.neutral.text }]} numberOfLines={2}>
+                {presencePresentation.summaryLine}
+              </Text>
+            </View>
+          ) : null}
+          {presencePresentation?.secondaryLine && !model.compact ? (
+            <View style={[styles.row, { backgroundColor: TONE_COLORS.positive.bg }]}>
+              <Text style={[styles.presenceSummary, { color: TONE_COLORS.positive.text }]} numberOfLines={2}>
+                {presencePresentation.secondaryLine}
+              </Text>
+            </View>
+          ) : null}
+          {!presencePresentation
+            ? model.rows.map((row) => {
+                const palette = TONE_COLORS[row.tone];
+                return (
+                  <View
+                    key={row.key}
+                    style={[styles.row, { backgroundColor: palette.bg }]}>
+                    <Text style={[styles.rowLabel, { color: palette.text }]} numberOfLines={1}>
+                      {row.label}
+                    </Text>
+                    <Text style={[styles.rowValue, { color: palette.text }]} numberOfLines={1}>
+                      {row.value}
+                    </Text>
+                  </View>
+                );
+              })
+            : null}
           {gameState.city.day >= 3 ? (
             <ResourceFatigueSummaryStrip
               summary={fatigueSummary}
@@ -156,6 +209,7 @@ export function HubOperationalResourcesCard() {
         <OperationalResourcesDetailSheet
           visible={detailOpen}
           onClose={() => setDetailOpen(false)}
+          defaultTabOverride={presencePresentation?.defaultTab}
         />
       ) : null}
     </>
@@ -213,6 +267,13 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   rowValue: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  presenceSummary: {
     flex: 1,
     fontSize: 12,
     fontWeight: '600',

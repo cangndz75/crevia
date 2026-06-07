@@ -593,9 +593,11 @@ export function DecisionResultScreen() {
         operationSignals,
         resourceFatigue: operationalResources,
         carryOverSummary: resultCarryOver?.summary,
+        eventPool,
       }),
     [
       currentDay,
+      eventPool,
       operationalResources,
       operationSignals,
       relatedEvent,

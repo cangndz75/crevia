@@ -66,4 +66,6 @@ export type DecisionImpactExplanationInput = {
   dailyReport?: DailyReport | null;
   recentDecisions?: DecisionRecord[];
   existingLines?: string[];
+  eventPool?: EventCard[];
+  postPilotCatalog?: EventCard[];
 };

@@ -7,6 +7,11 @@ import {
 import { buildOperationalResourceEngineInputFromStore } from '@/core/operationalResources/operationalResourceEngine';
 import type { OperationalResourceEngineInput } from '@/core/operationalResources/operationalResourceTypes';
 import { CONTAINER_NETWORK_DISTRICT_LABELS } from '@/core/operationalResources/operationalResourceConstants';
+import {
+  buildOperationalResourcePresenceLiteInputFromEngine,
+  buildOperationalResourcePresenceLiteModel,
+  buildOperationalResourcePresenceMapLine,
+} from '@/core/operationalResourcePresence';
 import type { GameState } from '@/core/models/GameState';
 import type { MonetizationState } from '@/core/monetization/monetizationTypes';
 import type { AssignmentsState } from '@/core/assignments/assignmentTypes';
@@ -172,6 +177,46 @@ function buildContainerPanelLine(
   };
 }
 
+export function buildMapResourcePresencePanelLine(
+  input: OperationalResourceEngineInput,
+  existingLines: string[] = [],
+): MapResourcePanelLine | undefined {
+  const day = resolveFirstTenMinutesDay(input.gameState);
+  const presenceInput = buildOperationalResourcePresenceLiteInputFromEngine({
+    day,
+    isPostPilot: day > 7,
+    accessMode:
+      input.monetization != null && isFullMainOperationAccess(input.gameState, input.monetization)
+        ? 'full'
+        : 'limited',
+    operationalResources: input.operationalResources,
+    operationSignals: {
+      dailyFocus: input.operationSignals.dailyFocus,
+      priorityDistrictId: input.operationSignals.priorityDistrictId,
+      containers: input.operationSignals.containers,
+      vehicles: input.operationSignals.vehicles,
+      personnel: input.operationSignals.personnel,
+      districts: input.operationSignals.districts,
+      overall: input.operationSignals.overall,
+    },
+    focusDistrictId: input.operationSignals.priorityDistrictId,
+    mapResourceOverlayLine: existingLines[0],
+  });
+  const presenceModel = buildOperationalResourcePresenceLiteModel(presenceInput);
+  const line = buildOperationalResourcePresenceMapLine(presenceModel, existingLines);
+  if (!line) return undefined;
+
+  const districtId = input.operationSignals.priorityDistrictId;
+  return {
+    id: 'resource-presence-lite',
+    title: 'Saha kapasitesi',
+    summary: line,
+    tone: 'warning',
+    iconKey: 'navigate',
+    relatedDistrictIds: districtId ? [districtId] : [],
+  };
+}
+
 export function buildResourcePanelLines(
   input: OperationalResourceEngineInput,
 ): MapResourcePanelLine[] {
@@ -180,9 +225,11 @@ export function buildResourcePanelLines(
   if (cap <= 0) return [];
 
   const candidates: MapResourcePanelLine[] = [];
+  const presenceLine = buildMapResourcePresencePanelLine(input);
   const containerLine = buildContainerPanelLine(input);
   const vehicleLine = getMostPressedVehicleLine(input);
   const personnelLine = getMostPressedPersonnelLine(input);
+  if (presenceLine) candidates.push(presenceLine);
   if (containerLine) candidates.push(containerLine);
   if (vehicleLine) candidates.push(vehicleLine);
   if (personnelLine) candidates.push(personnelLine);

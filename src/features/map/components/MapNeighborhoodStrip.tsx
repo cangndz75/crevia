@@ -128,6 +128,29 @@ export function MapNeighborhoodStrip({ items, selectedId, onSelect }: Props) {
                   {item.intelligenceAccentLabel}
                 </Text>
               ) : null}
+              {item.reactionIndicatorLabel ? (
+                <View style={styles.reactionRow}>
+                  <View
+                    style={[
+                      styles.reactionDot,
+                      item.reactionPulseStyle === 'ring' || item.reactionPulseStyle === 'glow'
+                        ? styles.reactionDotRing
+                        : null,
+                      {
+                        backgroundColor:
+                          item.reactionTone === 'risk' || item.reactionTone === 'watch'
+                            ? mapUi.riskHigh
+                            : item.reactionTone === 'recovery' || item.reactionTone === 'positive'
+                              ? mapUi.teal
+                              : mapUi.gold,
+                      },
+                    ]}
+                  />
+                  <Text style={styles.reactionLabel} numberOfLines={1}>
+                    {item.reactionIndicatorLabel}
+                  </Text>
+                </View>
+              ) : null}
             </View>
           </Pressable>
         );
@@ -217,6 +240,32 @@ const styles = StyleSheet.create({
     color: mapUi.teal,
     flexShrink: 1,
     minWidth: 0,
+  },
+  reactionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    minWidth: 0,
+  },
+  reactionDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    flexShrink: 0,
+  },
+  reactionDotRing: {
+    borderWidth: 1,
+    borderColor: 'rgba(229, 154, 34, 0.55)',
+  },
+  reactionLabel: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '600',
+    color: mapUi.textSecondary,
+    flexShrink: 1,
   },
   empty: {
     marginHorizontal: mapUi.screenPadding,

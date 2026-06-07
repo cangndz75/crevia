@@ -17,6 +17,15 @@ import {
   buildCityEchoReportLine,
 } from '@/core/cityEchoBinding';
 import {
+  buildCityJournalLiteModel,
+  buildCityJournalReportLine,
+} from '@/core/cityJournal';
+import {
+  buildOperationalResourcePresenceLiteInputFromEngine,
+  buildOperationalResourcePresenceLiteModel,
+  buildOperationalResourcePresenceReportLine,
+} from '@/core/operationalResourcePresence';
+import {
   buildDecisionImpactExplanation,
   buildDecisionImpactReportEcho,
 } from '@/core/decisionImpactExplanation';
@@ -579,6 +588,140 @@ export function EndOfDayReportView({
     tomorrowRiskPresentation.report,
   ]);
 
+  const cityJournalReportLine = useMemo(() => {
+    const existingLines = [
+      cityEchoReportLine ?? '',
+      decisionImpactReportEcho ?? '',
+      reportCarryOverMemory?.summary ?? '',
+      tomorrowRiskPresentation.report?.mainLine ?? '',
+      socialEchoForReport?.mention ?? '',
+      eventDomainFocus?.reportEchoLine ?? '',
+    ].filter(Boolean);
+
+    const model = buildCityJournalLiteModel({
+      currentDay: report.day,
+      isPostPilot: report.day >= POST_PILOT_FIRST_OPERATION_DAY,
+      postPilotPhase: postPilotOperation?.phase ?? null,
+      currentDailyReport: report,
+      carryOverMemory: reportCarryOverMemory ?? undefined,
+      decisionImpact: lastDecisionForDay
+        ? buildDecisionImpactExplanation({
+            day: report.day,
+            event: reportPackWiringContext.event,
+            snapshot: {
+              id: `report-journal-${lastDecisionForDay.id}`,
+              day: lastDecisionForDay.day,
+              eventId: lastDecisionForDay.eventId,
+              eventTitle: lastDecisionForDay.eventTitle,
+              neighborhoodId: lastDecisionForDay.neighborhoodId,
+              neighborhoodName: lastDecisionForDay.neighborhoodName,
+              decisionId: lastDecisionForDay.decisionId,
+              decisionTitle: lastDecisionForDay.decisionLabel,
+              decisionTone: 'balanced',
+              createdAt: Date.parse(lastDecisionForDay.createdAt) || Date.now(),
+              summaryTitle: lastDecisionForDay.eventTitle,
+              summaryText: lastDecisionForDay.decisionLabel,
+              resultTone: 'mixed',
+              metricChanges: [],
+              subsystemOutcomes: [],
+              highlightLines: [],
+              riskLines: [],
+            },
+            operationSignals,
+            resourceFatigue: operationalResources,
+            carryOverSummary: reportCarryOverMemory?.summary,
+            dailyReport: report,
+          })
+        : undefined,
+      tomorrowRisk: tomorrowRiskPresentation.report ?? undefined,
+      contentPackMeta: reportPackWiringContext.contentPackMeta,
+      operationSignals,
+      resourceFatigue: operationalResources,
+      socialPulse: {
+        globalPulseScore: socialPulseState.globalPulseScore,
+      },
+      focusDistrictId: lastDecisionForDay?.neighborhoodId,
+      existingLines,
+    });
+
+    return buildCityJournalReportLine(model, existingLines);
+  }, [
+    cityEchoReportLine,
+    decisionImpactReportEcho,
+    eventDomainFocus?.reportEchoLine,
+    lastDecisionForDay,
+    operationSignals,
+    operationalResources,
+    postPilotOperation?.phase,
+    report,
+    reportCarryOverMemory,
+    reportPackWiringContext.contentPackMeta,
+    reportPackWiringContext.event,
+    socialEchoForReport?.mention,
+    socialPulseState.globalPulseScore,
+    tomorrowRiskPresentation.report,
+  ]);
+
+  const resourcePresenceReportLine = useMemo(() => {
+    const existingLines = [
+      cityEchoReportLine ?? '',
+      decisionImpactReportEcho ?? '',
+      cityJournalReportLine ?? '',
+      tomorrowRiskPresentation.report?.mainLine ?? '',
+    ].filter(Boolean);
+
+    const presenceInput = buildOperationalResourcePresenceLiteInputFromEngine({
+      day: report.day,
+      isPostPilot: report.day >= POST_PILOT_FIRST_OPERATION_DAY,
+      operationalResources,
+      operationSignals,
+      decisionImpact: lastDecisionForDay
+        ? buildDecisionImpactExplanation({
+            day: report.day,
+            event: reportPackWiringContext.event,
+            snapshot: {
+              id: `report-presence-${lastDecisionForDay.id}`,
+              day: lastDecisionForDay.day,
+              eventId: lastDecisionForDay.eventId,
+              eventTitle: lastDecisionForDay.eventTitle,
+              neighborhoodId: lastDecisionForDay.neighborhoodId,
+              neighborhoodName: lastDecisionForDay.neighborhoodName,
+              decisionId: lastDecisionForDay.decisionId,
+              decisionTitle: lastDecisionForDay.decisionLabel,
+              decisionTone: 'balanced',
+              createdAt: Date.parse(lastDecisionForDay.createdAt) || Date.now(),
+              summaryTitle: lastDecisionForDay.eventTitle,
+              summaryText: lastDecisionForDay.decisionLabel,
+              resultTone: 'mixed',
+              metricChanges: [],
+              subsystemOutcomes: [],
+              highlightLines: [],
+              riskLines: [],
+            },
+            operationSignals,
+            resourceFatigue: operationalResources,
+            dailyReport: report,
+          })
+        : undefined,
+      tomorrowRisk: tomorrowRiskPresentation.report ?? undefined,
+      contentPackMeta: reportPackWiringContext.contentPackMeta,
+      existingLines,
+    });
+    const presenceModel = buildOperationalResourcePresenceLiteModel(presenceInput);
+    return buildOperationalResourcePresenceReportLine(presenceModel, existingLines);
+  }, [
+    cityEchoReportLine,
+    cityJournalReportLine,
+    decisionImpactReportEcho,
+    lastDecisionForDay,
+    operationSignals,
+    operationalResources,
+    report,
+    reportPackWiringContext.contentPackMeta,
+    reportPackWiringContext.event,
+    tomorrowRiskPresentation.report,
+  ]);
+
   const reportSystemsIntegration = useMemo(() => {
     const existingEchoLines: string[] = [
       ...(model.tomorrowNotes ?? []),
@@ -587,6 +730,8 @@ export function EndOfDayReportView({
       reportCarryOverMemory?.summary ?? '',
       cityEchoReportLine ?? '',
       decisionImpactReportEcho ?? '',
+      cityJournalReportLine ?? '',
+      resourcePresenceReportLine ?? '',
       socialEchoForReport?.mention ?? '',
       eventDomainFocus?.reportEchoLine ?? '',
       districtOperationActionReportLine ?? '',
@@ -697,6 +842,8 @@ export function EndOfDayReportView({
     authorityState?.unlockedPermissionIds,
     crisisState,
     cityEchoReportLine,
+    cityJournalReportLine,
+    resourcePresenceReportLine,
     districtOperationActionReportLine,
     decisionImpactReportEcho,
     eventDomainFocus?.focus,
@@ -904,6 +1051,17 @@ export function EndOfDayReportView({
         </View>
       ) : null}
 
+      {cityJournalReportLine ? (
+        <View style={styles.cityJournalReportRow}>
+          <Text style={styles.cityJournalReportLabel} numberOfLines={1}>
+            Şehir günlüğü
+          </Text>
+          <Text style={styles.cityJournalReportText} numberOfLines={2}>
+            {cityJournalReportLine}
+          </Text>
+        </View>
+      ) : null}
+
       {tomorrowPreviewBundle.showPreview && tomorrowPreviewBundle.summary.preview ? (
         <ReportTomorrowPreviewCard
           preview={tomorrowPreviewBundle.summary.preview}
@@ -913,6 +1071,17 @@ export function EndOfDayReportView({
             tomorrowPreviewBundle.summary.preview.visibility === 'final_safe'
           }
         />
+      ) : null}
+
+      {resourcePresenceReportLine ? (
+        <View style={styles.resourcePresenceReportRow}>
+          <Text style={styles.resourcePresenceReportLabel} numberOfLines={1}>
+            Saha kapasitesi
+          </Text>
+          <Text style={styles.resourcePresenceReportText} numberOfLines={2}>
+            {resourcePresenceReportLine}
+          </Text>
+        </View>
       ) : null}
 
       <ReportOperationSignalsCard
@@ -1099,6 +1268,40 @@ const styles = StyleSheet.create({
     color: '#0E5F5B',
   },
   decisionImpactReportText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    color: '#3D4F4C',
+    flexShrink: 1,
+  },
+  cityJournalReportRow: {
+    gap: 4,
+    minWidth: 0,
+    paddingHorizontal: 4,
+  },
+  cityJournalReportLabel: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#5C4A32',
+  },
+  cityJournalReportText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    color: '#5C4A32',
+    flexShrink: 1,
+  },
+  resourcePresenceReportRow: {
+    gap: 4,
+    minWidth: 0,
+    paddingHorizontal: 4,
+  },
+  resourcePresenceReportLabel: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#0E5F5B',
+  },
+  resourcePresenceReportText: {
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '600',

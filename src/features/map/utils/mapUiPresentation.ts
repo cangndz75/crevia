@@ -74,6 +74,11 @@ export type MapNeighborhoodStripItem = {
   crisisStripTone?: 'neutral' | 'warning' | 'critical';
   /** Seçili mahalle intelligence accent — max 1 kısa chip */
   intelligenceAccentLabel?: string;
+  /** Dynamic map reaction lite — görsel sinyal */
+  reactionTone?: 'positive' | 'watch' | 'recovery' | 'risk' | 'neutral' | 'operation';
+  reactionPulseStyle?: 'none' | 'soft' | 'ring' | 'bubble' | 'glow';
+  reactionShouldAnimate?: boolean;
+  reactionIndicatorLabel?: string;
 };
 
 export type MapOperationMetric = {
@@ -136,6 +141,9 @@ export type MapOperationPanelModel = {
   crisisLines?: MapCrisisPanelLine[];
   resourceLines?: MapResourcePanelLine[];
   presenceLines?: string[];
+  /** Dynamic map reaction lite — seçili mahalle kısa tepki satırı */
+  mapReactionHintLine?: string;
+  mapReactionHintTone?: 'positive' | 'watch' | 'recovery' | 'risk' | 'neutral' | 'operation';
 };
 
 const STATUS_LABELS: Record<MapNeighborhoodStripStatus, string> = {
@@ -487,6 +495,8 @@ export function buildMapOperationPanelModel(params: {
   crisisLines?: MapCrisisPanelLine[];
   resourceLines?: MapResourcePanelLine[];
   presenceLines?: string[];
+  mapReactionHintLine?: string;
+  mapReactionHintTone?: 'positive' | 'watch' | 'recovery' | 'risk' | 'neutral' | 'operation';
 }): MapOperationPanelModel {
   const preset = getPilotPreset(params.pilotAreaId);
   const isDetailView = params.viewMode === 'detail';
@@ -605,6 +615,8 @@ export function buildMapOperationPanelModel(params: {
       params.presenceLines && params.presenceLines.length > 0
         ? params.presenceLines.slice(0, 2)
         : undefined,
+    mapReactionHintLine: params.mapReactionHintLine,
+    mapReactionHintTone: params.mapReactionHintTone,
   };
 }
 

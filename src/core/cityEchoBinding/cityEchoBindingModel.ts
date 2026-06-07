@@ -33,6 +33,8 @@ function packMetaFromInput(input: CityEchoBindingInput) {
       input.decisionImpact?.relatedDistrictId ??
       input.tomorrowRisk?.relatedDistrictId,
     day: input.day,
+    eventPool: input.eventPool,
+    postPilotCatalog: input.postPilotCatalog,
   });
 }
 

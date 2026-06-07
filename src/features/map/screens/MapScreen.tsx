@@ -19,6 +19,22 @@ import {
 } from '@/core/activeTaskRoutes/activeTaskRouteUiPresentation';
 import type { CreviaActiveTaskRouteUiModel } from '@/core/activeTaskRoutes/activeTaskRouteUiTypes';
 import { buildMapDistrictIntelligenceModel } from '@/core/map/mapDistrictIntelligencePresentation';
+import {
+  buildDistrictReportCardLiteModel,
+  buildDistrictReportCardMapPresentation,
+} from '@/core/districtReportCard';
+import {
+  buildOperationalResourcePresenceLiteInputFromEngine,
+  buildOperationalResourcePresenceLiteModel,
+} from '@/core/operationalResourcePresence';
+import {
+  buildMapReactionLiteModel,
+  buildMapReactionPanelPresentation,
+  buildMapReactionHighlightDistrictIds,
+  buildMapReactionLiteInputFromMapContext,
+} from '@/core/mapReactions';
+import { deriveMainOperationAccessMode } from '@/core/mainOperation/mainOperationEngine';
+import { resolveContentPackMetaForWiring } from '@/core/contentRuntimeActivation';
 import { buildMapBeforeAfterSummary, buildMapPresenceViewModel } from '@/core/mapPresence';
 import { buildMainOperationMapScopeBadges } from '@/core/mainOperation/mainOperationPresentation';
 import {
@@ -30,6 +46,7 @@ import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventC
 import { buildPostPilotMapContextLineForGameState } from '@/core/postPilot/postPilotOperationUxPresentation';
 import { buildReportTomorrowPreview } from '@/core/reports/reportTomorrowPreviewPresentation';
 import { MapNeighborhoodStrip } from '@/features/map/components/MapNeighborhoodStrip';
+import { MapDistrictReportCard } from '@/features/map/components/MapDistrictReportCard';
 import { MapOperationBottomPanel } from '@/features/map/components/MapOperationBottomPanel';
 import { buildMapCrisisPresentationBundle } from '@/features/map/utils/mapCrisisPresentation';
 import {
@@ -88,6 +105,7 @@ import {
   buildMapPilotDistrictStatusModel,
   buildMapScreenHeaderModel,
 } from '../presentation/mapScreenPresentation';
+import { applyMapReactionStripOverlay } from '../utils/mapReactionMapIntegration';
 import type {
   ActiveLayers,
   LayerId,
@@ -200,6 +218,9 @@ export function MapScreen() {
   const microDecisionState = useGameStore((s) => s.microDecisionState);
   const crisisActionState = useGameStore((s) => s.crisisActionState);
   const operationalResources = useGameStore((s) => s.operationalResources);
+  const eventPool = useGameStore((s) => s.eventPool);
+  const postPilotCatalog =
+    postPilotOperation?.postPilotDailyEventSet?.catalog ?? [];
   const pilotCompleted = gameStateForMap.pilot.status === 'completed';
   const showPostPilotMapChrome = shouldShowMapCrisisChrome(gameDay, pilotCompleted);
 
@@ -474,6 +495,17 @@ export function MapScreen() {
     primaryMapEvent,
     showPostPilotMapChrome,
   ]);
+
+  const districtFocusedEvent = useMemo(
+    () =>
+      activeEvents.find(
+        (event) =>
+          event.neighborhoodId === focusDistrictId ||
+          event.district?.toLocaleLowerCase('tr-TR').includes(focusDistrictId),
+      ) ?? primaryMapEvent,
+    [activeEvents, focusDistrictId, primaryMapEvent],
+  );
+
   const newSystemsAnalyticsContext = useMemo(
     () => ({
       day: gameDay,
@@ -623,6 +655,202 @@ export function MapScreen() {
     showPostPilotMapChrome,
   ]);
 
+  const mapDistrictReportCardBundle = useMemo(() => {
+    const intelligenceLines = mapDistrictIntelligence?.visibleLines.map((line) => line.text) ?? [];
+    const model = buildDistrictReportCardLiteModel({
+      districtId: focusDistrictId,
+      day: gameDay,
+      isPostPilot: showPostPilotMapChrome,
+      isPilotCompleted: pilotCompleted,
+      postPilotPhase: postPilotOperation?.phase,
+      accessMode: deriveMainOperationAccessMode(gameStateForMap, monetization),
+      crisisState,
+      operationSignals,
+      resourceFatigue: operationalResources,
+      activeEvent: districtFocusedEvent,
+      recentEvents: activeEvents,
+      contentPackMeta: resolveContentPackMetaForWiring({
+        event: districtFocusedEvent,
+        eventId: districtFocusedEvent?.id,
+        districtId: focusDistrictId,
+        day: gameDay,
+        eventPool,
+        postPilotCatalog,
+      }),
+      mapIntelligenceLines: intelligenceLines,
+      mainOperationScopeHintLine: mainOperationScopeHintLine ?? undefined,
+      existingLines: [
+        ...intelligenceLines,
+        mainOperationScopeHintLine ?? '',
+        postPilotMapContextLine ?? '',
+      ].filter(Boolean),
+    });
+    const presentation = buildDistrictReportCardMapPresentation(model, [
+      ...intelligenceLines,
+      mainOperationScopeHintLine ?? '',
+    ]);
+    return { model, presentation };
+  }, [
+    activeEvents,
+    crisisState,
+    districtFocusedEvent,
+    focusDistrictId,
+    gameDay,
+    gameStateForMap,
+    mainOperationScopeHintLine,
+    mapDistrictIntelligence?.visibleLines,
+    monetization,
+    operationalResources,
+    operationSignals,
+    pilotCompleted,
+    postPilotMapContextLine,
+    postPilotOperation?.phase,
+    showPostPilotMapChrome,
+  ]);
+
+  const mapDistrictReportCard = mapDistrictReportCardBundle.presentation;
+
+  const operationalResourcePresenceModel = useMemo(() => {
+    if (gameDay <= 1) return null;
+    const input = buildOperationalResourcePresenceLiteInputFromEngine({
+      day: gameDay,
+      isPostPilot: showPostPilotMapChrome,
+      accessMode: deriveMainOperationAccessMode(gameStateForMap, monetization),
+      operationalResources,
+      operationSignals: {
+        dailyFocus: operationSignals.dailyFocus,
+        priorityDistrictId: operationSignals.priorityDistrictId,
+        containers: operationSignals.containers,
+        vehicles: operationSignals.vehicles,
+        personnel: operationSignals.personnel,
+        districts: operationSignals.districts,
+        overall: operationSignals.overall,
+      },
+      focusDistrictId,
+    });
+    return buildOperationalResourcePresenceLiteModel(input);
+  }, [
+    focusDistrictId,
+    gameDay,
+    gameStateForMap,
+    monetization,
+    operationalResources,
+    operationSignals,
+    showPostPilotMapChrome,
+  ]);
+
+  const mapReactionLiteModel = useMemo(() => {
+    const intelligenceLines =
+      mapDistrictIntelligence?.visibleLines.map((line) => line.text) ?? [];
+    const resourceOverlayLines = mapResourcePresentation.panelLines.map(
+      (line) => line.summary,
+    );
+    const reportCardLines = [
+      mapDistrictReportCard?.primaryLine ?? '',
+      mapDistrictReportCard?.recentEffectLine ?? '',
+    ].filter(Boolean);
+
+    return buildMapReactionLiteModel(
+      buildMapReactionLiteInputFromMapContext({
+        day: gameDay,
+        selectedDistrictId: focusDistrictId,
+        isPostPilot: showPostPilotMapChrome,
+        accessMode: deriveMainOperationAccessMode(gameStateForMap, monetization),
+        operationSignals: {
+          dailyFocus: operationSignals.dailyFocus,
+          priorityDistrictId: operationSignals.priorityDistrictId,
+          containers: operationSignals.containers,
+          vehicles: operationSignals.vehicles,
+          personnel: operationSignals.personnel,
+          districts: operationSignals.districts,
+          overall: operationSignals.overall,
+        },
+        resourceFatigue: operationalResources,
+        operationalResources,
+        districtReportCard: mapDistrictReportCardBundle.model,
+        operationalResourcePresence: operationalResourcePresenceModel ?? undefined,
+        contentPackMeta: resolveContentPackMetaForWiring({
+          event: districtFocusedEvent,
+          eventId: districtFocusedEvent?.id,
+          districtId: focusDistrictId,
+          day: gameDay,
+          eventPool,
+          postPilotCatalog,
+        }),
+        mainOperationScopeHintLine: mainOperationScopeHintLine ?? undefined,
+        activeRouteVisible: activeTaskRoutePreview?.visible,
+        activeRouteDistrictId: focusDistrictId,
+        mapIntelligenceLines: intelligenceLines,
+        districtReportCardLines: reportCardLines,
+        resourceOverlayLines,
+        resourcePresenceMapLine: operationalResourcePresenceModel?.mapPresenceLine,
+        mainOperationFeelMapHint: mainOperationScopeHintLine ?? undefined,
+      }),
+    );
+  }, [
+    activeTaskRoutePreview?.visible,
+    districtFocusedEvent,
+    focusDistrictId,
+    gameDay,
+    gameStateForMap,
+    mainOperationScopeHintLine,
+    mapDistrictIntelligence?.visibleLines,
+    mapDistrictReportCard,
+    mapDistrictReportCardBundle.model,
+    mapResourcePresentation.panelLines,
+    monetization,
+    operationalResourcePresenceModel,
+    operationalResources,
+    operationSignals,
+    showPostPilotMapChrome,
+  ]);
+
+  const mapReactionPanel = useMemo(() => {
+    const guard = [
+      ...(mapDistrictIntelligence?.visibleLines.map((line) => line.text) ?? []),
+      mapDistrictReportCard?.primaryLine ?? '',
+      mapDistrictReportCard?.recentEffectLine ?? '',
+      operationalResourcePresenceModel?.mapPresenceLine ?? '',
+      mainOperationScopeHintLine ?? '',
+      ...mapResourcePresentation.panelLines.map((line) => line.summary),
+    ].filter(Boolean);
+    return buildMapReactionPanelPresentation(mapReactionLiteModel, guard);
+  }, [
+    mainOperationScopeHintLine,
+    mapDistrictIntelligence?.visibleLines,
+    mapDistrictReportCard?.primaryLine,
+    mapDistrictReportCard?.recentEffectLine,
+    mapReactionLiteModel,
+    mapResourcePresentation.panelLines,
+    operationalResourcePresenceModel?.mapPresenceLine,
+  ]);
+
+  const reactionHighlightDistrictIds = useMemo(() => {
+    if (!showPostPilotMapChrome || gameDay <= 1) return undefined;
+    const crisisSet = new Set(crisisHighlightDistrictIds ?? []);
+    const resourceSet = new Set(resourceHighlightDistrictIds ?? []);
+    const ids = buildMapReactionHighlightDistrictIds(mapReactionLiteModel).filter(
+      (id) => !crisisSet.has(id) && !resourceSet.has(id),
+    );
+    return ids.length > 0 ? ids : undefined;
+  }, [
+    crisisHighlightDistrictIds,
+    gameDay,
+    mapReactionLiteModel,
+    resourceHighlightDistrictIds,
+    showPostPilotMapChrome,
+  ]);
+
+  const neighborhoodStripItemsWithReactions = useMemo(
+    () =>
+      applyMapReactionStripOverlay(
+        neighborhoodStripItems,
+        mapReactionLiteModel,
+        focusDistrictId,
+      ),
+    [focusDistrictId, mapReactionLiteModel, neighborhoodStripItems],
+  );
+
   const operationPanel = useMemo(() => {
     const merged = mergeMapPanelCrisisAndResourceLines({
       crisisLines: mapCrisisPresentation.visible
@@ -657,6 +885,8 @@ export function MapScreen() {
       crisisLines: merged.crisisLines,
       resourceLines: merged.resourceLines,
       presenceLines,
+      mapReactionHintLine: mapReactionPanel.visible ? mapReactionPanel.hintLine : undefined,
+      mapReactionHintTone: mapReactionPanel.hintTone,
     });
   }, [
     activeEvents,
@@ -669,6 +899,9 @@ export function MapScreen() {
     mapCrisisPresentation.visible,
     mapPresenceViewModel.panelLines,
     mapPresenceViewModel.visible,
+    mapReactionPanel.hintLine,
+    mapReactionPanel.hintTone,
+    mapReactionPanel.visible,
     mapResourcePresentation.panelLines,
     mapResourcePresentation.visible,
     mapViewMode,
@@ -722,7 +955,7 @@ export function MapScreen() {
 
         {showPostPilotMapChrome ? (
           <MapNeighborhoodStrip
-            items={neighborhoodStripItems}
+            items={neighborhoodStripItemsWithReactions}
             selectedId={focusDistrictId}
             onSelect={handleDistrictSelect}
           />
@@ -744,6 +977,7 @@ export function MapScreen() {
           selectedPinId={selectedPinId}
           crisisHighlightDistrictIds={crisisHighlightDistrictIds}
           resourceHighlightDistrictIds={resourceHighlightDistrictIds}
+          reactionHighlightDistrictIds={reactionHighlightDistrictIds}
           mapPresenceViewModel={mapPresenceViewModel}
           activeOperationOverlay={activeOperationOverlay}
           onLayersPress={() => setLayerPanelOpen(true)}
@@ -759,6 +993,7 @@ export function MapScreen() {
             <MapOperationBottomPanel
               model={operationPanel}
               districtIntelligence={mapDistrictIntelligence}
+              districtReportCard={mapDistrictReportCard}
               activeTaskRoutePreview={activeTaskRoutePreview}
               mapBeforeAfterImpact={
                 gameDay > 1 &&
@@ -778,6 +1013,10 @@ export function MapScreen() {
             onActionPress={handleFocusDistrict}
             onTrack={handleFocusDistrict}
           />
+
+          {!showPostPilotMapChrome && mapViewMode === 'detail' && mapDistrictReportCard ? (
+            <MapDistrictReportCard presentation={mapDistrictReportCard} />
+          ) : null}
 
           {!showPostPilotMapChrome ? (
             <MapPilotDistrictStatusCard

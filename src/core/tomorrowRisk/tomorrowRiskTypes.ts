@@ -111,7 +111,10 @@ export type TomorrowRiskInput = {
   } | null;
   contentPackMeta?: import('@/core/contentRuntimeActivation/contentRuntimeActivationTypes').ContentRuntimeActivationEventMeta | null;
   event?: import('@/core/models/EventCard').EventCard | null;
+  eventId?: string | null;
   existingLines?: string[];
+  eventPool?: import('@/core/models/EventCard').EventCard[];
+  postPilotCatalog?: import('@/core/models/EventCard').EventCard[];
 };
 
 export type TomorrowRiskPresentation = {
