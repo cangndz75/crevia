@@ -34,9 +34,16 @@ import {
 import { resolveEventCardById } from '@/core/liveFlow/eventLifecycleEngine';
 import { deriveMainOperationAccessMode } from '@/core/mainOperation/mainOperationEngine';
 import {
+  buildDistrictReportCardLiteModel,
+  buildDistrictReportCardSummaryForHub,
+} from '@/core/districtReportCard';
+import {
   buildMainOperationFeelEceLine,
   buildMainOperationFeelFromStore,
+  buildMainOperationFeelHubPresentation,
 } from '@/core/mainOperationFeel';
+import { RELEASE_CANDIDATE_POLISH_HUB_WIRING } from '@/core/releaseCandidatePolish/releaseCandidatePolishConstants';
+import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 import {
   buildHubCarryOverMemory,
   shouldShowCarryOverMemory,
@@ -312,6 +319,32 @@ export function HubScreen() {
     ],
   );
 
+  const mainOperationFeelPresentation = useMemo(
+    () => buildMainOperationFeelHubPresentation(mainOperationFeel),
+    [mainOperationFeel],
+  );
+
+  const showMainOperationSeasonCard = useMemo(() => {
+    if (!hubCardVisibility.showMainOperationSeason) return false;
+    if (hubDay >= RELEASE_CANDIDATE_POLISH_HUB_WIRING.seasonCardMinDay) return true;
+    if (
+      RELEASE_CANDIDATE_POLISH_HUB_WIRING.seasonCardDay8OnlyWhenFeelHidden &&
+      hubDay === POST_PILOT_FIRST_OPERATION_DAY &&
+      !mainOperationFeelPresentation.visible
+    ) {
+      return true;
+    }
+    if (hubDay >= 4 && hubDay <= 7) return true;
+    return false;
+  }, [
+    hubCardVisibility.showMainOperationSeason,
+    hubDay,
+    mainOperationFeelPresentation.visible,
+  ]);
+
+  const mainOperationSeasonCompact =
+    hubDay >= RELEASE_CANDIDATE_POLISH_HUB_WIRING.seasonCompactFromDay;
+
   const hubEceContextLine = useMemo(
     () =>
       buildMainOperationFeelEceLine(mainOperationFeel, [
@@ -382,6 +415,45 @@ export function HubScreen() {
     showHubCarryOver,
     socialPulseState.globalPulseScore,
     tomorrowRiskPresentation.hub,
+  ]);
+
+  const hubDistrictReportLine = useMemo(() => {
+    const focusDistrictId =
+      operationSignals.priorityDistrictId ??
+      decisionHistory.filter((r) => r.day === hubDay - 1).at(-1)?.neighborhoodId;
+    if (!focusDistrictId || hubDay <= 1) return null;
+
+    const existingLines = [
+      mainOperationFeelPresentation.scopeLine ?? mainOperationFeelPresentation.detailLine ?? '',
+      tomorrowRiskPresentation.hub?.mainLine ?? '',
+      cityEchoHubLine ?? '',
+      hubCityJournalPresentation?.primaryLine ?? '',
+    ].filter(Boolean);
+
+    const model = buildDistrictReportCardLiteModel({
+      districtId: focusDistrictId,
+      day: hubDay,
+      isPostPilot: hubDay >= POST_PILOT_FIRST_OPERATION_DAY,
+      postPilotPhase: gameState.pilot.postPilotOperation?.phase ?? null,
+      operationSignals,
+      resourceFatigue: operationalResources,
+      contentPackMeta: hubPackWiringContext.contentPackMeta,
+      existingLines,
+    });
+
+    return buildDistrictReportCardSummaryForHub(model, existingLines);
+  }, [
+    cityEchoHubLine,
+    decisionHistory,
+    gameState.pilot.postPilotOperation?.phase,
+    hubCityJournalPresentation?.primaryLine,
+    hubDay,
+    hubPackWiringContext.contentPackMeta,
+    mainOperationFeelPresentation.scopeLine,
+    mainOperationFeelPresentation.detailLine,
+    operationSignals,
+    operationalResources,
+    tomorrowRiskPresentation.hub?.mainLine,
   ]);
 
   useEffect(() => {
@@ -469,6 +541,10 @@ export function HubScreen() {
         hubTomorrowRisk={tomorrowRiskPresentation.hub}
         hubCityJournal={hubCityJournalPresentation}
         hubEceContextLine={hubEceContextLine}
+        hubDistrictReportLine={hubDistrictReportLine}
+        showMainOperationSeason={showMainOperationSeasonCard}
+        mainOperationSeasonCompact={mainOperationSeasonCompact}
+        showAdvisor={hubCardVisibility.showAdvisor}
         hubMainOperationFeelExistingLines={[
           showHubCarryOver ? hubCarryOverMemory?.summary ?? '' : '',
           tomorrowRiskPresentation.hub?.mainLine ?? '',

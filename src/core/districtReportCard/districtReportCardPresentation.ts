@@ -1,3 +1,5 @@
+import { softenRepeatedWatchNoteCopy } from '@/core/releaseCandidatePolish/polishCopyPresentation';
+
 import type { DistrictReportCardLiteModel, DistrictReportCardMapPresentation } from './districtReportCardTypes';
 import { isDistrictReportCardDuplicate, shouldShowDistrictReportCardLite } from './districtReportCardModel';
 
@@ -58,7 +60,7 @@ export function buildDistrictReportCardSummaryForHub(
   if (!shouldShowDistrictReportCardLite(model)) return null;
   const line = model!.trustLine ?? model!.dominantIssueLine;
   if (!line || isDistrictReportCardDuplicate(line, existingLines)) return null;
-  return line;
+  return softenRepeatedWatchNoteCopy(line, model!.day ?? 1);
 }
 
 export function buildDistrictReportCardLineForReport(
@@ -68,7 +70,7 @@ export function buildDistrictReportCardLineForReport(
   if (!shouldShowDistrictReportCardLite(model) || (model!.day ?? 1) <= 3) return null;
   const line = model!.recentEffectLine ?? model!.dominantIssueLine;
   if (!line || isDistrictReportCardDuplicate(line, existingLines)) return null;
-  return line;
+  return softenRepeatedWatchNoteCopy(line, model!.day ?? 1);
 }
 
 export function collectDistrictReportCardVisibleLines(

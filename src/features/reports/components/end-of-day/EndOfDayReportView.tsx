@@ -24,6 +24,14 @@ import {
   buildCityJournalReportLine,
 } from '@/core/cityJournal';
 import {
+  buildDistrictReportCardLiteModel,
+  buildDistrictReportCardLineForReport,
+} from '@/core/districtReportCard';
+import {
+  reportSecondaryLineMaxLines,
+  resolveReportSecondaryCompactMode,
+} from '@/core/releaseCandidatePolish/reportSecondaryCompactPresentation';
+import {
   buildOperationalResourcePresenceLiteInputFromEngine,
   buildOperationalResourcePresenceLiteModel,
   buildOperationalResourcePresenceReportLine,
@@ -230,6 +238,9 @@ export function EndOfDayReportView({
       postPilotLightDay,
     ],
   );
+
+  const reportSecondaryCompactMode = resolveReportSecondaryCompactMode(report.day);
+  const reportSecondaryMaxLines = reportSecondaryLineMaxLines(reportSecondaryCompactMode);
 
   const tomorrowNotesKey = useMemo(
     () => (model.tomorrowNotes ?? []).join('\u0001'),
@@ -725,6 +736,45 @@ export function EndOfDayReportView({
     tomorrowRiskPresentation.report,
   ]);
 
+  const districtReportCardLine = useMemo(() => {
+    const districtId =
+      operationSignals.priorityDistrictId ?? lastDecisionForDay?.neighborhoodId;
+    if (!districtId) return null;
+
+    const existingLines = [
+      cityEchoReportLine ?? '',
+      decisionImpactReportEcho ?? '',
+      cityJournalReportLine ?? '',
+      resourcePresenceReportLine ?? '',
+      tomorrowRiskPresentation.report?.mainLine ?? '',
+    ].filter(Boolean);
+
+    const cardModel = buildDistrictReportCardLiteModel({
+      districtId,
+      day: report.day,
+      isPostPilot: report.day >= POST_PILOT_FIRST_OPERATION_DAY,
+      postPilotPhase: postPilotOperation?.phase ?? null,
+      operationSignals,
+      resourceFatigue: operationalResources,
+      contentPackMeta: reportPackWiringContext.contentPackMeta,
+      existingLines,
+    });
+
+    return buildDistrictReportCardLineForReport(cardModel, existingLines);
+  }, [
+    cityEchoReportLine,
+    cityJournalReportLine,
+    decisionImpactReportEcho,
+    lastDecisionForDay?.neighborhoodId,
+    operationSignals,
+    operationalResources,
+    postPilotOperation?.phase,
+    report.day,
+    reportPackWiringContext.contentPackMeta,
+    resourcePresenceReportLine,
+    tomorrowRiskPresentation.report?.mainLine,
+  ]);
+
   const reportSystemsIntegration = useMemo(() => {
     const existingEchoLines: string[] = [
       ...(model.tomorrowNotes ?? []),
@@ -1064,8 +1114,19 @@ export function EndOfDayReportView({
           <Text style={styles.cityJournalReportLabel} numberOfLines={1}>
             Şehir günlüğü
           </Text>
-          <Text style={styles.cityJournalReportText} numberOfLines={2}>
+          <Text style={styles.cityJournalReportText} numberOfLines={reportSecondaryMaxLines}>
             {cityJournalReportLine}
+          </Text>
+        </View>
+      ) : null}
+
+      {districtReportCardLine ? (
+        <View style={styles.districtReportCardRow}>
+          <Text style={styles.districtReportCardLabel} numberOfLines={1}>
+            Mahalle notu
+          </Text>
+          <Text style={styles.districtReportCardText} numberOfLines={reportSecondaryMaxLines}>
+            {districtReportCardLine}
           </Text>
         </View>
       ) : null}
@@ -1086,7 +1147,7 @@ export function EndOfDayReportView({
           <Text style={styles.resourcePresenceReportLabel} numberOfLines={1}>
             Saha kapasitesi
           </Text>
-          <Text style={styles.resourcePresenceReportText} numberOfLines={2}>
+          <Text style={styles.resourcePresenceReportText} numberOfLines={reportSecondaryMaxLines}>
             {resourcePresenceReportLine}
           </Text>
         </View>
@@ -1297,6 +1358,23 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: '600',
     color: '#5C4A32',
+    flexShrink: 1,
+  },
+  districtReportCardRow: {
+    gap: 4,
+    minWidth: 0,
+    paddingHorizontal: 4,
+  },
+  districtReportCardLabel: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#3D5A52',
+  },
+  districtReportCardText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    color: '#173D3A',
     flexShrink: 1,
   },
   resourcePresenceReportRow: {

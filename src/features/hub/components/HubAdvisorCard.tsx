@@ -50,6 +50,7 @@ import {
   selectDecisionHistory,
   useGameStore,
 } from '@/store/useGameStore';
+import { selectPriorityAdvisorSupportingLine } from '@/core/releaseCandidatePolish/hubAdvisorPolishPresentation';
 import { getPressFeedbackStyle } from '@/ui/feedback/pressFeedback';
 import { spacing } from '@/ui/theme/spacing';
 
@@ -272,6 +273,27 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
     resourceAdvisorLine,
   ]);
 
+  const supportingAdvisorLine = useMemo(
+    () =>
+      advisorShortMode
+        ? undefined
+        : selectPriorityAdvisorSupportingLine(
+            [
+              { id: 'city_echo', line: cityEchoAdvisorLine ?? '', priority: 2 },
+              { id: 'resource', line: resourceAdvisorLine ?? '', priority: 1 },
+              { id: 'pilot_theme', line: pilotThemeAdvisorLine ?? '', priority: 3 },
+            ],
+            gameState.city.day,
+          ),
+    [
+      advisorShortMode,
+      cityEchoAdvisorLine,
+      gameState.city.day,
+      pilotThemeAdvisorLine,
+      resourceAdvisorLine,
+    ],
+  );
+
   const usesLeft = advisorState.dailyUsesRemaining > 0;
   const canAsk = usesLeft;
 
@@ -293,7 +315,7 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{getAdvisorAvatarInitials()}</Text>
           </View>
-          <View style={styles.titleCol}>
+          <View style={[styles.titleCol, { flexShrink: 1, minWidth: 0 }]}>
             <Text style={styles.advisorName} numberOfLines={1}>
               {model.advisorName}
             </Text>
@@ -334,21 +356,13 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
           />
         ) : null}
 
-        {pilotThemeAdvisorLine && !advisorShortMode ? (
-          <Text style={styles.themeContextLine} numberOfLines={2} ellipsizeMode="tail">
-            {pilotThemeAdvisorLine}
-          </Text>
-        ) : null}
-
-        {resourceAdvisorLine ? (
-          <Text style={styles.resourceLine} numberOfLines={2}>
-            {resourceAdvisorLine}
-          </Text>
-        ) : null}
-
-        {cityEchoAdvisorLine && !advisorShortMode ? (
-          <Text style={styles.cityEchoLine} numberOfLines={2}>
-            {cityEchoAdvisorLine}
+        {supportingAdvisorLine ? (
+          <Text
+            style={styles.cityEchoLine}
+            numberOfLines={gameState.city.day >= 8 ? 2 : 2}
+            ellipsizeMode="tail"
+            accessibilityRole="text">
+            {supportingAdvisorLine}
           </Text>
         ) : null}
 

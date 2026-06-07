@@ -6,6 +6,7 @@ import { SAVE_VERSION } from '@/store/gamePersist';
 import {
   CRASH_PERFORMANCE_ALTERNATIVE_PROVIDER,
   CRASH_PERFORMANCE_DOCS_PATH,
+  CRASH_PERFORMANCE_MANUAL_LAUNCH_TRACKER_PATH,
   CRASH_PERFORMANCE_ENV_KEYS,
   CRASH_PERFORMANCE_EAS_SECRET_KEYS,
   CRASH_PERFORMANCE_OFFICIAL_DOCS,
@@ -182,6 +183,7 @@ export function runCrashPerformanceAudit(
     id: 'smoke.real_device_crash',
     title: 'Trigger manual crash on internal EAS build and verify Sentry dashboard',
     status: 'pending',
+    notes: `Track in ${CRASH_PERFORMANCE_MANUAL_LAUNCH_TRACKER_PATH} (crash_sentry group).`,
   });
 
   if (sourceMapStatus === 'not_configured' || sourceMapStatus === 'docs_ready') {

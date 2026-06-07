@@ -2392,6 +2392,7 @@ export function runSoftLaunchReadinessReview(
     'IAP sandbox smoke test matrix (14 cases)',
     '4-profile real device playtest checklist',
     'Store screenshots + listing + privacy/data safety forms',
+    'Manual launch blocker tracker: docs/crevia-manual-launch-blocker-tracker.md',
   ];
 
   let recommendedNextPrompt: string = SOFT_LAUNCH_REVIEW_RECOMMENDED_PROMPTS[0]!;

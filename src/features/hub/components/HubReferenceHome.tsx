@@ -30,8 +30,11 @@ import { useGameStatus } from '@/store/gameSelectors';
 import { useGameStore } from '@/store/useGameStore';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
 import { HeaderAvatar } from '@/ui/components/game-header/HeaderAvatar';
+import type { HubCardVisibilityModel } from '@/core/onboarding/firstTenMinutesTypes';
+import { HubAdvisorCard } from './HubAdvisorCard';
 import { HubCityJournalStrip } from './HubCityJournalStrip';
 import { HubMainOperationFeelCard } from './HubMainOperationFeelCard';
+import { HubMainOperationSeasonCard } from './HubMainOperationSeasonCard';
 import { HubOperationalResourcesCard } from './HubOperationalResourcesCard';
 import { HubTomorrowRiskStrip } from './HubTomorrowRiskStrip';
 
@@ -119,11 +122,28 @@ type HubReferenceHomeProps = {
   hubTomorrowRisk?: TomorrowRiskModel | null;
   hubCityJournal?: CityJournalHubPresentation | null;
   hubEceContextLine?: string | null;
+  hubDistrictReportLine?: string | null;
   hubMainOperationFeelExistingLines?: string[];
   showHubCarryOver?: boolean;
   showOperationalResources?: boolean;
+  showMainOperationSeason?: boolean;
+  mainOperationSeasonCompact?: boolean;
+  showAdvisor?: HubCardVisibilityModel['showAdvisor'];
   scrollFooter?: ReactNode;
 };
+
+function HubDistrictReportSupportingLine({ line }: { line: string }) {
+  return (
+    <View style={styles.districtSupportLine}>
+      <Text style={styles.districtSupportLabel} numberOfLines={1} ellipsizeMode="tail">
+        Mahalle notu
+      </Text>
+      <Text style={styles.districtSupportText} numberOfLines={2} ellipsizeMode="tail">
+        {line}
+      </Text>
+    </View>
+  );
+}
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -715,9 +735,13 @@ export function HubReferenceHome({
   hubTomorrowRisk,
   hubCityJournal,
   hubEceContextLine,
+  hubDistrictReportLine,
   hubMainOperationFeelExistingLines,
   showHubCarryOver = false,
   showOperationalResources = false,
+  showMainOperationSeason = false,
+  mainOperationSeasonCompact = false,
+  showAdvisor = 'featured',
   scrollFooter,
 }: HubReferenceHomeProps = {}) {
   const { scrollBottomPadding } = useHubLayoutMetrics();
@@ -732,6 +756,9 @@ export function HubReferenceHome({
         <PremiumHubHeader />
         <View style={styles.body}>
           <HubMainOperationFeelCard existingLines={hubMainOperationFeelExistingLines} />
+          {showMainOperationSeason ? (
+            <HubMainOperationSeasonCard compact={mainOperationSeasonCompact} />
+          ) : null}
           <HubTomorrowRiskStrip model={hubTomorrowRisk} />
           {showHubCarryOver ? (
             <PreviousDecisionEffectCard
@@ -739,7 +766,16 @@ export function HubReferenceHome({
               impactExplanationLine={hubImpactExplanationLine}
             />
           ) : null}
-          <EceWelcomeCard contextLine={hubEceContextLine} />
+          {showAdvisor !== 'hidden' ? (
+            <HubAdvisorCard
+              compact={showAdvisor === 'compact' || showAdvisor === 'featured'}
+            />
+          ) : (
+            <EceWelcomeCard contextLine={hubEceContextLine} />
+          )}
+          {hubDistrictReportLine ? (
+            <HubDistrictReportSupportingLine line={hubDistrictReportLine} />
+          ) : null}
           {showOperationalResources ? <HubOperationalResourcesCard /> : null}
           <HubCityJournalStrip presentation={hubCityJournal} />
           <OperationFocusCard />
@@ -879,6 +915,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 12,
     marginTop: -28,
+  },
+  districtSupportLine: {
+    backgroundColor: palette.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: palette.border,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 4,
+  },
+  districtSupportLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    color: palette.muted,
+    textTransform: 'uppercase',
+  },
+  districtSupportText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: palette.text,
+    flexShrink: 1,
+    minWidth: 0,
   },
   card: {
     backgroundColor: palette.card,

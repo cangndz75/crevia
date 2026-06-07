@@ -11,6 +11,9 @@ import type { AnalyticsEventName } from './analyticsTypes';
 export const POST_LAUNCH_TELEMETRY_READINESS_DOCS_PATH =
   'docs/crevia-post-launch-telemetry-readiness.md';
 
+export const POST_LAUNCH_TELEMETRY_MANUAL_LAUNCH_TRACKER_PATH =
+  'docs/crevia-manual-launch-blocker-tracker.md';
+
 export const POST_LAUNCH_TELEMETRY_MIN_KPI_GROUPS = 8;
 export const POST_LAUNCH_TELEMETRY_MIN_FUNNELS = 5;
 export const POST_LAUNCH_TELEMETRY_MIN_DASHBOARD_CARDS = 10;

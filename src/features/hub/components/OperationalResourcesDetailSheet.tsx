@@ -251,7 +251,12 @@ export function OperationalResourcesDetailSheet({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <Pressable style={styles.backdropTap} onPress={onClose} accessibilityRole="button" />
+        <Pressable
+          style={styles.backdropTap}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Operasyon detayını kapat"
+        />
         <View style={styles.sheet}>
           <View style={styles.handle} />
           <Text style={styles.title} numberOfLines={1}>
@@ -277,13 +282,16 @@ export function OperationalResourcesDetailSheet({
                     selected ? { borderColor: palette.pill } : null,
                   ]}
                   onPress={() => setActiveTab(tab.id)}
-                  accessibilityRole="button">
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={`${tab.label} sekmesi`}>
                   <Text
                     style={[styles.tabLabel, selected && { color: palette.pill }]}
-                    numberOfLines={1}>
+                    numberOfLines={1}
+                    ellipsizeMode="tail">
                     {tab.label}
                   </Text>
-                  <Text style={styles.tabSummary} numberOfLines={1}>
+                  <Text style={styles.tabSummary} numberOfLines={1} ellipsizeMode="tail">
                     {tab.summary}
                   </Text>
                 </Pressable>
@@ -313,7 +321,8 @@ export function OperationalResourcesDetailSheet({
           <Pressable
             style={({ pressed }) => [styles.closeBtn, getPressFeedbackStyle({ pressed })]}
             onPress={onClose}
-            accessibilityRole="button">
+            accessibilityRole="button"
+            accessibilityLabel="Operasyon detayını kapat">
             <Text style={styles.closeBtnText}>Kapat</Text>
           </Pressable>
         </View>

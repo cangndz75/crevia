@@ -58,7 +58,9 @@ export function MentionFeedCard({ mention, index }: Props) {
             </View>
           </View>
 
-          <Text style={styles.body}>{mention.text}</Text>
+          <Text style={styles.body} numberOfLines={2} ellipsizeMode="tail">
+            {mention.text}
+          </Text>
 
           <View style={styles.footer}>
             <View style={styles.stats}>
