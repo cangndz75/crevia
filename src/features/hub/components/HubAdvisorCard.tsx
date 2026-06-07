@@ -9,6 +9,10 @@ import {
   buildAdvisorPresentationContextFromStore,
   getAdvisorAvatarInitials,
 } from '@/core/advisors/advisorPresentation';
+import {
+  buildCityEchoAdvisorLine,
+  buildCityEchoBinding,
+} from '@/core/cityEchoBinding';
 import { buildCrisisAdvisorNoteModel } from '@/core/crisis';
 import {
   buildCrisisActionHubModel,
@@ -229,6 +233,45 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
     advisorState.experience,
   ]);
 
+  const cityEchoAdvisorLine = useMemo(() => {
+    const lastDecision = decisionHistory.filter((record) => record.day === gameState.city.day - 1).at(-1);
+    return buildCityEchoAdvisorLine(
+      buildCityEchoBinding({
+        day: gameState.city.day,
+        operationSignals,
+        socialPulse: { score: undefined },
+        snapshot: lastDecision
+          ? {
+              id: `advisor-${lastDecision.id}`,
+              day: lastDecision.day,
+              eventId: lastDecision.eventId,
+              eventTitle: lastDecision.eventTitle,
+              neighborhoodId: lastDecision.neighborhoodId,
+              neighborhoodName: lastDecision.neighborhoodName,
+              decisionId: lastDecision.decisionId,
+              decisionTitle: lastDecision.decisionLabel,
+              decisionTone: 'balanced',
+              createdAt: Date.parse(lastDecision.createdAt) || Date.now(),
+              summaryTitle: lastDecision.eventTitle,
+              summaryText: lastDecision.decisionLabel,
+              resultTone: 'mixed',
+              metricChanges: [],
+              subsystemOutcomes: [],
+              highlightLines: [],
+              riskLines: [],
+            }
+          : null,
+        existingLines: [model.primaryInsight?.body ?? '', resourceAdvisorLine ?? ''].filter(Boolean),
+      }),
+    );
+  }, [
+    decisionHistory,
+    gameState.city.day,
+    model.primaryInsight?.body,
+    operationSignals,
+    resourceAdvisorLine,
+  ]);
+
   const usesLeft = advisorState.dailyUsesRemaining > 0;
   const canAsk = usesLeft;
 
@@ -300,6 +343,12 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
         {resourceAdvisorLine ? (
           <Text style={styles.resourceLine} numberOfLines={2}>
             {resourceAdvisorLine}
+          </Text>
+        ) : null}
+
+        {cityEchoAdvisorLine && !advisorShortMode ? (
+          <Text style={styles.cityEchoLine} numberOfLines={2}>
+            {cityEchoAdvisorLine}
           </Text>
         ) : null}
 
@@ -473,6 +522,13 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     color: '#0F8F86',
     fontWeight: '600',
+    flexShrink: 1,
+  },
+  cityEchoLine: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#2A6B64',
+    fontWeight: '700',
     flexShrink: 1,
   },
   metaRow: {

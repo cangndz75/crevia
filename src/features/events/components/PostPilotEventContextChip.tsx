@@ -1,5 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import {
+  buildContentPackEventChipLabel,
+  resolveContentPackMetaForWiring,
+} from '@/core/contentRuntimeActivation';
 import { buildPostPilotEventContextLabelForGameState } from '@/core/postPilot/postPilotOperationUxPresentation';
 import type { EventCard } from '@/core/models/EventCard';
 import { useGameStore } from '@/store/useGameStore';
@@ -11,9 +15,17 @@ type Props = {
 };
 
 export function PostPilotEventContextChip({ event }: Props) {
-  const label = useGameStore((s) =>
-    buildPostPilotEventContextLabelForGameState(event, s.gameState),
-  );
+  const label = useGameStore((s) => {
+    const day = s.gameState.city.day;
+    const packMeta = resolveContentPackMetaForWiring({
+      event,
+      eventPool: s.eventPool,
+      day,
+    });
+    const packChip = buildContentPackEventChipLabel(packMeta, day);
+    if (packChip) return packChip;
+    return buildPostPilotEventContextLabelForGameState(event, s.gameState);
+  });
 
   if (!label) {
     return null;

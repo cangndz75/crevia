@@ -152,6 +152,8 @@ export type EventCard = {
     label: string;
     tone: 'positive' | 'mixed' | 'warning' | 'neutral';
   };
+  /** Content runtime activation metadata — applyDecision tarafından işlenmez. */
+  contentPackMeta?: import('@/core/contentRuntimeActivation/contentRuntimeActivationTypes').ContentRuntimeActivationEventMeta;
 };
 
 export type EventDecisionContentHints = {

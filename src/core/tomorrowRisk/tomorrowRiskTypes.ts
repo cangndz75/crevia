@@ -24,6 +24,7 @@ export type TomorrowRiskPriority = 'low' | 'medium' | 'high';
 
 export type TomorrowRiskSource =
   | 'carry_over'
+  | 'content_pack'
   | 'tomorrow_hint'
   | 'operation_signals'
   | 'resource_fatigue'
@@ -108,6 +109,8 @@ export type TomorrowRiskInput = {
     operationDay?: number;
     scopes?: Record<string, string>;
   } | null;
+  contentPackMeta?: import('@/core/contentRuntimeActivation/contentRuntimeActivationTypes').ContentRuntimeActivationEventMeta | null;
+  event?: import('@/core/models/EventCard').EventCard | null;
   existingLines?: string[];
 };
 

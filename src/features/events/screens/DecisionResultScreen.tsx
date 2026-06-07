@@ -85,10 +85,13 @@ function resolveEventForResult(
   snapshot: DecisionResultSnapshot,
   events: EventCard[],
   solvedEvents: SolvedEvent[],
+  eventPool: EventCard[] = [],
 ): EventCard | null {
   if (!snapshot.eventId) return null;
   const active = events.find((event) => event.id === snapshot.eventId);
   if (active) return active;
+  const pooled = eventPool.find((event) => event.id === snapshot.eventId);
+  if (pooled) return pooled;
   const solved = solvedEvents.find((event) => event.id === snapshot.eventId);
   if (!solved) return null;
 
@@ -479,6 +482,7 @@ export function DecisionResultScreen() {
   const monetization = useGameStore((s) => s.monetization);
   const activeEvents = gameState.events;
   const solvedEvents = gameState.solvedEvents;
+  const eventPool = useGameStore((s) => s.eventPool);
   const currentDay = gameState.city.day;
   const operationSignals = useGameStore((s) => s.operationSignals);
   const operationalResources = useGameStore((s) => s.operationalResources);
@@ -491,8 +495,8 @@ export function DecisionResultScreen() {
   const isMissing = snapshot == null;
 
   const relatedEvent = useMemo(
-    () => resolveEventForResult(result, activeEvents, solvedEvents),
-    [activeEvents, result, solvedEvents],
+    () => resolveEventForResult(result, activeEvents, solvedEvents, eventPool),
+    [activeEvents, eventPool, result, solvedEvents],
   );
 
   useEffect(() => {

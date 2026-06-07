@@ -6,6 +6,7 @@ import type { MapDistrictId } from '@/features/map/data/mapDistrictConstants';
 import { getMapDistrictLabel } from '@/features/map/utils/mapDistrictLabels';
 
 import { buildMainOperationEngineInput } from '@/core/mainOperation/mainOperationEngine';
+import { deriveMainOperationAccessMode } from '@/core/mainOperation/mainOperationEngine';
 import {
   buildFullMainOperationDailySet,
   filterMainOperationActiveEvents,
@@ -14,6 +15,10 @@ import {
 } from '@/core/mainOperation/mainOperationEventGeneration';
 import { createInitialMonetizationState } from '@/core/monetization/monetizationState';
 import { createInitialMainOperationSeasonState } from '@/core/mainOperation/mainOperationState';
+import {
+  augmentPostPilotDailySetWithContentActivation,
+  type ContentRuntimeActivationInput,
+} from '@/core/contentRuntimeActivation';
 
 import {
   MAX_POST_PILOT_ACTIVE_EVENTS,
@@ -34,6 +39,39 @@ import type {
 import { derivePostPilotScopeStatuses } from './postPilotOperationEngine';
 import type { PostPilotOperationState } from './postPilotOperationTypes';
 import { normalizePostPilotOperationState } from './postPilotOperationSeed';
+
+function buildContentActivationInput(
+  gameState: GameState,
+  day: number,
+  postPilotOperation: PostPilotOperationState,
+  input: EnsurePostPilotDailyEventsInput,
+  scope: PostPilotEventScopeContext,
+): ContentRuntimeActivationInput {
+  const monetization =
+    input.mainOperationContext?.monetization ?? createInitialMonetizationState();
+  return {
+    day,
+    postPilotPhase: postPilotOperation.phase,
+    accessMode: deriveMainOperationAccessMode(gameState, monetization),
+    operationSignals: input.mainOperationContext?.operationSignals ?? undefined,
+    focusDistrictId: scope.mapDistrictId,
+    stableSeed: `${gameState.city.day}|${scope.mapDistrictId}`,
+  };
+}
+
+function applyContentRuntimeActivationToDailySet(
+  dailySet: PostPilotDailyEventSet,
+  gameState: GameState,
+  day: number,
+  postPilotOperation: PostPilotOperationState,
+  input: EnsurePostPilotDailyEventsInput,
+  scope: PostPilotEventScopeContext,
+): PostPilotDailyEventSet {
+  return augmentPostPilotDailySetWithContentActivation(
+    dailySet,
+    buildContentActivationInput(gameState, day, postPilotOperation, input, scope),
+  ).dailySet;
+}
 
 function cloneEventCards(events: EventCard[]): EventCard[] {
   return events.map((event) => ({
@@ -270,10 +308,24 @@ export function ensurePostPilotDailyEventsForDay(
   }
 
   if (useFullEvents) {
-    const dailySet = buildFullMainOperationDailySet(
+    const dailySet = applyContentRuntimeActivationToDailySet(
+      buildFullMainOperationDailySet(
+        day,
+        engineInput,
+        input.mainOperationContext?.crisisState,
+      ),
+      gameState,
       day,
-      engineInput,
-      input.mainOperationContext?.crisisState,
+      postPilotOperation,
+      input,
+      resolvePostPilotEventScope(gameState, {
+        ...postPilotOperation,
+        scopes: derivePostPilotScopeStatuses({
+          postPilotOperation,
+          pilotStatus: gameState.pilot.status,
+          authorityState: authorityState ?? gameState.pilot.authorityState,
+        }),
+      }),
     );
     const blockedIds = getBlockedEventIds(gameState);
     const activeEvents = filterMainOperationActiveEvents(
@@ -319,7 +371,14 @@ export function ensurePostPilotDailyEventsForDay(
     }),
   });
 
-  const dailySet = buildDailySetForDay(day, scope);
+  const dailySet = applyContentRuntimeActivationToDailySet(
+    buildDailySetForDay(day, scope),
+    gameState,
+    day,
+    postPilotOperation,
+    input,
+    scope,
+  );
   const blockedIds = getBlockedEventIds(gameState);
   const activeEvents = filterActiveEvents(
     dailySet.catalog,

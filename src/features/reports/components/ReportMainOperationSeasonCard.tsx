@@ -5,6 +5,10 @@ import {
   buildReportMainOperationSeasonModel,
   type MainOperationPresentationExtras,
 } from '@/core/mainOperation';
+import {
+  buildMainOperationFeelFromStore,
+  buildMainOperationFeelReportPresentation,
+} from '@/core/mainOperationFeel';
 import type { DailyReport } from '@/core/models/DailyReport';
 import { useGameStore } from '@/store/useGameStore';
 import { colors } from '@/ui/theme/colors';
@@ -59,16 +63,47 @@ export function ReportMainOperationSeasonCard({
     ],
   );
 
-  const model = useMemo(
-    () =>
-      buildReportMainOperationSeasonModel(
-        gameState,
-        monetization,
-        mainOperationSeason,
-        extras,
-      ),
-    [gameState, monetization, mainOperationSeason, extras, report.day],
-  );
+  const model = useMemo(() => {
+    const seasonModel = buildReportMainOperationSeasonModel(
+      gameState,
+      monetization,
+      mainOperationSeason,
+      extras,
+    );
+
+    const feelModel = buildMainOperationFeelFromStore({
+      gameState,
+      monetization,
+      mainOperationSeason,
+      operationSignals,
+      postPilotOperation: gameState.pilot.postPilotOperation ?? undefined,
+      existingLines: seasonModel.lines,
+    });
+    const feelReport = buildMainOperationFeelReportPresentation(feelModel, seasonModel.lines);
+
+    if (!feelReport.visible || !feelReport.reportLine) {
+      return seasonModel;
+    }
+
+    const mergedLines = [
+      feelReport.reportLine,
+      ...(feelReport.supportLine ? [feelReport.supportLine] : []),
+      ...seasonModel.lines,
+    ].filter((line, index, arr) => arr.indexOf(line) === index);
+
+    return {
+      ...seasonModel,
+      topLine: feelReport.reportLine,
+      lines: mergedLines.slice(0, 3),
+    };
+  }, [
+    extras,
+    gameState,
+    mainOperationSeason,
+    monetization,
+    operationSignals,
+    report.day,
+  ]);
 
   if (!model.visible) {
     return null;

@@ -1,3 +1,4 @@
+import { tryBuildDecisionImpactFromPackMeta } from '@/core/contentRuntimeActivation/contentRuntimeActivationWiring';
 import type { DecisionMetricChange } from '@/features/events/types/decisionResultTypes';
 
 import { DECISION_IMPACT_DOMAIN_LABELS, DECISION_IMPACT_EXPLANATION_TITLE } from './decisionImpactExplanationConstants';
@@ -138,6 +139,11 @@ export function buildDecisionImpactExplanation(
       tomorrowLine: input.carryOverSummary,
       confidence: 'high',
     });
+  }
+
+  const packImpact = tryBuildDecisionImpactFromPackMeta(input);
+  if (packImpact) {
+    return packImpact;
   }
 
   if (pressure?.domain === 'vehicles' || domain === 'route') {

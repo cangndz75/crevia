@@ -29,6 +29,7 @@ import { useGameStatus } from '@/store/gameSelectors';
 import { useGameStore } from '@/store/useGameStore';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
 import { HeaderAvatar } from '@/ui/components/game-header/HeaderAvatar';
+import { HubMainOperationFeelCard } from './HubMainOperationFeelCard';
 import { HubTomorrowRiskStrip } from './HubTomorrowRiskStrip';
 
 const COMPACT_BREAKPOINT = 370;
@@ -113,6 +114,8 @@ type HubReferenceHomeProps = {
   hubCarryOverMemory?: CarryOverMemoryModel | null;
   hubImpactExplanationLine?: string | null;
   hubTomorrowRisk?: TomorrowRiskModel | null;
+  hubEceContextLine?: string | null;
+  hubMainOperationFeelExistingLines?: string[];
   showHubCarryOver?: boolean;
   scrollFooter?: ReactNode;
 };
@@ -312,11 +315,12 @@ function PreviousDecisionEffectCard({
   );
 }
 
-function EceWelcomeCard() {
+function EceWelcomeCard({ contextLine }: { contextLine?: string | null }) {
   const router = useRouter();
   const status = useGameStatus();
   const { isCompact } = useHubLayoutMetrics();
   const eceWidth = isCompact ? 130 : 150;
+  const isPostPilotContext = Boolean(contextLine?.trim());
 
   const handlePress = () => {
     playLightImpactHaptic();
@@ -336,10 +340,13 @@ function EceWelcomeCard() {
           </Text>
         </View>
         <Text style={styles.eceLead} numberOfLines={1} ellipsizeMode="tail">
-          Merkeze hoş geldin {status.playerName || 'Can'}!
+          {isPostPilotContext
+            ? `Ana operasyon günü · Gün ${status.currentDay}`
+            : `Merkeze hoş geldin ${status.playerName || 'Can'}!`}
         </Text>
         <Text style={styles.bodyText} numberOfLines={2} ellipsizeMode="tail">
-          Bugün birlikte temel akışı öğrenip ilk kararlarını vermeye başlayalım.
+          {contextLine?.trim() ||
+            'Bugün birlikte temel akışı öğrenip ilk kararlarını vermeye başlayalım.'}
         </Text>
         <Pressable
           onPress={handlePress}
@@ -701,6 +708,8 @@ export function HubReferenceHome({
   hubCarryOverMemory,
   hubImpactExplanationLine,
   hubTomorrowRisk,
+  hubEceContextLine,
+  hubMainOperationFeelExistingLines,
   scrollFooter,
 }: HubReferenceHomeProps = {}) {
   const { scrollBottomPadding } = useHubLayoutMetrics();
@@ -719,7 +728,8 @@ export function HubReferenceHome({
             impactExplanationLine={hubImpactExplanationLine}
           />
           <HubTomorrowRiskStrip model={hubTomorrowRisk} />
-          <EceWelcomeCard />
+          <HubMainOperationFeelCard existingLines={hubMainOperationFeelExistingLines} />
+          <EceWelcomeCard contextLine={hubEceContextLine} />
           <OperationFocusCard />
           <QuickPreparationsCard />
           <OperationSignalsCard />

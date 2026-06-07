@@ -483,6 +483,7 @@ export function buildMapOperationPanelModel(params: {
   hideFleetSignals?: boolean;
   dayEventTitle?: string;
   postPilotMapContextLine?: string;
+  mainOperationScopeHintLine?: string;
   crisisLines?: MapCrisisPanelLine[];
   resourceLines?: MapResourcePanelLine[];
   presenceLines?: string[];
@@ -576,11 +577,15 @@ export function buildMapOperationPanelModel(params: {
     agendaSignalLine:
       params.postPilotMapContextLine && activeEventCount > 0
         ? params.postPilotMapContextLine
-        : undefined,
+        : params.mainOperationScopeHintLine && params.gameDay >= 8
+          ? params.mainOperationScopeHintLine
+          : undefined,
     sahaNote:
       params.postPilotMapContextLine && activeEventCount > 0
         ? undefined
-        : params.dayEventTitle,
+        : params.mainOperationScopeHintLine && params.gameDay >= 8 && activeEventCount === 0
+          ? params.mainOperationScopeHintLine
+          : params.dayEventTitle,
     metrics: metrics.slice(0, 3),
     riskMetrics,
     recommendedAction: focusPreset.recommendedAction

@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { resolveEventCardById } from '@/core/liveFlow/eventLifecycleEngine';
 import { normalizePostPilotOperationState } from '@/core/postPilot/postPilotOperationSeed';
 import type { SocialQuickActionType } from '@/core/social/socialTypes';
 import { selectIsDay1TutorialEligible } from '@/features/tutorial/tutorialSelectors';
@@ -47,6 +48,8 @@ export function SocialPulseScreen() {
   const pilotStatus = useGameStore((s) => s.gameState.pilot.status);
   const postPilotOperation = useGameStore(selectPostPilotOperation);
   const lastDecisionResult = useGameStore(selectLastDecisionResult);
+  const eventPool = useGameStore((s) => s.eventPool);
+  const activeEvents = useGameStore((s) => s.gameState.events);
   const operationSignals = useGameStore(
     (s) => s.operationSignals as OperationSignalsState,
   );
@@ -62,6 +65,14 @@ export function SocialPulseScreen() {
     return normalized?.phase ?? null;
   }, [currentDay, pilotStatus, postPilotOperation]);
 
+  const lastDecisionEvent = useMemo(
+    () =>
+      lastDecisionResult?.eventId
+        ? resolveEventCardById(lastDecisionResult.eventId, activeEvents, eventPool)
+        : undefined,
+    [activeEvents, eventPool, lastDecisionResult?.eventId],
+  );
+
   const viewModel = useMemo(
     () =>
       buildSocialPulseScreenViewModel({
@@ -69,12 +80,16 @@ export function SocialPulseScreen() {
         currentDay,
         postPilotPhase,
         lastDecisionResult,
+        lastDecisionEvent,
+        eventPool,
         operationSignals,
         isDay1Compact,
       }),
     [
       currentDay,
+      eventPool,
       isDay1Compact,
+      lastDecisionEvent,
       lastDecisionResult,
       operationSignals,
       postPilotPhase,

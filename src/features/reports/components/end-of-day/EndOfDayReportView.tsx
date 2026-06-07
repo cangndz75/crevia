@@ -13,6 +13,10 @@ import {
 } from '@/core/analytics/analyticsRuntime';
 import { normalizeAuthorityState } from '@/core/authority/authoritySeed';
 import {
+  buildCityEchoBinding,
+  buildCityEchoReportLine,
+} from '@/core/cityEchoBinding';
+import {
   buildDecisionImpactExplanation,
   buildDecisionImpactReportEcho,
 } from '@/core/decisionImpactExplanation';
@@ -40,6 +44,8 @@ import {
   isReportTomorrowPreviewDuplicateOf,
   shouldShowReportTomorrowPreview,
 } from '@/core/reports/reportTomorrowPreviewPresentation';
+import { resolveContentPackMetaForWiring } from '@/core/contentRuntimeActivation';
+import { resolveEventCardById } from '@/core/liveFlow/eventLifecycleEngine';
 import { buildTomorrowRiskPresentation } from '@/core/tomorrowRisk';
 import { buildSocialDecisionEcho } from '@/core/socialEcho/socialEchoSelectors';
 import { buildSocialEchoContextFromPulseArgs } from '@/core/socialEcho/socialEchoPresentation';
@@ -145,6 +151,7 @@ export function EndOfDayReportView({
   const microDecisionState = useGameStore((s) => s.microDecisionState);
   const socialPulseScore = useGameStore((s) => s.socialPulseState.globalPulseScore);
   const socialPulseState = useGameStore((s) => s.socialPulseState);
+  const eventPool = useGameStore((s) => s.eventPool);
 
   const reportGuard = useMemo(
     () => buildFirstTenMinutesReportGuard(gameState),
@@ -245,6 +252,25 @@ export function EndOfDayReportView({
     return dayRecords[dayRecords.length - 1];
   }, [decisionHistory, report.day]);
 
+  const reportPackWiringContext = useMemo(() => {
+    if (!lastDecisionForDay?.eventId) {
+      return { event: undefined, contentPackMeta: undefined };
+    }
+    const event = resolveEventCardById(
+      lastDecisionForDay.eventId,
+      gameState.events,
+      eventPool,
+    );
+    const contentPackMeta = resolveContentPackMetaForWiring({
+      event,
+      eventId: lastDecisionForDay.eventId,
+      districtId: lastDecisionForDay.neighborhoodId,
+      day: report.day,
+      eventPool,
+    });
+    return { event, contentPackMeta };
+  }, [eventPool, gameState.events, lastDecisionForDay, report.day]);
+
   const reportCarryOverMemory = useMemo(
     () =>
       buildReportCarryOverPreview({
@@ -268,6 +294,7 @@ export function EndOfDayReportView({
     return buildDecisionImpactReportEcho(
       buildDecisionImpactExplanation({
         day: report.day,
+        event: reportPackWiringContext.event,
         snapshot: {
           id: `report-${lastDecisionForDay.id}`,
           day: lastDecisionForDay.day,
@@ -299,6 +326,7 @@ export function EndOfDayReportView({
     operationalResources,
     report,
     reportCarryOverMemory?.summary,
+    reportPackWiringContext.event,
   ]);
 
   const eventDomainFocus = useMemo(() => {
@@ -450,6 +478,8 @@ export function EndOfDayReportView({
           globalPulseScore: socialPulseState.globalPulseScore,
         },
         postPilotOperation: postPilotOperation ?? undefined,
+        contentPackMeta: reportPackWiringContext.contentPackMeta,
+        event: reportPackWiringContext.event,
         existingLines: [
           ...(model.tomorrowNotes ?? []),
           ...(report.summaryLines ?? []),
@@ -479,12 +509,83 @@ export function EndOfDayReportView({
     ],
   );
 
+  const cityEchoReportLine = useMemo(() => {
+    if (!lastDecisionForDay) return undefined;
+    return buildCityEchoReportLine(
+      buildCityEchoBinding({
+        day: report.day,
+        decisionImpact: buildDecisionImpactExplanation({
+          day: report.day,
+          event: reportPackWiringContext.event,
+          snapshot: {
+            id: `report-city-echo-${lastDecisionForDay.id}`,
+            day: lastDecisionForDay.day,
+            eventId: lastDecisionForDay.eventId,
+            eventTitle: lastDecisionForDay.eventTitle,
+            neighborhoodId: lastDecisionForDay.neighborhoodId,
+            neighborhoodName: lastDecisionForDay.neighborhoodName,
+            decisionId: lastDecisionForDay.decisionId,
+            decisionTitle: lastDecisionForDay.decisionLabel,
+            decisionTone: 'balanced',
+            createdAt: Date.parse(lastDecisionForDay.createdAt) || Date.now(),
+            summaryTitle: lastDecisionForDay.eventTitle,
+            summaryText: lastDecisionForDay.decisionLabel,
+            resultTone: 'mixed',
+            metricChanges: [],
+            subsystemOutcomes: [],
+            highlightLines: [],
+            riskLines: [],
+          },
+          operationSignals,
+          resourceFatigue: operationalResources,
+          carryOverSummary: reportCarryOverMemory?.summary,
+          dailyReport: report,
+        }),
+        tomorrowRisk: tomorrowRiskPresentation.report,
+        carryOverSummary: reportCarryOverMemory?.summary,
+        event: reportPackWiringContext.event,
+        contentPackMeta: reportPackWiringContext.contentPackMeta,
+        operationSignals,
+        socialPulse: {
+          globalPulseScore: socialPulseState.globalPulseScore,
+        },
+        postPilotPhase: postPilotOperation?.phase,
+        existingLines: [
+          ...(model.tomorrowNotes ?? []),
+          reportCarryOverMemory?.summary ?? '',
+          socialEchoForReport?.mention ?? '',
+          eventDomainFocus?.reportEchoLine ?? '',
+          tomorrowPreviewBundle.summary.preview?.summary ?? '',
+          tomorrowRiskPresentation.report?.mainLine ?? '',
+          decisionImpactReportEcho ?? '',
+        ].filter(Boolean),
+      }),
+    );
+  }, [
+    decisionImpactReportEcho,
+    eventDomainFocus?.reportEchoLine,
+    lastDecisionForDay,
+    model.tomorrowNotes,
+    operationSignals,
+    operationalResources,
+    postPilotOperation?.phase,
+    report,
+    reportCarryOverMemory?.summary,
+    reportPackWiringContext.contentPackMeta,
+    reportPackWiringContext.event,
+    socialEchoForReport?.mention,
+    socialPulseState.globalPulseScore,
+    tomorrowPreviewBundle.summary.preview?.summary,
+    tomorrowRiskPresentation.report,
+  ]);
+
   const reportSystemsIntegration = useMemo(() => {
     const existingEchoLines: string[] = [
       ...(model.tomorrowNotes ?? []),
       ...(report.summaryLines ?? []),
       ...(report.carryOverSummaryLines ?? []),
       reportCarryOverMemory?.summary ?? '',
+      cityEchoReportLine ?? '',
       decisionImpactReportEcho ?? '',
       socialEchoForReport?.mention ?? '',
       eventDomainFocus?.reportEchoLine ?? '',
@@ -595,6 +696,7 @@ export function EndOfDayReportView({
     authorityState?.formalRankId,
     authorityState?.unlockedPermissionIds,
     crisisState,
+    cityEchoReportLine,
     districtOperationActionReportLine,
     decisionImpactReportEcho,
     eventDomainFocus?.focus,
@@ -791,13 +893,13 @@ export function EndOfDayReportView({
         <ReportPrimaryImpactSection model={impactModel} />
       </Animated.View>
 
-      {decisionImpactReportEcho ? (
+      {cityEchoReportLine || decisionImpactReportEcho ? (
         <View style={styles.decisionImpactReportRow}>
           <Text style={styles.decisionImpactReportLabel} numberOfLines={1}>
             Kararın etkisi
           </Text>
           <Text style={styles.decisionImpactReportText} numberOfLines={2}>
-            {decisionImpactReportEcho}
+            {cityEchoReportLine ?? decisionImpactReportEcho}
           </Text>
         </View>
       ) : null}

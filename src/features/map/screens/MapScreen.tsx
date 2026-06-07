@@ -21,6 +21,10 @@ import type { CreviaActiveTaskRouteUiModel } from '@/core/activeTaskRoutes/activ
 import { buildMapDistrictIntelligenceModel } from '@/core/map/mapDistrictIntelligencePresentation';
 import { buildMapBeforeAfterSummary, buildMapPresenceViewModel } from '@/core/mapPresence';
 import { buildMainOperationMapScopeBadges } from '@/core/mainOperation/mainOperationPresentation';
+import {
+  buildMainOperationFeelFromStore,
+  buildMainOperationFeelMapHint,
+} from '@/core/mainOperationFeel';
 import { buildEventDomainFocusModel } from '@/core/events/eventDomainPresentation';
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 import { buildPostPilotMapContextLineForGameState } from '@/core/postPilot/postPilotOperationUxPresentation';
@@ -595,6 +599,30 @@ export function MapScreen() {
     return buildPostPilotMapContextLineForGameState(gameStateForMap, districtEvents);
   }, [activeEvents, focusDistrictId, gameStateForMap]);
 
+  const mainOperationScopeHintLine = useMemo(() => {
+    if (!showPostPilotMapChrome || gameDay < POST_PILOT_FIRST_OPERATION_DAY) {
+      return undefined;
+    }
+    const feelModel = buildMainOperationFeelFromStore({
+      gameState: gameStateForMap,
+      monetization,
+      mainOperationSeason,
+      operationSignals,
+      postPilotOperation: postPilotOperation ?? undefined,
+    });
+    return buildMainOperationFeelMapHint(feelModel, [postPilotMapContextLine ?? ''].filter(Boolean))
+      .hintLine;
+  }, [
+    gameDay,
+    gameStateForMap,
+    mainOperationSeason,
+    monetization,
+    operationSignals,
+    postPilotMapContextLine,
+    postPilotOperation,
+    showPostPilotMapChrome,
+  ]);
+
   const operationPanel = useMemo(() => {
     const merged = mergeMapPanelCrisisAndResourceLines({
       crisisLines: mapCrisisPresentation.visible
@@ -625,6 +653,7 @@ export function MapScreen() {
       hideFleetSignals: hideMapFleetSignals,
       dayEventTitle: dayEvent.mainEventTitle,
       postPilotMapContextLine: postPilotMapContextLine ?? undefined,
+      mainOperationScopeHintLine: mainOperationScopeHintLine ?? undefined,
       crisisLines: merged.crisisLines,
       resourceLines: merged.resourceLines,
       presenceLines,
@@ -643,6 +672,7 @@ export function MapScreen() {
     mapResourcePresentation.panelLines,
     mapResourcePresentation.visible,
     mapViewMode,
+    mainOperationScopeHintLine,
     pilotAreaId,
     postPilotMapContextLine,
     selectedDistrictId,

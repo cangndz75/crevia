@@ -9,15 +9,29 @@ import {
   trackOncePerRuntime,
 } from '@/core/analytics/analyticsRuntime';
 import {
+  buildCityEchoBinding,
+  buildCityEchoHubLine,
+} from '@/core/cityEchoBinding';
+import {
   buildDecisionImpactExplanationForHub,
   buildDecisionImpactHubEcho,
 } from '@/core/decisionImpactExplanation';
-import { buildHubCardVisibilityModel } from '@/core/onboarding/firstTenMinutesPresentation';
+import {
+  buildContentRuntimeActivationSelection,
+  resolveContentPackMetaForWiring,
+} from '@/core/contentRuntimeActivation';
+import { resolveEventCardById } from '@/core/liveFlow/eventLifecycleEngine';
+import { deriveMainOperationAccessMode } from '@/core/mainOperation/mainOperationEngine';
+import {
+  buildMainOperationFeelEceLine,
+  buildMainOperationFeelFromStore,
+} from '@/core/mainOperationFeel';
 import {
   buildHubCarryOverMemory,
   shouldShowCarryOverMemory,
 } from '@/core/carryOver/carryOverMemoryPresentation';
 import { buildTomorrowRiskPresentation } from '@/core/tomorrowRisk';
+import { buildHubCardVisibilityModel } from '@/core/onboarding/firstTenMinutesPresentation';
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
 import { HubReferenceHome } from '@/features/hub/components/HubReferenceHome';
 import { buildHubScreenLayoutModel } from '@/features/hub/utils/hubScreenPresentation';
@@ -48,12 +62,16 @@ export function HubScreen() {
   const operationalResources = useGameStore((s) => s.operationalResources);
   const operationSignals = useGameStore((s) => s.operationSignals);
   const decisionHistory = useGameStore(selectDecisionHistory);
+  const eventPool = useGameStore((s) => s.eventPool);
   const socialPulseState = useGameStore((s) => s.socialPulseState);
   const tutorialActive = useGameStore(selectIsDay1TutorialActive);
   const hubTutorialStep = useGameStore((s) =>
     selectActiveTutorialStepForScreen(s, 'hub'),
   );
   useTutorialHighlight('hub', 'hub_metrics');
+
+  const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
+  const postPilotOperation = useGameStore((s) => s.gameState.pilot.postPilotOperation);
 
   const hubCardVisibility = buildHubCardVisibilityModel(gameState, monetization);
   const hubDay = gameState.city.day;
@@ -78,12 +96,29 @@ export function HubScreen() {
     hubCarryOverMemory?.visible === true &&
     shouldShowCarryOverMemory(hubDay, 'hub', { day: hubDay });
 
+  const hubPackWiringContext = useMemo(() => {
+    const lastDecision = decisionHistory.filter((record) => record.day === hubDay - 1).at(-1);
+    if (!lastDecision?.eventId) {
+      return { event: undefined, contentPackMeta: undefined };
+    }
+    const event = resolveEventCardById(lastDecision.eventId, gameState.events, eventPool);
+    const contentPackMeta = resolveContentPackMetaForWiring({
+      event,
+      eventId: lastDecision.eventId,
+      districtId: lastDecision.neighborhoodId,
+      day: hubDay,
+      eventPool,
+    });
+    return { event, contentPackMeta };
+  }, [decisionHistory, eventPool, gameState.events, hubDay]);
+
   const hubImpactExplanationLine = useMemo(
     () =>
       buildDecisionImpactHubEcho(
         buildDecisionImpactExplanationForHub({
           day: hubDay,
           recentDecisions: decisionHistory,
+          event: hubPackWiringContext.event,
           operationSignals,
           resourceFatigue: operationalResources,
           carryOverSummary: hubCarryOverMemory?.summary,
@@ -93,6 +128,7 @@ export function HubScreen() {
       decisionHistory,
       hubCarryOverMemory?.summary,
       hubDay,
+      hubPackWiringContext.event,
       operationSignals,
       operationalResources,
     ],
@@ -109,19 +145,152 @@ export function HubScreen() {
           globalPulseScore: socialPulseState.globalPulseScore,
         },
         postPilotOperation: gameState.pilot.postPilotOperation ?? undefined,
+        contentPackMeta: hubPackWiringContext.contentPackMeta,
+        event: hubPackWiringContext.event,
         existingLines: [
           showHubCarryOver ? hubCarryOverMemory?.summary ?? '' : '',
           showHubCarryOver ? hubCarryOverMemory?.detail ?? '' : '',
+          hubImpactExplanationLine ?? '',
         ].filter(Boolean),
       }),
     [
       gameState.pilot.postPilotOperation,
       hubCarryOverMemory,
       hubDay,
+      hubImpactExplanationLine,
+      hubPackWiringContext.contentPackMeta,
+      hubPackWiringContext.event,
       operationSignals,
       operationalResources,
       showHubCarryOver,
       socialPulseState.globalPulseScore,
+    ],
+  );
+
+  const cityEchoHubLine = useMemo(
+    () =>
+      buildCityEchoHubLine(
+        buildCityEchoBinding({
+          day: hubDay,
+          decisionImpact: buildDecisionImpactExplanationForHub({
+            day: hubDay,
+            recentDecisions: decisionHistory,
+            event: hubPackWiringContext.event,
+            operationSignals,
+            resourceFatigue: operationalResources,
+            carryOverSummary: hubCarryOverMemory?.summary,
+          }),
+          tomorrowRisk: tomorrowRiskPresentation.hub,
+          carryOverSummary: hubCarryOverMemory?.summary,
+          event: hubPackWiringContext.event,
+          contentPackMeta: hubPackWiringContext.contentPackMeta,
+          operationSignals,
+          socialPulse: {
+            globalPulseScore: socialPulseState.globalPulseScore,
+          },
+          postPilotPhase: gameState.pilot.postPilotOperation?.phase,
+          existingLines: [
+            hubCarryOverMemory?.summary ?? '',
+            tomorrowRiskPresentation.hub?.mainLine ?? '',
+            hubImpactExplanationLine ?? '',
+          ].filter(Boolean),
+        }),
+      ),
+    [
+      decisionHistory,
+      gameState.pilot.postPilotOperation?.phase,
+      hubCarryOverMemory?.summary,
+      hubDay,
+      hubImpactExplanationLine,
+      hubPackWiringContext.contentPackMeta,
+      hubPackWiringContext.event,
+      operationSignals,
+      operationalResources,
+      socialPulseState.globalPulseScore,
+      tomorrowRiskPresentation.hub,
+    ],
+  );
+
+  const contentPackActivation = useMemo(
+    () =>
+      buildContentRuntimeActivationSelection({
+        day: hubDay,
+        postPilotPhase: gameState.pilot.postPilotOperation?.phase,
+        accessMode: deriveMainOperationAccessMode(gameState, monetization),
+        operationSignals,
+        focusDistrictId: operationSignals.priorityDistrictId,
+        stableSeed: `${hubDay}|hub`,
+      }),
+    [gameState, hubDay, monetization, operationSignals],
+  );
+
+  const mainOperationFeel = useMemo(
+    () =>
+      buildMainOperationFeelFromStore({
+        gameState,
+        monetization,
+        mainOperationSeason,
+        operationSignals,
+        postPilotOperation: postPilotOperation ?? undefined,
+        tomorrowRisk: tomorrowRiskPresentation.hub,
+        contentPackPresentationHint: contentPackActivation.model.presentationHint,
+        cityEchoBinding: buildCityEchoBinding({
+          day: hubDay,
+          decisionImpact: buildDecisionImpactExplanationForHub({
+            day: hubDay,
+            recentDecisions: decisionHistory,
+            operationSignals,
+            resourceFatigue: operationalResources,
+            carryOverSummary: hubCarryOverMemory?.summary,
+          }),
+          tomorrowRisk: tomorrowRiskPresentation.hub,
+          carryOverSummary: hubCarryOverMemory?.summary,
+          operationSignals,
+          socialPulse: {
+            globalPulseScore: socialPulseState.globalPulseScore,
+          },
+          postPilotPhase: gameState.pilot.postPilotOperation?.phase,
+          existingLines: [
+            hubCarryOverMemory?.summary ?? '',
+            tomorrowRiskPresentation.hub?.mainLine ?? '',
+          ].filter(Boolean),
+        }),
+        existingLines: [
+          showHubCarryOver ? hubCarryOverMemory?.summary ?? '' : '',
+          tomorrowRiskPresentation.hub?.mainLine ?? '',
+          cityEchoHubLine ?? '',
+        ].filter(Boolean),
+      }),
+    [
+      cityEchoHubLine,
+      decisionHistory,
+      gameState,
+      hubCarryOverMemory?.summary,
+      hubDay,
+      mainOperationSeason,
+      monetization,
+      operationSignals,
+      operationalResources,
+      postPilotOperation,
+      showHubCarryOver,
+      socialPulseState.globalPulseScore,
+      tomorrowRiskPresentation.hub,
+      contentPackActivation.model.presentationHint,
+    ],
+  );
+
+  const hubEceContextLine = useMemo(
+    () =>
+      buildMainOperationFeelEceLine(mainOperationFeel, [
+        cityEchoHubLine ?? '',
+        hubImpactExplanationLine ?? '',
+        tomorrowRiskPresentation.hub?.mainLine ?? '',
+      ].filter(Boolean)),
+    [
+      cityEchoHubLine,
+      hubImpactExplanationLine,
+      mainOperationFeel,
+      tomorrowRiskPresentation.hub?.mainLine,
     ],
   );
 
@@ -184,8 +353,14 @@ export function HubScreen() {
       contentStyle={{ paddingHorizontal: 0, paddingTop: 0, gap: 0 }}>
       <HubReferenceHome
         hubCarryOverMemory={hubCarryOverMemory}
-        hubImpactExplanationLine={hubImpactExplanationLine}
+        hubImpactExplanationLine={cityEchoHubLine ?? hubImpactExplanationLine}
         hubTomorrowRisk={tomorrowRiskPresentation.hub}
+        hubEceContextLine={hubEceContextLine}
+        hubMainOperationFeelExistingLines={[
+          showHubCarryOver ? hubCarryOverMemory?.summary ?? '' : '',
+          tomorrowRiskPresentation.hub?.mainLine ?? '',
+          cityEchoHubLine ?? '',
+        ].filter(Boolean)}
         showHubCarryOver={showHubCarryOver}
         scrollFooter={
           __DEV__ && !hubCardVisibility.suppressDevTools ? <HubDevTools /> : undefined

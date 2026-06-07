@@ -3,6 +3,8 @@ import {
   TOMORROW_RISK_MAX_VISIBLE_LINES,
   TOMORROW_RISK_TITLE,
 } from './tomorrowRiskConstants';
+import { buildTomorrowRiskFromPackMeta } from '@/core/contentRuntimeActivation/contentRuntimeActivationWiring';
+
 import type {
   TomorrowRiskDomain,
   TomorrowRiskInput,
@@ -196,6 +198,10 @@ function fromCarryOver(input: TomorrowRiskInput): TomorrowRiskModel | null {
   });
 }
 
+function fromContentPackMeta(input: TomorrowRiskInput): TomorrowRiskModel | null {
+  return buildTomorrowRiskFromPackMeta(input);
+}
+
 function fromTomorrowHint(input: TomorrowRiskInput): TomorrowRiskModel | null {
   const hint = cleanText(input.tomorrowHint ?? input.reportTomorrowPreview?.summary);
   if (!hint || input.reportTomorrowPreview?.visible === false) return null;
@@ -352,6 +358,7 @@ export function buildTomorrowRiskModel(input: TomorrowRiskInput): TomorrowRiskMo
 
   const builders = [
     fromCarryOver,
+    fromContentPackMeta,
     fromTomorrowHint,
     fromOperationSignals,
     fromResourceFatigue,

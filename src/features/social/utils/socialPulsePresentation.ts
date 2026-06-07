@@ -1,5 +1,10 @@
+import { resolveContentPackMetaForWiring } from '@/core/contentRuntimeActivation';
 import { buildHubCarryOverMemory } from '@/core/carryOver/carryOverMemoryPresentation';
 import type { CarryOverMemoryInput } from '@/core/carryOver/carryOverMemoryTypes';
+import {
+  buildCityEchoBinding,
+  buildCityEchoSocialLine,
+} from '@/core/cityEchoBinding';
 import {
   buildDistrictEventContextLine,
   getDistrictIdentity,
@@ -7,6 +12,7 @@ import {
   resolveDistrictAccentColor,
 } from '@/core/districts/districtIdentityPresentation';
 import { buildEventDomainFocusModel } from '@/core/events/eventDomainPresentation';
+import type { EventCard } from '@/core/models/EventCard';
 import type { OperationSignalsState } from '@/core/operations/operationSignalTypes';
 import {
   buildSocialDecisionEcho,
@@ -508,7 +514,38 @@ export function buildDynamicSocialDecisionEchoModel(
       : undefined,
   });
 
-  return buildSocialDecisionEcho(context);
+  const echo = buildSocialDecisionEcho(context);
+  const packMeta = resolveContentPackMetaForWiring({
+    event: params.lastDecisionEvent,
+    eventId: params.lastDecisionResult?.eventId,
+    districtId: params.lastDecisionResult?.neighborhoodId,
+    day: currentDay,
+    eventPool: params.eventPool,
+  });
+  const cityEchoLine = buildCityEchoSocialLine(
+    buildCityEchoBinding({
+      day: currentDay,
+      snapshot: params.lastDecisionResult ?? undefined,
+      carryOverSummary: carryHub?.summary,
+      event: params.lastDecisionEvent,
+      contentPackMeta: packMeta,
+      operationSignals: params.operationSignals ?? undefined,
+      socialPulse: params.socialPulseState
+        ? { globalPulseScore: params.socialPulseState.globalPulseScore }
+        : undefined,
+      existingLines: [echo?.mention ?? ''].filter(Boolean),
+    }),
+  );
+
+  if (!echo || !cityEchoLine) return echo;
+  if (cityEchoLine === echo.mention) return echo;
+
+  return {
+    ...echo,
+    mention: cityEchoLine,
+    source: 'event_echo',
+    debugReason: `${echo.debugReason ?? 'social'}:city_echo_binding`,
+  };
 }
 
 export function assertNoSocialPulseForbiddenWords(text: string): string[] {
@@ -561,6 +598,8 @@ export type BuildSocialPulseScreenParams = {
   currentDay?: number;
   postPilotPhase?: PostPilotPhase | null;
   lastDecisionResult?: DecisionResultSnapshot | null;
+  lastDecisionEvent?: EventCard | null;
+  eventPool?: EventCard[];
   operationSignals?: OperationSignalsState | null;
   isDay1Compact?: boolean;
 };
