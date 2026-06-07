@@ -15,6 +15,7 @@ type OnboardingBottomControlsProps = {
   isFinal: boolean;
   disabled?: boolean;
   ctaHeight: number;
+  compact?: boolean;
 };
 
 export function OnboardingBottomControls({
@@ -27,9 +28,10 @@ export function OnboardingBottomControls({
   isFinal,
   disabled = false,
   ctaHeight,
+  compact = false,
 }: OnboardingBottomControlsProps) {
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, compact && styles.wrapCompact]}>
       <PrimaryGameButton
         title={primaryLabel}
         variant={isFinal ? 'continueGame' : 'default'}
@@ -43,16 +45,20 @@ export function OnboardingBottomControls({
           onPress={onBackPress}
           accessibilityRole="button"
           accessibilityLabel="Geri"
-          style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}>
-          <Ionicons name="chevron-back" size={15} color={onboardingTokens.textMuted} />
-          <Text style={styles.backText} numberOfLines={1}>
+          style={({ pressed }) => [
+            styles.backBtn,
+            compact && styles.backBtnCompact,
+            pressed && styles.pressed,
+          ]}>
+          <Ionicons name="chevron-back" size={compact ? 14 : 15} color={onboardingTokens.textMuted} />
+          <Text style={[styles.backText, compact && styles.backTextCompact]} numberOfLines={1}>
             Geri
           </Text>
         </Pressable>
       ) : (
-        <View style={styles.backSpacer} />
+        <View style={[styles.backSpacer, compact && styles.backSpacerCompact]} />
       )}
-      <ProgressDots current={activeIndex + 1} total={total} />
+      <ProgressDots compact={compact} current={activeIndex + 1} total={total} />
     </View>
   );
 }
@@ -61,6 +67,9 @@ const styles = StyleSheet.create({
   wrap: {
     gap: 6,
   },
+  wrapCompact: {
+    gap: 2,
+  },
   backBtn: {
     minHeight: 34,
     flexDirection: 'row',
@@ -68,13 +77,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 3,
   },
+  backBtnCompact: {
+    minHeight: 28,
+  },
   backText: {
     fontSize: 15,
     fontWeight: '800',
     color: onboardingTokens.textMuted,
   },
+  backTextCompact: {
+    fontSize: 14,
+  },
   backSpacer: {
     height: 34,
+  },
+  backSpacerCompact: {
+    height: 28,
   },
   pressed: {
     opacity: 0.74,

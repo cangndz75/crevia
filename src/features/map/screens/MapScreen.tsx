@@ -36,6 +36,7 @@ import {
   buildMapReactionHighlightDistrictIds,
   buildMapReactionLiteInputFromMapContext,
 } from '@/core/mapReactions';
+import { buildRewardComebackMapPresentation } from '@/core/rewardComeback';
 import { deriveMainOperationAccessMode } from '@/core/mainOperation/mainOperationEngine';
 import { resolveContentPackMetaForWiring } from '@/core/contentRuntimeActivation';
 import { buildMapBeforeAfterSummary, buildMapPresenceViewModel } from '@/core/mapPresence';
@@ -813,6 +814,43 @@ export function MapScreen() {
     showPostPilotMapChrome,
   ]);
 
+  const rewardComebackMapPresentation = useMemo(() => {
+    if (gameDay <= 2) return null;
+    return buildRewardComebackMapPresentation({
+      day: gameDay,
+      surface: 'map',
+      isPostPilot: showPostPilotMapChrome,
+      priorityDistrictId: focusDistrictId,
+      mapReactionKind: mapReactionLiteModel?.selectedDistrictReaction?.kind,
+      districtReportCard: mapDistrictReportCardBundle.model ?? undefined,
+      contentPackMeta: resolveContentPackMetaForWiring({
+        event: districtFocusedEvent,
+        eventId: districtFocusedEvent?.id,
+        districtId: focusDistrictId,
+        day: gameDay,
+        eventPool,
+        postPilotCatalog,
+      }),
+      existingLines: [
+        mapDistrictReportCard?.primaryLine ?? '',
+        mapDistrictReportCard?.recentEffectLine ?? '',
+        operationalResourcePresenceModel?.mapPresenceLine ?? '',
+      ].filter(Boolean),
+    });
+  }, [
+    districtFocusedEvent,
+    eventPool,
+    focusDistrictId,
+    gameDay,
+    mapDistrictReportCard?.primaryLine,
+    mapDistrictReportCard?.recentEffectLine,
+    mapDistrictReportCardBundle.model,
+    mapReactionLiteModel?.selectedDistrictReaction?.kind,
+    operationalResourcePresenceModel?.mapPresenceLine,
+    postPilotCatalog,
+    showPostPilotMapChrome,
+  ]);
+
   const mapReactionPanel = useMemo(() => {
     const guard = [
       ...(mapDistrictIntelligence?.visibleLines.map((line) => line.text) ?? []),
@@ -820,6 +858,7 @@ export function MapScreen() {
       mapDistrictReportCard?.recentEffectLine ?? '',
       operationalResourcePresenceModel?.mapPresenceLine ?? '',
       mainOperationScopeHintLine ?? '',
+      rewardComebackMapPresentation?.mapLine ?? '',
       ...mapResourcePresentation.panelLines.map((line) => line.summary),
     ].filter(Boolean);
     return buildMapReactionPanelPresentation(mapReactionLiteModel, guard);
@@ -831,6 +870,7 @@ export function MapScreen() {
     mapReactionLiteModel,
     mapResourcePresentation.panelLines,
     operationalResourcePresenceModel?.mapPresenceLine,
+    rewardComebackMapPresentation?.mapLine,
   ]);
 
   const reactionHighlightDistrictIds = useMemo(() => {

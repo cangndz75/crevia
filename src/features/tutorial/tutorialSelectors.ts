@@ -120,6 +120,34 @@ export function skipTutorialState(state: TutorialState): TutorialState {
   };
 }
 
+const TUTORIAL_STEPS_BEFORE_SOCIAL_SIGNAL = [
+  'day1_intro',
+  'hub_metrics',
+  'hub_critical_event',
+  'event_timeline',
+  'event_insight',
+  'event_resources',
+  'event_decisions',
+  'decision_result',
+] as const;
+
+/** Onboarding'de verilen ilk karar uygulandıktan sonra tutorial'ı sonuç sonrasına taşır. */
+export function markTutorialPastOnboardingDecision(
+  state: TutorialState,
+): TutorialState {
+  if (state.day1Completed || state.skipped) return state;
+
+  const completed = [
+    ...new Set([...state.completedStepIds, ...TUTORIAL_STEPS_BEFORE_SOCIAL_SIGNAL]),
+  ];
+
+  return {
+    ...state,
+    completedStepIds: completed,
+    activeStepId: 'hub_social_signal',
+  };
+}
+
 export type Day1ReportTutorialCopy = {
   title: string;
   summaryLines: string[];

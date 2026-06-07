@@ -11,6 +11,7 @@ type ProgressDotsProps = {
   current: number;
   total: number;
   showCounter?: boolean;
+  compact?: boolean;
 };
 
 function Dot({ active, done }: { active: boolean; done: boolean }) {
@@ -30,9 +31,14 @@ function Dot({ active, done }: { active: boolean; done: boolean }) {
   );
 }
 
-export function ProgressDots({ current, total, showCounter = true }: ProgressDotsProps) {
+export function ProgressDots({
+  current,
+  total,
+  showCounter = true,
+  compact = false,
+}: ProgressDotsProps) {
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, compact && styles.wrapCompact]}>
       <View style={styles.row}>
         {Array.from({ length: total }, (_, i) => {
           const step = i + 1;
@@ -40,7 +46,7 @@ export function ProgressDots({ current, total, showCounter = true }: ProgressDot
         })}
       </View>
       {showCounter ? (
-        <Text style={styles.counter}>
+        <Text style={[styles.counter, compact && styles.counterCompact]}>
           {current} / {total}
         </Text>
       ) : null}
@@ -53,6 +59,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     paddingVertical: spacing.sm,
+  },
+  wrapCompact: {
+    gap: 4,
+    paddingVertical: 2,
   },
   row: {
     flexDirection: 'row',
@@ -71,5 +81,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: onboardingTokens.textMuted,
+  },
+  counterCompact: {
+    fontSize: 11,
   },
 });

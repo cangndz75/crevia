@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { useEffect } from 'react';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useEffect, useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   FadeIn,
   useAnimatedProps,
@@ -15,78 +15,98 @@ import { OUTCOME_SUMMARY } from '@/features/onboarding/data/onboardingData';
 import { onboardingRadii, onboardingTokens } from '@/features/onboarding/theme/onboardingTokens';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-const RING_SIZE = 86;
-const STROKE = 7;
-const RADIUS = (RING_SIZE - STROKE) / 2;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-export function OutcomeResultCard() {
+type OutcomeResultCardProps = {
+  compact?: boolean;
+};
+
+export function OutcomeResultCard({ compact = false }: OutcomeResultCardProps) {
   const progress = useSharedValue(0);
-  const { width } = useWindowDimensions();
-  const small = width <= 370;
+  const ringSize = compact ? 68 : 86;
+  const stroke = compact ? 6 : 7;
+  const radius = (ringSize - stroke) / 2;
+  const circumference = useMemo(() => 2 * Math.PI * radius, [radius]);
 
   useEffect(() => {
     progress.value = withTiming(OUTCOME_SUMMARY.progress, { duration: 1000 });
   }, [progress]);
 
   const animatedProps = useAnimatedProps(() => ({
-    strokeDashoffset: CIRCUMFERENCE * (1 - progress.value),
+    strokeDashoffset: circumference * (1 - progress.value),
   }));
 
   return (
-    <Animated.View entering={FadeIn.delay(200).duration(500)} style={styles.card}>
+    <Animated.View
+      entering={FadeIn.delay(200).duration(500)}
+      style={[styles.card, compact && styles.cardCompact]}>
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={styles.kicker} numberOfLines={1} ellipsizeMode="tail">
+          <Text
+            style={[styles.kicker, compact && styles.kickerCompact]}
+            numberOfLines={1}
+            ellipsizeMode="tail">
             {OUTCOME_SUMMARY.title}
           </Text>
-          <Text style={styles.status} numberOfLines={1} ellipsizeMode="tail">
+          <Text
+            style={[styles.status, compact && styles.statusCompact]}
+            numberOfLines={1}
+            ellipsizeMode="tail">
             {OUTCOME_SUMMARY.status}
           </Text>
         </View>
-        <View style={styles.checkBadge}>
-          <Ionicons name="checkmark" size={15} color="#FFFFFF" />
+        <View style={[styles.checkBadge, compact && styles.checkBadgeCompact]}>
+          <Ionicons name="checkmark" size={compact ? 13 : 15} color="#FFFFFF" />
         </View>
       </View>
 
       <View style={styles.mainRow}>
-        <View style={styles.ringWrap}>
-          <Svg width={RING_SIZE} height={RING_SIZE}>
+        <View style={[styles.ringWrap, { width: ringSize, height: ringSize }]}>
+          <Svg width={ringSize} height={ringSize}>
             <Circle
-              cx={RING_SIZE / 2}
-              cy={RING_SIZE / 2}
-              r={RADIUS}
+              cx={ringSize / 2}
+              cy={ringSize / 2}
+              r={radius}
               stroke={onboardingTokens.successMuted}
-              strokeWidth={STROKE}
+              strokeWidth={stroke}
               fill="none"
             />
             <AnimatedCircle
               animatedProps={animatedProps}
-              cx={RING_SIZE / 2}
-              cy={RING_SIZE / 2}
-              r={RADIUS}
+              cx={ringSize / 2}
+              cy={ringSize / 2}
+              r={radius}
               stroke={onboardingTokens.green}
-              strokeWidth={STROKE}
+              strokeWidth={stroke}
               fill="none"
-              strokeDasharray={CIRCUMFERENCE}
+              strokeDasharray={circumference}
               strokeLinecap="round"
               rotation="-90"
-              origin={`${RING_SIZE / 2}, ${RING_SIZE / 2}`}
+              origin={`${ringSize / 2}, ${ringSize / 2}`}
             />
           </Svg>
           <View style={styles.heart}>
-            <Ionicons name="heart" size={25} color={onboardingTokens.green} />
+            <Ionicons
+              name="heart"
+              size={compact ? 20 : 25}
+              color={onboardingTokens.green}
+            />
           </View>
         </View>
 
         <View style={styles.stats}>
           {OUTCOME_SUMMARY.stats.map((stat) => (
             <View key={stat.label} style={styles.statLine}>
-              <Ionicons name={stat.icon} size={14} color={onboardingTokens.green} />
-              <Text style={styles.statLabel} numberOfLines={1} ellipsizeMode="tail">
+              <Ionicons name={stat.icon} size={compact ? 12 : 14} color={onboardingTokens.green} />
+              <Text
+                style={[styles.statLabel, compact && styles.statLabelCompact]}
+                numberOfLines={1}
+                ellipsizeMode="tail">
                 {stat.label}
               </Text>
-              <Text style={styles.statValue} numberOfLines={1} ellipsizeMode="tail">
+              <Text
+                style={[styles.statValue, compact && styles.statValueCompact]}
+                numberOfLines={1}
+                ellipsizeMode="tail">
                 {stat.value}
               </Text>
             </View>
@@ -95,13 +115,16 @@ export function OutcomeResultCard() {
 
         <Image
           source={onboardingAssets.outcomeMap}
-          style={[styles.mapImage, small && styles.mapImageSmall]}
+          style={[styles.mapImage, compact && styles.mapImageCompact]}
           contentFit="contain"
         />
       </View>
 
-      <View style={styles.noteBand}>
-        <Text style={styles.noteText} numberOfLines={2} ellipsizeMode="tail">
+      <View style={[styles.noteBand, compact && styles.noteBandCompact]}>
+        <Text
+          style={[styles.noteText, compact && styles.noteTextCompact]}
+          numberOfLines={compact ? 1 : 2}
+          ellipsizeMode="tail">
           {OUTCOME_SUMMARY.note}
         </Text>
       </View>
@@ -123,6 +146,11 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 4,
   },
+  cardCompact: {
+    borderRadius: 20,
+    padding: 10,
+    gap: 8,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -139,10 +167,16 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: onboardingTokens.textMain,
   },
+  kickerCompact: {
+    fontSize: 13,
+  },
   status: {
     fontSize: 14,
     fontWeight: '900',
     color: onboardingTokens.green,
+  },
+  statusCompact: {
+    fontSize: 12,
   },
   checkBadge: {
     width: 28,
@@ -152,6 +186,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: onboardingTokens.green,
   },
+  checkBadgeCompact: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+  },
   mainRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -159,8 +198,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   ringWrap: {
-    width: RING_SIZE,
-    height: RING_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -186,20 +223,27 @@ const styles = StyleSheet.create({
     color: onboardingTokens.textMuted,
     fontWeight: '800',
   },
+  statLabelCompact: {
+    fontSize: 10,
+  },
   statValue: {
     maxWidth: 72,
     fontSize: 12,
     fontWeight: '900',
     color: onboardingTokens.green,
   },
+  statValueCompact: {
+    maxWidth: 60,
+    fontSize: 11,
+  },
   mapImage: {
     width: 122,
     height: 116,
     flexShrink: 0,
   },
-  mapImageSmall: {
-    width: 96,
-    height: 102,
+  mapImageCompact: {
+    width: 78,
+    height: 74,
   },
   noteBand: {
     borderRadius: onboardingRadii.md,
@@ -209,10 +253,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(41,185,111,0.16)',
   },
+  noteBandCompact: {
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
   noteText: {
     fontSize: 12,
     lineHeight: 17,
     fontWeight: '800',
     color: onboardingTokens.textMain,
+  },
+  noteTextCompact: {
+    fontSize: 11,
+    lineHeight: 15,
   },
 });

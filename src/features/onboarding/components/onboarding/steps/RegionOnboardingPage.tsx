@@ -7,11 +7,16 @@ import { REGION_CARDS } from '@/features/onboarding/data/onboardingData';
 type RegionOnboardingPageProps = {
   selectedId: PilotDistrictId;
   onSelect: (id: PilotDistrictId) => void;
+  compact?: boolean;
 };
 
-export function RegionOnboardingPage({ selectedId, onSelect }: RegionOnboardingPageProps) {
+export function RegionOnboardingPage({
+  selectedId,
+  onSelect,
+  compact = false,
+}: RegionOnboardingPageProps) {
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, compact && styles.wrapCompact]}>
       {REGION_CARDS.map((region, index) => (
         <PilotRegionCard
           key={region.id}
@@ -19,6 +24,7 @@ export function RegionOnboardingPage({ selectedId, onSelect }: RegionOnboardingP
           selected={selectedId === region.id}
           onPress={() => onSelect(region.id)}
           index={index}
+          compact={compact}
         />
       ))}
     </View>
@@ -31,5 +37,9 @@ const styles = StyleSheet.create({
     gap: 12,
     alignItems: 'center',
     paddingBottom: 10,
+  },
+  wrapCompact: {
+    gap: 8,
+    paddingBottom: 4,
   },
 });

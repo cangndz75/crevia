@@ -5,6 +5,7 @@ import {
   buildCityEchoBinding,
   buildCityEchoSocialLine,
 } from '@/core/cityEchoBinding';
+import { buildRewardComebackSocialPresentation } from '@/core/rewardComeback';
 import {
   buildDistrictEventContextLine,
   getDistrictIdentity,
@@ -537,14 +538,26 @@ export function buildDynamicSocialDecisionEchoModel(
     }),
   );
 
-  if (!echo || !cityEchoLine) return echo;
-  if (cityEchoLine === echo.mention) return echo;
+  const rewardSocial = buildRewardComebackSocialPresentation({
+    day: currentDay,
+    surface: 'social',
+    snapshot: params.lastDecisionResult ?? undefined,
+    contentPackMeta: packMeta,
+    operationSignals: params.operationSignals ?? undefined,
+    existingLines: [echo?.mention ?? '', cityEchoLine ?? ''].filter(Boolean),
+  });
+
+  const rewardLine = rewardSocial.socialLine;
+  const preferredLine = rewardLine && rewardLine !== echo?.mention ? rewardLine : cityEchoLine;
+
+  if (!echo || !preferredLine) return echo;
+  if (preferredLine === echo.mention) return echo;
 
   return {
     ...echo,
-    mention: cityEchoLine,
-    source: 'event_echo',
-    debugReason: `${echo.debugReason ?? 'social'}:city_echo_binding`,
+    mention: preferredLine,
+    source: rewardLine ? 'event_echo' : 'event_echo',
+    debugReason: `${echo.debugReason ?? 'social'}:${rewardLine ? 'reward_comeback' : 'city_echo_binding'}`,
   };
 }
 

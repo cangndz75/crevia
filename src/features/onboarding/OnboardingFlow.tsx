@@ -1,12 +1,12 @@
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import { CreviaOnboardingScreen } from '@/features/onboarding/screens/CreviaOnboardingScreen';
+import type { OnboardingFinishPayload } from '@/features/onboarding/screens/CreviaOnboardingScreen';
 import { onboardingTokens } from '@/features/onboarding/theme/onboardingTokens';
 
 type OnboardingFlowProps = {
-  onComplete: (districtId: PilotDistrictId) => void | Promise<void>;
+  onComplete: (payload: OnboardingFinishPayload) => void | Promise<void>;
 };
 
 /** 4 adımlı premium onboarding — tamamlanınca `onComplete` çağrılır. */

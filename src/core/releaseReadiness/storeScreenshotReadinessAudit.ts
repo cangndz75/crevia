@@ -1,4 +1,8 @@
 import {
+  runStoreScreenshotNarrativeAudit,
+  STORE_SCREENSHOT_NARRATIVE_DOCS_PATH,
+} from '@/core/storeScreenshotNarrative';
+import {
   STORE_SCREENSHOT_ASSET_CHECKLIST,
   STORE_SCREENSHOT_DEVICE_PROFILES,
   STORE_SCREENSHOT_FALSE_CLAIM_PATTERNS,
@@ -199,6 +203,11 @@ export function runStoreScreenshotReadinessAudit(
   }
   nextActions.push(`Review capture plan: ${STORE_SCREENSHOT_READINESS_DOCS_PATH}`);
 
+  const narrative = runStoreScreenshotNarrativeAudit();
+  nextActions.push(
+    `Screenshot narrative pack (${narrative.status}): ${STORE_SCREENSHOT_NARRATIVE_DOCS_PATH}`,
+  );
+
   return {
     health,
     mode,
@@ -215,6 +224,9 @@ export function runStoreScreenshotReadinessAudit(
     deviceMatrixComplete,
     assetChecklistComplete,
     nextActions,
+    narrativePackId: narrative.packId,
+    narrativePackStatus: narrative.status,
+    narrativeDocsPath: STORE_SCREENSHOT_NARRATIVE_DOCS_PATH,
   };
 }
 

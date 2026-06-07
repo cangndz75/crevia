@@ -50,6 +50,8 @@ import {
   selectDecisionHistory,
   useGameStore,
 } from '@/store/useGameStore';
+import { buildAdvisorRelationshipHubPresentation } from '@/core/advisorRelationship';
+import { buildRewardComebackHubPresentation } from '@/core/rewardComeback';
 import { selectPriorityAdvisorSupportingLine } from '@/core/releaseCandidatePolish/hubAdvisorPolishPresentation';
 import { getPressFeedbackStyle } from '@/ui/feedback/pressFeedback';
 import { spacing } from '@/ui/theme/spacing';
@@ -273,26 +275,85 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
     resourceAdvisorLine,
   ]);
 
-  const supportingAdvisorLine = useMemo(
-    () =>
-      advisorShortMode
-        ? undefined
-        : selectPriorityAdvisorSupportingLine(
-            [
-              { id: 'city_echo', line: cityEchoAdvisorLine ?? '', priority: 2 },
-              { id: 'resource', line: resourceAdvisorLine ?? '', priority: 1 },
-              { id: 'pilot_theme', line: pilotThemeAdvisorLine ?? '', priority: 3 },
-            ],
-            gameState.city.day,
-          ),
-    [
-      advisorShortMode,
-      cityEchoAdvisorLine,
+  const advisorRelationshipPresentation = useMemo(() => {
+    if (advisorShortMode || isDay1) return null;
+    return buildAdvisorRelationshipHubPresentation({
+      day: gameState.city.day,
+      surface: 'hub',
+      advisorState,
+      playerStyleProfile: playerStyleProfile ?? undefined,
+      decisionHistory,
+      operationSignals,
+      existingLines: [
+        model.primaryInsight?.body ?? '',
+        cityEchoAdvisorLine ?? '',
+        resourceAdvisorLine ?? '',
+      ].filter(Boolean),
+    });
+  }, [
+    advisorShortMode,
+    advisorState,
+    cityEchoAdvisorLine,
+    decisionHistory,
+    gameState.city.day,
+    isDay1,
+    model.primaryInsight?.body,
+    operationSignals,
+    playerStyleProfile,
+    resourceAdvisorLine,
+  ]);
+
+  const rewardComebackPresentation = useMemo(() => {
+    if (advisorShortMode || isDay1) return null;
+    return buildRewardComebackHubPresentation({
+      day: gameState.city.day,
+      surface: 'hub',
+      operationSignals,
+      advisorRelationship: advisorRelationshipPresentation?.model,
+      existingLines: [
+        model.primaryInsight?.body ?? '',
+        advisorRelationshipPresentation?.mainLine ?? '',
+        cityEchoAdvisorLine ?? '',
+        resourceAdvisorLine ?? '',
+      ].filter(Boolean),
+    });
+  }, [
+    advisorRelationshipPresentation?.mainLine,
+    advisorRelationshipPresentation?.model,
+    advisorShortMode,
+    cityEchoAdvisorLine,
+    gameState.city.day,
+    isDay1,
+    model.primaryInsight?.body,
+    operationSignals,
+    resourceAdvisorLine,
+  ]);
+
+  const supportingAdvisorLine = useMemo(() => {
+    if (advisorShortMode) return undefined;
+    if (rewardComebackPresentation?.hubLine && gameState.city.day >= 4) {
+      return rewardComebackPresentation.hubLine;
+    }
+    if (gameState.city.day >= 8 && advisorRelationshipPresentation?.supportingLine) {
+      return advisorRelationshipPresentation.supportingLine;
+    }
+    return selectPriorityAdvisorSupportingLine(
+      [
+        { id: 'city_echo', line: cityEchoAdvisorLine ?? '', priority: 2 },
+        { id: 'resource', line: resourceAdvisorLine ?? '', priority: 1 },
+        { id: 'pilot_theme', line: pilotThemeAdvisorLine ?? '', priority: 3 },
+      ],
       gameState.city.day,
-      pilotThemeAdvisorLine,
-      resourceAdvisorLine,
-    ],
-  );
+    );
+  }, [
+    advisorRelationshipPresentation?.supportingLine,
+    advisorShortMode,
+    cityEchoAdvisorLine,
+    gameState.city.day,
+    pilotThemeAdvisorLine,
+    resourceAdvisorLine,
+    rewardComebackPresentation?.hubLine,
+  ]);
 
   const usesLeft = advisorState.dailyUsesRemaining > 0;
   const canAsk = usesLeft;
@@ -346,6 +407,16 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
             numberOfLines={expanded ? 4 : 2}
             ellipsizeMode="tail">
             {model.primaryInsight.body}
+          </Text>
+        ) : null}
+
+        {advisorRelationshipPresentation?.visible && advisorRelationshipPresentation.mainLine ? (
+          <Text
+            style={styles.relationshipLine}
+            numberOfLines={gameState.city.day >= 8 ? 2 : 2}
+            ellipsizeMode="tail"
+            accessibilityRole="text">
+            {advisorRelationshipPresentation.mainLine}
           </Text>
         ) : null}
 
@@ -524,6 +595,13 @@ const styles = StyleSheet.create({
     color: '#3D4F4C',
     flexShrink: 1,
   },
+  relationshipLine: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#2A5C56',
+    fontWeight: '600',
+    flexShrink: 1,
+  },
   themeContextLine: {
     fontSize: 12,
     lineHeight: 17,
@@ -543,6 +621,13 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     color: '#2A6B64',
     fontWeight: '700',
+    flexShrink: 1,
+  },
+  rewardComebackLine: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#1F6B5E',
+    fontWeight: '600',
     flexShrink: 1,
   },
   metaRow: {

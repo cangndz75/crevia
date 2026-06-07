@@ -1,11 +1,11 @@
-import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import {
   CreviaOnboardingScreen,
   type CreviaOnboardingScreenProps,
+  type OnboardingFinishPayload,
 } from '@/features/onboarding/screens/CreviaOnboardingScreen';
 
 type OnboardingScreenProps = {
-  onComplete: (districtId: PilotDistrictId) => void | Promise<void>;
+  onComplete: (payload: OnboardingFinishPayload) => void | Promise<void>;
 };
 
 /** @deprecated Use `CreviaOnboardingScreen` — geriye uyumluluk alias'ı */

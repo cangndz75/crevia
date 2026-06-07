@@ -162,6 +162,7 @@ export const NO_NEW_SYSTEM_FREEZE_REGISTERED_CONTENT_PACK_FILES = [
 export const NO_NEW_SYSTEM_FREEZE_BASELINE_CORE_DIRS = [
   'src/core/activeTaskRoutes',
   'src/core/advisors',
+  'src/core/advisorRelationship',
   'src/core/analytics',
   'src/core/animations',
   'src/core/assets',
@@ -240,6 +241,7 @@ export const NO_NEW_SYSTEM_FREEZE_BASELINE_CORE_DIRS = [
   'src/core/progression',
   'src/core/quality',
   'src/core/rankPermissions',
+  'src/core/rewardComeback',
   'src/core/releaseReadiness',
   'src/core/reports',
   'src/core/resources',
@@ -253,6 +255,7 @@ export const NO_NEW_SYSTEM_FREEZE_BASELINE_CORE_DIRS = [
   'src/core/manualLaunchTracker',
   'src/core/releaseCandidate',
   'src/core/releaseCandidatePolish',
+  'src/core/storeScreenshotNarrative',
   'src/core/storyChains',
   'src/core/teamSpecialization',
   'src/core/tomorrowRisk',

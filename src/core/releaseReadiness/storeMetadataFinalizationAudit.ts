@@ -294,6 +294,9 @@ export function runStoreMetadataFinalizationAudit(
     nextActions.push('Publish real privacy policy URL — placeholder blocks launch_candidate.');
   }
   nextActions.push('Capture store screenshots per matrix.');
+  nextActions.push(
+    'Apply TR/EN screenshot narrative captions: docs/crevia-store-screenshot-narrative-pack.md',
+  );
   nextActions.push('Enter metadata in App Store Connect / Play Console.');
   if (STORE_IAP_METADATA_DRAFT.priceTierStatus === 'pending_manual') {
     nextActions.push('Set IAP price tier in store dashboards.');

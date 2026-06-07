@@ -10,7 +10,7 @@ import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import type { PilotDistrictId } from "@/core/models/DistrictProfile";
+import type { OnboardingFinishPayload } from "@/features/onboarding/screens/CreviaOnboardingScreen";
 import { OnboardingFlow } from "@/features/onboarding/OnboardingFlow";
 import {
   useAppBootstrap,
@@ -68,7 +68,7 @@ type AppGateProps = {
   phase: AppBootstrapPhase;
   retrying: boolean;
   onRetry: () => void;
-  onOnboardingComplete: (districtId: PilotDistrictId) => void | Promise<void>;
+  onOnboardingComplete: (payload: OnboardingFinishPayload) => void | Promise<void>;
 };
 
 function AppGate({

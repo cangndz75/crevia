@@ -396,7 +396,12 @@ function buildBlockedApplyDecisionResult(
 }
 
 import {
+  resolveOnboardingStarterDecision,
+  type OnboardingStarterDecisionId,
+} from '@/core/onboarding/onboardingStarterDecision';
+import {
   advanceTutorialState,
+  markTutorialPastOnboardingDecision,
   skipTutorialState,
   startTutorialState,
 } from '@/features/tutorial/tutorialSelectors';
@@ -581,6 +586,9 @@ type GameStoreActions = {
   _setHasHydrated: (v: boolean) => void;
   setSelectedPilotDistrict: (districtId: PilotDistrictId) => void;
   startPilotDistrict: (districtId: PilotDistrictId) => void;
+  applyOnboardingStarterDecision: (
+    starterDecision: OnboardingStarterDecisionId,
+  ) => void;
   setPilotFlag: (key: string, value: string | number | boolean) => void;
   addCompletedPilotEvent: (eventId: string) => void;
   addPendingConsequence: (consequence: PendingConsequence) => void;
@@ -3571,6 +3579,27 @@ export const useGameStore = create<GameStore>()(
           eventPool: pilotRefresh.eventPool,
         });
         get().ensureDay1TutorialStarted();
+      },
+
+      applyOnboardingStarterDecision: (starterDecision) => {
+        const districtId = get().gameState.pilot.selectedDistrictId;
+        if (!districtId) return;
+
+        const { eventId, decisionId, responseStyle } = resolveOnboardingStarterDecision(
+          districtId,
+          starterDecision,
+        );
+
+        get().setPilotFlag('day1ResponseStyle', responseStyle);
+        get().setPilotFlag('onboardingStarterDecision', starterDecision);
+
+        const applyResult = get().applyDecision(eventId, decisionId);
+        if (applyResult.success === false) return;
+
+        const tutorialState = markTutorialPastOnboardingDecision(get().tutorialState);
+        if (tutorialState !== get().tutorialState) {
+          set({ tutorialState });
+        }
       },
 
       refreshPilotEventsForCurrentDay: () => {

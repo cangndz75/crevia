@@ -22,6 +22,7 @@ import {
 import { buildPlayerStyleProfile } from '@/core/playerStyle';
 import { AdvisorDepthInsightBlock } from '@/features/advisor/components/AdvisorDepthInsightBlock';
 import { AdvisorSeniorityBadge } from '@/features/advisor/components/AdvisorSeniorityBadge';
+import { buildAdvisorRelationshipReportPresentation } from '@/core/advisorRelationship';
 import { EcePlayerStyleInsightCard } from '@/features/advisor/components/EcePlayerStyleInsightCard';
 import {
   selectAdvisorState,
@@ -119,6 +120,30 @@ export function ReportAdvisorCommentCard({
     playerStyleProfile,
   );
 
+  const relationshipPresentation = useMemo(() => {
+    if (isDay1) return null;
+    return buildAdvisorRelationshipReportPresentation({
+      day: report.day,
+      surface: 'report',
+      advisorState,
+      playerStyleProfile: playerStyleProfile ?? undefined,
+      decisionHistory,
+      dailyReport: report,
+      operationSignals,
+      existingLines: [body, model.learningAckLine ?? '', model.levelUpLine ?? ''].filter(Boolean),
+    });
+  }, [
+    advisorState,
+    body,
+    decisionHistory,
+    isDay1,
+    model.learningAckLine,
+    model.levelUpLine,
+    operationSignals,
+    playerStyleProfile,
+    report,
+  ]);
+
   return (
     <Animated.View
       entering={FadeInUp.delay(100).duration(240).springify().damping(22)}
@@ -158,6 +183,15 @@ export function ReportAdvisorCommentCard({
           profile={playerStyleProfile}
           compact={report.day <= 3 || compact}
         />
+      ) : null}
+      {relationshipPresentation?.visible && relationshipPresentation.reportLine ? (
+        <Text
+          style={styles.relationshipLine}
+          numberOfLines={2}
+          ellipsizeMode="tail"
+          accessibilityRole="text">
+          {relationshipPresentation.reportLine}
+        </Text>
       ) : null}
       <View style={styles.footer}>
         <Text style={styles.experienceLine} numberOfLines={1}>
@@ -227,6 +261,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: '#3D4F4C',
+    flexShrink: 1,
+  },
+  relationshipLine: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#2A5C56',
+    fontWeight: '600',
     flexShrink: 1,
   },
   footer: {

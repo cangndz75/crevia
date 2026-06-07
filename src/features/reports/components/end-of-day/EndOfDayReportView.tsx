@@ -23,6 +23,7 @@ import {
   buildCityJournalLiteModel,
   buildCityJournalReportLine,
 } from '@/core/cityJournal';
+import { buildRewardComebackReportPresentation } from '@/core/rewardComeback';
 import {
   buildDistrictReportCardLiteModel,
   buildDistrictReportCardLineForReport,
@@ -676,11 +677,88 @@ export function EndOfDayReportView({
     tomorrowRiskPresentation.report,
   ]);
 
+  const rewardComebackReportLine = useMemo(() => {
+    const existingLines = [
+      cityEchoReportLine ?? '',
+      decisionImpactReportEcho ?? '',
+      cityJournalReportLine ?? '',
+      tomorrowRiskPresentation.report?.mainLine ?? '',
+    ].filter(Boolean);
+
+    const presentation = buildRewardComebackReportPresentation({
+      day: report.day,
+      surface: 'report',
+      isPostPilot: report.day >= POST_PILOT_FIRST_OPERATION_DAY,
+      decisionImpact: lastDecisionForDay
+        ? buildDecisionImpactExplanation({
+            day: report.day,
+            event: reportPackWiringContext.event,
+            snapshot: {
+              id: `report-reward-${lastDecisionForDay.id}`,
+              day: lastDecisionForDay.day,
+              eventId: lastDecisionForDay.eventId,
+              eventTitle: lastDecisionForDay.eventTitle,
+              neighborhoodId: lastDecisionForDay.neighborhoodId,
+              neighborhoodName: lastDecisionForDay.neighborhoodName,
+              decisionId: lastDecisionForDay.decisionId,
+              decisionTitle: lastDecisionForDay.decisionLabel,
+              decisionTone: 'balanced',
+              createdAt: Date.parse(lastDecisionForDay.createdAt) || Date.now(),
+              summaryTitle: lastDecisionForDay.eventTitle,
+              summaryText: lastDecisionForDay.decisionLabel,
+              resultTone: 'positive',
+              metricChanges: [],
+              subsystemOutcomes: [],
+              highlightLines: [],
+              riskLines: [],
+            },
+            operationSignals,
+            resourceFatigue: operationalResources,
+            carryOverSummary: reportCarryOverMemory?.summary,
+            dailyReport: report,
+          })
+        : null,
+      tomorrowRisk: tomorrowRiskPresentation.report ?? undefined,
+      carryOverMemory: reportCarryOverMemory ?? undefined,
+      contentPackMeta: reportPackWiringContext.contentPackMeta,
+      cityJournalEntry: cityJournalReportLine
+        ? {
+            id: 'journal-echo',
+            day: report.day,
+            title: 'Günlük',
+            line: cityJournalReportLine,
+            kind: 'recovery_momentum',
+            tone: 'recovery',
+            priority: 'medium',
+            sourceKind: 'daily_report',
+            createdFromDay: report.day,
+            maxVisibleLines: 1,
+          }
+        : undefined,
+      operationSignals,
+      existingLines,
+    });
+    return presentation.reportLine;
+  }, [
+    cityEchoReportLine,
+    cityJournalReportLine,
+    decisionImpactReportEcho,
+    lastDecisionForDay,
+    operationSignals,
+    operationalResources,
+    report,
+    reportCarryOverMemory,
+    reportPackWiringContext.contentPackMeta,
+    reportPackWiringContext.event,
+    tomorrowRiskPresentation.report,
+  ]);
+
   const resourcePresenceReportLine = useMemo(() => {
     const existingLines = [
       cityEchoReportLine ?? '',
       decisionImpactReportEcho ?? '',
       cityJournalReportLine ?? '',
+      rewardComebackReportLine ?? '',
       tomorrowRiskPresentation.report?.mainLine ?? '',
     ].filter(Boolean);
 
@@ -1120,6 +1198,20 @@ export function EndOfDayReportView({
         </View>
       ) : null}
 
+      {rewardComebackReportLine ? (
+        <View style={styles.rewardComebackReportRow}>
+          <Text style={styles.rewardComebackReportLabel} numberOfLines={1}>
+            Olumlu iz
+          </Text>
+          <Text
+            style={styles.rewardComebackReportText}
+            numberOfLines={reportSecondaryMaxLines}
+            ellipsizeMode="tail">
+            {rewardComebackReportLine}
+          </Text>
+        </View>
+      ) : null}
+
       {districtReportCardLine ? (
         <View style={styles.districtReportCardRow}>
           <Text style={styles.districtReportCardLabel} numberOfLines={1}>
@@ -1358,6 +1450,24 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: '600',
     color: '#5C4A32',
+    flexShrink: 1,
+  },
+  rewardComebackReportRow: {
+    gap: 4,
+    minWidth: 0,
+    paddingHorizontal: 4,
+  },
+  rewardComebackReportLabel: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#1F6B5E',
+    flexShrink: 1,
+  },
+  rewardComebackReportText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    color: '#2A5C56',
     flexShrink: 1,
   },
   districtReportCardRow: {

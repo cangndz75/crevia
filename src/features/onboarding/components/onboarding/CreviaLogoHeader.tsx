@@ -10,10 +10,12 @@ type CreviaLogoHeaderProps = {
 };
 
 export function CreviaLogoHeader({ compact = false, size }: CreviaLogoHeaderProps) {
-  const width = size ?? (compact ? 148 : 204);
+  const width = size ?? (compact ? 96 : 140);
 
   return (
-    <Animated.View entering={FadeInDown.duration(500)} style={styles.wrap}>
+    <Animated.View
+      entering={FadeInDown.duration(500)}
+      style={[styles.wrap, compact && styles.wrapCompact]}>
       <CreviaGameLogo width={width} />
     </Animated.View>
   );
@@ -24,5 +26,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing.xs,
+  },
+  wrapCompact: {
+    paddingVertical: 0,
   },
 });

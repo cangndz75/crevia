@@ -7,7 +7,10 @@ import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { buildEventResultAnalyticsPayload } from '@/core/analytics/analyticsPayloadBuilders';
+import { buildAdvisorRelationshipResultPresentation } from '@/core/advisorRelationship';
+import { resolveContentPackMetaForWiring } from '@/core/contentRuntimeActivation/contentRuntimeActivationWiring';
 import { buildDecisionImpactExplanation } from '@/core/decisionImpactExplanation';
+import { buildRewardComebackResultPresentation } from '@/core/rewardComeback';
 import { getEventAssignment } from '@/core/assignments/assignmentState';
 import {
   buildResultCarryOverMemory,
@@ -462,16 +465,26 @@ function DistrictImpact({ result }: { result: DecisionResultSnapshot }) {
   );
 }
 
-function EceComment({ fieldNote }: { fieldNote: string }) {
+function EceComment({
+  fieldNote,
+  relationshipLine,
+}: {
+  fieldNote: string;
+  relationshipLine?: string;
+}) {
+  const body =
+    relationshipLine?.trim() ||
+    fieldNote ||
+    'Harika bir iş çıkardın Can! Halkın memnuniyeti ve güveni yükseldi. Bu istikrarı koruyalım.';
   return (
     <View style={styles.eceComment}>
       <Image source={eceImage} style={styles.eceCommentImage} contentFit="contain" />
-      <View style={styles.eceCommentCopy}>
+      <View style={[styles.eceCommentCopy, { flexShrink: 1, minWidth: 0 }]}>
         <Text style={styles.eceCommentTitle} numberOfLines={1}>
           Ece’nin Yorumu
         </Text>
-        <Text style={styles.eceCommentBody} numberOfLines={3}>
-          {fieldNote || 'Harika bir iş çıkardın Can! Halkın memnuniyeti ve güveni yükseldi. Bu istikrarı koruyalım.'}
+        <Text style={styles.eceCommentBody} numberOfLines={2} ellipsizeMode="tail">
+          {body}
         </Text>
       </View>
     </View>
@@ -616,6 +629,82 @@ export function DecisionResultScreen() {
       resultCarryOver?.summary,
     ],
   );
+
+  const advisorRelationshipResult = useMemo(() => {
+    const day = result.day ?? currentDay;
+    if (day <= 1) return null;
+    const existingLines = [
+      impactExplanation?.mainLine ?? '',
+      resultCarryOver?.summary ?? '',
+      domainResultFocus?.echoLine ?? '',
+      result.summaryText ?? '',
+      viewModel.fieldNote,
+    ].filter(Boolean);
+    return buildAdvisorRelationshipResultPresentation({
+      day,
+      surface: 'result',
+      snapshot: result,
+      decisionImpact: impactExplanation,
+      operationSignals,
+      resourceFatigue:
+        operationSignals.vehicles?.status === 'strained' ||
+        operationSignals.vehicles?.status === 'critical'
+          ? { domain: 'vehicle', state: operationSignals.vehicles.status }
+          : null,
+      existingLines,
+    });
+  }, [
+    currentDay,
+    domainResultFocus?.echoLine,
+    impactExplanation,
+    operationalResources,
+    operationSignals,
+    result,
+    resultCarryOver?.summary,
+    viewModel.fieldNote,
+  ]);
+
+  const rewardComebackResult = useMemo(() => {
+    const day = result.day ?? currentDay;
+    if (day <= 1) return null;
+    const packMeta = resolveContentPackMetaForWiring({
+      event: relatedEvent ?? undefined,
+      eventId: result.eventId,
+      districtId: result.neighborhoodId,
+      day,
+      eventPool,
+    });
+    const existingLines = [
+      impactExplanation?.mainLine ?? '',
+      advisorRelationshipResult?.resultLine ?? '',
+      resultCarryOver?.summary ?? '',
+      domainResultFocus?.echoLine ?? '',
+      result.summaryText ?? '',
+    ].filter(Boolean);
+    return buildRewardComebackResultPresentation({
+      day,
+      surface: 'result',
+      snapshot: result,
+      eventId: result.eventId,
+      decisionImpact: impactExplanation,
+      advisorRelationship: advisorRelationshipResult?.model,
+      carryOverMemory: resultCarryOver ?? null,
+      contentPackMeta: packMeta,
+      operationSignals,
+      existingLines,
+    });
+  }, [
+    advisorRelationshipResult?.model,
+    advisorRelationshipResult?.resultLine,
+    currentDay,
+    domainResultFocus?.echoLine,
+    eventPool,
+    impactExplanation,
+    operationSignals,
+    relatedEvent,
+    result,
+    resultCarryOver,
+  ]);
 
   const mapBeforeAfterSummary = useMemo(() => {
     if (isMissing) return null;
@@ -856,7 +945,23 @@ export function DecisionResultScreen() {
           ) : null}
 
           <DistrictImpact result={result} />
-          <EceComment fieldNote={viewModel.fieldNote} />
+          {rewardComebackResult?.visible && rewardComebackResult.resultLine ? (
+            <View style={styles.rewardComebackChip}>
+              <Text style={styles.rewardComebackChipLabel} numberOfLines={1}>
+                {rewardComebackResult.label ?? 'Olumlu iz'}
+              </Text>
+              <Text
+                style={styles.rewardComebackChipBody}
+                numberOfLines={2}
+                ellipsizeMode="tail">
+                {rewardComebackResult.resultLine}
+              </Text>
+            </View>
+          ) : null}
+          <EceComment
+            fieldNote={viewModel.fieldNote}
+            relationshipLine={advisorRelationshipResult?.resultLine}
+          />
 
           <View style={styles.actionArea}>
             <Pressable
@@ -1323,6 +1428,29 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '900',
     color: palette.tealDark,
+  },
+  rewardComebackChip: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(31, 107, 94, 0.18)',
+    backgroundColor: '#F4FBF8',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 2,
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  rewardComebackChipLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1F6B5E',
+    flexShrink: 1,
+  },
+  rewardComebackChipBody: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#2A5C56',
+    flexShrink: 1,
   },
   eceComment: {
     flexDirection: 'row',

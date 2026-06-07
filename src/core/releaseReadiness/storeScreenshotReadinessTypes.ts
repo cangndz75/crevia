@@ -83,6 +83,9 @@ export type CreviaStoreScreenshotReadinessResult = {
   deviceMatrixComplete: boolean;
   assetChecklistComplete: boolean;
   nextActions: string[];
+  narrativePackId?: string;
+  narrativePackStatus?: string;
+  narrativeDocsPath?: string;
 };
 
 export type RunStoreScreenshotReadinessAuditOptions = {

@@ -154,6 +154,20 @@ export const REGION_CARDS: RegionCardData[] = [
       difficulty: { label: 'Operasyon Zorluğu', value: 'Yüksek', tone: 'high' },
     },
   },
+  {
+    id: 'industrial_market',
+    title: 'Sanayi & Pazar Bölgesi',
+    badges: [
+      { label: 'Geniş Rota', icon: 'map-outline' },
+      { label: 'Operasyon Baskısı', icon: 'construct-outline' },
+    ],
+    description: 'Rota yoğun, araç ve personel yorgunluğu yüksek. Kaynak dengesi kritik.',
+    metrics: {
+      socialRisk: { label: 'Sosyal Risk', value: 'Orta', tone: 'mid' },
+      staffPace: { label: 'Personel Temposu', value: 'Yüksek', tone: 'high' },
+      difficulty: { label: 'Operasyon Zorluğu', value: 'Yüksek', tone: 'high' },
+    },
+  },
 ];
 
 export const TUTORIAL_EVENT = {
@@ -166,6 +180,12 @@ export const TUTORIAL_EVENT = {
   swipeHint: 'Kartı kaydırarak diğer olaylara göz at',
 };
 
+export type EventDecisionImpact = {
+  label: string;
+  value: string;
+  positive?: boolean;
+};
+
 export type EventDecisionOption = {
   id: string;
   title: string;
@@ -173,32 +193,48 @@ export type EventDecisionOption = {
   icon: keyof typeof Ionicons.glyphMap;
   tone: 'mint' | 'blue' | 'orange';
   badge: string;
+  impacts: EventDecisionImpact[];
 };
 
 export const EVENT_DECISIONS: EventDecisionOption[] = [
   {
     id: 'fast',
     title: 'Hızlı Müdahale',
-    subtitle: 'Hemen ekip yönlendir, hızlı çöz.',
+    subtitle: 'Ekibi sahaya yönlendir; hızlı çözüm, yüksek kaynak maliyeti.',
     icon: 'flash-outline',
     tone: 'mint',
     badge: 'Önerilen',
+    impacts: [
+      { label: 'Güven', value: '+5', positive: true },
+      { label: 'Risk', value: '-4', positive: true },
+      { label: 'Bütçe', value: '-2.5K' },
+    ],
   },
   {
     id: 'planned',
     title: 'Planlı Çözüm',
-    subtitle: 'Programı düzenle, kalıcı çözüm üret.',
+    subtitle: 'Durumu izle; bütçe korunur, risk sürer.',
     icon: 'calendar-outline',
     tone: 'blue',
     badge: 'Dengeli',
+    impacts: [
+      { label: 'Güven', value: '+1', positive: true },
+      { label: 'Risk', value: '+2' },
+      { label: 'Bütçe', value: '0' },
+    ],
   },
   {
     id: 'partial',
     title: 'Kısmi Müdahale',
-    subtitle: 'Kaynakları koru, durumu izle.',
-    icon: 'shield-outline',
+    subtitle: 'Mahalleyle iletişim kur; sosyal baskı azalır.',
+    icon: 'chatbubble-ellipses-outline',
     tone: 'orange',
-    badge: 'Riskli',
+    badge: 'Dengeli',
+    impacts: [
+      { label: 'Güven', value: '+2', positive: true },
+      { label: 'Risk', value: '-3', positive: true },
+      { label: 'Bütçe', value: '-500' },
+    ],
   },
 ];
 

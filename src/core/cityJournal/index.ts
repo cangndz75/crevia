@@ -43,8 +43,3 @@ export {
   buildCityJournalReportLine,
   buildCityJournalReportPresentation,
 } from './cityJournalPresentation';
-
-export {
-  verifyCityJournalScenario,
-  type VerifyCityJournalOutcome,
-} from './verifyCityJournalScenario';

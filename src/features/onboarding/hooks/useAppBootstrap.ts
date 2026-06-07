@@ -5,6 +5,10 @@ import {
   DEFAULT_PILOT_DISTRICT_ID,
   type PilotDistrictId,
 } from '@/core/models/DistrictProfile';
+import {
+  isOnboardingStarterDecisionId,
+  type OnboardingStarterDecisionId,
+} from '@/core/onboarding/onboardingStarterDecision';
 import { breadcrumbOfflineResumeWarning } from '@/core/crashPerformance/crashBreadcrumbs';
 import { checkConnectivity, subscribeConnectivity } from '@/core/onboarding/connectivity';
 import {
@@ -88,9 +92,15 @@ export function useAppBootstrap() {
     }
   }, [resolvePhase]);
 
-  /** Onboarding biter — bayrak yazılır, pilot bölge store'a işlenir. */
+  /** Onboarding biter — bayrak yazılır, pilot bölge ve ilk karar store'a işlenir. */
   const completeOnboarding = useCallback(
-    async (districtId: PilotDistrictId = DEFAULT_PILOT_DISTRICT_ID) => {
+    async (payload?: {
+      districtId?: PilotDistrictId;
+      starterDecision?: OnboardingStarterDecisionId;
+    }) => {
+      const districtId = payload?.districtId ?? DEFAULT_PILOT_DISTRICT_ID;
+      const starterDecision = payload?.starterDecision ?? 'fast';
+
       await setOnboardingComplete();
 
       const store = useGameStore.getState();
@@ -104,6 +114,10 @@ export function useAppBootstrap() {
       }
 
       store.startPilotDistrict(districtId);
+
+      if (isOnboardingStarterDecisionId(starterDecision)) {
+        store.applyOnboardingStarterDecision(starterDecision);
+      }
 
       setPhase('ready');
       setGateOpen(true);

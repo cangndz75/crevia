@@ -15,6 +15,10 @@ import {
   DEFAULT_PILOT_DISTRICT_ID,
   type PilotDistrictId,
 } from '@/core/models/DistrictProfile';
+import {
+  isOnboardingStarterDecisionId,
+  type OnboardingStarterDecisionId,
+} from '@/core/onboarding/onboardingStarterDecision';
 import { CreviaLogoHeader } from '@/features/onboarding/components/onboarding/CreviaLogoHeader';
 import { OnboardingBackground } from '@/features/onboarding/components/onboarding/OnboardingBackground';
 import { OnboardingBottomControls } from '@/features/onboarding/components/onboarding/OnboardingBottomControls';
@@ -24,36 +28,43 @@ import { RoadmapOnboardingPage } from '@/features/onboarding/components/onboardi
 import { WelcomeOnboardingPage } from '@/features/onboarding/components/onboarding/steps/WelcomeOnboardingPage';
 import { ONBOARDING_STEPS } from '@/features/onboarding/data/onboardingData';
 import { onboardingTokens } from '@/features/onboarding/theme/onboardingTokens';
+import { buildRoadmapStepSubtitle } from '@/features/onboarding/utils/onboardingRoadmapPresentation';
 
 const TOTAL = ONBOARDING_STEPS.length;
 
+export type OnboardingFinishPayload = {
+  districtId: PilotDistrictId;
+  starterDecision: OnboardingStarterDecisionId;
+};
+
 export type CreviaOnboardingScreenProps = {
-  onFinish: (districtId: PilotDistrictId) => void | Promise<void>;
+  onFinish: (payload: OnboardingFinishPayload) => void | Promise<void>;
 };
 
 export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps) {
   const pagerRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
-  const isSmallPhone = width <= 370;
-  const horizontalPadding = isSmallPhone ? 20 : 26;
-  const titleFont = isSmallPhone ? 28 : 34;
-  const subtitleFont = isSmallPhone ? 14 : 16;
-  const ctaHeight = isSmallPhone ? 62 : 70;
+  const { width, height } = useWindowDimensions();
   const [stepIndex, setStepIndex] = useState(0);
+  const isCompact = height < 900 || width <= 390;
+  const isSmallPhone = width <= 370 || height < 740;
+  const horizontalPadding = isSmallPhone ? 18 : 24;
+  const titleFont = isCompact ? (stepIndex === 0 ? 22 : 20) : stepIndex === 0 ? 28 : 24;
+  const subtitleFont = isCompact ? 12 : 14;
+  const ctaHeight = isCompact ? 50 : 58;
   const [selectedRegionId, setSelectedRegionId] =
     useState<PilotDistrictId>(DEFAULT_PILOT_DISTRICT_ID);
   const [selectedDecisionId, setSelectedDecisionId] = useState('fast');
 
   const step = ONBOARDING_STEPS[stepIndex]!;
   const isLast = stepIndex === TOTAL - 1;
-  const logoSize = isSmallPhone
+  const logoSize = isCompact
     ? stepIndex === 0
-      ? 170
-      : 132
+      ? 92
+      : 64
     : stepIndex === 0
-      ? 210
-      : 154;
+      ? 120
+      : 80;
 
   const scrollToStep = useCallback(
     (index: number) => {
@@ -64,7 +75,11 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
   );
 
   const handleFinish = () => {
-    void onFinish(selectedRegionId);
+    const starterDecision = isOnboardingStarterDecisionId(selectedDecisionId)
+      ? selectedDecisionId
+      : 'fast';
+
+    void onFinish({ districtId: selectedRegionId, starterDecision });
   };
 
   const handlePrimary = () => {
@@ -87,13 +102,27 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
   };
 
   const titleLines = step.titleLines ?? [step.title];
+  const stepBody =
+    stepIndex === TOTAL - 1
+      ? buildRoadmapStepSubtitle(
+          selectedRegionId,
+          isOnboardingStarterDecisionId(selectedDecisionId) ? selectedDecisionId : 'fast',
+        )
+      : step.body;
 
   return (
     <View style={styles.root}>
       <OnboardingBackground />
 
-      <View style={[styles.header, { paddingHorizontal: horizontalPadding }]}>
-        <CreviaLogoHeader compact={stepIndex > 0} size={logoSize} />
+      <View
+        style={[
+          styles.header,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingTop: Math.max(insets.top, isCompact ? 2 : 6),
+          },
+        ]}>
+        <CreviaLogoHeader compact={stepIndex > 0 || isCompact} size={logoSize} />
         <Animated.View
           key={`title-${stepIndex}`}
           entering={FadeInDown.duration(360)}
@@ -109,9 +138,15 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
           ))}
           <Text
             style={[styles.body, { fontSize: subtitleFont, lineHeight: subtitleFont + 7 }]}
-            numberOfLines={3}
+            numberOfLines={
+              isCompact
+                ? stepIndex === 0 || stepIndex === TOTAL - 1
+                  ? 2
+                  : 1
+                : 3
+            }
             ellipsizeMode="tail">
-            {step.body}
+            {stepBody}
           </Text>
         </Animated.View>
       </View>
@@ -127,16 +162,21 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
         contentContainerStyle={styles.pagerContent}>
         <View style={[styles.page, { width }]}>
           <ScrollView
+            style={styles.pageInnerScroll}
             showsVerticalScrollIndicator={false}
+            bounces
             contentContainerStyle={[styles.pageScroll, { paddingHorizontal: horizontalPadding }]}>
-            <WelcomeOnboardingPage />
+            <WelcomeOnboardingPage compact={isCompact} />
           </ScrollView>
         </View>
         <View style={[styles.page, { width }]}>
           <ScrollView
+            style={styles.pageInnerScroll}
             showsVerticalScrollIndicator={false}
+            bounces
             contentContainerStyle={[styles.pageScroll, { paddingHorizontal: horizontalPadding }]}>
             <RegionOnboardingPage
+              compact={isCompact}
               selectedId={selectedRegionId}
               onSelect={setSelectedRegionId}
             />
@@ -144,9 +184,12 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
         </View>
         <View style={[styles.page, { width }]}>
           <ScrollView
+            style={styles.pageInnerScroll}
             showsVerticalScrollIndicator={false}
+            bounces
             contentContainerStyle={[styles.pageScroll, { paddingHorizontal: horizontalPadding }]}>
             <EventsOnboardingPage
+              compact={isCompact}
               selectedDecisionId={selectedDecisionId}
               onSelectDecision={setSelectedDecisionId}
             />
@@ -154,9 +197,15 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
         </View>
         <View style={[styles.page, { width }]}>
           <ScrollView
+            style={styles.pageInnerScroll}
             showsVerticalScrollIndicator={false}
+            bounces
             contentContainerStyle={[styles.pageScroll, { paddingHorizontal: horizontalPadding }]}>
-            <RoadmapOnboardingPage />
+            <RoadmapOnboardingPage
+              compact={isCompact}
+              districtId={selectedRegionId}
+              decisionId={selectedDecisionId}
+            />
           </ScrollView>
         </View>
       </ScrollView>
@@ -166,7 +215,8 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
           styles.footer,
           {
             paddingHorizontal: horizontalPadding,
-            paddingBottom: Math.max(insets.bottom, 10),
+            paddingBottom: Math.max(insets.bottom, isCompact ? 6 : 10),
+            paddingTop: isCompact ? 2 : 4,
           },
         ]}>
         <OnboardingBottomControls
@@ -178,6 +228,7 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
           showBack={stepIndex > 0}
           isFinal={isLast}
           ctaHeight={ctaHeight}
+          compact={isCompact}
         />
       </View>
     </View>
@@ -190,15 +241,16 @@ const styles = StyleSheet.create({
     backgroundColor: onboardingTokens.background,
   },
   header: {
-    paddingTop: 4,
-    gap: 7,
+    gap: 2,
     alignItems: 'center',
+    flexShrink: 0,
   },
   headerText: {
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
     paddingHorizontal: 0,
     minWidth: 0,
+    flexShrink: 0,
   },
   title: {
     fontWeight: '900',
@@ -207,7 +259,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   body: {
-    marginTop: 6,
+    marginTop: 2,
     color: onboardingTokens.textMuted,
     textAlign: 'center',
     fontWeight: '600',
@@ -222,11 +274,15 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
   },
+  pageInnerScroll: {
+    flex: 1,
+  },
   pageScroll: {
-    paddingTop: 10,
-    paddingBottom: 18,
+    flexGrow: 1,
+    paddingTop: 2,
+    paddingBottom: 12,
   },
   footer: {
-    paddingTop: 6,
+    flexShrink: 0,
   },
 });

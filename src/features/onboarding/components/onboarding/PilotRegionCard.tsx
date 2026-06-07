@@ -22,9 +22,16 @@ type PilotRegionCardProps = {
   selected: boolean;
   onPress: () => void;
   index: number;
+  compact?: boolean;
 };
 
-export function PilotRegionCard({ region, selected, onPress, index }: PilotRegionCardProps) {
+export function PilotRegionCard({
+  region,
+  selected,
+  onPress,
+  index,
+  compact = false,
+}: PilotRegionCardProps) {
   const anim = useAnimatedStyle(() => ({
     transform: [{ scale: withSpring(selected ? 1.01 : 1, { damping: 18 }) }],
     borderColor: withSpring(selected ? onboardingTokens.primary : onboardingTokens.border),
@@ -37,26 +44,35 @@ export function PilotRegionCard({ region, selected, onPress, index }: PilotRegio
         accessibilityRole="button"
         accessibilityLabel={region.title}
         accessibilityState={{ selected }}>
-        <Animated.View style={[styles.card, selected && styles.cardSelected, anim]}>
+        <Animated.View
+          style={[
+            styles.card,
+            compact && styles.cardCompact,
+            selected && styles.cardSelected,
+            anim,
+          ]}>
           {region.recommended ? (
-            <View style={styles.recommended}>
-              <Ionicons name="star" size={11} color="#FFFFFF" />
+            <View style={[styles.recommended, compact && styles.recommendedCompact]}>
+              <Ionicons name="star" size={compact ? 9 : 11} color="#FFFFFF" />
               <Text style={styles.recommendedText} numberOfLines={1}>
                 Önerilen
               </Text>
             </View>
           ) : selected ? (
-            <View style={styles.recommended}>
-              <Ionicons name="checkmark" size={11} color="#FFFFFF" />
+            <View style={[styles.recommended, compact && styles.recommendedCompact]}>
+              <Ionicons name="checkmark" size={compact ? 9 : 11} color="#FFFFFF" />
               <Text style={styles.recommendedText} numberOfLines={1}>
                 Seçildi
               </Text>
             </View>
           ) : null}
 
-          <View style={styles.inner}>
-            <View style={styles.textCol}>
-              <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+          <View style={[styles.inner, compact && styles.innerCompact]}>
+            <View style={[styles.textCol, compact && styles.textColCompact]}>
+              <Text
+                style={[styles.title, compact && styles.titleCompact]}
+                numberOfLines={1}
+                ellipsizeMode="tail">
                 {region.title}
               </Text>
               <View style={styles.badges}>
@@ -69,10 +85,13 @@ export function PilotRegionCard({ region, selected, onPress, index }: PilotRegio
                   </View>
                 ))}
               </View>
-              <Text style={styles.desc} numberOfLines={2} ellipsizeMode="tail">
+              <Text
+                style={[styles.desc, compact && styles.descCompact]}
+                numberOfLines={compact ? 1 : 2}
+                ellipsizeMode="tail">
                 {region.description}
               </Text>
-              <View style={styles.metrics}>
+              <View style={[styles.metrics, compact && styles.metricsCompact]}>
                 {(
                   [
                     region.metrics.socialRisk,
@@ -100,10 +119,10 @@ export function PilotRegionCard({ region, selected, onPress, index }: PilotRegio
               </View>
             </View>
 
-            <View style={styles.visual}>
+            <View style={[styles.visual, compact && styles.visualCompact]}>
               <Image
                 source={getDistrictAsset(region.id)}
-                style={styles.visualImage}
+                style={[styles.visualImage, compact && styles.visualImageCompact]}
                 contentFit="contain"
               />
             </View>
@@ -129,6 +148,9 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 4,
   },
+  cardCompact: {
+    borderRadius: 18,
+  },
   cardSelected: {
     backgroundColor: '#F9F7FF',
     shadowColor: onboardingTokens.primary,
@@ -147,6 +169,12 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 999,
   },
+  recommendedCompact: {
+    top: 8,
+    right: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
   recommendedText: {
     fontSize: 10,
     fontWeight: '900',
@@ -158,16 +186,27 @@ const styles = StyleSheet.create({
     gap: 10,
     minWidth: 0,
   },
+  innerCompact: {
+    padding: 10,
+    gap: 8,
+  },
   textCol: {
     flex: 1,
     minWidth: 0,
     gap: 8,
+  },
+  textColCompact: {
+    gap: 5,
   },
   title: {
     maxWidth: '72%',
     fontSize: 17,
     fontWeight: '900',
     color: onboardingTokens.textMain,
+  },
+  titleCompact: {
+    fontSize: 15,
+    maxWidth: '68%',
   },
   badges: {
     flexDirection: 'row',
@@ -200,10 +239,17 @@ const styles = StyleSheet.create({
     color: onboardingTokens.textMuted,
     fontWeight: '600',
   },
+  descCompact: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
   metrics: {
     flexDirection: 'row',
     gap: 6,
     minWidth: 0,
+  },
+  metricsCompact: {
+    gap: 4,
   },
   metric: {
     flex: 1,
@@ -235,8 +281,17 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     marginTop: 12,
   },
+  visualCompact: {
+    width: 64,
+    height: 78,
+    marginTop: 6,
+  },
   visualImage: {
     width: 96,
     height: 96,
+  },
+  visualImageCompact: {
+    width: 68,
+    height: 68,
   },
 });
