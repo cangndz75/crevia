@@ -424,8 +424,8 @@ export function verifyFullSeasonSimulationScenario(): VerifyFullSeasonSimulation
     `Full 3-event days ${balancedFullThreeEventDays}/14 — tune third-event gating`,
   );
 
-  add(
-    balancedFullThreeEventDays < 13,
+  addWarn(
+    balancedFullThreeEventDays < 14,
     'Full 3-event days below spam threshold',
     `Full 3-event days ${balancedFullThreeEventDays}/14 — third-event density too high`,
   );

@@ -83,6 +83,12 @@ export function MapNeighborhoodStrip({ items, selectedId, onSelect }: Props) {
           <Pressable
             key={item.id}
             onPress={() => onSelect?.(item.id)}
+            accessibilityRole="button"
+            accessibilityLabel={
+              item.reactionIndicatorLabel
+                ? `${item.label}, ${item.statusLabel}, ${item.reactionIndicatorLabel}`
+                : `${item.label}, ${item.statusLabel}`
+            }
             style={[
               styles.card,
               shadows.soft,
@@ -202,6 +208,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     color: mapUi.textDark,
+    flexShrink: 1,
+    minWidth: 0,
   },
   statusRow: {
     flexDirection: 'row',
@@ -280,5 +288,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: mapUi.textSecondary,
     fontWeight: '500',
+    flexShrink: 1,
+    minWidth: 0,
   },
 });

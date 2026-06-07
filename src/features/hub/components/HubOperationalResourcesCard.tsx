@@ -245,6 +245,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: HUB_PREMIUM_COLORS.tealDark,
     flexShrink: 1,
+    minWidth: 0,
   },
   subtitle: {
     fontSize: 11,

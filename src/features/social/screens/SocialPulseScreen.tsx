@@ -4,6 +4,9 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { getAnalyticsAccessModeFromGameState } from '@/core/analytics/analyticsRuntime';
+import { breadcrumbSocialPulseOpened } from '@/core/crashPerformance/crashBreadcrumbs';
+import { startScreenTiming } from '@/core/crashPerformance/performanceLite';
 import { resolveEventCardById } from '@/core/liveFlow/eventLifecycleEngine';
 import { normalizePostPilotOperationState } from '@/core/postPilot/postPilotOperationSeed';
 import type { SocialQuickActionType } from '@/core/social/socialTypes';
@@ -44,7 +47,9 @@ export function SocialPulseScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const socialPulseState = useGameStore(selectSocialPulseStateFromStore);
-  const currentDay = useGameStore((s) => s.gameState.city.day);
+  const gameState = useGameStore((s) => s.gameState);
+  const monetization = useGameStore((s) => s.monetization);
+  const currentDay = gameState.city.day;
   const pilotStatus = useGameStore((s) => s.gameState.pilot.status);
   const postPilotOperation = useGameStore(selectPostPilotOperation);
   const lastDecisionResult = useGameStore(selectLastDecisionResult);
@@ -56,6 +61,14 @@ export function SocialPulseScreen() {
   const isDay1Compact = useGameStore(selectIsDay1TutorialEligible);
   const applySocialQuickAction = useGameStore((s) => s.applySocialQuickAction);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    startScreenTiming('SocialPulseScreen', { day: currentDay, surface: 'social' });
+    breadcrumbSocialPulseOpened({
+      day: currentDay,
+      phase: getAnalyticsAccessModeFromGameState(gameState, monetization),
+    });
+  }, [currentDay, gameState, monetization]);
 
   const postPilotPhase = useMemo(() => {
     const normalized = normalizePostPilotOperationState(postPilotOperation, {

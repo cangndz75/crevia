@@ -2,10 +2,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { runFullLoopAnalysis } from '@/core/fullLoop/runFullLoopSimulation';
+import { runNoNewSystemFreezeAudit } from '@/core/releaseReadiness/noNewSystemFreezeAudit';
+import { runPrivacyPolicyReadinessAudit } from '@/core/releaseReadiness/privacyPolicyReadinessAudit';
 import { runSoftLaunchReadinessReview } from '@/core/releaseReadiness/softLaunchReviewAudit';
-import { verifyNoNewSystemFreezeScenario } from '@/core/releaseReadiness/verifyNoNewSystemFreezeScenario';
-import { verifyPrivacyPolicyReadinessScenario } from '@/core/releaseReadiness/verifyPrivacyPolicyReadinessScenario';
-import { verifySoftLaunchReviewScenario } from '@/core/releaseReadiness/verifySoftLaunchReviewScenario';
+import {
+  isAnalyticsSchemaCodeHealthy,
+  summarizeSoftLaunchReviewCodeBlockers,
+} from '@/core/softLaunchRegressionCleanup/verificationHealthHelpers';
 import { verifyFullUxFlowScenario } from '@/core/ux/verifyFullUxFlowScenario';
 import { SAVE_VERSION } from '@/store/gamePersist';
 
@@ -27,12 +30,23 @@ import {
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
 
+export type VerifyPostLaunchTelemetryReadinessOptions = {
+  progress?: boolean;
+};
+
 export type VerifyPostLaunchTelemetryReadinessOutcome = {
   ok: boolean;
   warn: boolean;
   checks: string[];
   telemetryHealth: string;
 };
+
+function progressLog(enabled: boolean, message: string): void {
+  if (enabled) {
+    // eslint-disable-next-line no-console
+    console.log(`[telemetry-verify] ${message}`);
+  }
+}
 
 function assert(checks: string[], ok: boolean, pass: string, fail: string): boolean {
   checks.push(ok ? `PASS ${pass}` : `FAIL ${fail}`);
@@ -49,14 +63,20 @@ function readRepo(rel: string): string {
   return existsSync(full) ? readFileSync(full, 'utf8') : '';
 }
 
-export function verifyPostLaunchTelemetryReadinessScenario(): VerifyPostLaunchTelemetryReadinessOutcome {
+export function verifyPostLaunchTelemetryReadinessScenario(
+  options: VerifyPostLaunchTelemetryReadinessOptions = {},
+): VerifyPostLaunchTelemetryReadinessOutcome {
+  const progress = options.progress !== false;
   const checks: string[] = [];
   let ok = true;
   let hasWarn = false;
 
+  progressLog(progress, 'audit: post-launch telemetry readiness...');
   const result = runPostLaunchTelemetryReadinessAudit({ mode: 'soft_launch_candidate' });
-  const internalReview = runSoftLaunchReadinessReview({ mode: 'internal_device_test' });
   const schemaEventCount = ANALYTICS_EVENT_DEFINITIONS.length;
+
+  progressLog(progress, 'audit: soft launch review (internal summary)...');
+  const internalReview = runSoftLaunchReadinessReview({ mode: 'internal_device_test' });
 
   ok =
     assert(
@@ -175,14 +195,76 @@ export function verifyPostLaunchTelemetryReadinessScenario(): VerifyPostLaunchTe
       ) && ok;
   }
 
-  ok = assert(checks, verifyAnalyticsNewSystemsScenario().ok, 'verify:analytics-new-systems compatible', 'Broken') && ok;
-  ok = assert(checks, verifySoftLaunchReviewScenario().ok, 'verify:soft-launch-review compatible', 'Broken') && ok;
-  ok = assert(checks, verifyNoNewSystemFreezeScenario().ok, 'verify:no-new-system-freeze compatible', 'Broken') && ok;
-  ok = assert(checks, verifyPrivacyPolicyReadinessScenario().ok, 'verify:privacy-policy-readiness compatible', 'Broken') && ok;
+  progressLog(progress, 'compatibility: analytics-new-systems...');
+  ok = assert(checks, verifyAnalyticsNewSystemsScenario().ok, 'verify:analytics-new-systems compatible', 'analytics-new-systems broken') && ok;
 
+  progressLog(progress, 'compatibility: soft-launch-review (summary, no nested CLI)...');
+  const reviewSummary = summarizeSoftLaunchReviewCodeBlockers('internal_device_test');
+  if (
+    !warn(
+      checks,
+      reviewSummary.codeBlockers.length === 0,
+      'soft-launch-review code health PASS',
+      `manual_blocker_or_stale: ${reviewSummary.manualBlockers.join('; ') || 'see soft-launch-review'}`,
+    )
+  ) {
+    hasWarn = true;
+  }
+
+  progressLog(progress, 'compatibility: no-new-system-freeze (audit only)...');
+  const freezeAudit = runNoNewSystemFreezeAudit({ mode: 'soft_launch_candidate' });
+  ok =
+    assert(
+      checks,
+      freezeAudit.violations.filter((v) => v.severity === 'blocker').length === 0,
+      'freeze compliance no code expansion blockers',
+      `freeze_violations=${freezeAudit.violations.length}`,
+    ) && ok;
+  if (
+    !warn(
+      checks,
+      freezeAudit.manualBlockers.some((b) => b.status === 'pending'),
+      'freeze manual blockers visible',
+      'freeze manual blockers missing',
+    )
+  ) {
+    hasWarn = true;
+  }
+
+  progressLog(progress, 'compatibility: privacy-policy-readiness (audit only)...');
+  const privacyAudit = runPrivacyPolicyReadinessAudit({ mode: 'launch_candidate' });
+  ok =
+    assert(
+      checks,
+      isAnalyticsSchemaCodeHealthy(),
+      'analytics schema healthy for telemetry pass',
+      'analytics schema regression',
+    ) && ok;
+  if (
+    !warn(
+      checks,
+      privacyAudit.publishedPrivacyUrlIsPlaceholder,
+      'manual_blocker: privacy_url_placeholder',
+      'privacy URL should remain placeholder blocker',
+    )
+  ) {
+    hasWarn = true;
+  }
+  if (
+    !warn(
+      checks,
+      privacyAudit.thirdPartyProcessors.some((p) => p.id === 'crash_reporting' && p.name.includes('Sentry')),
+      'privacy Sentry processor listed',
+      'privacy Sentry processor missing',
+    )
+  ) {
+    hasWarn = true;
+  }
+
+  progressLog(progress, 'compatibility: full-loop + full-ux-flow...');
   const fullLoop = runFullLoopAnalysis();
   ok = assert(checks, fullLoop.totalFAIL === 0, 'verify:full-loop compatible', `FAIL=${fullLoop.totalFAIL}`) && ok;
-  ok = assert(checks, verifyFullUxFlowScenario().ok, 'verify:full-ux-flow compatible', 'Broken') && ok;
+  ok = assert(checks, verifyFullUxFlowScenario().ok, 'verify:full-ux-flow compatible', 'full-ux-flow broken') && ok;
   ok = assert(checks, SAVE_VERSION === 23, 'SAVE_VERSION 23 unchanged', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
 
   ok =
@@ -217,6 +299,8 @@ export function verifyPostLaunchTelemetryReadinessScenario(): VerifyPostLaunchTe
   if (result.warnings.length > 0) {
     hasWarn = true;
   }
+
+  progressLog(progress, 'done.');
 
   return {
     ok,

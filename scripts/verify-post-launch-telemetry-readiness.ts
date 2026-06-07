@@ -7,7 +7,9 @@ import { runPostLaunchTelemetryReadinessAudit } from '../src/core/analytics/post
 import { buildPostLaunchTelemetryConsoleSummary } from '../src/core/analytics/postLaunchTelemetryReadinessPresentation';
 import { verifyPostLaunchTelemetryReadinessScenario } from '../src/core/analytics/verifyPostLaunchTelemetryReadinessScenario';
 
-const outcome = verifyPostLaunchTelemetryReadinessScenario();
+// eslint-disable-next-line no-console
+console.log('Starting post-launch telemetry verify...');
+const outcome = verifyPostLaunchTelemetryReadinessScenario({ progress: true });
 const result = runPostLaunchTelemetryReadinessAudit({ mode: 'soft_launch_candidate' });
 
 for (const line of outcome.checks) {

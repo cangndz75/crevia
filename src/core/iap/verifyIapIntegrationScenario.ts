@@ -5,7 +5,7 @@ import {
   buildAnalyticsPayload,
   validateAnalyticsEventPayload,
 } from '@/core/analytics/analyticsSchema';
-import { verifyAnalyticsScenario } from '@/core/analytics/verifyAnalyticsScenario';
+import { validateAnalyticsEventDefinitions } from '@/core/analytics/analyticsSchema';
 import {
   applyIapEntitlementToMonetizationState,
   createInitialMonetizationState,
@@ -534,10 +534,14 @@ export function verifyIapIntegrationScenario(): VerifyIapIntegrationOutcome {
     assert(checks, monetizationVerify.ok, 'monetization-gate compatible', 'monetization verify failed') &&
     ok;
 
-  const analyticsVerify = verifyAnalyticsScenario();
+  const analyticsSchema = validateAnalyticsEventDefinitions();
   ok =
-    assert(checks, analyticsVerify.ok, 'analytics-events compatible', 'analytics verify failed') &&
-    ok;
+    assert(
+      checks,
+      analyticsSchema.failCount === 0,
+      'analytics-events schema compatible',
+      `analytics schema FAIL count=${analyticsSchema.failCount}`,
+    ) && ok;
 
   const productDesignVerify = verifyIapProductDesignScenario();
   ok =

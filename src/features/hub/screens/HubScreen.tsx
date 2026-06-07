@@ -6,8 +6,15 @@ import {
 } from '@/core/analytics/analyticsPayloadBuilders';
 import {
   buildCommonAnalyticsBase,
+  getAnalyticsAccessModeFromGameState,
   trackOncePerRuntime,
 } from '@/core/analytics/analyticsRuntime';
+import {
+  breadcrumbContentPackEventShown,
+  breadcrumbHubScreenOpened,
+  breadcrumbMainOperationFeelShown,
+} from '@/core/crashPerformance/crashBreadcrumbs';
+import { startScreenTiming } from '@/core/crashPerformance/performanceLite';
 import {
   buildCityJournalHubPresentation,
   buildCityJournalLiteModel,
@@ -378,6 +385,25 @@ export function HubScreen() {
   ]);
 
   useEffect(() => {
+    startScreenTiming('HubScreen', { day: hubDay, surface: 'hub' });
+    breadcrumbHubScreenOpened({
+      day: hubDay,
+      phase: getAnalyticsAccessModeFromGameState(gameState, monetization),
+    });
+
+    if (mainOperationFeel && hubDay >= 8) {
+      breadcrumbMainOperationFeelShown({ day: hubDay });
+    }
+
+    if (hubPackWiringContext.contentPackMeta?.packId) {
+      breadcrumbContentPackEventShown({
+        day: hubDay,
+        packId: hubPackWiringContext.contentPackMeta.packId,
+        familyId: hubPackWiringContext.contentPackMeta.familyId,
+        eventId: hubPackWiringContext.event?.id,
+      });
+    }
+
     const base = buildCommonAnalyticsBase(gameState, 'hub', monetization);
     trackOncePerRuntime(`day_started:${hubDay}`, 'day_started', base);
 
@@ -421,6 +447,9 @@ export function HubScreen() {
     hubCardVisibility.showMainOperationSeason,
     hubCardVisibility.showOperationalResources,
     hubDay,
+    hubPackWiringContext.contentPackMeta,
+    hubPackWiringContext.event?.id,
+    mainOperationFeel,
     monetization,
     operationalResources,
   ]);
@@ -446,6 +475,7 @@ export function HubScreen() {
           cityEchoHubLine ?? '',
         ].filter(Boolean)}
         showHubCarryOver={showHubCarryOver}
+        showOperationalResources={hubCardVisibility.showOperationalResources}
         scrollFooter={
           __DEV__ && !hubCardVisibility.suppressDevTools ? <HubDevTools /> : undefined
         }

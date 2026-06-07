@@ -7,6 +7,11 @@ import {
   createAnalyticsEvent,
   trackAnalyticsEvent,
 } from '@/core/analytics/analyticsTracker';
+import {
+  breadcrumbIapPurchaseStatus,
+  breadcrumbPostPilotOfferSeen,
+} from '@/core/crashPerformance/crashBreadcrumbs';
+import { startScreenTiming } from '@/core/crashPerformance/performanceLite';
 import type { AnalyticsAccessMode } from '@/core/analytics/analyticsTypes';
 import {
   IAP_OFFER_COPY,
@@ -116,8 +121,10 @@ export function PostPilotOfferScreen() {
     if (!canShowOffer || seenRef.current) return;
     seenRef.current = true;
     markSeen();
+    startScreenTiming('PostPilotOfferScreen', { day: currentDay, surface: 'post_pilot_offer' });
+    breadcrumbPostPilotOfferSeen({ day: currentDay, phase: accessMode });
     trackOfferEvent(MOCK_PURCHASE_ANALYTICS_BRIDGE.offerOpened);
-  }, [canShowOffer, markSeen, trackOfferEvent]);
+  }, [accessMode, canShowOffer, currentDay, markSeen, trackOfferEvent]);
 
   useEffect(() => {
     let cancelled = false;
@@ -223,10 +230,12 @@ export function PostPilotOfferScreen() {
       trackOfferEvent(MOCK_PURCHASE_ANALYTICS_BRIDGE.purchaseStarted, {
         source: 'mock',
       });
+      breadcrumbIapPurchaseStatus({ day: currentDay, status: 'started', source: 'mock' });
       mockPurchase();
       trackOfferEvent(MOCK_PURCHASE_ANALYTICS_BRIDGE.purchaseCompleted, {
         source: 'mock',
       });
+      breadcrumbIapPurchaseStatus({ day: currentDay, status: 'succeeded', source: 'mock' });
       completeFullAccess(MONETIZATION_COPY.mockUnlockFeedback);
       return;
     }
@@ -243,6 +252,7 @@ export function PostPilotOfferScreen() {
       ctaId: 'primary_unlock',
       source: 'revenuecat',
     });
+    breadcrumbIapPurchaseStatus({ day: currentDay, status: 'started', source: 'revenuecat' });
 
     const result = await purchaseIapProduct(
       MAIN_OPERATION_IAP_PRODUCT_ID,
@@ -256,6 +266,7 @@ export function PostPilotOfferScreen() {
         source: 'revenuecat',
         resultBand: 'completed',
       });
+      breadcrumbIapPurchaseStatus({ day: currentDay, status: 'succeeded', source: 'revenuecat' });
       completeFullAccess(result.message);
       return;
     }
@@ -275,6 +286,7 @@ export function PostPilotOfferScreen() {
       source: 'revenuecat',
       resultBand: 'failed',
     });
+    breadcrumbIapPurchaseStatus({ day: currentDay, status: 'failed', source: 'revenuecat' });
     setIapStatusMessage(undefined);
     setIapErrorMessage(result.message);
   };
@@ -299,6 +311,11 @@ export function PostPilotOfferScreen() {
       trackOfferEvent('iap_restore_completed', {
         source: 'revenuecat',
         resultBand: 'restored',
+      });
+      breadcrumbIapPurchaseStatus({
+        day: currentDay,
+        status: 'restored',
+        source: useRealPurchase ? 'revenuecat' : 'mock',
       });
       completeFullAccess(result.message);
       return;

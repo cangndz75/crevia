@@ -1,5 +1,6 @@
 import "react-native-gesture-handler";
 
+import { initCrashReporter, markAppStart } from "@/core/crashPerformance/crashReporter";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFonts } from "expo-font";
 import { Tabs } from "expo-router";
@@ -20,10 +21,14 @@ import {
   ANIMATED_TAB_BAR_HEIGHT,
   AnimatedTabBar,
 } from "@/ui/components/AnimatedTabBar";
+import { CreviaErrorBoundary } from "@/ui/components/CreviaErrorBoundary";
 import { GestureRootProvider } from "@/ui/providers/GestureRootProvider";
 import { colors } from "@/ui/theme/colors";
 
 SplashScreen.preventAutoHideAsync();
+
+initCrashReporter();
+markAppStart();
 
 function TabNavigator() {
   return (
@@ -105,10 +110,11 @@ export default function RootLayout() {
   const fontsReady = fontsLoaded || fontError;
 
   return (
-    <GestureRootProvider>
-      <SafeAreaProvider>
-        <StatusBar style="dark" />
-        <View style={styles.root}>
+    <CreviaErrorBoundary>
+      <GestureRootProvider>
+        <SafeAreaProvider>
+          <StatusBar style="dark" />
+          <View style={styles.root}>
           {!fontsReady ? null : showBrandedSplash ? (
             <SplashGateScreen mode="loading" />
           ) : bootstrap.phase === "ready" ? (
@@ -121,9 +127,10 @@ export default function RootLayout() {
               onOnboardingComplete={bootstrap.completeOnboarding}
             />
           )}
-        </View>
-      </SafeAreaProvider>
-    </GestureRootProvider>
+          </View>
+        </SafeAreaProvider>
+      </GestureRootProvider>
+    </CreviaErrorBoundary>
   );
 }
 

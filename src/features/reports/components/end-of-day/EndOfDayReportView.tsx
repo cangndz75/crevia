@@ -9,8 +9,11 @@ import {
 } from '@/core/analytics/analyticsPayloadBuilders';
 import {
   buildCommonAnalyticsBase,
+  getAnalyticsAccessModeFromGameState,
   trackOncePerRuntime,
 } from '@/core/analytics/analyticsRuntime';
+import { breadcrumbEndOfDayReportOpened } from '@/core/crashPerformance/crashBreadcrumbs';
+import { startScreenTiming } from '@/core/crashPerformance/performanceLite';
 import { normalizeAuthorityState } from '@/core/authority/authoritySeed';
 import {
   buildCityEchoBinding,
@@ -923,6 +926,11 @@ export function EndOfDayReportView({
   );
 
   useEffect(() => {
+    startScreenTiming('EndOfDayReportView', { day: report.day, surface: 'report' });
+    breadcrumbEndOfDayReportOpened({
+      day: report.day,
+      phase: getAnalyticsAccessModeFromGameState(gameState, monetization),
+    });
     const base = buildCommonAnalyticsBase(gameState, 'report', monetization);
     const dayKey = report.day;
 

@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 
+import { triggerDevCrashTest } from '@/core/crashPerformance/crashReporter';
 import { PostPilotDevTools } from '@/features/devtools/components/PostPilotDevTools';
 import { isPostPilotDevToolsEnabled } from '@/features/devtools/postPilotDevToolsGuard';
 import { resetOnboardingForDev } from '@/core/onboarding/onboardingStorage';
@@ -120,6 +121,17 @@ function HubDevToolsPanel({
         <Ionicons name="warning-outline" size={16} color={colors.primary} />
         <Text style={styles.btnText}>Dev: Kriz Hamlesi Üret</Text>
       </Pressable>
+      {__DEV__ ? (
+        <Pressable
+          style={[styles.btn, styles.btnOutline]}
+          onPress={() => {
+            onClose();
+            triggerDevCrashTest();
+          }}>
+          <Ionicons name="bug-outline" size={16} color={colors.danger} />
+          <Text style={[styles.btnText, styles.btnTextDanger]}>Dev: Sentry crash test</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }

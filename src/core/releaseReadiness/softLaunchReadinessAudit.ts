@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { runCrashPerformanceAudit } from '@/core/crashPerformance/crashPerformanceAudit';
+import { CRASH_PERFORMANCE_DOCS_PATH } from '@/core/crashPerformance/crashPerformanceConstants';
 import { validateAnalyticsPrivacy } from '@/core/analytics/analyticsPrivacy';
 import { ANALYTICS_EVENT_DEFINITIONS } from '@/core/analytics/analyticsSchema';
 import { ANALYTICS_FUNNEL_DEFINITIONS } from '@/core/analytics/analyticsFunnels';
@@ -986,6 +988,53 @@ export function auditPerformanceReadiness(): SoftLaunchReadinessFinding[] {
         'Performance selector PASS',
         'No WARN/FAIL in selector audit.',
         'Maintain after Hub changes.',
+      ),
+    );
+  }
+
+  const crash = runCrashPerformanceAudit();
+  if (crash.codeIntegrationPass) {
+    findings.push(
+      pass(
+        'performance.crash_sdk_code_ready',
+        'performance',
+        'Crash SDK code integration (Sentry-first)',
+        `mode=${crash.integrationMode}, release=${crash.releaseReadinessStatus}.`,
+        CRASH_PERFORMANCE_DOCS_PATH,
+      ),
+    );
+  } else {
+    findings.push(
+      warnFinding(
+        'performance.crash_sdk_pending',
+        'performance',
+        'Crash SDK integration pending',
+        'Sentry-first observability layer incomplete.',
+        'Run verify:crash-performance.',
+      ),
+    );
+  }
+
+  if (crash.environmentConfigStatus !== 'ready') {
+    findings.push(
+      warnFinding(
+        'performance.crash_env_pending',
+        'performance',
+        'Crash SDK DSN / enable flag pending',
+        `environmentConfigStatus=${crash.environmentConfigStatus}`,
+        'Runtime stays no-op until env configured.',
+      ),
+    );
+  }
+
+  if (crash.smokeTestStatus !== 'passed') {
+    findings.push(
+      warnFinding(
+        'performance.crash_smoke_pending',
+        'performance',
+        'Crash dashboard smoke test pending',
+        'Manual Sentry verification not completed.',
+        'Internal EAS build + dev crash test button.',
       ),
     );
   }

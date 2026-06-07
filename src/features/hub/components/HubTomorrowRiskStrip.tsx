@@ -22,7 +22,7 @@ export function HubTomorrowRiskStrip({ model }: Props) {
         <Text style={styles.mainLine} numberOfLines={1} ellipsizeMode="tail">
           {model.mainLine}
         </Text>
-        {model.supportLine ? (
+        {model.supportLine && !model.shouldShowAsCompact ? (
           <Text style={styles.supportLine} numberOfLines={1} ellipsizeMode="tail">
             {model.supportLine}
           </Text>

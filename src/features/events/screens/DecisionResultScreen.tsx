@@ -31,7 +31,12 @@ import {
   inferResourceDomainFromEventFocus,
 } from '@/core/resources';
 import { ResourceFatigueStateChip } from '@/features/resources/components/ResourceFatigueStateChip';
-import { trackOncePerRuntime } from '@/core/analytics/analyticsRuntime';
+import {
+  getAnalyticsAccessModeFromGameState,
+  trackOncePerRuntime,
+} from '@/core/analytics/analyticsRuntime';
+import { breadcrumbDecisionResultOpened } from '@/core/crashPerformance/crashBreadcrumbs';
+import { startScreenTiming } from '@/core/crashPerformance/performanceLite';
 import type { EventCard, SolvedEvent } from '@/core/models/EventCard';
 import type {
   DecisionMetricChange,
@@ -501,6 +506,12 @@ export function DecisionResultScreen() {
 
   useEffect(() => {
     if (isMissing || !result.eventId) return;
+    startScreenTiming('DecisionResultScreen', { day: currentDay, surface: 'result' });
+    breadcrumbDecisionResultOpened({
+      day: currentDay,
+      eventId: result.eventId,
+      phase: getAnalyticsAccessModeFromGameState(gameState, monetization),
+    });
     trackOncePerRuntime(
       `event_completed:${result.eventId}`,
       'event_completed',

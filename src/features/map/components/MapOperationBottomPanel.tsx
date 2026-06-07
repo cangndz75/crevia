@@ -332,6 +332,7 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 12,
     marginTop: 16,
+    minWidth: 0,
   },
   topRow: {
     flexDirection: 'row',
@@ -362,6 +363,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     color: mapUi.tealDark,
+    flexShrink: 1,
+    minWidth: 0,
   },
   titleRow: {
     flexDirection: 'row',
@@ -393,6 +396,8 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontWeight: '500',
     color: mapUi.textSecondary,
+    flexShrink: 1,
+    minWidth: 0,
   },
   agendaRow: {
     flexDirection: 'row',

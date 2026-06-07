@@ -1,9 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { validateAnalyticsEventDefinitions } from '@/core/analytics/analyticsSchema';
 import { runPostLaunchTelemetryReadinessAudit } from '@/core/analytics/postLaunchTelemetryReadinessAudit';
+import { runCrashPerformanceAudit } from '@/core/crashPerformance/crashPerformanceAudit';
+import { CRASH_PERFORMANCE_DOCS_PATH } from '@/core/crashPerformance/crashPerformanceConstants';
 import { verifyAnalyticsNewSystemsScenario } from '@/core/analytics/verifyAnalyticsNewSystemsScenario';
-import { verifyAnalyticsScenario } from '@/core/analytics/verifyAnalyticsScenario';
 import { buildEventResultSystemsEchoModel } from '@/core/events/eventResultNewSystemsPresentation';
 import { runFullLoopAnalysis } from '@/core/fullLoop/runFullLoopSimulation';
 import { containsForbiddenHubOpenEndedCopy } from '@/core/hub/hubOpenEndedIntegrationPresentation';
@@ -921,7 +923,8 @@ function auditAreaContentCoverage(): CreviaSoftLaunchReviewFinding[] {
 
 function auditAreaAnalytics(mode: CreviaSoftLaunchReviewMode): CreviaSoftLaunchReviewFinding[] {
   const findings: CreviaSoftLaunchReviewFinding[] = [];
-  const analytics = verifyAnalyticsScenario();
+  const analyticsSchemaAudit = validateAnalyticsEventDefinitions();
+  const analyticsSchemaOk = analyticsSchemaAudit.failCount === 0;
   const newSystems = verifyAnalyticsNewSystemsScenario();
   const telemetryMode =
     mode === 'launch_candidate' || mode === 'soft_launch_candidate'
@@ -933,10 +936,12 @@ function auditAreaAnalytics(mode: CreviaSoftLaunchReviewMode): CreviaSoftLaunchR
   findings.push(
     makeFinding(
       'analytics',
-      analytics.ok ? 'analytics.schema_pass' : 'analytics.schema_fail',
-      analytics.ok ? 'pass' : 'blocker',
+      analyticsSchemaOk ? 'analytics.schema_pass' : 'analytics.schema_fail',
+      analyticsSchemaOk ? 'pass' : 'blocker',
       'Analytics schema verify',
-      analytics.ok ? 'Core analytics events valid.' : 'Analytics schema regression.',
+      analyticsSchemaOk
+        ? 'Core analytics event definitions valid (schema-only; selector perf separate).'
+        : `Analytics schema regression (${analyticsSchemaAudit.failCount} FAIL).`,
       'Run verify:analytics-events.',
     ),
     makeFinding(
@@ -1025,6 +1030,67 @@ function auditAreaAnalytics(mode: CreviaSoftLaunchReviewMode): CreviaSoftLaunchR
       'KPI/funnel/dashboard definitions ready; production SDK and charts not connected.',
       'WARN only — not a soft-launch code blocker.',
       false,
+    ),
+  );
+
+  const crash = runCrashPerformanceAudit({
+    mode:
+      mode === 'launch_candidate' || mode === 'soft_launch_candidate'
+        ? mode
+        : 'internal_device_test',
+  });
+
+  findings.push(
+    makeFinding(
+      'analytics',
+      'crash.code_integration_present',
+      crash.codeIntegrationPass ? 'pass' : 'warn',
+      crash.codeIntegrationPass
+        ? 'Crash SDK code integration present (Sentry-first)'
+        : 'Crash SDK code integration incomplete',
+      `provider=${crash.selectedProvider}, mode=${crash.integrationMode}, release=${crash.releaseReadinessStatus}.`,
+      CRASH_PERFORMANCE_DOCS_PATH,
+    ),
+    makeFinding(
+      'analytics',
+      'crash.dsn_or_enable_pending',
+      crash.environmentConfigStatus === 'ready' ? 'pass' : 'warn',
+      crash.environmentConfigStatus === 'ready'
+        ? 'Crash SDK env configured'
+        : 'Crash SDK DSN / enable flag pending',
+      `environmentConfigStatus=${crash.environmentConfigStatus}`,
+      'Set EXPO_PUBLIC_SENTRY_DSN and EXPO_PUBLIC_CRASH_REPORTING_ENABLED for internal EAS builds.',
+      false,
+    ),
+    makeFinding(
+      'analytics',
+      'crash.smoke_test_pending',
+      crash.smokeTestStatus === 'passed' ? 'pass' : 'warn',
+      'Crash dashboard smoke test pending',
+      'Manual real-device crash not verified in dashboard.',
+      'Run dev crash test on internal build; confirm event in Sentry.',
+      false,
+    ),
+    makeFinding(
+      'analytics',
+      'crash.source_maps_pending',
+      crash.sourceMapStatus === 'configured' ? 'pass' : 'warn',
+      crash.sourceMapStatus === 'configured'
+        ? 'Sentry source maps configured'
+        : 'Sentry source maps not fully configured',
+      `sourceMapStatus=${crash.sourceMapStatus}`,
+      'Add SENTRY_AUTH_TOKEN to EAS; see crash-performance docs.',
+      false,
+    ),
+    makeFinding(
+      'analytics',
+      'crash.analytics_separation_pass',
+      crash.analyticsSeparationPass ? 'pass' : 'blocker',
+      crash.analyticsSeparationPass
+        ? 'Crash layer separated from analytics tracker'
+        : 'Crash layer coupled to analytics runtime',
+      'Crash breadcrumbs must not mutate analytics schema or call trackAnalyticsEvent.',
+      'Keep crashPerformance independent.',
     ),
   );
 

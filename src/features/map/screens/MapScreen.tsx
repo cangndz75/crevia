@@ -10,8 +10,11 @@ import {
 } from '@/core/analytics/analyticsPayloadBuilders';
 import {
   buildCommonAnalyticsBase,
+  getAnalyticsAccessModeFromGameState,
   trackOncePerRuntime,
 } from '@/core/analytics/analyticsRuntime';
+import { breadcrumbMapScreenOpened } from '@/core/crashPerformance/crashBreadcrumbs';
+import { startScreenTiming } from '@/core/crashPerformance/performanceLite';
 import { getEventAssignment } from '@/core/assignments/assignmentState';
 import {
   buildActiveTaskRouteForEvent,
@@ -289,6 +292,11 @@ export function MapScreen() {
   );
 
   useEffect(() => {
+    startScreenTiming('MapScreen', { day: gameDay, surface: 'map' });
+    breadcrumbMapScreenOpened({
+      day: gameDay,
+      phase: getAnalyticsAccessModeFromGameState(gameStateForMap, monetization),
+    });
     const base = buildCommonAnalyticsBase(gameStateForMap, 'map', monetization);
     trackOncePerRuntime(`map_opened:${gameDay}`, 'map_opened', base);
 

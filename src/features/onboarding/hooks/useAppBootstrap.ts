@@ -5,6 +5,7 @@ import {
   DEFAULT_PILOT_DISTRICT_ID,
   type PilotDistrictId,
 } from '@/core/models/DistrictProfile';
+import { breadcrumbOfflineResumeWarning } from '@/core/crashPerformance/crashBreadcrumbs';
 import { checkConnectivity, subscribeConnectivity } from '@/core/onboarding/connectivity';
 import {
   isOnboardingComplete,
@@ -38,6 +39,7 @@ export function useAppBootstrap() {
       const elapsed = Date.now() - startedAt;
       const wait = Math.max(0, MIN_SPLASH_MS - elapsed);
       await new Promise((r) => setTimeout(r, wait));
+      breadcrumbOfflineResumeWarning({ scenario: 'connectivity_offline', status: 'blocked' });
       setPhase('offline');
       setGateOpen(true);
       return;
@@ -47,6 +49,16 @@ export function useAppBootstrap() {
     const elapsed = Date.now() - startedAt;
     const wait = Math.max(0, MIN_SPLASH_MS - elapsed);
     await new Promise((r) => setTimeout(r, wait));
+
+    if (completed) {
+      const store = useGameStore.getState();
+      if (store._hasHydrated && store.gameState?.city) {
+        breadcrumbOfflineResumeWarning({
+          scenario: 'hydrated_save_resume',
+          status: 'ready',
+        });
+      }
+    }
 
     setPhase(completed ? 'ready' : 'onboarding');
     setGateOpen(true);

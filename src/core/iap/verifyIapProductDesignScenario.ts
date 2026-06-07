@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { ANALYTICS_EVENT_DEFINITIONS } from '@/core/analytics/analyticsSchema';
-import { verifyAnalyticsScenario } from '@/core/analytics/verifyAnalyticsScenario';
+import { validateAnalyticsEventDefinitions } from '@/core/analytics/analyticsSchema';
 import { createDay1Seed } from '@/core/content/day1Seed';
 import { buildDevJumpPilotCompletedGameState } from '@/core/monetization/monetizationEngine';
 import {
@@ -412,10 +412,15 @@ export function verifyIapProductDesignScenario(): VerifyIapProductDesignOutcome 
   ok =
     assert(checks, verifyMonetizationScenario().ok, 'Monetization gate compatible', 'Monetization FAIL') &&
     ok;
+  const analyticsSchema = validateAnalyticsEventDefinitions();
   ok =
-    assert(checks, verifyAnalyticsScenario().ok, 'Analytics events compatible', 'Analytics FAIL') &&
-    ok;
-  if (verifyAnalyticsScenario().warn) hasWarn = true;
+    assert(
+      checks,
+      analyticsSchema.failCount === 0,
+      'Analytics events schema compatible',
+      `Analytics schema FAIL count=${analyticsSchema.failCount}`,
+    ) && ok;
+  if (analyticsSchema.warnCount > 0) hasWarn = true;
 
   ok =
     assert(

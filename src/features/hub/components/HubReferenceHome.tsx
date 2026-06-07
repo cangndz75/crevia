@@ -32,6 +32,7 @@ import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
 import { HeaderAvatar } from '@/ui/components/game-header/HeaderAvatar';
 import { HubCityJournalStrip } from './HubCityJournalStrip';
 import { HubMainOperationFeelCard } from './HubMainOperationFeelCard';
+import { HubOperationalResourcesCard } from './HubOperationalResourcesCard';
 import { HubTomorrowRiskStrip } from './HubTomorrowRiskStrip';
 
 const COMPACT_BREAKPOINT = 370;
@@ -120,6 +121,7 @@ type HubReferenceHomeProps = {
   hubEceContextLine?: string | null;
   hubMainOperationFeelExistingLines?: string[];
   showHubCarryOver?: boolean;
+  showOperationalResources?: boolean;
   scrollFooter?: ReactNode;
 };
 
@@ -714,6 +716,8 @@ export function HubReferenceHome({
   hubCityJournal,
   hubEceContextLine,
   hubMainOperationFeelExistingLines,
+  showHubCarryOver = false,
+  showOperationalResources = false,
   scrollFooter,
 }: HubReferenceHomeProps = {}) {
   const { scrollBottomPadding } = useHubLayoutMetrics();
@@ -727,14 +731,17 @@ export function HubReferenceHome({
         contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollBottomPadding }]}>
         <PremiumHubHeader />
         <View style={styles.body}>
-          <PreviousDecisionEffectCard
-            memory={hubCarryOverMemory}
-            impactExplanationLine={hubImpactExplanationLine}
-          />
-          <HubTomorrowRiskStrip model={hubTomorrowRisk} />
-          <HubCityJournalStrip presentation={hubCityJournal} />
           <HubMainOperationFeelCard existingLines={hubMainOperationFeelExistingLines} />
+          <HubTomorrowRiskStrip model={hubTomorrowRisk} />
+          {showHubCarryOver ? (
+            <PreviousDecisionEffectCard
+              memory={hubCarryOverMemory}
+              impactExplanationLine={hubImpactExplanationLine}
+            />
+          ) : null}
           <EceWelcomeCard contextLine={hubEceContextLine} />
+          {showOperationalResources ? <HubOperationalResourcesCard /> : null}
+          <HubCityJournalStrip presentation={hubCityJournal} />
           <OperationFocusCard />
           <QuickPreparationsCard />
           <OperationSignalsCard />

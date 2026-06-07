@@ -26,9 +26,12 @@ export function EventResultImpactExplanationCard({ explanation, compact = false 
   if (!explanation?.shouldShowInResult) return null;
 
   const accent = TONE_ACCENTS[explanation.tone];
+  const mainLineLimit = compact ? 1 : Math.min(explanation.maxVisibleLines, 2);
 
   return (
     <View
+      accessibilityRole="summary"
+      accessibilityLabel={`${explanation.title}. ${explanation.mainLine}`}
       style={[
         styles.card,
         compact && styles.cardCompact,
@@ -42,7 +45,7 @@ export function EventResultImpactExplanationCard({ explanation, compact = false 
       </View>
       <Text
         style={[styles.mainLine, { color: accent.text }]}
-        numberOfLines={2}
+        numberOfLines={mainLineLimit}
         ellipsizeMode="tail">
         {explanation.mainLine}
       </Text>
@@ -88,6 +91,7 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     fontWeight: '700',
     flexShrink: 1,
+    minWidth: 0,
   },
   tomorrowLine: {
     fontSize: 11,

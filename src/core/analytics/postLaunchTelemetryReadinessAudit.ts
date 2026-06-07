@@ -1,6 +1,8 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { runCrashPerformanceAudit } from '@/core/crashPerformance/crashPerformanceAudit';
+import { CRASH_PERFORMANCE_DOCS_PATH } from '@/core/crashPerformance/crashPerformanceConstants';
 import { runPrivacyPolicyReadinessAudit } from '@/core/releaseReadiness/privacyPolicyReadinessAudit';
 
 import {
@@ -263,6 +265,50 @@ function collectBlockersAndWarnings(
     message: 'No production analytics SDK or dashboard connected; definitions only.',
     recommendation: 'WARN only — connect SDK after soft launch instrumentation review',
   });
+
+  const crashAudit = runCrashPerformanceAudit({ mode });
+  if (crashAudit.codeIntegrationPass) {
+    warnings.push({
+      id: 'telemetry.crash_sdk_code_ready',
+      title: 'Crash SDK code integration ready (Sentry-first)',
+      message: `Provider=${crashAudit.selectedProvider}, mode=${crashAudit.integrationMode}, release=${crashAudit.releaseReadinessStatus}.`,
+      recommendation: CRASH_PERFORMANCE_DOCS_PATH,
+    });
+  } else {
+    warnings.push({
+      id: 'telemetry.crash_sdk_pending',
+      title: 'Crash / performance SDK integration pending',
+      message: 'Sentry-first crash layer not fully wired.',
+      recommendation: 'Run verify:crash-performance and complete Aşama 1 module.',
+    });
+  }
+
+  if (crashAudit.environmentConfigStatus !== 'ready') {
+    warnings.push({
+      id: 'telemetry.crash_dsn_pending',
+      title: 'Crash SDK DSN / enable flag pending',
+      message: `environmentConfigStatus=${crashAudit.environmentConfigStatus}`,
+      recommendation: 'Set EXPO_PUBLIC_SENTRY_DSN + EXPO_PUBLIC_CRASH_REPORTING_ENABLED for internal builds.',
+    });
+  }
+
+  if (crashAudit.smokeTestStatus !== 'passed') {
+    warnings.push({
+      id: 'telemetry.crash_smoke_test_pending',
+      title: 'Crash dashboard smoke test not run',
+      message: 'Manual real-device crash verification pending.',
+      recommendation: 'Follow docs real device smoke test checklist.',
+    });
+  }
+
+  if (crashAudit.sourceMapStatus !== 'configured') {
+    warnings.push({
+      id: 'telemetry.crash_source_maps_pending',
+      title: 'Sentry source maps not fully configured',
+      message: `sourceMapStatus=${crashAudit.sourceMapStatus}`,
+      recommendation: 'Configure SENTRY_AUTH_TOKEN + EAS secrets; optional metro plugin in Aşama 1.1.',
+    });
+  }
 
   const docsPresent = existsSync(join(REPO_ROOT, POST_LAUNCH_TELEMETRY_READINESS_DOCS_PATH));
   if (!docsPresent) {

@@ -95,6 +95,7 @@ export function HubMainOperationFeelCard({
 const styles = StyleSheet.create({
   wrap: {
     marginBottom: spacing.sm,
+    minWidth: 0,
   },
   wrapCompact: {
     marginBottom: spacing.xs,
@@ -105,34 +106,45 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(15, 143, 134, 0.14)',
     gap: 6,
+    minWidth: 0,
   },
   title: {
     fontSize: 16,
     fontWeight: '700',
     color: '#0D3B37',
+    flexShrink: 1,
+    minWidth: 0,
   },
   subtitle: {
     fontSize: 13,
     fontWeight: '500',
     color: '#2A6B64',
     lineHeight: 18,
+    flexShrink: 1,
+    minWidth: 0,
   },
   scopeLine: {
     fontSize: 13,
     color: '#63706D',
     lineHeight: 18,
+    flexShrink: 1,
+    minWidth: 0,
   },
   detailLine: {
     fontSize: 12,
     color: '#63706D',
     lineHeight: 17,
+    flexShrink: 1,
+    minWidth: 0,
   },
   cta: {
     marginTop: 4,
     backgroundColor: '#0D3B37',
     borderRadius: 12,
     paddingVertical: 10,
+    minHeight: 44,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   ctaPressed: {
     opacity: 0.9,
