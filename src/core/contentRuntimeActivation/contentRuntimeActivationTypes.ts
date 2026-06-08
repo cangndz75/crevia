@@ -6,12 +6,19 @@ export type ContentRuntimeActivationPhase =
   | 'post_pilot_light'
   | 'main_operation_full';
 
-export type ContentRuntimeActivationMode = 'off' | 'preview' | 'lite' | 'full_ready';
+export type ContentRuntimeActivationMode =
+  | 'off'
+  | 'preview'
+  | 'lite'
+  | 'full_ready'
+  | 'limited_full';
 
 export type ContentRuntimeActivationPackId =
   | 'district_pack_one'
   | 'vehicle_route_pack_one'
-  | 'container_environment_pack_one';
+  | 'container_environment_pack_one'
+  | 'social_trust_pack_one'
+  | 'crisis_adjacent_pack_one';
 
 export type ContentRuntimeActivationGuardState = {
   blockedFamilies: string[];
@@ -37,6 +44,20 @@ export type ContentRuntimeActivationModel = {
   activationMode: ContentRuntimeActivationMode;
   sourceSignals: string[];
   presentationHint?: string;
+  selectedPackEvents?: string[];
+  suppressedPackEvents?: string[];
+  capSummary?: string;
+  districtBalanceSummary?: string;
+  archiveWriteEligibility?: {
+    allowed: number;
+    used: number;
+    eligible: boolean;
+  };
+  storyTriggerEligibility?: {
+    canTrigger: boolean;
+    reason: string;
+  };
+  surfaceDensitySummary?: string;
 };
 
 export type ContentRuntimeActivationOperationSignalsInput = {
@@ -60,6 +81,10 @@ export type ContentRuntimeActivationInput = {
   previousFamilyIds?: string[];
   previousDistrictDomainKeys?: string[];
   previousTitles?: string[];
+  previousSemanticClusters?: string[];
+  activeStoryChainDistrictIds?: string[];
+  packOriginStoryStartsToday?: number;
+  hasActiveMainOperation?: boolean;
   stableSeed?: string;
 };
 
@@ -103,6 +128,7 @@ export type ContentRuntimeActivationFamilyCandidate = {
 export type ContentRuntimeActivationSelectionResult = {
   model: ContentRuntimeActivationModel;
   candidates: ContentRuntimeActivationFamilyCandidate[];
+  suppressedCandidates: ContentRuntimeActivationFamilyCandidate[];
   eventCards: EventCard[];
 };
 
@@ -126,7 +152,7 @@ export type ContentRuntimeActivationEventMeta = {
   districtTrustIntent?: string;
   operationEraIntent?: string;
   activeRouteIntent?: string;
-  source: 'content_runtime_activation_lite';
+  source: 'content_runtime_activation_lite' | 'content_runtime_activation_limited_full';
 };
 
 export type ContentRuntimeActivationPresentationHint = {

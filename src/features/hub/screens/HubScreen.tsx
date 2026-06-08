@@ -34,9 +34,11 @@ import {
 import { resolveEventCardById } from '@/core/liveFlow/eventLifecycleEngine';
 import { deriveMainOperationAccessMode } from '@/core/mainOperation/mainOperationEngine';
 import {
-  buildDistrictReportCardLiteModel,
+  buildDistrictReportCardFullModel,
   buildDistrictReportCardSummaryForHub,
 } from '@/core/districtReportCard';
+import { buildHubArchiveContinuityModel } from '@/core/cityArchive/cityArchiveSurfaceWiring';
+import { buildPersistentStoryChainHubLine } from '@/core/storyChains/storyChainPersistentPresentation';
 import {
   buildMainOperationFeelEceLine,
   buildMainOperationFeelFromStore,
@@ -433,7 +435,7 @@ export function HubScreen() {
       hubCityJournalPresentation?.primaryLine ?? '',
     ].filter(Boolean);
 
-    const model = buildDistrictReportCardLiteModel({
+    const model = buildDistrictReportCardFullModel({
       districtId: focusDistrictId,
       day: hubDay,
       isPostPilot: hubDay >= POST_PILOT_FIRST_OPERATION_DAY,
@@ -441,11 +443,14 @@ export function HubScreen() {
       operationSignals,
       resourceFatigue: operationalResources,
       contentPackMeta: hubPackWiringContext.contentPackMeta,
+      cityArchive,
+      advisorRelationshipLine: undefined,
       existingLines,
     });
 
     return buildDistrictReportCardSummaryForHub(model, existingLines);
   }, [
+    cityArchive,
     cityEchoHubLine,
     decisionHistory,
     gameState.pilot.postPilotOperation?.phase,
@@ -456,6 +461,60 @@ export function HubScreen() {
     mainOperationFeelPresentation.detailLine,
     operationSignals,
     operationalResources,
+    tomorrowRiskPresentation.hub?.mainLine,
+  ]);
+
+  const hubStoryChainLine = useMemo(() => {
+    if (hubDay <= 1) return null;
+    const existingLines = [
+      hubCityJournalPresentation?.primaryLine ?? '',
+      tomorrowRiskPresentation.hub?.mainLine ?? '',
+      cityEchoHubLine ?? '',
+    ].filter(Boolean);
+    const storyCandidate = buildPersistentStoryChainHubLine(cityArchive, hubDay, existingLines);
+    const continuity = buildHubArchiveContinuityModel({
+      day: hubDay,
+      cityArchive,
+      storyChainLine: storyCandidate,
+      districtReportLine: hubDistrictReportLine,
+      cityJournalLine: hubCityJournalPresentation?.primaryLine ?? null,
+      existingLines,
+    });
+    if (continuity.continuityKind === 'story') return continuity.continuityLine ?? null;
+    if (continuity.continuityKind === 'reward' || continuity.continuityKind === 'city_memory') {
+      return continuity.continuityLine ?? null;
+    }
+    return null;
+  }, [
+    cityArchive,
+    cityEchoHubLine,
+    hubCityJournalPresentation?.primaryLine,
+    hubDay,
+    hubDistrictReportLine,
+    tomorrowRiskPresentation.hub?.mainLine,
+  ]);
+
+  const hubDistrictReportContinuityLine = useMemo(() => {
+    if (hubDay <= 1) return null;
+    const existingLines = [
+      hubCityJournalPresentation?.primaryLine ?? '',
+      tomorrowRiskPresentation.hub?.mainLine ?? '',
+      cityEchoHubLine ?? '',
+    ].filter(Boolean);
+    const continuity = buildHubArchiveContinuityModel({
+      day: hubDay,
+      cityArchive,
+      districtReportLine: hubDistrictReportLine,
+      cityJournalLine: hubCityJournalPresentation?.primaryLine ?? null,
+      existingLines,
+    });
+    return continuity.continuityKind === 'district' ? continuity.continuityLine ?? null : null;
+  }, [
+    cityArchive,
+    cityEchoHubLine,
+    hubCityJournalPresentation?.primaryLine,
+    hubDay,
+    hubDistrictReportLine,
     tomorrowRiskPresentation.hub?.mainLine,
   ]);
 
@@ -544,7 +603,8 @@ export function HubScreen() {
         hubTomorrowRisk={tomorrowRiskPresentation.hub}
         hubCityJournal={hubCityJournalPresentation}
         hubEceContextLine={hubEceContextLine}
-        hubDistrictReportLine={hubDistrictReportLine}
+        hubDistrictReportLine={hubDistrictReportContinuityLine}
+        hubStoryChainLine={hubStoryChainLine}
         showMainOperationSeason={showMainOperationSeasonCard}
         mainOperationSeasonCompact={mainOperationSeasonCompact}
         showAdvisor={hubCardVisibility.showAdvisor}

@@ -5,6 +5,7 @@ import {
   CONTENT_RUNTIME_ACTIVATION_PILOT_MAX_DAY,
   CONTENT_RUNTIME_ACTIVATION_PRIORITY_DISTRICTS,
 } from './contentRuntimeActivationConstants';
+import { resolveContentRuntimeActivationModeForAccess } from './contentRuntimeActivationFullGuards';
 import type {
   ContentRuntimeActivationGuardState,
   ContentRuntimeActivationInput,
@@ -36,17 +37,9 @@ export function resolveContentRuntimeActivationPhase(
 
 export function resolveContentRuntimeActivationMode(
   phase: ContentRuntimeActivationPhase,
+  accessMode?: ContentRuntimeActivationInput['accessMode'],
 ): ContentRuntimeActivationMode {
-  switch (phase) {
-    case 'pilot':
-      return 'off';
-    case 'post_pilot_light':
-      return 'lite';
-    case 'main_operation_full':
-      return 'lite';
-    default:
-      return 'off';
-  }
+  return resolveContentRuntimeActivationModeForAccess(phase, accessMode);
 }
 
 function emptyGuard(): ContentRuntimeActivationGuardState {
@@ -73,7 +66,7 @@ export function buildContentRuntimeActivationModel(
   input: ContentRuntimeActivationInput,
   phase: ContentRuntimeActivationPhase = resolveContentRuntimeActivationPhase(input),
 ): ContentRuntimeActivationModel {
-  const activationMode = resolveContentRuntimeActivationMode(phase);
+  const activationMode = resolveContentRuntimeActivationMode(phase, input.accessMode);
   const isEligible = isContentRuntimeActivationEligible(input, phase);
   const sourceSignals: string[] = [];
 

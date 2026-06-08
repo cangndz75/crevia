@@ -35,16 +35,20 @@ export const CONTENT_RUNTIME_ACTIVATION_FORBIDDEN_WORDS = [
 
 export const CONTENT_RUNTIME_ACTIVATION_PRESENTATION_HINTS = {
   main_operation_scope: 'Ana operasyon kapsamı',
-  district_focus: 'Mahalle odağı',
-  route_pressure: 'Rota baskısı',
+  district_focus: 'Mahalle izi',
+  route_pressure: 'Rota dengesi',
   container_area: 'Konteyner çevresi',
   recovery_opportunity: 'Toparlanma fırsatı',
+  social_trust: 'Sosyal güven',
+  operation_followup: 'Operasyon takibi',
 } as const;
 
 export const CONTENT_RUNTIME_ACTIVATION_PACK_LABELS: Record<ContentRuntimeActivationPackId, string> = {
-  district_pack_one: 'Mahalle Operasyonu',
-  vehicle_route_pack_one: 'Rota / Araç',
-  container_environment_pack_one: 'Konteyner / Çevre',
+  district_pack_one: 'Mahalle izi',
+  vehicle_route_pack_one: 'Rota dengesi',
+  container_environment_pack_one: 'Konteyner çevresi',
+  social_trust_pack_one: 'Sosyal güven',
+  crisis_adjacent_pack_one: 'Risk sinyali',
 };
 
 export const CONTENT_RUNTIME_ACTIVATION_PRIORITY_DISTRICTS = [

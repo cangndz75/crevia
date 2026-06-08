@@ -1,4 +1,5 @@
 import { resolveContentPackMetaForWiring } from '@/core/contentRuntimeActivation/contentRuntimeActivationWiring';
+import { buildMapArchiveJournalTracePresentation } from '@/core/cityArchive/cityArchiveSurfaceWiring';
 import { buildCityJournalMapHint } from '@/core/cityJournal/cityJournalPresentation';
 import { normalizeMapDistrictId } from '@/core/districts/districtIdentityPresentation';
 import type { MapDistrictId } from '@/core/districts/districtIdentityTypes';
@@ -485,12 +486,14 @@ function buildDrafts(input: MapReactionLiteInput, selectedId: MapDistrictId): Re
     );
   }
 
-  const journalHint = buildCityJournalMapHint(
-    input.cityJournal ?? null,
+  const archiveJournalTrace = buildMapArchiveJournalTracePresentation(
+    input.cityArchive ?? null,
+    input.day ?? 1,
     selectedId,
     guard,
+    input.districtReportCard?.recentEffectLine ?? input.districtReportCard?.dominantIssueLine ?? null,
   );
-  if (journalHint.visible && journalHint.line) {
+  if (archiveJournalTrace.visible && archiveJournalTrace.line) {
     pushIfUnique(
       drafts,
       buildReactionDraft({
@@ -498,14 +501,37 @@ function buildDrafts(input: MapReactionLiteInput, selectedId: MapDistrictId): Re
         kind: 'journal_trace',
         sourceKind: 'city_journal',
         shortLine: sanitizeCopy(
-          journalHint.line.replace(/^Son şehir izi:\s*/i, 'Günlük izi: '),
+          archiveJournalTrace.line,
           `Günlük izi: ${districtName(selectedId)} operasyonu kayda geçti.`,
         ),
-        scoreBoost: 4,
+        scoreBoost: 6,
         selectedBoost: true,
       }),
-      [...guard, journalHint.line],
+      [...guard, archiveJournalTrace.line],
     );
+  } else {
+    const journalHint = buildCityJournalMapHint(
+      input.cityJournal ?? null,
+      selectedId,
+      guard,
+    );
+    if (journalHint.visible && journalHint.line) {
+      pushIfUnique(
+        drafts,
+        buildReactionDraft({
+          districtId: selectedId,
+          kind: 'journal_trace',
+          sourceKind: 'city_journal',
+          shortLine: sanitizeCopy(
+            journalHint.line.replace(/^Son şehir izi:\s*/i, 'Günlük izi: '),
+            `Günlük izi: ${districtName(selectedId)} operasyonu kayda geçti.`,
+          ),
+          scoreBoost: 4,
+          selectedBoost: true,
+        }),
+        [...guard, journalHint.line],
+      );
+    }
   }
 
   if (input.mainOperationScopeHintLine && (input.day ?? 1) >= POST_PILOT_FIRST_OPERATION_DAY) {

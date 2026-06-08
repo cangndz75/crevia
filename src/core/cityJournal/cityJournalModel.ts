@@ -5,6 +5,7 @@ import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventC
 
 import { convertArchiveEntryToJournalEntry } from '@/core/cityArchive/cityArchivePresentation';
 import { selectPlayerVisibleArchiveEntriesForJournal } from '@/core/cityArchive/cityArchiveSelectors';
+import { filterArchiveEntriesForJournalDisplay } from '@/core/cityArchive/cityArchiveSurfaceWiring';
 
 import {
   CITY_JOURNAL_EARLY_MAX_DAY,
@@ -635,10 +636,13 @@ export function buildCityJournalLiteModel(input: CityJournalLiteInput = {}): Cit
   }
 
   const archiveEntries = input.cityArchive
-    ? selectPlayerVisibleArchiveEntriesForJournal(
-        input.cityArchive,
+    ? filterArchiveEntriesForJournalDisplay(
+        selectPlayerVisibleArchiveEntriesForJournal(
+          input.cityArchive,
+          visibilityConfig.maxEntries + 2,
+          day,
+        ),
         visibilityConfig.maxEntries,
-        day,
       ).map((entry, index) => convertArchiveEntryToJournalEntry(entry, index))
     : [];
 

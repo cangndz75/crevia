@@ -247,7 +247,7 @@ export const SOFT_LAUNCH_COMPLETION_MODULE_REGISTRY: readonly SoftLaunchCompleti
     {
       id: 'cityArchive',
       coreDir: 'src/core/cityArchive',
-      kind: 'persistence',
+      kind: 'runtime_lite',
       freezeRisk: 'medium',
       allowedBeforeSoftLaunch: true,
       reason: 'City archive persistence V1 — SAVE_VERSION 24 migration.',

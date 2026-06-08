@@ -60,6 +60,13 @@ export function buildContentRuntimeActivationPresentationHints(
       label = CONTENT_RUNTIME_ACTIVATION_PRESENTATION_HINTS.container_area;
     } else if (candidate.selectedVariantKind === 'recovery') {
       label = CONTENT_RUNTIME_ACTIVATION_PRESENTATION_HINTS.recovery_opportunity;
+    } else if (candidate.packId === 'social_trust_pack_one') {
+      label = CONTENT_RUNTIME_ACTIVATION_PRESENTATION_HINTS.social_trust;
+    } else if (
+      candidate.domains.some((d) => d.includes('operation_era')) ||
+      candidate.selectedVariantKind === 'operation_era'
+    ) {
+      label = CONTENT_RUNTIME_ACTIVATION_PRESENTATION_HINTS.operation_followup;
     } else if (candidate.packId === 'district_pack_one') {
       label = CONTENT_RUNTIME_ACTIVATION_PRESENTATION_HINTS.district_focus;
     }

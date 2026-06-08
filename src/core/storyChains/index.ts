@@ -132,3 +132,44 @@ export {
   verifyStoryChainPersistentRuntimeReviewScenario,
   type VerifyStoryChainPersistentRuntimeReviewOutcome,
 } from './verifyStoryChainPersistentRuntimeReviewScenario';
+
+export type {
+  PersistentStoryChain,
+  PersistentStoryChainClosure,
+  PersistentStoryChainDayCloseInput,
+  PersistentStoryChainState,
+  PersistentStoryChainSurfaceLines,
+} from './storyChainPersistentTypes';
+
+export {
+  STORY_CHAIN_PERSISTENT_FORBIDDEN_TERMS,
+  STORY_CHAIN_PERSISTENT_MAX_AGE_DAYS,
+  maxActiveChainsForDay,
+} from './storyChainPersistentConstants';
+
+export {
+  applyPersistentStoryChainOnDayClose,
+  applyPersistentStoryChainUpdate,
+  buildPersistentStoryChainUpdate,
+  extractPersistentStoryChainState,
+} from './storyChainPersistentEngine';
+
+export {
+  buildPersistentStoryChainEceHint,
+  buildPersistentStoryChainHubLine,
+  buildPersistentStoryChainMapHint,
+  buildPersistentStoryChainReportLine,
+  buildPersistentStoryChainSurfaceLines,
+  isStoryChainPersistentDuplicate,
+  storyChainPersistentLineContainsForbidden,
+} from './storyChainPersistentPresentation';
+
+export {
+  buildPersistentStoryChainDayCloseInput,
+  type StoryChainDayCloseStoreInput,
+} from './storyChainPersistentWiring';
+
+export {
+  verifyStoryChainPersistentRuntimeScenario,
+  type VerifyStoryChainPersistentRuntimeOutcome,
+} from './verifyStoryChainPersistentRuntimeScenario';

@@ -90,6 +90,7 @@ function buildDecisions(
 
 export function buildContentRuntimeActivationEventMeta(
   candidate: ContentRuntimeActivationFamilyCandidate,
+  activationMode: 'lite' | 'limited_full' | 'off' | 'preview' | 'full_ready' = 'lite',
 ): ContentRuntimeActivationEventMeta {
   const domain = candidate.domains[0] ?? 'generic_operation';
   return {
@@ -117,18 +118,22 @@ export function buildContentRuntimeActivationEventMeta(
       candidate.packId === 'vehicle_route_pack_one'
         ? candidate.intents.vehicleMaintenance
         : undefined,
-    source: 'content_runtime_activation_lite',
+    source:
+      activationMode === 'limited_full'
+        ? 'content_runtime_activation_limited_full'
+        : 'content_runtime_activation_lite',
   };
 }
 
 export function mapContentRuntimeActivationCandidateToEventCard(
   candidate: ContentRuntimeActivationFamilyCandidate,
   day: number,
+  activationMode: 'lite' | 'limited_full' | 'off' | 'preview' | 'full_ready' = 'lite',
 ): EventCard {
   const districtId = candidate.selectedDistrictId as MapDistrictId;
   const pilotDistrict = pilotDistrictFromMapDistrict(districtId);
   const districtIds = pilotDistrict ? [pilotDistrict] : undefined;
-  const meta = buildContentRuntimeActivationEventMeta(candidate);
+  const meta = buildContentRuntimeActivationEventMeta(candidate, activationMode);
 
   const filterTags: EventCard['filterTags'] = candidate.domains.some((d) =>
     d.includes('crisis'),
@@ -172,16 +177,23 @@ export function mapContentRuntimeActivationCandidateToEventCard(
 export function mapContentRuntimeActivationCandidatesToEventCards(
   candidates: ContentRuntimeActivationFamilyCandidate[],
   day: number,
+  activationMode: 'lite' | 'limited_full' | 'off' | 'preview' | 'full_ready' = 'lite',
 ): EventCard[] {
   return candidates.map((candidate) =>
-    mapContentRuntimeActivationCandidateToEventCard(candidate, day),
+    mapContentRuntimeActivationCandidateToEventCard(candidate, day, activationMode),
   );
 }
+
+const CONTENT_RUNTIME_ACTIVATION_SOURCES = new Set([
+  'content_runtime_activation_lite',
+  'content_runtime_activation_limited_full',
+]);
 
 export function readContentRuntimeActivationMetaFromEvent(
   event?: EventCard | null,
 ): ContentRuntimeActivationEventMeta | undefined {
-  return event?.contentPackMeta?.source === 'content_runtime_activation_lite'
-    ? event.contentPackMeta
+  const meta = event?.contentPackMeta;
+  return meta && CONTENT_RUNTIME_ACTIVATION_SOURCES.has(meta.source)
+    ? meta
     : undefined;
 }

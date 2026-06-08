@@ -1,5 +1,12 @@
 import type { MapDistrictId } from '@/core/districts/districtIdentityTypes';
 
+import { extractPersistentStoryChainState } from '@/core/storyChains/storyChainPersistentEngine';
+
+import {
+  mapJournalTraceAllowedForDay,
+  scoreMapJournalTraceEntry,
+} from './cityArchiveSurfacePriority';
+import { normalizeCityArchiveState } from './cityArchiveState';
 import type { CityArchiveEntry, CityArchiveV1State } from './cityArchiveTypes';
 
 export function selectRecentCityArchiveEntries(
@@ -25,18 +32,48 @@ export function selectDistrictArchiveEntries(
     .slice(0, limit);
 }
 
+function hasActiveStoryTrace(archive: CityArchiveV1State, day: number): boolean {
+  const chainState = extractPersistentStoryChainState(archive);
+  return chainState.activeChains.some(
+    (c) => c.status === 'active' || c.status === 'waiting' || c.lastAdvancedDay === day,
+  );
+}
+
+export function selectArchiveEntryForMapJournalTracePriority(
+  state: CityArchiveV1State | null | undefined,
+  day: number,
+  focusDistrictId?: MapDistrictId,
+): CityArchiveEntry | undefined {
+  if (!mapJournalTraceAllowedForDay(day) || !state?.entries.length) return undefined;
+
+  const archive = normalizeCityArchiveState(state, day);
+  const activeStory = hasActiveStoryTrace(archive, day);
+  const recent = selectRecentCityArchiveEntries(archive, 12).filter((e) => e.isPlayerVisible);
+
+  const candidates = recent
+    .map((entry) => ({
+      entry,
+      score: scoreMapJournalTraceEntry(entry, day, activeStory),
+      districtBoost: focusDistrictId && entry.districtId === focusDistrictId ? 8 : 0,
+    }))
+    .filter((c) => c.score > 0)
+    .sort((a, b) => b.score + b.districtBoost - (a.score + a.districtBoost));
+
+  if (day <= 3) {
+    const top = candidates[0];
+    if (!top || top.score < 50) return undefined;
+    return top.entry;
+  }
+
+  return candidates[0]?.entry;
+}
+
 export function selectArchiveEntryForMapJournalTrace(
   state: CityArchiveV1State | null | undefined,
   focusDistrictId?: MapDistrictId,
+  day = state?.updatedAtDay ?? 1,
 ): CityArchiveEntry | undefined {
-  const recent = selectRecentCityArchiveEntries(state, 8);
-  if (focusDistrictId) {
-    const districtMatch = recent.find(
-      (e) => e.districtId === focusDistrictId && e.mapLine,
-    );
-    if (districtMatch) return districtMatch;
-  }
-  return recent.find((e) => e.mapLine || e.kind === 'report_milestone');
+  return selectArchiveEntryForMapJournalTracePriority(state, day, focusDistrictId);
 }
 
 export function selectArchivePreviousDecisionReference(

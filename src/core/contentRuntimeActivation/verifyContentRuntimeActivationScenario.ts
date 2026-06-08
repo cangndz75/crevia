@@ -429,7 +429,7 @@ export function verifyContentRuntimeActivationScenario(): VerifyContentRuntimeAc
   record(assert(checks, !crisisEcho.includes('panik') && !crisisEcho.includes('felaket'), 'crisis_adjacent panic language yok'));
 
   const chip = buildContentPackEventChipLabel(routeMeta, 8);
-  record(assert(checks, chip === 'Rota baskısı', 'Event chip max 1 player-facing label'));
+  record(assert(checks, chip === 'Rota dengesi', 'Event chip max 1 player-facing label'));
   record(assert(checks, buildContentPackEventChipLabel(routeMeta, 5) == null, 'Day 1-7 chip görünmüyor'));
   record(assert(checks, !`${chip}`.includes('vehicle_route_pack_one'), 'Chip teknik pack adı içermiyor'));
 

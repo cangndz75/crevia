@@ -66,6 +66,7 @@ import {
   createInitialPostPilotOperationState,
   normalizePostPilotOperationState,
 } from '@/core/postPilot';
+import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 
 import {
   INITIAL_DAILY_GOAL_RUNTIME,
@@ -411,11 +412,14 @@ import {
 } from '@/features/tutorial/tutorialTypes';
 
 import {
-  appendDayCloseCityArchive,
+  appendDayCloseCityArchiveWithStoryChains,
   buildCityArchiveDayCloseInput,
 } from '@/core/cityArchive/cityArchiveWiring';
 import { createInitialCityArchiveState } from '@/core/cityArchive/cityArchiveState';
 import type { CityArchiveV1State } from '@/core/cityArchive/cityArchiveTypes';
+import { buildDistrictReportCardFullModel } from '@/core/districtReportCard/districtReportCardModel';
+import { buildRewardComebackVisibilityModel } from '@/core/rewardComeback/rewardComebackModel';
+import { buildTomorrowRiskModel } from '@/core/tomorrowRisk/tomorrowRiskModel';
 
 import {
   clearPersistedGame,
@@ -3456,6 +3460,46 @@ export const useGameStore = create<GameStore>()(
           ),
         };
 
+        const storyChainDistrictId =
+          operationSignalsAfterDay.priorityDistrictId ??
+          current.decisionHistory.filter((r) => r.day === closingDay).at(-1)
+            ?.neighborhoodId;
+        const districtReportForStoryChain = storyChainDistrictId
+          ? buildDistrictReportCardFullModel({
+              districtId: storyChainDistrictId,
+              day: closingDay,
+              isPostPilot: closingDay >= POST_PILOT_FIRST_OPERATION_DAY,
+              postPilotPhase:
+                current.gameState.pilot.postPilotOperation?.phase ?? null,
+              operationSignals: operationSignalsAfterDay,
+              resourceFatigue: current.operationalResources,
+              cityArchive: current.cityArchive,
+            })
+          : null;
+        const tomorrowRiskForStoryChain = buildTomorrowRiskModel({
+          day: closingDay,
+          carryOver: carryOverSummaryLines[0]
+            ? { summary: carryOverSummaryLines[0], visible: true }
+            : null,
+          operationSignals: operationSignalsAfterDay,
+          socialPulse: {
+            globalPulseScore: socialPulseStateAfterNight.globalPulseScore,
+            previousGlobalPulseScore:
+              socialPulseStateBeforeNight.globalPulseScore,
+          },
+          postPilotOperation: current.gameState.pilot.postPilotOperation,
+        });
+        const rewardComebackForStoryChain = buildRewardComebackVisibilityModel({
+          day: closingDay,
+          isPostPilot: closingDay >= POST_PILOT_FIRST_OPERATION_DAY,
+          isMainOperationFull:
+            current.monetization.mainOperationAccess === 'full',
+          operationSignals: operationSignalsAfterDay,
+          priorityDistrictId:
+            (storyChainDistrictId as import('@/core/districts/districtIdentityTypes').MapDistrictId | undefined) ??
+            undefined,
+        });
+
         const archiveCloseInput = buildCityArchiveDayCloseInput({
           closingDay,
           pilotStatus: current.gameState.pilot.status,
@@ -3477,9 +3521,52 @@ export const useGameStore = create<GameStore>()(
             })),
           carryOverLine: carryOverSummaryLines[0],
         });
-        const cityArchiveAfterClose = appendDayCloseCityArchive(
+        const cityArchiveAfterClose = appendDayCloseCityArchiveWithStoryChains(
           current.cityArchive,
           archiveCloseInput,
+          {
+            closingDay,
+            isPostPilot: closingDay >= POST_PILOT_FIRST_OPERATION_DAY,
+            isPilotCompleted: current.gameState.pilot.status === 'completed',
+            districtId: storyChainDistrictId,
+            carryOverLine: carryOverSummaryLines[0],
+            carryOverUnresolved: Boolean(carryOverSummaryLines[0]),
+            districtReportIssueKind:
+              districtReportForStoryChain?.dominantIssueKind ?? null,
+            tomorrowRiskLine: tomorrowRiskForStoryChain?.mainLine ?? null,
+            tomorrowRiskSoftened:
+              tomorrowRiskForStoryChain?.tone === 'recovery' ||
+              tomorrowRiskForStoryChain?.tone === 'calm',
+            rewardComebackLine:
+              rewardComebackForStoryChain.primaryMoment?.line ??
+              rewardComebackForStoryChain.hubLine ??
+              null,
+            rewardComebackKind:
+              rewardComebackForStoryChain.primaryMoment?.kind ?? null,
+            operationSignals: {
+              containers: operationSignalsAfterDay.containers,
+              vehicles: operationSignalsAfterDay.vehicles,
+              personnel: operationSignalsAfterDay.personnel,
+              districts: operationSignalsAfterDay.districts,
+              priorityDistrictId: operationSignalsAfterDay.priorityDistrictId,
+            },
+            crisisWatch:
+              crisisStateAfterDay.activeIncident != null ||
+              crisisStateAfterDay.riskLevel === 'elevated' ||
+              crisisStateAfterDay.riskLevel === 'critical',
+            crisisPrevented: crisisStateAfterDay.riskLevel === 'stable',
+            routeBalanced: operationSignalsAfterDay.vehicles?.status === 'stable',
+            containerRelief: operationSignalsAfterDay.containers?.status === 'stable',
+            resourceRecovered: operationSignalsAfterDay.personnel?.status === 'stable',
+            socialResponse: socialPulseStateAfterNight.globalPulseScore > 55,
+            trustImproving:
+              districtReportForStoryChain?.trustTrend === 'up' ||
+              districtReportForStoryChain?.trustTrend === 'recovered',
+            trustRecovering:
+              districtReportForStoryChain?.recoveryState === 'recovering' ||
+              districtReportForStoryChain?.recoveryState === 'comeback_completed' ||
+              districtReportForStoryChain?.recoveryState === 'improving',
+          },
         );
 
         set({

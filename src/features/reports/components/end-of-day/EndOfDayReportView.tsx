@@ -25,9 +25,11 @@ import {
 } from '@/core/cityJournal';
 import { buildRewardComebackReportPresentation } from '@/core/rewardComeback';
 import {
-  buildDistrictReportCardLiteModel,
+  buildDistrictReportCardFullModel,
   buildDistrictReportCardLineForReport,
 } from '@/core/districtReportCard';
+import { buildReportArchiveContinuityFromCandidates } from '@/core/cityArchive/cityArchiveSurfaceWiring';
+import { buildPersistentStoryChainReportLine } from '@/core/storyChains/storyChainPersistentPresentation';
 import {
   reportSecondaryLineMaxLines,
   resolveReportSecondaryCompactMode,
@@ -832,7 +834,7 @@ export function EndOfDayReportView({
       tomorrowRiskPresentation.report?.mainLine ?? '',
     ].filter(Boolean);
 
-    const cardModel = buildDistrictReportCardLiteModel({
+    const cardModel = buildDistrictReportCardFullModel({
       districtId,
       day: report.day,
       isPostPilot: report.day >= POST_PILOT_FIRST_OPERATION_DAY,
@@ -840,11 +842,14 @@ export function EndOfDayReportView({
       operationSignals,
       resourceFatigue: operationalResources,
       contentPackMeta: reportPackWiringContext.contentPackMeta,
+      cityArchive,
+      rewardComebackLine: rewardComebackReportLine ?? undefined,
       existingLines,
     });
 
     return buildDistrictReportCardLineForReport(cardModel, existingLines);
   }, [
+    cityArchive,
     cityEchoReportLine,
     cityJournalReportLine,
     decisionImpactReportEcho,
@@ -852,9 +857,58 @@ export function EndOfDayReportView({
     operationSignals,
     operationalResources,
     postPilotOperation?.phase,
+    rewardComebackReportLine,
     report.day,
     reportPackWiringContext.contentPackMeta,
     resourcePresenceReportLine,
+    tomorrowRiskPresentation.report?.mainLine,
+  ]);
+
+  const storyChainReportLine = useMemo(() => {
+    const existingLines = [
+      cityEchoReportLine ?? '',
+      cityJournalReportLine ?? '',
+      districtReportCardLine ?? '',
+      rewardComebackReportLine ?? '',
+      tomorrowRiskPresentation.report?.mainLine ?? '',
+    ].filter(Boolean);
+    return buildPersistentStoryChainReportLine(cityArchive, report.day, existingLines);
+  }, [
+    cityArchive,
+    cityEchoReportLine,
+    cityJournalReportLine,
+    districtReportCardLine,
+    report.day,
+    rewardComebackReportLine,
+    tomorrowRiskPresentation.report?.mainLine,
+  ]);
+
+  const reportArchiveContinuity = useMemo(() => {
+    const existingLines = [
+      cityEchoReportLine ?? '',
+      decisionImpactReportEcho ?? '',
+      tomorrowRiskPresentation.report?.mainLine ?? '',
+      resourcePresenceReportLine ?? '',
+    ].filter(Boolean);
+    return buildReportArchiveContinuityFromCandidates({
+      day: report.day,
+      cityArchive,
+      storyChainLine: storyChainReportLine,
+      rewardComebackLine: rewardComebackReportLine,
+      districtReportLine: districtReportCardLine,
+      cityJournalLine: cityJournalReportLine,
+      existingLines,
+    });
+  }, [
+    cityArchive,
+    cityEchoReportLine,
+    cityJournalReportLine,
+    decisionImpactReportEcho,
+    districtReportCardLine,
+    report.day,
+    resourcePresenceReportLine,
+    rewardComebackReportLine,
+    storyChainReportLine,
     tomorrowRiskPresentation.report?.mainLine,
   ]);
 
@@ -1197,22 +1251,18 @@ export function EndOfDayReportView({
         </CreviaAnimatedLine>
       ) : null}
 
-      {cityJournalReportLine ? (
-        <CreviaAnimatedChip
-          surface="report"
-          index={1}
-          reducedMotion={reducedMotion}
-          style={styles.cityJournalReportRow}>
-          <Text style={styles.cityJournalReportLabel} numberOfLines={1}>
-            Şehir günlüğü
+      {reportArchiveContinuity.storyChainLine ? (
+        <View style={styles.districtReportCardRow}>
+          <Text style={styles.districtReportCardLabel} numberOfLines={1}>
+            Operasyon zinciri
           </Text>
-          <Text style={styles.cityJournalReportText} numberOfLines={reportSecondaryMaxLines}>
-            {cityJournalReportLine}
+          <Text style={styles.districtReportCardText} numberOfLines={reportSecondaryMaxLines}>
+            {reportArchiveContinuity.storyChainLine}
           </Text>
-        </CreviaAnimatedChip>
+        </View>
       ) : null}
 
-      {rewardComebackReportLine ? (
+      {reportArchiveContinuity.positiveLine ? (
         <CreviaAnimatedChip
           surface="report"
           index={2}
@@ -1226,20 +1276,35 @@ export function EndOfDayReportView({
             style={styles.rewardComebackReportText}
             numberOfLines={reportSecondaryMaxLines}
             ellipsizeMode="tail">
-            {rewardComebackReportLine}
+            {reportArchiveContinuity.positiveLine}
           </Text>
         </CreviaAnimatedChip>
       ) : null}
 
-      {districtReportCardLine ? (
+      {reportArchiveContinuity.districtLine ? (
         <View style={styles.districtReportCardRow}>
           <Text style={styles.districtReportCardLabel} numberOfLines={1}>
             Mahalle notu
           </Text>
           <Text style={styles.districtReportCardText} numberOfLines={reportSecondaryMaxLines}>
-            {districtReportCardLine}
+            {reportArchiveContinuity.districtLine}
           </Text>
         </View>
+      ) : null}
+
+      {reportArchiveContinuity.cityJournalLine ? (
+        <CreviaAnimatedChip
+          surface="report"
+          index={1}
+          reducedMotion={reducedMotion}
+          style={styles.cityJournalReportRow}>
+          <Text style={styles.cityJournalReportLabel} numberOfLines={1}>
+            Şehir günlüğü
+          </Text>
+          <Text style={styles.cityJournalReportText} numberOfLines={reportSecondaryMaxLines}>
+            {reportArchiveContinuity.cityJournalLine}
+          </Text>
+        </CreviaAnimatedChip>
       ) : null}
 
       {tomorrowPreviewBundle.showPreview && tomorrowPreviewBundle.summary.preview ? (

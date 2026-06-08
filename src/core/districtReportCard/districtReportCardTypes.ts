@@ -1,5 +1,6 @@
 import type { ContentRuntimeActivationEventMeta } from '@/core/contentRuntimeActivation/contentRuntimeActivationTypes';
 import type { CarryOverMemoryModel } from '@/core/carryOver/carryOverMemoryTypes';
+import type { CityArchiveV1State } from '@/core/cityArchive/cityArchiveTypes';
 import type { CityEchoBinding } from '@/core/cityEchoBinding/cityEchoBindingTypes';
 import type { EventCard } from '@/core/models/EventCard';
 import type { CreviaDistrictTrustBand } from '@/core/districtTrustRuntime/districtTrustRuntimeTypes';
@@ -128,6 +129,120 @@ export type DistrictReportCardMapPresentation = {
   statusChipLabel?: string;
   primaryLine?: string;
   recentEffectLine?: string;
+  publicToneLine?: string;
+  recoveryLine?: string;
+  recentEvents?: DistrictReportRecentEvent[];
   eceLine?: string;
   visibleLineCount: number;
+};
+
+export type DistrictReportCardFullVisibility =
+  | 'hidden'
+  | 'compact'
+  | 'standard'
+  | 'full_preview';
+
+export type DistrictReportPublicTone =
+  | 'calm'
+  | 'watchful'
+  | 'thankful'
+  | 'strained'
+  | 'recovering'
+  | 'frustrated_soft'
+  | 'confident'
+  | 'mixed'
+  | 'unknown';
+
+export type DistrictReportPlayerStyleKind =
+  | 'fast_responder'
+  | 'social_trust_focused'
+  | 'route_balancer'
+  | 'resource_guardian'
+  | 'recovery_builder'
+  | 'balanced_operator'
+  | 'unknown';
+
+export type DistrictReportRecoveryState =
+  | 'stable'
+  | 'improving'
+  | 'recovering'
+  | 'comeback_available'
+  | 'comeback_completed'
+  | 'still_under_watch'
+  | 'unknown';
+
+export type DistrictReportRecentEventTone =
+  | 'positive'
+  | 'warning'
+  | 'recovery'
+  | 'neutral';
+
+export type DistrictReportRecentEvent = {
+  id: string;
+  day: number;
+  kind: string;
+  title: string;
+  shortLine: string;
+  tone: DistrictReportRecentEventTone;
+  sourceKind: string;
+  priority: DistrictReportCardLitePriority;
+};
+
+export type DistrictReportCardFullSourceSignals = DistrictReportCardLiteSourceSignals & {
+  hasCityArchive: boolean;
+  hasArchiveDistrictSummary: boolean;
+  hasArchiveRewardComeback: boolean;
+  hasArchiveEceSummary: boolean;
+};
+
+export type DistrictReportCardFullModel = {
+  districtId: MapDistrictId;
+  districtName: string;
+  day: number;
+  visible: boolean;
+  visibility: DistrictReportCardFullVisibility;
+  trustBand?: CreviaDistrictTrustBand;
+  trustTrend: 'down' | 'flat' | 'up' | 'recovered' | 'unknown';
+  trustLabel?: string;
+  trustLine?: string;
+  dominantIssueKind: DistrictReportCardDominantIssueKind;
+  dominantIssueLabel: string;
+  dominantIssueLine: string;
+  recentArchiveEvents: DistrictReportRecentEvent[];
+  publicTone: DistrictReportPublicTone;
+  publicToneLine: string;
+  playerStyleInDistrict: DistrictReportPlayerStyleKind;
+  playerStyleLine?: string;
+  recoveryState: DistrictReportRecoveryState;
+  recoveryLine?: string;
+  resourcePressureState: 'none' | 'low' | 'medium' | 'high' | 'unknown';
+  eceDistrictLine?: string;
+  socialToneLine?: string;
+  mapLine?: string;
+  hubLine?: string;
+  reportLine?: string;
+  detailLines: string[];
+  sourceSignals: DistrictReportCardFullSourceSignals;
+  duplicateKey: string;
+  maxVisibleRecentEvents: number;
+  /** Lite uyumluluk */
+  recentEffectLine: string;
+  recentEffectKind: DistrictReportCardRecentEffectKind;
+  statusTone: DistrictReportCardLiteStatusTone;
+  priority: DistrictReportCardLitePriority;
+  maxVisibleLines: number;
+  /** Lite uyumluluk — downstream map/reward helpers */
+  eceLine?: string;
+};
+
+export type DistrictReportCardSurfaceModel =
+  | DistrictReportCardLiteModel
+  | DistrictReportCardFullModel;
+
+export type DistrictReportCardFullInput = DistrictReportCardLiteInput & {
+  cityArchive?: CityArchiveV1State | null;
+  advisorRelationshipLine?: string | null;
+  rewardComebackLine?: string | null;
+  mapReactionLine?: string | null;
+  operationalResourceLine?: string | null;
 };

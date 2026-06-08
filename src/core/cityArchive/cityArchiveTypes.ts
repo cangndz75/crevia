@@ -98,6 +98,11 @@ export type CityArchiveStoryChainSummary = {
   unresolvedChainKinds: string[];
   lastClosureDay?: number;
   lastUpdatedDay: number;
+  lastResolvedDay?: number;
+  duplicateKeys?: string[];
+  summaryLine?: string;
+  activeChains?: import('@/core/storyChains/storyChainPersistentTypes').PersistentStoryChain[];
+  recentlyClosedChains?: import('@/core/storyChains/storyChainPersistentTypes').PersistentStoryChainClosure[];
 };
 
 export type CityArchivePruningState = {

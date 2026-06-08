@@ -6,3 +6,5 @@ export * from './cityArchiveEngine';
 export * from './cityArchiveSelectors';
 export * from './cityArchivePresentation';
 export * from './cityArchiveWiring';
+export * from './cityArchiveSurfacePriority';
+export * from './cityArchiveSurfaceWiring';

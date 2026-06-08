@@ -14,6 +14,13 @@ const STATUS_TONE = {
   text: mapUi.tealDark,
 } as const;
 
+const EVENT_TONE_COLOR: Record<string, string> = {
+  positive: mapUi.teal,
+  recovery: mapUi.tealDark,
+  warning: '#B45309',
+  neutral: mapUi.textSecondary,
+};
+
 export function MapDistrictReportCard({ presentation }: Props) {
   if (presentation.visibleLineCount <= 0) return null;
 
@@ -41,7 +48,33 @@ export function MapDistrictReportCard({ presentation }: Props) {
         </Text>
       ) : null}
 
-      {presentation.recentEffectLine ? (
+      {presentation.publicToneLine && presentation.publicToneLine !== presentation.primaryLine ? (
+        <Text style={styles.secondaryLine} numberOfLines={2}>
+          {presentation.publicToneLine}
+        </Text>
+      ) : null}
+
+      {presentation.recoveryLine ? (
+        <Text style={styles.recoveryLine} numberOfLines={2}>
+          {presentation.recoveryLine}
+        </Text>
+      ) : null}
+
+      {presentation.recentEvents?.map((event) => (
+        <View key={event.id} style={styles.eventRow}>
+          <Text style={styles.eventDay} numberOfLines={1}>
+            G{event.day}
+          </Text>
+          <Text
+            style={[styles.eventLine, { color: EVENT_TONE_COLOR[event.tone] ?? mapUi.textSecondary }]}
+            numberOfLines={2}>
+            {event.shortLine}
+          </Text>
+        </View>
+      ))}
+
+      {presentation.recentEffectLine &&
+      !presentation.recentEvents?.some((e) => e.shortLine === presentation.recentEffectLine) ? (
         <Text style={styles.secondaryLine} numberOfLines={2}>
           {presentation.recentEffectLine}
         </Text>
@@ -113,6 +146,35 @@ const styles = StyleSheet.create({
     color: mapUi.textSecondary,
     flexShrink: 1,
     minWidth: 0,
+  },
+  recoveryLine: {
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: '700',
+    color: mapUi.tealDark,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  eventRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    minWidth: 0,
+  },
+  eventDay: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: mapUi.teal,
+    minWidth: 22,
+    flexShrink: 0,
+  },
+  eventLine: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: '600',
+    flexShrink: 1,
   },
   eceRow: {
     flexDirection: 'row',

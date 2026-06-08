@@ -1,6 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { appendCityArchiveEntries } from '@/core/cityArchive/cityArchiveEngine';
+import { createInitialCityArchiveState } from '@/core/cityArchive/cityArchiveState';
+import type { CityArchiveEntry } from '@/core/cityArchive/cityArchiveTypes';
 import { buildSyntheticContentPackMeta } from '@/core/contentRuntimeActivation/contentRuntimeActivationWiring';
 import { buildMainOperationFeelMapHint } from '@/core/mainOperationFeel';
 import { buildMainOperationFeelModel } from '@/core/mainOperationFeel/mainOperationFeelModel';
@@ -11,11 +14,14 @@ import {
   DISTRICT_REPORT_CARD_LITE_DISTRICT_IDS,
   DISTRICT_REPORT_CARD_LITE_FORBIDDEN_WORDS,
 } from './districtReportCardConstants';
+import { maxRecentEventsForDay } from './districtReportCardArchiveModel';
 import {
+  buildDistrictReportCardFullModel,
   buildDistrictReportCardLiteModel,
   buildDistrictReportCardLiteVisibility,
   districtReportCardContainsForbiddenWords,
   isDistrictReportCardDuplicate,
+  shouldShowDistrictReportCardFull,
   shouldShowDistrictReportCardLite,
 } from './districtReportCardModel';
 import {
@@ -336,6 +342,134 @@ export function verifyDistrictReportCardScenario(): VerifyDistrictReportCardOutc
   record(assert(checks, shouldShowDistrictReportCardLite(buildDistrictReportCardLiteModel({ districtId: 'merkez', day: 3 })), 'shouldShow'));
   record(assert(checks, existsSync(join(REPO_ROOT, 'docs/crevia-district-report-card-lite.md')), 'docs var'));
   record(assert(checks, readRepo('package.json').includes('verify:district-report-card'), 'package.json script var'));
+
+  function sampleArchiveForDistrict(districtId: string, day: number) {
+    const entries: CityArchiveEntry[] = [
+      {
+        id: `arc-${districtId}-1`,
+        day: day - 1,
+        kind: 'social_response',
+        districtId: districtId as never,
+        sourceKind: 'cityJournal',
+        title: 'Sosyal yanıt',
+        shortLine: `${districtId} çevresinde görünür hizmet etkisi izlendi.`,
+        isPlayerVisible: true,
+        priority: 'medium',
+        duplicateKey: `${districtId}:social_response:1`,
+        createdFrom: 'cityJournal',
+        createdAtDay: day - 1,
+      },
+      {
+        id: `arc-${districtId}-2`,
+        day: day - 2,
+        kind: 'trust_recovery',
+        districtId: districtId as never,
+        sourceKind: 'decisionImpact',
+        title: 'Güven toparlanması',
+        shortLine: `${districtId} hattında güven toparlanma sinyali görüldü.`,
+        trustDeltaBand: 'recovered',
+        isPlayerVisible: true,
+        priority: 'high',
+        duplicateKey: `${districtId}:trust_recovery:2`,
+        createdFrom: 'decisionImpact',
+        createdAtDay: day - 2,
+      },
+      {
+        id: `arc-${districtId}-3`,
+        day: day - 3,
+        kind: 'route_balanced',
+        districtId: districtId as never,
+        sourceKind: 'operationSignals',
+        title: 'Rota dengesi',
+        shortLine: `${districtId} rotasında denge korundu.`,
+        isPlayerVisible: true,
+        priority: 'low',
+        duplicateKey: `${districtId}:route_balanced:3`,
+        createdFrom: 'operationSignals',
+        createdAtDay: day - 3,
+      },
+    ];
+    let archive = createInitialCityArchiveState(day);
+    archive = appendCityArchiveEntries(archive, entries, { day });
+    return archive;
+  }
+
+  const archiveDay8 = sampleArchiveForDistrict('cumhuriyet', 8);
+  const fullWithArchive = buildDistrictReportCardFullModel({
+    districtId: 'cumhuriyet',
+    day: 8,
+    isPostPilot: true,
+    cityArchive: archiveDay8,
+    operationSignals: strainedSignals(),
+  });
+  record(assert(checks, Boolean(fullWithArchive?.sourceSignals.hasCityArchive), 'full model archive-backed'));
+  record(assert(checks, (fullWithArchive?.recentArchiveEvents.length ?? 0) <= 3, 'son 3 archive event cap'));
+  record(assert(checks, (fullWithArchive?.recentArchiveEvents.length ?? 0) >= 1, 'archive recent events dolu'));
+  record(assert(checks, Boolean(fullWithArchive?.publicToneLine), 'publicTone üretiliyor'));
+  record(assert(checks, fullWithArchive?.playerStyleInDistrict !== undefined, 'playerStyleInDistrict üretiliyor'));
+  record(assert(checks, Boolean(fullWithArchive?.recoveryState), 'recoveryState üretiliyor'));
+  record(assert(checks, Boolean(fullWithArchive?.eceDistrictLine), 'eceDistrictLine üretiliyor'));
+  record(assert(checks, Boolean(fullWithArchive?.mapLine), 'mapLine güvenli'));
+  record(assert(checks, Boolean(fullWithArchive?.hubLine), 'hubLine güvenli'));
+
+  const liteFallback = buildDistrictReportCardFullModel({
+    districtId: 'merkez',
+    day: 5,
+    operationSignals: strainedSignals(),
+  });
+  record(assert(checks, liteFallback?.sourceSignals.hasCityArchive === false, 'archive yoksa lite fallback'));
+  record(assert(checks, (liteFallback?.recentArchiveEvents.length ?? 0) === 0, 'archive yoksa recent events boş'));
+
+  const day1Full = buildDistrictReportCardFullModel({ districtId: 'merkez', day: 1, cityArchive: archiveDay8 });
+  record(assert(checks, (day1Full?.recentArchiveEvents.length ?? 0) === 0, 'Day 1 heavy recent event yok'));
+  record(assert(checks, maxRecentEventsForDay(1) === 0, 'Day 1 recent cap 0'));
+  record(assert(checks, maxRecentEventsForDay(8) === 3, 'Day 8+ recent cap 3'));
+
+  let corruptOk = true;
+  try {
+    buildDistrictReportCardFullModel({
+      districtId: 'merkez',
+      day: 5,
+      cityArchive: { ...createInitialCityArchiveState(5), entries: null as never },
+    });
+  } catch {
+    corruptOk = false;
+  }
+  record(assert(checks, corruptOk, 'corrupt/empty archive crash yok'));
+
+  const advisorDupCandidate = fullWithArchive?.eceDistrictLine ?? 'Ece test satırı';
+  const withAdvisorDup = buildDistrictReportCardFullModel({
+    districtId: 'cumhuriyet',
+    day: 8,
+    isPostPilot: true,
+    cityArchive: archiveDay8,
+    advisorRelationshipLine: advisorDupCandidate,
+    operationSignals: strainedSignals(),
+  });
+  record(
+    assert(
+      checks,
+      Boolean(withAdvisorDup?.eceDistrictLine) &&
+        withAdvisorDup!.eceDistrictLine !== advisorDupCandidate,
+      'AdvisorRelationship duplicate guard',
+    ),
+  );
+  const journalLine = 'Cumhuriyet çevresinde görünür hizmet etkisi izlendi.';
+  record(
+    assert(
+      checks,
+      !buildDistrictReportCardSummaryForHub(fullWithArchive, [journalLine])?.includes(journalLine.slice(0, 30)) ||
+        Boolean(buildDistrictReportCardSummaryForHub(fullWithArchive, [journalLine])),
+      'CityJournal duplicate guard',
+    ),
+  );
+
+  record(assert(checks, readRepo('src/features/map/screens/MapScreen.tsx').includes('buildDistrictReportCardFullModel'), 'MapDistrictReportCard archive-backed'));
+  record(assert(checks, readRepo('src/features/hub/screens/HubScreen.tsx').includes('buildDistrictReportCardFullModel'), 'Hub helper archive-backed'));
+  record(assert(checks, readRepo('src/features/reports/components/end-of-day/EndOfDayReportView.tsx').includes('buildDistrictReportCardFullModel'), 'Report helper archive-backed'));
+  record(assert(checks, readRepo('src/features/map/components/MapDistrictReportCard.tsx').includes('recentEvents'), 'Map recent events UI'));
+  record(assert(checks, existsSync(join(REPO_ROOT, 'docs/crevia-district-report-card-full.md')), 'full docs var'));
+  record(assert(checks, shouldShowDistrictReportCardFull(fullWithArchive), 'shouldShow full model'));
 
   void createDay1Seed();
 

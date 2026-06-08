@@ -70,6 +70,7 @@ export function buildMapReactionLiteInputFromMapContext(params: {
   operationalResourcePresence?: MapReactionLiteInput['operationalResourcePresence'];
   contentPackMeta?: MapReactionLiteInput['contentPackMeta'];
   cityJournal?: MapReactionLiteInput['cityJournal'];
+  cityArchive?: MapReactionLiteInput['cityArchive'];
   carryOverMemory?: MapReactionLiteInput['carryOverMemory'];
   mainOperationScopeHintLine?: string | null;
   activeRouteDistrictId?: string | null;

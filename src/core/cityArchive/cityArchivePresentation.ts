@@ -8,6 +8,11 @@ import type {
 import type { MapDistrictId } from '@/core/districts/districtIdentityTypes';
 import { DISTRICT_IDENTITIES } from '@/core/districts/districtIdentityConstants';
 
+import {
+  archiveJournalEntryLabel,
+  CITY_ARCHIVE_JOURNAL_ENTRY_LABELS,
+} from './cityArchiveSurfacePriority';
+
 import type { CityArchiveEntry, CityArchiveEntryKind } from './cityArchiveTypes';
 
 const ARCHIVE_KIND_TO_JOURNAL_KIND: Partial<
@@ -26,6 +31,7 @@ const ARCHIVE_KIND_TO_JOURNAL_KIND: Partial<
   comeback_available: 'recovery_momentum',
   comeback_completed: 'recovery_momentum',
   ece_prediction_confirmed: 'district_trust_shift',
+  story_chain_step: 'carry_over_created',
   report_milestone: 'fallback',
 };
 
@@ -42,6 +48,7 @@ function journalToneForArchive(entry: CityArchiveEntry): CityJournalLiteEntryTon
   }
   if (entry.kind === 'main_operation_started') return 'operation';
   if (entry.kind === 'social_response') return 'positive';
+  if (entry.kind === 'story_chain_step') return 'watch';
   return 'neutral';
 }
 
@@ -59,6 +66,8 @@ function journalSourceKind(entry: CityArchiveEntry): CityJournalLiteSourceKind {
       return 'district_memory';
     case 'advisorRelationship':
       return 'city_echo';
+    case 'storyChain':
+      return 'carry_over';
     case 'operationSignals':
       return 'carry_over';
     default:
@@ -78,10 +87,14 @@ export function convertArchiveEntryToJournalEntry(
     ? entry.shortLine
     : `Gün ${entry.day}: ${entry.shortLine}`;
 
+  const title = CITY_ARCHIVE_JOURNAL_ENTRY_LABELS[entry.kind]
+    ? archiveJournalEntryLabel(entry.kind)
+    : entry.title;
+
   return {
     id: `archive_journal_${entry.id}`,
     day: entry.day,
-    title: entry.title,
+    title,
     line,
     districtId: entry.districtId as MapDistrictId | undefined,
     districtName,

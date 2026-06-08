@@ -35,10 +35,60 @@ export const DISTRICT_REPORT_CARD_LITE_FORBIDDEN_WORDS = [
   'felaket',
   'viral',
   'trend oldu',
+  'isyan',
+  'gps',
+  'canlı takip',
+  'gerçek vatandaş',
+  'resmi belediye',
+  'openai',
+  ' ai ',
   'district_pack_one',
   'vehicle_route_pack_one',
   'container_environment_pack_one',
 ] as const;
+
+export const DISTRICT_REPORT_CARD_FULL_MAX_RECENT_EVENTS = 3;
+
+export const DISTRICT_REPORT_CARD_PUBLIC_TONE_LINES: Record<
+  import('./districtReportCardTypes').DistrictReportPublicTone,
+  string
+> = {
+  calm: 'Mahallede hava daha sakin.',
+  watchful: 'Saha temposu dikkatle izleniyor.',
+  thankful: 'Halk görünür hizmeti fark ediyor.',
+  strained: 'Baskı azaldı ama beklenti tamamen kapanmadı.',
+  recovering: 'Toparlanma çizgisi görünür kalıyor.',
+  frustrated_soft: 'Mahallede beklenti hâlâ dikkatle izleniyor.',
+  confident: 'Mahallede dengeli bir tempo korunuyor.',
+  mixed: 'Mahallede hem toparlanma hem izleme sinyali var.',
+  unknown: 'Mahalle tonu sakin izleniyor.',
+};
+
+export const DISTRICT_REPORT_CARD_PLAYER_STYLE_LINES: Record<
+  import('./districtReportCardTypes').DistrictReportPlayerStyleKind,
+  string
+> = {
+  fast_responder: 'Bu mahallede hızlı müdahale kararların öne çıkıyor.',
+  social_trust_focused: 'Bu mahallede sosyal güvene odaklı kararlar daha görünür.',
+  route_balancer: 'Bu hatta kaynak dengesini koruyan kararlar daha görünür.',
+  resource_guardian: 'Bu mahallede kaynak temposunu koruyan kararlar öne çıkıyor.',
+  recovery_builder: 'Son kararların toparlanma çizgisini destekliyor.',
+  balanced_operator: 'Son karar çizgin dengeli ve ölçülü görünüyor.',
+  unknown: 'Son karar çizgin bu mahallede sakin izleniyor.',
+};
+
+export const DISTRICT_REPORT_CARD_RECOVERY_LINES: Record<
+  import('./districtReportCardTypes').DistrictReportRecoveryState,
+  string
+> = {
+  stable: 'Bu mahallede olumlu iz korunuyor.',
+  improving: 'Toparlanma başladı.',
+  recovering: 'Dünkü baskı bugün toparlama fırsatına döndü.',
+  comeback_available: 'Bu mahallede toparlanma fırsatı açık.',
+  comeback_completed: 'Toparlanma adımı tamamlandı.',
+  still_under_watch: 'Risk tamamen kapanmadı, ama baskı daha kontrollü.',
+  unknown: 'Toparlanma çizgisi sakin izleniyor.',
+};
 
 export const DISTRICT_REPORT_CARD_LITE_TRUST_LABELS: Record<CreviaDistrictTrustBand, string> = {
   fragile: 'Sosyal güven hassas',

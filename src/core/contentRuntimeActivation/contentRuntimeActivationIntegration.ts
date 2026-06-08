@@ -17,6 +17,14 @@ import {
   CONTENT_RUNTIME_ACTIVATION_PRIORITY_DISTRICTS,
 } from './contentRuntimeActivationConstants';
 import {
+  buildArchiveWriteEligibility,
+  buildCapSummary,
+  buildDistrictBalanceSummary,
+  buildSurfaceDensitySummary,
+  evaluateCandidateStoryChainEligibility,
+  resolveMaxPackOriginForMode,
+} from './contentRuntimeActivationFullGuards';
+import {
   mapContentRuntimeActivationCandidatesToEventCards,
 } from './contentRuntimeActivationMapper';
 import { buildContentRuntimeActivationPresentationHint } from './contentRuntimeActivationPresentation';
@@ -39,31 +47,49 @@ export function buildContentRuntimeActivationSelection(
 ): ContentRuntimeActivationSelectionResult {
   const phase = resolveContentRuntimeActivationPhase(input);
   const model = buildContentRuntimeActivationModel(input, phase);
-  const maxCandidates =
-    phase === 'main_operation_full'
-      ? CONTENT_RUNTIME_ACTIVATION_MAX_CANDIDATES_FULL
-      : CONTENT_RUNTIME_ACTIVATION_MAX_CANDIDATES_LIGHT;
+  const maxCandidates = resolveMaxPackOriginForMode(model.activationMode, input.day);
 
-  if (!model.isEligible || model.activationMode === 'off') {
-    return { model, candidates: [], eventCards: [] };
+  if (!model.isEligible || model.activationMode === 'off' || maxCandidates === 0) {
+    return { model, candidates: [], suppressedCandidates: [], eventCards: [] };
   }
 
-  const pool = buildContentRuntimeActivationFamilyPool(input);
+  const pool = buildContentRuntimeActivationFamilyPool(input, model.activationMode);
   const ranked = rankContentRuntimeActivationCandidates(pool, input, model);
-  const candidates = selectContentRuntimeActivationCandidates(
-    ranked,
-    input,
-    model,
-    maxCandidates,
-  );
+  const guardContext = {
+    mode: model.activationMode,
+    phase,
+    activeStoryChainDistrictIds: input.activeStoryChainDistrictIds,
+    previousSemanticClusters: input.previousSemanticClusters,
+    packOriginStoryStartsToday: input.packOriginStoryStartsToday,
+    hasActiveMainOperation: input.hasActiveMainOperation ?? phase === 'main_operation_full',
+  };
+  const { selected: candidates, suppressed: suppressedCandidates } =
+    selectContentRuntimeActivationCandidates(
+      ranked,
+      input,
+      model,
+      maxCandidates,
+      guardContext,
+    );
   const eventCards = mapContentRuntimeActivationCandidatesToEventCards(
     candidates,
     input.day,
+    model.activationMode,
   );
 
   const presentationHint = buildContentRuntimeActivationPresentationHint(
     model,
     candidates,
+  );
+
+  const storyTriggerEligibility =
+    candidates.length > 0
+      ? evaluateCandidateStoryChainEligibility(candidates[0], input, guardContext)
+      : { canTrigger: false, reason: 'no_pack_candidate' };
+
+  const archiveWriteEligibility = buildArchiveWriteEligibility(
+    model.activationMode,
+    candidates.length,
   );
 
   return {
@@ -74,12 +100,23 @@ export function buildContentRuntimeActivationSelection(
       selectedVariantIds: candidates.map(
         (c) => `${c.familyId}_${c.selectedVariantKind}`,
       ),
+      selectedPackEvents: eventCards.map((e) => e.id),
+      suppressedPackEvents: suppressedCandidates.map((c) => c.familyId),
+      capSummary: buildCapSummary(model.activationMode, input.day, candidates.length),
+      districtBalanceSummary: buildDistrictBalanceSummary(candidates),
+      archiveWriteEligibility,
+      storyTriggerEligibility: {
+        canTrigger: storyTriggerEligibility.canTrigger,
+        reason: storyTriggerEligibility.reason,
+      },
+      surfaceDensitySummary: buildSurfaceDensitySummary(model.activationMode),
       sourceSignals: presentationHint
         ? [...model.sourceSignals, 'content_pack_activation']
         : model.sourceSignals,
       presentationHint,
     },
     candidates,
+    suppressedCandidates,
     eventCards,
   };
 }
@@ -140,6 +177,11 @@ export function isPilotDayProtected(day: number): boolean {
 
 export const CONTENT_RUNTIME_ACTIVATION_PRIORITY_DISTRICT_LIST =
   CONTENT_RUNTIME_ACTIVATION_PRIORITY_DISTRICTS;
+
+export {
+  CONTENT_RUNTIME_ACTIVATION_MAX_CANDIDATES_FULL,
+  CONTENT_RUNTIME_ACTIVATION_MAX_CANDIDATES_LIGHT,
+};
 
 export {
   DISTRICT_PACK_ONE_ID,

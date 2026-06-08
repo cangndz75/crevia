@@ -1,6 +1,12 @@
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 
 import {
+  buildPersistentStoryChainDayCloseInput,
+  type StoryChainDayCloseStoreInput,
+} from '@/core/storyChains/storyChainPersistentWiring';
+import { applyPersistentStoryChainOnDayClose } from '@/core/storyChains/storyChainPersistentEngine';
+
+import {
   appendCityArchiveEntries,
   buildCityArchiveEntriesForDay,
 } from './cityArchiveEngine';
@@ -56,4 +62,15 @@ export function appendDayCloseCityArchive(
   const base = archive ?? createInitialCityArchiveState(input.day);
   const entries = buildCityArchiveEntriesForDay(input);
   return appendCityArchiveEntries(base, entries, { day: input.day, skipDuplicate: true });
+}
+
+export function appendDayCloseCityArchiveWithStoryChains(
+  archive: CityArchiveV1State | null | undefined,
+  archiveInput: CityArchiveDayCloseInput,
+  storyChainStoreInput?: StoryChainDayCloseStoreInput,
+): CityArchiveV1State {
+  const afterArchive = appendDayCloseCityArchive(archive, archiveInput);
+  if (!storyChainStoreInput) return afterArchive;
+  const storyInput = buildPersistentStoryChainDayCloseInput(storyChainStoreInput);
+  return applyPersistentStoryChainOnDayClose(afterArchive, storyInput);
 }

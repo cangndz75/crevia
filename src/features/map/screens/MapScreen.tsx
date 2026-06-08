@@ -23,7 +23,7 @@ import {
 import type { CreviaActiveTaskRouteUiModel } from '@/core/activeTaskRoutes/activeTaskRouteUiTypes';
 import { buildMapDistrictIntelligenceModel } from '@/core/map/mapDistrictIntelligencePresentation';
 import {
-  buildDistrictReportCardLiteModel,
+  buildDistrictReportCardFullModel,
   buildDistrictReportCardMapPresentation,
 } from '@/core/districtReportCard';
 import {
@@ -228,6 +228,7 @@ export function MapScreen() {
   const microDecisionState = useGameStore((s) => s.microDecisionState);
   const crisisActionState = useGameStore((s) => s.crisisActionState);
   const operationalResources = useGameStore((s) => s.operationalResources);
+  const cityArchive = useGameStore((s) => s.cityArchive);
   const eventPool = useGameStore((s) => s.eventPool);
   const postPilotCatalog =
     postPilotOperation?.postPilotDailyEventSet?.catalog ?? [];
@@ -672,7 +673,7 @@ export function MapScreen() {
 
   const mapDistrictReportCardBundle = useMemo(() => {
     const intelligenceLines = mapDistrictIntelligence?.visibleLines.map((line) => line.text) ?? [];
-    const model = buildDistrictReportCardLiteModel({
+    const model = buildDistrictReportCardFullModel({
       districtId: focusDistrictId,
       day: gameDay,
       isPostPilot: showPostPilotMapChrome,
@@ -684,6 +685,7 @@ export function MapScreen() {
       resourceFatigue: operationalResources,
       activeEvent: districtFocusedEvent,
       recentEvents: activeEvents,
+      cityArchive,
       contentPackMeta: resolveContentPackMetaForWiring({
         event: districtFocusedEvent,
         eventId: districtFocusedEvent?.id,
@@ -707,6 +709,7 @@ export function MapScreen() {
     return { model, presentation };
   }, [
     activeEvents,
+    cityArchive,
     crisisState,
     districtFocusedEvent,
     focusDistrictId,
@@ -768,6 +771,7 @@ export function MapScreen() {
     return buildMapReactionLiteModel(
       buildMapReactionLiteInputFromMapContext({
         day: gameDay,
+        cityArchive,
         selectedDistrictId: focusDistrictId,
         isPostPilot: showPostPilotMapChrome,
         accessMode: deriveMainOperationAccessMode(gameStateForMap, monetization),

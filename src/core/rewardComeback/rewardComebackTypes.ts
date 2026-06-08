@@ -4,7 +4,7 @@ import type { CityEchoBinding } from '@/core/cityEchoBinding/cityEchoBindingType
 import type { CityJournalLiteEntry } from '@/core/cityJournal/cityJournalTypes';
 import type { ContentRuntimeActivationEventMeta } from '@/core/contentRuntimeActivation/contentRuntimeActivationTypes';
 import type { DecisionImpactExplanation } from '@/core/decisionImpactExplanation/decisionImpactExplanationTypes';
-import type { DistrictReportCardLiteModel } from '@/core/districtReportCard/districtReportCardTypes';
+import type { DistrictReportCardSurfaceModel } from '@/core/districtReportCard/districtReportCardTypes';
 import type { MapDistrictId } from '@/core/districts/districtIdentityTypes';
 import type { MainOperationFeelModel } from '@/core/mainOperationFeel/mainOperationFeelTypes';
 import type { MapDistrictReactionKind } from '@/core/mapReactions/mapReactionTypes';
@@ -119,7 +119,7 @@ export type RewardComebackInput = {
   cityEchoBinding?: CityEchoBinding | null;
   tomorrowRisk?: TomorrowRiskModel | null;
   carryOverMemory?: CarryOverMemoryModel | null;
-  districtReportCard?: DistrictReportCardLiteModel | null;
+  districtReportCard?: DistrictReportCardSurfaceModel | null;
   cityJournalEntry?: CityJournalLiteEntry | null;
   operationSignals?: OperationSignalsState | null;
   resourceFatigue?: { domain?: string; state?: string; trend?: string } | null;

@@ -30,7 +30,7 @@ import type {
 } from './contentRuntimeActivationTypes';
 
 const CRA_EVENT_ID_RE =
-  /^cra_(district_pack_one|vehicle_route_pack_one|container_environment_pack_one)_(.+)_d(\d+)$/;
+  /^cra_(district_pack_one|vehicle_route_pack_one|container_environment_pack_one|social_trust_pack_one|crisis_adjacent_pack_one)_(.+)_d(\d+)$/;
 
 const WIRING_FORBIDDEN_WORDS = [
   ...CONTENT_RUNTIME_ACTIVATION_FORBIDDEN_WORDS,
@@ -67,6 +67,8 @@ function districtLabel(meta: ContentRuntimeActivationEventMeta): string {
 function domainForPackId(packId: ContentRuntimeActivationPackId): string {
   if (packId === 'vehicle_route_pack_one') return 'route';
   if (packId === 'container_environment_pack_one') return 'container';
+  if (packId === 'social_trust_pack_one') return 'social';
+  if (packId === 'crisis_adjacent_pack_one') return 'crisis';
   return 'district';
 }
 

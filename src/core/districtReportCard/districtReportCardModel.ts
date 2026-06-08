@@ -19,14 +19,37 @@ import {
   DISTRICT_REPORT_CARD_LITE_MAX_VISIBLE_LINES,
   DISTRICT_REPORT_CARD_LITE_TRUST_LABELS,
 } from './districtReportCardConstants';
+import {
+  buildEceDistrictLineFromArchive,
+  buildRecentEventsFromArchive,
+  collectArchiveGuardLines,
+  inferPlayerStyleInDistrict,
+  inferPublicTone,
+  inferRecoveryState,
+  inferResourcePressureState,
+  inferTrustTrend,
+  mapLiteVisibilityToFull,
+  maxRecentEventsForDay,
+} from './districtReportCardArchiveModel';
+import {
+  DISTRICT_REPORT_CARD_PLAYER_STYLE_LINES,
+  DISTRICT_REPORT_CARD_PUBLIC_TONE_LINES,
+  DISTRICT_REPORT_CARD_RECOVERY_LINES,
+} from './districtReportCardConstants';
 import type {
   DistrictReportCardDominantIssueKind,
+  DistrictReportCardFullInput,
+  DistrictReportCardFullModel,
+  DistrictReportCardFullSourceSignals,
   DistrictReportCardLiteInput,
   DistrictReportCardLiteModel,
   DistrictReportCardLitePriority,
   DistrictReportCardLiteSourceSignals,
   DistrictReportCardLiteVisibility,
   DistrictReportCardRecentEffectKind,
+  DistrictReportPlayerStyleKind,
+  DistrictReportPublicTone,
+  DistrictReportRecoveryState,
 } from './districtReportCardTypes';
 
 function cleanText(value: string | null | undefined, limit = DISTRICT_REPORT_CARD_LITE_MAX_COPY_LENGTH): string {
@@ -560,4 +583,221 @@ export function shouldShowDistrictReportCardLite(
   model: DistrictReportCardLiteModel | null | undefined,
 ): boolean {
   return Boolean(model?.visible && model.districtName);
+}
+
+export function shouldShowDistrictReportCardFull(
+  model: DistrictReportCardFullModel | null | undefined,
+): boolean {
+  return Boolean(model?.visible && model.districtName);
+}
+
+function buildPublicToneLine(
+  tone: DistrictReportPublicTone,
+  districtName: string,
+  existing: string[],
+): string {
+  const base = DISTRICT_REPORT_CARD_PUBLIC_TONE_LINES[tone];
+  const localized =
+    tone === 'watchful' || tone === 'strained'
+      ? `${districtName} çevresinde ${base.charAt(0).toLowerCase()}${base.slice(1)}`
+      : base;
+  const line = sanitizeCopy(localized, DISTRICT_REPORT_CARD_PUBLIC_TONE_LINES.unknown);
+  if (isDistrictReportCardDuplicate(line, existing)) {
+    return sanitizeCopy(DISTRICT_REPORT_CARD_PUBLIC_TONE_LINES.calm, DISTRICT_REPORT_CARD_LITE_FALLBACK_LINE);
+  }
+  return line;
+}
+
+function buildPlayerStyleLine(
+  style: DistrictReportPlayerStyleKind,
+  existing: string[],
+): string | undefined {
+  const line = sanitizeCopy(
+    DISTRICT_REPORT_CARD_PLAYER_STYLE_LINES[style],
+    DISTRICT_REPORT_CARD_PLAYER_STYLE_LINES.unknown,
+  );
+  if (isDistrictReportCardDuplicate(line, existing)) return undefined;
+  return line;
+}
+
+function buildRecoveryLine(
+  state: DistrictReportRecoveryState,
+  existing: string[],
+): string | undefined {
+  const line = sanitizeCopy(
+    DISTRICT_REPORT_CARD_RECOVERY_LINES[state],
+    DISTRICT_REPORT_CARD_RECOVERY_LINES.unknown,
+  );
+  if (isDistrictReportCardDuplicate(line, existing)) return undefined;
+  return line;
+}
+
+export function buildDistrictReportCardFullModel(
+  input: DistrictReportCardFullInput = {},
+): DistrictReportCardFullModel | null {
+  const lite = buildDistrictReportCardLiteModel(input);
+  if (!lite) return null;
+
+  const day = lite.day;
+  const maxVisibleRecentEvents = maxRecentEventsForDay(day);
+  const archive = input.cityArchive;
+  const guard = collectArchiveGuardLines(input);
+
+  const recentArchiveEvents = buildRecentEventsFromArchive(
+    archive,
+    lite.districtId,
+    maxVisibleRecentEvents,
+  );
+
+  const trustTrend = inferTrustTrend(archive, lite.districtId);
+  const resourcePressureState = inferResourcePressureState(archive, lite.districtId, lite);
+
+  const carryResolved =
+    input.carryOverMemory?.visible === false ||
+    input.carryOverMemory?.summary?.toLocaleLowerCase('tr-TR').includes('toparlan');
+
+  const publicTone = inferPublicTone({
+    archive,
+    districtId: lite.districtId,
+    trustBand: lite.trustBand,
+    socialPulseTrend: input.socialPulse?.trend,
+    carryOverResolved: carryResolved,
+    hasCrisisWatch: lite.dominantIssueKind === 'crisis_prevention',
+    resourcePressure: resourcePressureState,
+  });
+
+  const playerStyleInDistrict = inferPlayerStyleInDistrict({
+    archive,
+    districtId: lite.districtId,
+    advisorStyle: archive?.playerStyleSummary?.dominantStyle ?? null,
+  });
+
+  const recoveryState = inferRecoveryState({
+    archive,
+    districtId: lite.districtId,
+    trustBand: lite.trustBand,
+    tomorrowRiskSoftened: input.tomorrowRisk?.shouldShowAsCompact === true,
+    carryOverResolved: carryResolved,
+    rewardComebackLine: input.rewardComebackLine,
+  });
+
+  let guardLines = [...guard];
+  let publicToneLine = day <= 1 ? sanitizeCopy(lite.trustLine ?? lite.dominantIssueLine, DISTRICT_REPORT_CARD_LITE_FALLBACK_LINE) : buildPublicToneLine(publicTone, lite.districtName, guardLines);
+  guardLines.push(publicToneLine);
+
+  const playerStyleLine =
+    day >= 4 ? buildPlayerStyleLine(playerStyleInDistrict, guardLines) : undefined;
+  if (playerStyleLine) guardLines.push(playerStyleLine);
+
+  const recoveryLine =
+    day >= 3 && recoveryState !== 'unknown'
+      ? buildRecoveryLine(recoveryState, guardLines)
+      : undefined;
+  if (recoveryLine) guardLines.push(recoveryLine);
+
+  const eceDistrictLine =
+    day <= 1
+      ? undefined
+      : buildEceDistrictLineFromArchive({
+          archive,
+          districtId: lite.districtId,
+          districtName: lite.districtName,
+          dominantIssueKind: lite.dominantIssueKind,
+          publicTone,
+          playerStyle: playerStyleInDistrict,
+          liteEceLine: lite.eceLine,
+          existingLines: guardLines,
+        });
+
+  if (eceDistrictLine) guardLines.push(eceDistrictLine);
+
+  let dominantIssueLine = lite.dominantIssueLine;
+  const archiveDominant = recentArchiveEvents.find((e) => e.tone === 'warning');
+  if (archiveDominant && day >= 4 && !isDistrictReportCardDuplicate(archiveDominant.shortLine, guardLines)) {
+    dominantIssueLine = sanitizeCopy(
+      archiveDominant.shortLine,
+      lite.dominantIssueLine,
+    );
+  }
+  guardLines.push(dominantIssueLine);
+
+  const recentEffectLine =
+    recentArchiveEvents[0]?.shortLine && !isDistrictReportCardDuplicate(recentArchiveEvents[0].shortLine, guardLines)
+      ? sanitizeCopy(recentArchiveEvents[0].shortLine, lite.recentEffectLine)
+      : lite.recentEffectLine;
+
+  const mapLine = sanitizeCopy(
+    recentArchiveEvents.find((e) => e.tone !== 'neutral')?.shortLine ??
+      dominantIssueLine ??
+      publicToneLine,
+    lite.dominantIssueLine,
+  );
+
+  const hubLine = sanitizeCopy(
+    playerStyleLine ?? publicToneLine ?? lite.trustLine ?? dominantIssueLine,
+    lite.dominantIssueLine,
+  );
+
+  const reportLine =
+    day <= 3
+      ? undefined
+      : sanitizeCopy(
+          recoveryLine ?? recentEffectLine ?? dominantIssueLine,
+          lite.recentEffectLine,
+        );
+
+  const detailLines = [
+    publicToneLine,
+    playerStyleLine ?? '',
+    recoveryLine ?? '',
+    ...recentArchiveEvents.map((e) => e.shortLine),
+    eceDistrictLine ?? '',
+  ].filter((line) => Boolean(line) && !isDistrictReportCardDuplicate(line, guard));
+
+  const sourceSignals: DistrictReportCardFullSourceSignals = {
+    ...lite.sourceSignals,
+    hasCityArchive: Boolean(Array.isArray(archive?.entries) && archive.entries.length > 0),
+    hasArchiveDistrictSummary: Boolean(archive?.districtSummaries?.[lite.districtId]),
+    hasArchiveRewardComeback: Boolean(archive?.rewardComebackSummary?.recentComebackEntryIds?.length),
+    hasArchiveEceSummary: Boolean(archive?.eceRelationshipSummary?.lastUpdatedDay),
+  };
+
+  return {
+    districtId: lite.districtId,
+    districtName: lite.districtName,
+    day,
+    visible: lite.visible,
+    visibility: mapLiteVisibilityToFull(lite.visibility),
+    trustBand: lite.trustBand,
+    trustTrend,
+    trustLabel: lite.trustLabel,
+    trustLine: lite.trustLine,
+    dominantIssueKind: lite.dominantIssueKind,
+    dominantIssueLabel: lite.dominantIssueLabel,
+    dominantIssueLine,
+    recentArchiveEvents,
+    publicTone,
+    publicToneLine,
+    playerStyleInDistrict,
+    playerStyleLine,
+    recoveryState,
+    recoveryLine,
+    resourcePressureState,
+    eceDistrictLine,
+    socialToneLine: lite.socialToneLine,
+    mapLine: isDistrictReportCardDuplicate(mapLine, guard) ? undefined : mapLine,
+    hubLine: isDistrictReportCardDuplicate(hubLine, guard) ? lite.trustLine : hubLine,
+    reportLine:
+      reportLine && !isDistrictReportCardDuplicate(reportLine, guard) ? reportLine : undefined,
+    detailLines,
+    sourceSignals,
+    duplicateKey: [lite.duplicateKey, archive ? 'archive' : 'lite', publicTone, playerStyleInDistrict].join(':'),
+    maxVisibleRecentEvents,
+    recentEffectLine,
+    recentEffectKind: lite.recentEffectKind,
+    statusTone: lite.statusTone,
+    priority: lite.priority,
+    maxVisibleLines: lite.maxVisibleLines,
+    eceLine: eceDistrictLine ?? lite.eceLine,
+  };
 }

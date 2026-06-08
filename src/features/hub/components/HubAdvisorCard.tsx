@@ -52,6 +52,7 @@ import {
 } from '@/store/useGameStore';
 import { buildAdvisorRelationshipHubPresentation } from '@/core/advisorRelationship';
 import { buildRewardComebackHubPresentation } from '@/core/rewardComeback';
+import { buildEceArchiveHintModel } from '@/core/cityArchive/cityArchiveSurfaceWiring';
 import { selectPriorityAdvisorSupportingLine } from '@/core/releaseCandidatePolish/hubAdvisorPolishPresentation';
 import { getPressFeedbackStyle } from '@/ui/feedback/pressFeedback';
 import { spacing } from '@/ui/theme/spacing';
@@ -76,6 +77,7 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
   const crisisActionState = useGameStore((s) => s.crisisActionState);
   const operationalResources = useGameStore((s) => s.operationalResources);
   const decisionHistory = useGameStore(selectDecisionHistory);
+  const cityArchive = useGameStore((s) => s.cityArchive);
   const isDay1 = useGameStore(selectIsDay1TutorialEligible);
   const advisorShortMode = shouldUseFirstTenMinutesAdvisorShortMode(gameState);
   const askDaily = useGameStore((s) => s.askAdvisorForDailySummary);
@@ -331,12 +333,20 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
 
   const supportingAdvisorLine = useMemo(() => {
     if (advisorShortMode) return undefined;
-    if (rewardComebackPresentation?.hubLine && gameState.city.day >= 4) {
-      return rewardComebackPresentation.hubLine;
-    }
-    if (gameState.city.day >= 8 && advisorRelationshipPresentation?.supportingLine) {
-      return advisorRelationshipPresentation.supportingLine;
-    }
+    const eceHint = buildEceArchiveHintModel({
+      day: gameState.city.day,
+      cityArchive,
+      advisorRelationshipSupportingLine: advisorRelationshipPresentation?.supportingLine ?? null,
+      advisorRelationshipMainLine: advisorRelationshipPresentation?.mainLine ?? null,
+      rewardComebackEceLine: rewardComebackPresentation?.model.eceLine ?? null,
+      cityEchoAdvisorLine: cityEchoAdvisorLine ?? null,
+      existingLines: [
+        model.primaryInsight?.body ?? '',
+        resourceAdvisorLine ?? '',
+        rewardComebackPresentation?.hubLine ?? '',
+      ].filter(Boolean),
+    });
+    if (eceHint.supportingLine) return eceHint.supportingLine;
     return selectPriorityAdvisorSupportingLine(
       [
         { id: 'city_echo', line: cityEchoAdvisorLine ?? '', priority: 2 },
@@ -346,13 +356,17 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
       gameState.city.day,
     );
   }, [
+    advisorRelationshipPresentation?.mainLine,
     advisorRelationshipPresentation?.supportingLine,
     advisorShortMode,
+    cityArchive,
     cityEchoAdvisorLine,
     gameState.city.day,
+    model.primaryInsight?.body,
     pilotThemeAdvisorLine,
     resourceAdvisorLine,
     rewardComebackPresentation?.hubLine,
+    rewardComebackPresentation?.model.eceLine,
   ]);
 
   const usesLeft = advisorState.dailyUsesRemaining > 0;

@@ -124,6 +124,7 @@ type HubReferenceHomeProps = {
   hubCityJournal?: CityJournalHubPresentation | null;
   hubEceContextLine?: string | null;
   hubDistrictReportLine?: string | null;
+  hubStoryChainLine?: string | null;
   hubMainOperationFeelExistingLines?: string[];
   showHubCarryOver?: boolean;
   showOperationalResources?: boolean;
@@ -138,6 +139,19 @@ function HubDistrictReportSupportingLine({ line }: { line: string }) {
     <View style={styles.districtSupportLine}>
       <Text style={styles.districtSupportLabel} numberOfLines={1} ellipsizeMode="tail">
         Mahalle notu
+      </Text>
+      <Text style={styles.districtSupportText} numberOfLines={2} ellipsizeMode="tail">
+        {line}
+      </Text>
+    </View>
+  );
+}
+
+function HubStoryChainSupportingLine({ line }: { line: string }) {
+  return (
+    <View style={styles.districtSupportLine}>
+      <Text style={styles.districtSupportLabel} numberOfLines={1} ellipsizeMode="tail">
+        Devam eden iz
       </Text>
       <Text style={styles.districtSupportText} numberOfLines={2} ellipsizeMode="tail">
         {line}
@@ -737,6 +751,7 @@ export function HubReferenceHome({
   hubCityJournal,
   hubEceContextLine,
   hubDistrictReportLine,
+  hubStoryChainLine,
   hubMainOperationFeelExistingLines,
   showHubCarryOver = false,
   showOperationalResources = false,
@@ -805,6 +820,9 @@ export function HubReferenceHome({
           )}
           {hubDistrictReportLine ? (
             <HubDistrictReportSupportingLine line={hubDistrictReportLine} />
+          ) : null}
+          {hubStoryChainLine ? (
+            <HubStoryChainSupportingLine line={hubStoryChainLine} />
           ) : null}
           {showOperationalResources ? (
             <CreviaAnimatedCard
