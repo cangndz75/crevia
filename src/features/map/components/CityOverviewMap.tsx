@@ -35,8 +35,11 @@ import {
   shouldShowRoutes,
 } from '../utils/mapOverviewPins';
 import { useMapDisplaySize } from './MapDisplaySizeContext';
+import type { MapDistrictMotionCue } from '@/core/mapReactionsMotion/mapReactionMotionTypes';
+
 import { MapOverlaySvg } from './MapOverlaySvg';
 import { MapPin as MapPinNode } from './MapPin';
+import { MapReactionMotionLayer } from './MapReactionMotionLayer';
 import { ZoomableMapCanvas, type ZoomableMapControls } from './ZoomableMapCanvas';
 
 export type CityOverviewMapProps = {
@@ -56,6 +59,8 @@ export type CityOverviewMapProps = {
   crisisHighlightDistrictIds?: MapDistrictId[];
   resourceHighlightDistrictIds?: MapDistrictId[];
   reactionHighlightDistrictIds?: MapDistrictId[];
+  reactionMotionCues?: MapDistrictMotionCue[];
+  operationScopeMotionDistrictIds?: MapDistrictId[];
   mapPresenceViewModel?: MapPresenceViewModel | null;
   onDistrictPress?: (districtId: MapDistrictId) => void;
   onPinPress?: (pinId: string) => void;
@@ -78,6 +83,8 @@ export function CityOverviewMap({
   crisisHighlightDistrictIds,
   resourceHighlightDistrictIds,
   reactionHighlightDistrictIds,
+  reactionMotionCues,
+  operationScopeMotionDistrictIds,
   mapPresenceViewModel = null,
   onDistrictPress,
   onPinPress,
@@ -152,6 +159,8 @@ export function CityOverviewMap({
         crisisHighlightDistrictIds={crisisHighlightDistrictIds}
         resourceHighlightDistrictIds={resourceHighlightDistrictIds}
         reactionHighlightDistrictIds={reactionHighlightDistrictIds}
+        reactionMotionCues={reactionMotionCues}
+        operationScopeMotionDistrictIds={operationScopeMotionDistrictIds}
         mapPresenceViewModel={mapPresenceViewModel}
         onDistrictPress={onDistrictPress}
         onPinPress={onPinPress}
@@ -169,6 +178,8 @@ type OverlayProps = {
   crisisHighlightDistrictIds?: MapDistrictId[];
   resourceHighlightDistrictIds?: MapDistrictId[];
   reactionHighlightDistrictIds?: MapDistrictId[];
+  reactionMotionCues?: MapDistrictMotionCue[];
+  operationScopeMotionDistrictIds?: MapDistrictId[];
   mapPresenceViewModel?: MapPresenceViewModel | null;
   showHeat: boolean;
   showRoutes: boolean;
@@ -185,6 +196,8 @@ function CityOverviewOverlay({
   crisisHighlightDistrictIds,
   resourceHighlightDistrictIds,
   reactionHighlightDistrictIds,
+  reactionMotionCues,
+  operationScopeMotionDistrictIds,
   mapPresenceViewModel = null,
   showHeat,
   showRoutes,
@@ -395,6 +408,12 @@ function CityOverviewOverlay({
       })}
 
       <MapPresenceSvgLayer viewModel={mapPresenceViewModel} />
+
+      <MapReactionMotionLayer
+        cues={reactionMotionCues ?? []}
+        activeDistrictId={activeMapDistrict}
+        operationScopeDistrictIds={operationScopeMotionDistrictIds}
+      />
 
       <G>
         {pins.map((pin) => (

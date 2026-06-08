@@ -1,9 +1,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { IAP_PRODUCT_COPY_DOCS_PATH, runIapProductCopyAudit } from '@/core/iapProductCopy';
 import { runSecretHygieneScan } from '@/core/security/secretHygieneAudit';
 import { buildSecretRotationClosureResult } from '@/core/security/secretRotationClosureAudit';
 
+import {
+  IAP_DASHBOARD_ENTRY_CHECKLIST_DOCS_PATH,
+  runIapDashboardEntryChecklistAudit,
+} from './iapDashboardEntryChecklist';
 import { IAP_SANDBOX_QA_ENV_KEYS } from './iapSandboxQaConstants';
 import {
   IAP_MANUAL_SETUP_TRACKER_AREAS,
@@ -60,12 +65,16 @@ function checkDocsContainRealKey(): boolean {
 }
 
 export function buildIapManualSetupTracker(): CreviaIapManualSetupTrackerResult {
+  const productCopy = runIapProductCopyAudit();
   const items = buildIapManualSetupTrackerItems();
   const iosKeyRaw = readEnv(IAP_MANUAL_SETUP_TRACKER_ENV_KEYS.ios);
   const androidKeyRaw = readEnv(IAP_MANUAL_SETUP_TRACKER_ENV_KEYS.android);
   const iosKeyConfigured = iosKeyRaw.length > 0 && !isPlaceholder(iosKeyRaw) && !isSecretPattern(iosKeyRaw);
   const androidKeyConfigured = androidKeyRaw.length > 0 && !isPlaceholder(androidKeyRaw) && !isSecretPattern(androidKeyRaw);
   const keysConfigured = iosKeyConfigured && androidKeyConfigured;
+  const dashboardAudit = runIapDashboardEntryChecklistAudit({
+    revenueCatKeysConfigured: keysConfigured,
+  });
 
   const secretCommitted = checkSecretKeyCommitted();
   const docsContainRealKey = checkDocsContainRealKey();
@@ -91,6 +100,12 @@ export function buildIapManualSetupTracker(): CreviaIapManualSetupTrackerResult 
   );
   const platformStatuses = buildIapManualSetupPlatformStatus(items);
   const nextActions = buildIapManualSetupNextActions(items, keysConfigured, secretCommitted);
+  nextActions.unshift(
+    `IAP dashboard entry checklist (${dashboardAudit.checklist.status}): ${IAP_DASHBOARD_ENTRY_CHECKLIST_DOCS_PATH}`,
+  );
+  nextActions.unshift(
+    `IAP product copy pack (${productCopy.status}): ${IAP_PRODUCT_COPY_DOCS_PATH}`,
+  );
 
   const entitlementMappingPending = items
     .filter((i) => i.area === 'revenuecat_entitlement')
@@ -134,6 +149,22 @@ export function buildIapManualSetupTracker(): CreviaIapManualSetupTrackerResult 
     androidProductId: IAP_MANUAL_SETUP_TRACKER_PRODUCT_IDS.android,
     entitlementId: IAP_MANUAL_SETUP_TRACKER_PRODUCT_IDS.entitlement,
     offeringId: IAP_MANUAL_SETUP_TRACKER_PRODUCT_IDS.offering,
+    productCopyPackId: productCopy.packId,
+    productCopyPackStatus: productCopy.status,
+    productCopyDocsPath: IAP_PRODUCT_COPY_DOCS_PATH,
+    productMetadataCopyReady: productCopy.copyGuardPassed,
+    dashboardChecklistId: dashboardAudit.checklist.checklistId,
+    dashboardChecklistStatus: dashboardAudit.checklist.status,
+    dashboardChecklistDocsPath: IAP_DASHBOARD_ENTRY_CHECKLIST_DOCS_PATH,
+    appStoreChecklistStatus: dashboardAudit.appStoreChecklistStatus,
+    playChecklistStatus: dashboardAudit.playChecklistStatus,
+    revenueCatChecklistStatus: dashboardAudit.revenueCatChecklistStatus,
+    sandboxMatrixStatus: dashboardAudit.sandboxMatrixStatus,
+    placeholderCount: dashboardAudit.placeholderCount,
+    verifiedEvidenceCount: dashboardAudit.verifiedEvidenceCount,
+    canStartSandboxTesting: dashboardAudit.canStartSandboxTesting,
+    canSubmitForReview: dashboardAudit.canSubmitForReview,
+    dashboardEntryChecklist: dashboardAudit.checklist,
   };
 }
 

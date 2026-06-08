@@ -30,6 +30,7 @@ import { useGameStatus } from '@/store/gameSelectors';
 import { useGameStore } from '@/store/useGameStore';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
 import { HeaderAvatar } from '@/ui/components/game-header/HeaderAvatar';
+import { CreviaAnimatedCard, CreviaAnimatedLine, useCreviaReducedMotion } from '@/shared/motion';
 import type { HubCardVisibilityModel } from '@/core/onboarding/firstTenMinutesTypes';
 import { HubAdvisorCard } from './HubAdvisorCard';
 import { HubCityJournalStrip } from './HubCityJournalStrip';
@@ -745,6 +746,10 @@ export function HubReferenceHome({
   scrollFooter,
 }: HubReferenceHomeProps = {}) {
   const { scrollBottomPadding } = useHubLayoutMetrics();
+  const status = useGameStatus();
+  const reducedMotion = useCreviaReducedMotion();
+  const motionDay = status.currentDay;
+  const hubMotionEnabled = motionDay > 1;
 
   return (
     <View style={styles.root}>
@@ -755,11 +760,29 @@ export function HubReferenceHome({
         contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollBottomPadding }]}>
         <PremiumHubHeader />
         <View style={styles.body}>
-          <HubMainOperationFeelCard existingLines={hubMainOperationFeelExistingLines} />
+          <CreviaAnimatedCard
+            surface="hub"
+            index={0}
+            day={motionDay}
+            reducedMotion={reducedMotion}
+            disabled={!hubMotionEnabled}
+            motionKind="card_enter"
+            intensity={motionDay >= 8 ? 'highlighted' : 'subtle'}>
+            <HubMainOperationFeelCard existingLines={hubMainOperationFeelExistingLines} />
+          </CreviaAnimatedCard>
           {showMainOperationSeason ? (
             <HubMainOperationSeasonCard compact={mainOperationSeasonCompact} />
           ) : null}
-          <HubTomorrowRiskStrip model={hubTomorrowRisk} />
+          <CreviaAnimatedCard
+            surface="hub"
+            index={1}
+            day={motionDay}
+            reducedMotion={reducedMotion}
+            disabled={!hubMotionEnabled}
+            motionKind="compact_card_enter"
+            intensity="subtle">
+            <HubTomorrowRiskStrip model={hubTomorrowRisk} />
+          </CreviaAnimatedCard>
           {showHubCarryOver ? (
             <PreviousDecisionEffectCard
               memory={hubCarryOverMemory}
@@ -767,17 +790,42 @@ export function HubReferenceHome({
             />
           ) : null}
           {showAdvisor !== 'hidden' ? (
-            <HubAdvisorCard
-              compact={showAdvisor === 'compact' || showAdvisor === 'featured'}
-            />
+            <CreviaAnimatedLine
+              surface="hub"
+              index={2}
+              day={motionDay}
+              reducedMotion={reducedMotion}
+              disabledMotion={!hubMotionEnabled}>
+              <HubAdvisorCard
+                compact={showAdvisor === 'compact' || showAdvisor === 'featured'}
+              />
+            </CreviaAnimatedLine>
           ) : (
             <EceWelcomeCard contextLine={hubEceContextLine} />
           )}
           {hubDistrictReportLine ? (
             <HubDistrictReportSupportingLine line={hubDistrictReportLine} />
           ) : null}
-          {showOperationalResources ? <HubOperationalResourcesCard /> : null}
-          <HubCityJournalStrip presentation={hubCityJournal} />
+          {showOperationalResources ? (
+            <CreviaAnimatedCard
+              surface="hub"
+              index={3}
+              day={motionDay}
+              reducedMotion={reducedMotion}
+              disabled
+              motionKind="compact_card_enter">
+              <HubOperationalResourcesCard />
+            </CreviaAnimatedCard>
+          ) : null}
+          <CreviaAnimatedCard
+            surface="hub"
+            index={4}
+            day={motionDay}
+            reducedMotion={reducedMotion}
+            disabled
+            motionKind="compact_card_enter">
+            <HubCityJournalStrip presentation={hubCityJournal} />
+          </CreviaAnimatedCard>
           <OperationFocusCard />
           <QuickPreparationsCard />
           <OperationSignalsCard />

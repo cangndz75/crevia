@@ -806,7 +806,7 @@ export function verifyMicroDecisionScenario(): VerifyMicroDecisionOutcome {
   record(
     assert(
       checks,
-      SAVE_VERSION === 23,
+      SAVE_VERSION === 24,
       'Full loop SAVE_VERSION 22 ile çalışıyor',
       `SAVE_VERSION=${SAVE_VERSION}`,
     ),

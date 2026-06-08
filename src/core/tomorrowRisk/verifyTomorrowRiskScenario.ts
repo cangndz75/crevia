@@ -13,7 +13,7 @@ import {
 import { buildTomorrowRiskPresentation } from './tomorrowRiskPresentation';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 23;
+const EXPECTED_SAVE_VERSION = 24;
 
 export type VerifyTomorrowRiskOutcome = {
   ok: boolean;

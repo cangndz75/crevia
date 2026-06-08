@@ -99,6 +99,12 @@ export type CreviaStoreMetadataFinalizationResult = {
   privacyUrlIsPlaceholder: boolean;
   screenshotsPending: boolean;
   consoleEntryPending: boolean;
+  copyPackId?: string;
+  copyPackStatus?: string;
+  copyDocsPath?: string;
+  privacyTextDocsPath?: string;
+  iapProductCopyDocsPath?: string;
+  iapDashboardChecklistDocsPath?: string;
   nextActions: string[];
 };
 

@@ -82,6 +82,7 @@ export function HubScreen() {
   const decisionHistory = useGameStore(selectDecisionHistory);
   const eventPool = useGameStore((s) => s.eventPool);
   const socialPulseState = useGameStore((s) => s.socialPulseState);
+  const cityArchive = useGameStore((s) => s.cityArchive);
   const tutorialActive = useGameStore(selectIsDay1TutorialActive);
   const hubTutorialStep = useGameStore((s) =>
     selectActiveTutorialStepForScreen(s, 'hub'),
@@ -396,10 +397,12 @@ export function HubScreen() {
         globalPulseScore: socialPulseState.globalPulseScore,
       },
       existingLines: journalExistingLines,
+      cityArchive,
     });
 
     return buildCityJournalHubPresentation(model, journalExistingLines);
   }, [
+    cityArchive,
     cityEchoHubLine,
     decisionHistory,
     gameState,

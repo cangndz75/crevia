@@ -444,7 +444,7 @@ export function verifyFullSeasonSimulationScenario(): VerifyFullSeasonSimulation
     'limited vs full too similar',
   );
 
-  add(SAVE_VERSION === 23, 'SAVE_VERSION unchanged at 23', 'save version changed');
+  add(SAVE_VERSION === 24, 'SAVE_VERSION unchanged at 23', 'save version changed');
 
   const report = buildFullSeasonSimulationConsoleReport(audit);
   add(report.length > 80, 'Console report non-empty', 'empty report');

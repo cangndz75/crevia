@@ -18,6 +18,11 @@ import {
   pilotAreaFromMapDistrict,
 } from '../data/mapDistrictMapping';
 import type { MapPresenceViewModel } from '@/core/mapPresence/mapPresenceTypes';
+import type {
+  MapBubbleMotionCue,
+  MapDistrictMotionCue,
+  MapJournalMotionCue,
+} from '@/core/mapReactionsMotion/mapReactionMotionTypes';
 
 import type { ActiveLayers, MapFilterId, MapViewMode, PilotAreaId } from '../types/map';
 import { getNeighborhoodMapCharacterLine } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
@@ -25,6 +30,7 @@ import { getMapDistrictLabel } from '../utils/mapDistrictLabels';
 import { CityOverviewMap } from './CityOverviewMap';
 import { DistrictDetailMap } from './DistrictDetailMap';
 import { MapLegend } from './MapLegend';
+import { MapReactionMotionHints } from './MapReactionMotionHints';
 import type { ZoomableMapControls } from './ZoomableMapCanvas';
 
 type Props = {
@@ -44,6 +50,11 @@ type Props = {
   crisisHighlightDistrictIds?: MapDistrictId[];
   resourceHighlightDistrictIds?: MapDistrictId[];
   reactionHighlightDistrictIds?: MapDistrictId[];
+  reactionMotionCues?: MapDistrictMotionCue[];
+  operationScopeMotionDistrictIds?: MapDistrictId[];
+  journalMotionCue?: MapJournalMotionCue;
+  bubbleMotionCue?: MapBubbleMotionCue;
+  reducedMotionMode?: boolean;
   mapPresenceViewModel?: MapPresenceViewModel | null;
   activeOperationOverlay?: MapActiveOperationOverlayModel | null;
   onLayersPress: () => void;
@@ -76,6 +87,11 @@ export function CityMapCard({
   crisisHighlightDistrictIds,
   resourceHighlightDistrictIds,
   reactionHighlightDistrictIds,
+  reactionMotionCues,
+  operationScopeMotionDistrictIds,
+  journalMotionCue,
+  bubbleMotionCue,
+  reducedMotionMode = false,
   mapPresenceViewModel = null,
   activeOperationOverlay = null,
   onLayersPress,
@@ -136,11 +152,21 @@ export function CityMapCard({
             crisisHighlightDistrictIds={crisisHighlightDistrictIds}
             resourceHighlightDistrictIds={resourceHighlightDistrictIds}
             reactionHighlightDistrictIds={reactionHighlightDistrictIds}
+            reactionMotionCues={reactionMotionCues}
+            operationScopeMotionDistrictIds={operationScopeMotionDistrictIds}
             mapPresenceViewModel={mapPresenceViewModel}
             onDistrictPress={handleDistrictPress}
             onPinPress={onPinPress}
           />
         )}
+
+        {!isDetail ? (
+          <MapReactionMotionHints
+            journalCue={journalMotionCue}
+            bubbleCue={bubbleMotionCue}
+            reducedMotionMode={reducedMotionMode}
+          />
+        ) : null}
 
         {isDetail ? (
           <Pressable

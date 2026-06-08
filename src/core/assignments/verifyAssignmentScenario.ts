@@ -644,7 +644,7 @@ export function verifyAssignmentScenario(): VerifyAssignmentOutcome {
   ok =
     assert(
       checks,
-      SAVE_VERSION === 23 && hydratedV16?.assignments != null,
+      SAVE_VERSION === 24 && hydratedV16?.assignments != null,
       'Full loop SAVE_VERSION 22 ile çalışıyor',
       `SAVE_VERSION=${SAVE_VERSION}`,
     ) && ok;

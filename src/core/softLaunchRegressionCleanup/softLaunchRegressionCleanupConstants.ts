@@ -6,7 +6,7 @@ import type {
 export const SOFT_LAUNCH_REGRESSION_CLEANUP_DOCS_PATH =
   'docs/crevia-soft-launch-regression-cleanup.md';
 
-export const SOFT_LAUNCH_REGRESSION_CLEANUP_EXPECTED_SAVE_VERSION = 23;
+export const SOFT_LAUNCH_REGRESSION_CLEANUP_EXPECTED_SAVE_VERSION = 24;
 
 export const SOFT_LAUNCH_MANUAL_BLOCKERS: readonly SoftLaunchManualBlocker[] = [
   {
@@ -242,6 +242,17 @@ export const SOFT_LAUNCH_COMPLETION_MODULE_REGISTRY: readonly SoftLaunchCompleti
       reason: 'Şehir günlüğü lite.',
       saveVersionImpact: false,
       persistImpact: false,
+      gameplayImpact: false,
+    },
+    {
+      id: 'cityArchive',
+      coreDir: 'src/core/cityArchive',
+      kind: 'persistence',
+      freezeRisk: 'medium',
+      allowedBeforeSoftLaunch: true,
+      reason: 'City archive persistence V1 — SAVE_VERSION 24 migration.',
+      saveVersionImpact: true,
+      persistImpact: true,
       gameplayImpact: false,
     },
     {

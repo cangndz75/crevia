@@ -1,6 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import {
+  runStoreMetadataCopyAudit,
+  STORE_METADATA_COPY_DOCS_PATH,
+} from '@/core/storeMetadataCopy';
+import { IAP_PRODUCT_COPY_DOCS_PATH } from '@/core/iapProductCopy';
+import { IAP_DASHBOARD_ENTRY_CHECKLIST_DOCS_PATH } from '@/core/iapQa/iapDashboardEntryChecklist';
+import { PRIVACY_POLICY_TEXT_DOCS_PATH } from '@/core/privacyPolicyText';
 import { isPrivacyPolicyUrlPlaceholder } from './storeListingReadinessAudit';
 import {
   STORE_IAP_METADATA_DRAFT,
@@ -233,6 +240,7 @@ export function runStoreMetadataFinalizationAudit(
   options: RunStoreMetadataFinalizationAuditOptions = {},
 ): CreviaStoreMetadataFinalizationResult {
   const mode = options.mode ?? 'internal_device_test';
+  const metadataCopy = runStoreMetadataCopyAudit();
 
   const fields = buildFields();
   const reviewNotes = buildReviewNotesDraft();
@@ -295,6 +303,12 @@ export function runStoreMetadataFinalizationAudit(
   }
   nextActions.push('Capture store screenshots per matrix.');
   nextActions.push(
+    `Apply TR/EN metadata copy pack (${metadataCopy.status}): ${STORE_METADATA_COPY_DOCS_PATH}`,
+  );
+  nextActions.push(`Review privacy policy text pack: ${PRIVACY_POLICY_TEXT_DOCS_PATH}`);
+  nextActions.push(`Review IAP product copy pack: ${IAP_PRODUCT_COPY_DOCS_PATH}`);
+  nextActions.push(`Follow IAP dashboard entry checklist: ${IAP_DASHBOARD_ENTRY_CHECKLIST_DOCS_PATH}`);
+  nextActions.push(
     'Apply TR/EN screenshot narrative captions: docs/crevia-store-screenshot-narrative-pack.md',
   );
   nextActions.push('Enter metadata in App Store Connect / Play Console.');
@@ -326,6 +340,12 @@ export function runStoreMetadataFinalizationAudit(
     privacyUrlIsPlaceholder,
     screenshotsPending: true,
     consoleEntryPending: true,
+    copyPackId: metadataCopy.packId,
+    copyPackStatus: metadataCopy.status,
+    copyDocsPath: STORE_METADATA_COPY_DOCS_PATH,
+    privacyTextDocsPath: PRIVACY_POLICY_TEXT_DOCS_PATH,
+    iapProductCopyDocsPath: IAP_PRODUCT_COPY_DOCS_PATH,
+    iapDashboardChecklistDocsPath: IAP_DASHBOARD_ENTRY_CHECKLIST_DOCS_PATH,
     nextActions,
   };
 }

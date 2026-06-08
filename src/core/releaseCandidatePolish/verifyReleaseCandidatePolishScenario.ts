@@ -117,7 +117,7 @@ export function verifyReleaseCandidatePolishScenario(): VerifyReleaseCandidatePo
       'Internal device test ready_to_execute',
     ),
   );
-  record(assert(checks, SAVE_VERSION === 23, 'SAVE_VERSION unchanged'));
+  record(assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION unchanged'));
   record(assert(checks, !readRepo('src/store/gamePersist.ts').includes('releaseCandidatePolishState'), 'persist shape unchanged'));
   record(assert(checks, !readRepo('src/core/game/applyDecision.ts').includes('releaseCandidatePolish'), 'applyDecision unchanged'));
   record(

@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { buildEventResultAnalyticsPayload } from '@/core/analytics/analyticsPayloadBuilders';
@@ -57,6 +57,12 @@ import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
 import { HeaderAvatar } from '@/ui/components/game-header/HeaderAvatar';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import { getTimeGreeting } from '@/core/utils/timeGreeting';
+import {
+  CreviaAnimatedCard,
+  CreviaAnimatedChip,
+  CreviaAnimatedPressable,
+  useCreviaReducedMotion,
+} from '@/shared/motion';
 import { TutorialCoachOverlay } from '@/features/tutorial/TutorialCoachOverlay';
 import { OnboardingCoachBubble } from '@/features/onboarding/components/OnboardingCoachBubble';
 import { useOnboardingHint } from '@/features/onboarding/hooks/useOnboardingHint';
@@ -508,6 +514,7 @@ export function DecisionResultScreen() {
   const assignments = useGameStore((s) => s.assignments);
   const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
   const pilotStatus = useGameStore((s) => s.gameState.pilot.status);
+  const reducedMotion = useCreviaReducedMotion();
 
   const result = snapshot ?? createEmptyDecisionResultFallback();
   const isMissing = snapshot == null;
@@ -900,11 +907,24 @@ export function DecisionResultScreen() {
             </Text>
           </View>
 
-          <Animated.View entering={ZoomIn.delay(80).duration(300)}>
+          <CreviaAnimatedCard
+            surface="decision_result"
+            index={0}
+            day={result.day ?? currentDay}
+            reducedMotion={reducedMotion}
+            motionKind="result_emphasis"
+            intensity="highlighted">
             <RewardHero result={result} />
-          </Animated.View>
+          </CreviaAnimatedCard>
 
-          <EventResultImpactExplanationCard explanation={impactExplanation} compact />
+          <CreviaAnimatedCard
+            surface="decision_result"
+            index={1}
+            day={result.day ?? currentDay}
+            reducedMotion={reducedMotion}
+            motionKind="card_enter">
+            <EventResultImpactExplanationCard explanation={impactExplanation} compact />
+          </CreviaAnimatedCard>
 
           <BeforeAfterPanel result={result} />
           <ResultStatCards result={result} />
@@ -946,7 +966,12 @@ export function DecisionResultScreen() {
 
           <DistrictImpact result={result} />
           {rewardComebackResult?.visible && rewardComebackResult.resultLine ? (
-            <View style={styles.rewardComebackChip}>
+            <CreviaAnimatedChip
+              surface="decision_result"
+              index={2}
+              reducedMotion={reducedMotion}
+              style={styles.rewardComebackChip}
+              tone="success">
               <Text style={styles.rewardComebackChipLabel} numberOfLines={1}>
                 {rewardComebackResult.label ?? 'Olumlu iz'}
               </Text>
@@ -956,7 +981,7 @@ export function DecisionResultScreen() {
                 ellipsizeMode="tail">
                 {rewardComebackResult.resultLine}
               </Text>
-            </View>
+            </CreviaAnimatedChip>
           ) : null}
           <EceComment
             fieldNote={viewModel.fieldNote}
@@ -964,26 +989,28 @@ export function DecisionResultScreen() {
           />
 
           <View style={styles.actionArea}>
-            <Pressable
+            <CreviaAnimatedPressable
               onPress={goReports}
               accessibilityRole="button"
               accessibilityLabel="Gün sonu raporuna geç"
-              style={({ pressed }) => [styles.primaryCta, pressed && styles.pressed]}>
+              reducedMotion={reducedMotion}
+              style={styles.primaryCta}>
               <Ionicons name="newspaper-outline" size={19} color={palette.white} />
               <Text style={styles.primaryCtaText} numberOfLines={1}>
                 Gün Sonu Raporuna Geç
               </Text>
-            </Pressable>
-            <Pressable
+            </CreviaAnimatedPressable>
+            <CreviaAnimatedPressable
               onPress={goHub}
               accessibilityRole="button"
               accessibilityLabel="Merkeze dön"
-              style={({ pressed }) => [styles.secondaryCta, pressed && styles.pressed]}>
+              reducedMotion={reducedMotion}
+              style={styles.secondaryCta}>
               <Ionicons name="business" size={16} color={palette.tealDark} />
               <Text style={styles.secondaryCtaText} numberOfLines={1}>
                 Merkeze Dön
               </Text>
-            </Pressable>
+            </CreviaAnimatedPressable>
           </View>
         </Animated.View>
       </ScrollView>

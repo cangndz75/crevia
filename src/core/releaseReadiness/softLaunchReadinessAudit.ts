@@ -227,7 +227,7 @@ export function buildAreaSummaries(
 export function auditSaveMigrationReadiness(): SoftLaunchReadinessFinding[] {
   const findings: SoftLaunchReadinessFinding[] = [];
 
-  if (SAVE_VERSION === 23) {
+  if (SAVE_VERSION === 24) {
     findings.push(
       pass(
         'save_migration.save_version_23',

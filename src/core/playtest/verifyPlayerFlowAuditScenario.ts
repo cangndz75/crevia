@@ -244,7 +244,7 @@ export function verifyPlayerFlowAuditScenario(): VerifyPlayerFlowAuditOutcome {
     'forbidden',
   );
 
-  add(SAVE_VERSION === 23, 'SAVE_VERSION unchanged at 23', String(SAVE_VERSION));
+  add(SAVE_VERSION === 24, 'SAVE_VERSION unchanged at 23', String(SAVE_VERSION));
 
   add(
     scenario.checks.some((c) => c.id === 'crisis_map_priority'),

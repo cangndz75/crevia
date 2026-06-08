@@ -61,7 +61,7 @@ export function verifyDistrictOperationsRuntimeScenario(): VerifyDistrictOperati
     if (!pass) ok = false;
   };
 
-  record(assert(checks, SAVE_VERSION === 23, 'SAVE_VERSION 23', `SAVE_VERSION ${SAVE_VERSION}`));
+  record(assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION 23', `SAVE_VERSION ${SAVE_VERSION}`));
 
   for (const id of MAP_DISTRICT_IDENTITY_IDS) {
     const snapshot = buildDistrictOperationsRuntimeSnapshot({ day: 10, focusDistrictId: id });

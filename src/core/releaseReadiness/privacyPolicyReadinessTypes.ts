@@ -129,6 +129,13 @@ export type CreviaPrivacyPolicyReadinessResult = {
   riskyWordingScanPassed: boolean;
   thirdPartyConfirmationPending: boolean;
   legalReviewPending: boolean;
+  privacyTextPackId?: string;
+  privacyTextStatus?: string;
+  privacyDocsPath?: string;
+  dataSafetyChecklistStatus?: string;
+  sdkDisclosureMatrixStatus?: string;
+  legalReviewStatus?: string;
+  privacyUrlStatus?: string;
   nextActions: string[];
 };
 

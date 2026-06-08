@@ -3,6 +3,7 @@ export type {
   StoreScreenshotNarrativeCaptureScenario,
   StoreScreenshotNarrativeCaptureStatus,
   StoreScreenshotNarrativeDeviceMatrixEntry,
+  StoreScreenshotNarrativeFalseClaimFinding,
   StoreScreenshotNarrativeItem,
   StoreScreenshotNarrativePack,
   StoreScreenshotNarrativePackStatus,
@@ -13,7 +14,9 @@ export {
   STORE_SCREENSHOT_NARRATIVE_FORBIDDEN_PHRASES,
   STORE_SCREENSHOT_NARRATIVE_ITEMS_TEMPLATE,
   STORE_SCREENSHOT_NARRATIVE_MIN_COUNT,
+  STORE_SCREENSHOT_NARRATIVE_OFFICIAL_DOCS,
   STORE_SCREENSHOT_NARRATIVE_PACK_ID,
+  STORE_SCREENSHOT_NARRATIVE_TECHNICAL_FORBIDDEN_WORDS,
   STORE_SCREENSHOT_NARRATIVE_VISUAL_DIRECTION,
 } from './storeScreenshotNarrativeConstants';
 

@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { runFullLoopAnalysis } from '@/core/fullLoop/runFullLoopSimulation';
+import { buildIapManualSetupTracker } from '@/core/iapQa/iapManualSetupTrackerAudit';
 import { NO_NEW_SYSTEM_FREEZE_REGISTERED_CORE_DIRS } from '@/core/releaseReadiness/noNewSystemFreezeConstants';
 import { SAVE_VERSION } from '@/store/gamePersist';
 import {
@@ -132,6 +133,19 @@ export function verifyReleaseCandidateScenario(): VerifyReleaseCandidateOutcome 
     );
   }
   record(assert(checks, audit.storeChecklist.some((i) => i.section === 'iap_metadata'), 'IAP product metadata checklist'));
+
+  const iapSetup = buildIapManualSetupTracker();
+  record(assert(checks, iapSetup.productMetadataCopyReady === true, 'IAP product copy ready'));
+  record(
+    assert(
+      checks,
+      iapSetup.dashboardChecklistStatus === 'ready_for_manual_entry',
+      'Dashboard entry checklist ready',
+    ),
+  );
+  record(assert(checks, iapSetup.storeProductsPending === true, 'IAP product setup pending'));
+  record(assert(checks, iapSetup.manualVerificationPending === true, 'IAP sandbox/restore pending'));
+  record(assert(checks, (iapSetup.verifiedEvidenceCount ?? 0) === 0, 'IAP dashboard verified evidence 0'));
 
   record(assert(checks, audit.blockerSummary.topInternalBlockers.some((b) => b.includes('sentry')) || audit.manualBlockers.some((id) => id.includes('sentry')), 'Sentry blockers tracked'));
   record(assert(checks, summarizeCrashSdkStatus().envPending, 'Sentry DSN pending'));

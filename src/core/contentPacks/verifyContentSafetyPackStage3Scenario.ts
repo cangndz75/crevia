@@ -296,7 +296,7 @@ export function verifyContentSafetyPackStage3Scenario(): VerifyContentSafetyPack
   record(assert(checks, !!goldenBundle.reportLine, 'golden report', 'golden report'));
 
   record(assert(checks, !readRepo('src/core/contentPacks/eventEchoSelectors.ts').includes('Math.random'), 'no Math.random', 'random'));
-  record(assert(checks, SAVE_VERSION === 23, `SAVE_VERSION (${SAVE_VERSION})`, 'SAVE_VERSION'));
+  record(assert(checks, SAVE_VERSION === 24, `SAVE_VERSION (${SAVE_VERSION})`, 'SAVE_VERSION'));
   record(assert(checks, !readRepo('src/core/game/applyDecision.ts').includes('eventEcho'), 'applyDecision', 'applyDecision'));
   record(assert(checks, !readRepo('src/core/postPilot/postPilotEventEngine.ts').includes('eventEchoCopy'), 'postPilot', 'postPilot'));
   record(assert(checks, buildEventEchoSummaryForDocs().length > 80, 'presentation summary', 'summary'));

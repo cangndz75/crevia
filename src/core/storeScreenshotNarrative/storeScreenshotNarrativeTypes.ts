@@ -10,6 +10,8 @@ export type StoreScreenshotNarrativeTargetStore = 'app_store' | 'google_play' | 
 
 export type StoreScreenshotNarrativeCaptureStatus = 'pending' | 'captured' | 'verified';
 
+export type StoreScreenshotNarrativeTargetDay = 1 | 5 | 8 | 'profile' | 'custom';
+
 export type StoreScreenshotNarrativeItem = {
   id: string;
   order: number;
@@ -33,12 +35,15 @@ export type StoreScreenshotNarrativeItem = {
 };
 
 export type StoreScreenshotNarrativeCaptureScenario = {
-  id: string;
-  title: string;
-  targetDayRange: string;
-  description: string;
-  screenshotIds: string[];
-  devToolsPresetNote?: string;
+  scenarioId: string;
+  label: string;
+  targetDay: StoreScreenshotNarrativeTargetDay;
+  requiredStateSummary: string;
+  surfaces: string[];
+  seedNotes: string;
+  fakeDataPolicy: string;
+  devtoolsNotes?: string;
+  evidenceNotes: string;
 };
 
 export type StoreScreenshotNarrativeCaptionGuideline = {
@@ -47,19 +52,25 @@ export type StoreScreenshotNarrativeCaptionGuideline = {
 };
 
 export type StoreScreenshotNarrativeDeviceMatrixEntry = {
-  id: string;
   platform: 'ios' | 'android';
-  label: string;
-  storeSizeNotes: string;
-  safeAreaNotes: string;
-  trCopyLengthNote: string;
-  enCopyLengthNote: string;
+  deviceClass: string;
+  orientation: 'portrait';
+  priority: 'must' | 'should' | 'optional';
   cropRisk: string;
+  safeAreaNotes: string;
+  copyLengthNotes: string;
+  officialDimensionNotes: string;
 };
 
 export type StoreScreenshotNarrativeBlocker = {
   id: string;
   title: string;
+  message: string;
+};
+
+export type StoreScreenshotNarrativeFalseClaimFinding = {
+  id: string;
+  passed: boolean;
   message: string;
 };
 
@@ -72,6 +83,7 @@ export type StoreScreenshotNarrativePack = {
   captureScenarios: StoreScreenshotNarrativeCaptureScenario[];
   captionGuidelines: StoreScreenshotNarrativeCaptionGuideline[];
   deviceMatrix: StoreScreenshotNarrativeDeviceMatrixEntry[];
+  falseClaimFindings: StoreScreenshotNarrativeFalseClaimFinding[];
   blockerSummary: StoreScreenshotNarrativeBlocker[];
   nextActions: string[];
   fakePassGuard: true;

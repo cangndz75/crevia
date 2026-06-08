@@ -654,7 +654,7 @@ export function verifyContainerNetworkScenario(): VerifyContainerNetworkOutcome 
     ),
   );
 
-  record(assert(checks, SAVE_VERSION === 23, 'SAVE_VERSION unchanged at 23', 'SAVE_VERSION changed'));
+  record(assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION unchanged at 23', 'SAVE_VERSION changed'));
 
   const indexSource = readRepo('src/core/containerNetwork/index.ts');
   record(assert(checks, indexSource.includes('export type'), 'type exports present', 'missing type exports'));

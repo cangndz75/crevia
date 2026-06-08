@@ -1,4 +1,4 @@
-﻿export * from './carryOverTypes';
+export * from './carryOverTypes';
 export * from './carryOverConstants';
 export * from './carryOverEngine';
 export * from './carryOverPresentation';

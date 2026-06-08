@@ -306,7 +306,15 @@ export function verifyStoreMetadataFinalizationScenario(): VerifyStoreMetadataFi
   ok = assert(checks, fullLoop.totalFAIL === 0, 'verify:full-loop compatible', `FAIL=${fullLoop.totalFAIL}`) && ok;
   ok = assert(checks, verifyFullUxFlowScenario().ok, 'verify:full-ux-flow compatible', 'UX flow broken') && ok;
 
-  ok = assert(checks, SAVE_VERSION === 23, 'SAVE_VERSION 23 unchanged', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok =
+    assert(
+      checks,
+      launch.iapDashboardChecklistDocsPath === 'docs/crevia-iap-dashboard-entry-checklist.md',
+      'IAP dashboard checklist docs path',
+      'Missing dashboard checklist docs path',
+    ) && ok;
+
+  ok = assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION 23 unchanged', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
 
   const persist = readRepo('src/store/gamePersist.ts');
   ok =

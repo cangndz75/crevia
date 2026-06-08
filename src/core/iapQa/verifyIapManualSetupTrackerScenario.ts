@@ -4,11 +4,22 @@ import { join } from 'node:path';
 import { runFullLoopAnalysis } from '@/core/fullLoop/runFullLoopSimulation';
 import { verifyIapIntegrationScenario } from '@/core/iap/verifyIapIntegrationScenario';
 import { IAP_STORE_PRODUCT_IDS, MAIN_OPERATION_ENTITLEMENT_ID } from '@/core/iap/iapProductConstants';
+import { runIapProductCopyAudit } from '@/core/iapProductCopy/iapProductCopyAudit';
+import { runManualLaunchTrackerAudit } from '@/core/manualLaunchTracker/manualLaunchTrackerAudit';
+import { runReleaseCandidateAudit } from '@/core/releaseCandidate/releaseCandidateAudit';
 import { runSoftLaunchReadinessReview } from '@/core/releaseReadiness/softLaunchReviewAudit';
+import { runStoreMetadataFinalizationAudit } from '@/core/releaseReadiness/storeMetadataFinalizationAudit';
 import { verifySoftLaunchReviewScenario } from '@/core/releaseReadiness/verifySoftLaunchReviewScenario';
 import { verifyFullUxFlowScenario } from '@/core/ux/verifyFullUxFlowScenario';
 import { SAVE_VERSION } from '@/store/gamePersist';
 
+import {
+  IAP_DASHBOARD_ENTRY_CHECKLIST_DOCS_PATH,
+  IAP_DASHBOARD_ENTRY_PLACEHOLDERS,
+  assertIapDashboardEntryChecklistIntegrity,
+  buildIapDashboardEntryChecklist,
+  runIapDashboardEntryChecklistAudit,
+} from './iapDashboardEntryChecklist';
 import {
   IAP_MANUAL_SETUP_TRACKER_AREAS,
   IAP_MANUAL_SETUP_TRACKER_DOCS_PATH,
@@ -241,6 +252,156 @@ export function verifyIapManualSetupTrackerScenario(): VerifyIapManualSetupTrack
       'Offering item missing',
     ) && ok;
 
+  // Dashboard entry checklist
+  const dashboardIntegrity = assertIapDashboardEntryChecklistIntegrity();
+  ok =
+    assert(checks, dashboardIntegrity.ok, 'Dashboard checklist integrity', dashboardIntegrity.message) &&
+    ok;
+  const dashboard = buildIapDashboardEntryChecklist();
+  const dashboardAudit = runIapDashboardEntryChecklistAudit();
+  ok = assert(checks, dashboard.appStoreItems.length >= 10, 'App Store checklist present', 'ASC checklist missing') && ok;
+  ok = assert(checks, dashboard.playStoreItems.length >= 8, 'Play Console checklist present', 'Play checklist missing') && ok;
+  ok = assert(checks, dashboard.revenueCatItems.length >= 10, 'RevenueCat checklist present', 'RC checklist missing') && ok;
+  ok =
+    assert(
+      checks,
+      dashboard.sandboxTestMatrix.length >= 10,
+      'Sandbox test matrix present',
+      `matrix=${dashboard.sandboxTestMatrix.length}`,
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      dashboard.reviewNoteItems.length >= 5,
+      'Review notes placeholder mapping',
+      `mappings=${dashboard.reviewNoteItems.length}`,
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      dashboard.offerScreenTrustQa.length >= 8,
+      'Offer screen trust QA checklist',
+      `qa=${dashboard.offerScreenTrustQa.length}`,
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      tracker.dashboardChecklistId === dashboard.checklistId,
+      'Tracker dashboard checklist id',
+      'Dashboard id mismatch',
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      tracker.dashboardChecklistStatus === 'ready_for_manual_entry',
+      'Dashboard checklist ready_for_manual_entry',
+      `status=${tracker.dashboardChecklistStatus}`,
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      (tracker.placeholderCount ?? 0) > 0,
+      'Placeholders remain (expected)',
+      'placeholderCount should be > 0',
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      (tracker.verifiedEvidenceCount ?? 0) === 0,
+      'Verified evidence count 0',
+      `verified=${tracker.verifiedEvidenceCount}`,
+    ) && ok;
+  ok =
+    assert(checks, tracker.canStartSandboxTesting === false, 'Cannot start sandbox yet', 'sandbox gate open too early') &&
+    ok;
+  ok =
+    assert(checks, tracker.canSubmitForReview === false, 'Cannot submit for review yet', 'review gate open too early') &&
+    ok;
+  ok =
+    assert(
+      checks,
+      !dashboard.appStoreItems.some((i) => i.status === 'verified'),
+      'No ASC item verified without evidence',
+      'Fake ASC verified',
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      !dashboard.sandboxTestMatrix.some((t) => t.id.includes('PASS')),
+      'Sandbox matrix no fake PASS ids',
+      'Fake PASS in matrix',
+    ) && ok;
+  const productCopy = runIapProductCopyAudit();
+  ok =
+    assert(
+      checks,
+      productCopy.status === 'ready_for_dashboard_entry',
+      'iapProductCopy pack status read',
+      `copyStatus=${productCopy.status}`,
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      tracker.productMetadataCopyReady === true,
+      'Product metadata copy ready',
+      'copy not ready',
+    ) && ok;
+  const dashboardDocs = readRepo(IAP_DASHBOARD_ENTRY_CHECKLIST_DOCS_PATH);
+  ok = assert(checks, dashboardDocs.length > 200, 'Dashboard checklist docs exist', 'Missing dashboard docs') && ok;
+  ok =
+    assert(
+      checks,
+      dashboardDocs.includes(IAP_DASHBOARD_ENTRY_PLACEHOLDERS.appStoreProductId),
+      'Docs ASC product placeholder',
+      'Missing ASC placeholder in docs',
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      !dashboardDocs.match(/appl_[a-zA-Z0-9]{10,}/) && !dashboardDocs.match(/goog_[a-zA-Z0-9]{10,}/),
+      'Dashboard docs no fabricated RC keys',
+      'Real keys in dashboard docs',
+    ) && ok;
+  const metadata = runStoreMetadataFinalizationAudit({ mode: 'launch_candidate' });
+  ok =
+    assert(
+      checks,
+      metadata.iapDashboardChecklistDocsPath === IAP_DASHBOARD_ENTRY_CHECKLIST_DOCS_PATH,
+      'storeMetadataFinalization dashboard docs path',
+      'Metadata finalization missing dashboard path',
+    ) && ok;
+  const release = runReleaseCandidateAudit();
+  ok =
+    assert(checks, release.publicLaunchDecision === 'blocked', 'Public launch blocked', 'Public launch not blocked') &&
+    ok;
+  ok =
+    assert(checks, release.monetizationReadiness === 'BLOCKED', 'Release candidate IAP blocked', 'IAP not blocked') &&
+    ok;
+  const manualLaunch = runManualLaunchTrackerAudit({ mode: 'internal_device_test' });
+  ok =
+    assert(
+      checks,
+      manualLaunch.evidenceSummary.verifiedEvidence === 0,
+      'Manual launch evidence verified 0',
+      `verified=${manualLaunch.evidenceSummary.verifiedEvidence}`,
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      manualLaunch.blockers.some((b) => b.id.includes('iap') || b.category === 'iap'),
+      'Manual launch IAP blockers pending',
+      'IAP blockers missing',
+    ) && ok;
+  ok =
+    assert(checks, dashboardAudit.fakePassGuard === true, 'Dashboard fake pass guard active', 'Guard off') && ok;
+  ok =
+    assert(
+      checks,
+      dashboard.reviewNoteItems.every((m) => !m.readyForReview),
+      'Review placeholders not ready_for_review',
+      'Placeholder marked ready',
+    ) && ok;
+
   // Soft launch review integration
   const launchReview = runSoftLaunchReadinessReview({ mode: 'launch_candidate' });
   ok =
@@ -269,16 +430,44 @@ export function verifyIapManualSetupTrackerScenario(): VerifyIapManualSetupTrack
   ok = assert(checks, verifyFullUxFlowScenario().ok, 'verify:full-ux-flow', 'UX flow broken') && ok;
 
   // SAVE_VERSION
-  ok = assert(checks, SAVE_VERSION === 23, 'SAVE_VERSION 23', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION 23', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
 
   // No persist pollution
   const persist = readRepo('src/store/gamePersist.ts');
   ok =
     assert(
       checks,
-      !persist.includes('iapManualSetupTracker'),
+      !persist.includes('iapManualSetupTracker') && !persist.includes('iapDashboardEntry'),
       'No persist change',
       'Persist polluted',
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      !readRepo('src/core/game/applyDecision.ts').includes('iapDashboardEntry'),
+      'applyDecision unchanged',
+      'applyDecision touched',
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      !readRepo('src/core/dayPipeline/dayPipelineOrchestrator.ts').includes('iapDashboardEntry'),
+      'dayPipeline unchanged',
+      'dayPipeline touched',
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      !readRepo('src/core/game/generateDailyEventSet.ts').includes('iapDashboardEntry'),
+      'event generation unchanged',
+      'event generation touched',
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      !readRepo('src/core/iapQa/iapDashboardEntryChecklist.ts').includes('expo-router'),
+      'no new route in dashboard checklist module',
+      'route added',
     ) && ok;
 
   if (tracker.health === 'BLOCKED' || tracker.health === 'WARN') {

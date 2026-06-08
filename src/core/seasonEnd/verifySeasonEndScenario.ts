@@ -423,7 +423,7 @@ export function verifySeasonEndScenario(): VerifySeasonEndOutcome {
     ) && ok;
 
   ok =
-    assert(checks, SAVE_VERSION === 23, 'SAVE_VERSION 23', 'SAVE_VERSION changed') &&
+    assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION 23', 'SAVE_VERSION changed') &&
     ok;
 
   checks.push(

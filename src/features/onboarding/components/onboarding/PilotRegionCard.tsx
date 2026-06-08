@@ -10,6 +10,7 @@ import Animated, {
 import type { RegionCardData } from '@/features/onboarding/data/onboardingData';
 import { getDistrictAsset } from '@/features/onboarding/data/onboardingAssets';
 import { onboardingRadii, onboardingTokens } from '@/features/onboarding/theme/onboardingTokens';
+import type { OnboardingDistrictOption } from '@/features/onboarding/utils/onboardingContinuationTypes';
 
 const TONE = {
   low: { bg: onboardingTokens.successMuted, text: onboardingTokens.success },
@@ -18,7 +19,7 @@ const TONE = {
 };
 
 type PilotRegionCardProps = {
-  region: RegionCardData;
+  region: RegionCardData | OnboardingDistrictOption;
   selected: boolean;
   onPress: () => void;
   index: number;
@@ -32,6 +33,7 @@ export function PilotRegionCard({
   index,
   compact = false,
 }: PilotRegionCardProps) {
+  const visualDistrictId = 'gameDistrictId' in region ? region.gameDistrictId : region.id;
   const anim = useAnimatedStyle(() => ({
     transform: [{ scale: withSpring(selected ? 1.01 : 1, { damping: 18 }) }],
     borderColor: withSpring(selected ? onboardingTokens.primary : onboardingTokens.border),
@@ -78,7 +80,11 @@ export function PilotRegionCard({
               <View style={styles.badges}>
                 {region.badges.map((badge) => (
                   <View key={badge.label} style={styles.badge}>
-                    <Ionicons name={badge.icon} size={11} color={onboardingTokens.textMuted} />
+                    <Ionicons
+                      name={badge.icon as keyof typeof Ionicons.glyphMap}
+                      size={11}
+                      color={onboardingTokens.textMuted}
+                    />
                     <Text style={styles.badgeText} numberOfLines={1} ellipsizeMode="tail">
                       {badge.label}
                     </Text>
@@ -121,7 +127,7 @@ export function PilotRegionCard({
 
             <View style={[styles.visual, compact && styles.visualCompact]}>
               <Image
-                source={getDistrictAsset(region.id)}
+                source={getDistrictAsset(visualDistrictId)}
                 style={[styles.visualImage, compact && styles.visualImageCompact]}
                 contentFit="contain"
               />

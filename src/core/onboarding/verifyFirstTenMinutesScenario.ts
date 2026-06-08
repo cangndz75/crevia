@@ -335,7 +335,7 @@ export function verifyFirstTenMinutesScenario(): VerifyFirstTenMinutesOutcome {
   });
   add(day2HubResources.visible, 'Day 2 compact resource card visible', 'hub day2');
 
-  add(SAVE_VERSION === 23, 'SAVE_VERSION 23 with operational resources', String(SAVE_VERSION));
+  add(SAVE_VERSION === 24, 'SAVE_VERSION 23 with operational resources', String(SAVE_VERSION));
 
   const guideContracts = getInteractionContractsForComponent('HubFirstTenMinutesGuideCard');
   add(guideContracts.length >= 1, 'Interaction contract HubFirstTenMinutesGuideCard', 'missing');

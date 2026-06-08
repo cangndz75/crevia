@@ -279,7 +279,7 @@ export function verifyStoreListingReadinessScenario(): VerifyStoreListingReadine
       'Review notes draft missing',
     ) && ok;
 
-  ok = assert(checks, SAVE_VERSION === 23, 'SAVE_VERSION 23 unchanged', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION 23 unchanged', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
 
   const persist = readRepo('src/store/gamePersist.ts');
   ok =

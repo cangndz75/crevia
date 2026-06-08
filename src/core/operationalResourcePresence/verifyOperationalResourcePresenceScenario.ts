@@ -37,7 +37,7 @@ import {
 } from './operationalResourcePresencePresentation';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 23;
+const EXPECTED_SAVE_VERSION = 24;
 
 export type VerifyOperationalResourcePresenceOutcome = {
   ok: boolean;

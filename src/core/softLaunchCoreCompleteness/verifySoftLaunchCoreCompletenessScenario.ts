@@ -88,12 +88,12 @@ export function verifySoftLaunchCoreCompletenessScenario(): VerifySoftLaunchCore
     ) && ok;
   }
 
-  ok = assert(checks, SAVE_VERSION === 23, 'SAVE_VERSION unchanged at 23', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION at 24', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
   ok = assert(
     checks,
-    result.nonGoalsConfirmed.some((line) => line.includes('SAVE_VERSION remains 23')),
-    'Audit confirms SAVE_VERSION unchanged',
-    'Missing SAVE_VERSION non-goal',
+    result.nonGoalsConfirmed.some((line) => line.includes('SAVE_VERSION remains 24')),
+    'Audit confirms SAVE_VERSION snapshot',
+    'Missing SAVE_VERSION snapshot',
   ) && ok;
 
   const store = readRepo('src/store/useGameStore.ts');

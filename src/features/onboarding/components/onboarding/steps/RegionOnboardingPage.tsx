@@ -1,12 +1,12 @@
 import { StyleSheet, View } from 'react-native';
 
-import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import { PilotRegionCard } from '@/features/onboarding/components/onboarding/PilotRegionCard';
-import { REGION_CARDS } from '@/features/onboarding/data/onboardingData';
+import { ONBOARDING_DISTRICT_OPTIONS } from '@/features/onboarding/utils/onboardingContinuationConstants';
+import type { OnboardingPilotDistrictId } from '@/features/onboarding/utils/onboardingContinuationTypes';
 
 type RegionOnboardingPageProps = {
-  selectedId: PilotDistrictId;
-  onSelect: (id: PilotDistrictId) => void;
+  selectedId: OnboardingPilotDistrictId | null;
+  onSelect: (id: OnboardingPilotDistrictId) => void;
   compact?: boolean;
 };
 
@@ -17,7 +17,7 @@ export function RegionOnboardingPage({
 }: RegionOnboardingPageProps) {
   return (
     <View style={[styles.wrap, compact && styles.wrapCompact]}>
-      {REGION_CARDS.map((region, index) => (
+      {ONBOARDING_DISTRICT_OPTIONS.map((region, index) => (
         <PilotRegionCard
           key={region.id}
           region={region}

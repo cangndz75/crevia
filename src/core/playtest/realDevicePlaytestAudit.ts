@@ -172,7 +172,7 @@ export function assertPlaytestPlanIntegrity(): {
       plan.scenarios.length >= REAL_DEVICE_PLAYTEST_MIN_SCENARIOS &&
       scenariosValid &&
       templatesValid &&
-      SAVE_VERSION === 23,
+      SAVE_VERSION === 24,
     areaCount: plan.areas.length,
     scenarioCount: plan.scenarios.length,
     saveVersion: SAVE_VERSION,

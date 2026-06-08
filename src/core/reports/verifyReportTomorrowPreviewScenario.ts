@@ -36,7 +36,7 @@ import {
   validateReportTomorrowPreviewTextLength,
 } from './reportTomorrowPreviewValidation';
 
-const EXPECTED_SAVE_VERSION = 23;
+const EXPECTED_SAVE_VERSION = 24;
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
 

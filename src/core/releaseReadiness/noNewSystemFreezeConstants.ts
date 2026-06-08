@@ -7,7 +7,7 @@ import type {
 
 export const NO_NEW_SYSTEM_FREEZE_DOCS_PATH = 'docs/crevia-no-new-system-freeze.md';
 
-export const NO_NEW_SYSTEM_FREEZE_EXPECTED_SAVE_VERSION = 23;
+export const NO_NEW_SYSTEM_FREEZE_EXPECTED_SAVE_VERSION = 24;
 
 export const NO_NEW_SYSTEM_FREEZE_ALLOWED_SCOPES: readonly CreviaFreezeAllowedScope[] = [
   'bugfix',
@@ -173,6 +173,8 @@ export const NO_NEW_SYSTEM_FREEZE_BASELINE_CORE_DIRS = [
   'src/core/brand',
   'src/core/carryOver',
   'src/core/cityEchoBinding',
+  'src/core/cityArchive',
+  'src/core/cityArchivePlanning',
   'src/core/cityJournal',
   'src/core/crashPerformance',
   'src/core/containerNetwork',
@@ -218,9 +220,11 @@ export const NO_NEW_SYSTEM_FREEZE_BASELINE_CORE_DIRS = [
   'src/core/mapLayers',
   'src/core/mapPresence',
   'src/core/mapReactions',
+  'src/core/mapReactionsMotion',
   'src/core/metaProgression',
   'src/core/microDecisions',
   'src/core/models',
+  'src/core/motion',
   'src/core/monetization',
   'src/core/neighborhoodIdentity',
   'src/core/offlineResume',
@@ -256,6 +260,9 @@ export const NO_NEW_SYSTEM_FREEZE_BASELINE_CORE_DIRS = [
   'src/core/releaseCandidate',
   'src/core/releaseCandidatePolish',
   'src/core/storeScreenshotNarrative',
+  'src/core/storeMetadataCopy',
+  'src/core/privacyPolicyText',
+  'src/core/iapProductCopy',
   'src/core/storyChains',
   'src/core/teamSpecialization',
   'src/core/tomorrowRisk',

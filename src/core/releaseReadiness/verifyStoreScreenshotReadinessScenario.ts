@@ -280,7 +280,7 @@ export function verifyStoreScreenshotReadinessScenario(): VerifyStoreScreenshotR
   ok =
     assert(
       checks,
-      SAVE_VERSION === 23,
+      SAVE_VERSION === 24,
       'SAVE_VERSION 23 unchanged',
       `SAVE_VERSION=${SAVE_VERSION}`,
     ) && ok;

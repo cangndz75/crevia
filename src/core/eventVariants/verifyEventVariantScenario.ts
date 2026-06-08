@@ -88,7 +88,7 @@ export function verifyEventVariantScenario(): VerifyEventVariantOutcome {
     if (!pass) ok = false;
   };
 
-  record(assert(checks, SAVE_VERSION === 23, 'SAVE_VERSION 23', `SAVE_VERSION ${SAVE_VERSION}`));
+  record(assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION 23', `SAVE_VERSION ${SAVE_VERSION}`));
 
   for (const kind of EVENT_VARIANT_KINDS) {
     const def = EVENT_VARIANT_DEFINITIONS[kind];

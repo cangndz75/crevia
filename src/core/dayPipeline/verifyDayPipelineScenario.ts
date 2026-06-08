@@ -460,7 +460,7 @@ export function verifyDayPipelineScenario(): VerifyDayPipelineOutcome {
     'full eligible',
   );
 
-  add(SAVE_VERSION === 23, 'SAVE_VERSION 22', 'save version');
+  add(SAVE_VERSION === 24, 'SAVE_VERSION 22', 'save version');
   add(
     END_OF_DAY_PIPELINE_STEP_DEFINITIONS.every((s) => !s.id.includes('persist')),
     'No new persist key introduced',

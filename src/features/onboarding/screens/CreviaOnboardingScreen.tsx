@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -11,10 +11,7 @@ import {
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  DEFAULT_PILOT_DISTRICT_ID,
-  type PilotDistrictId,
-} from '@/core/models/DistrictProfile';
+import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import {
   isOnboardingStarterDecisionId,
   type OnboardingStarterDecisionId,
@@ -22,15 +19,26 @@ import {
 import { CreviaLogoHeader } from '@/features/onboarding/components/onboarding/CreviaLogoHeader';
 import { OnboardingBackground } from '@/features/onboarding/components/onboarding/OnboardingBackground';
 import { OnboardingBottomControls } from '@/features/onboarding/components/onboarding/OnboardingBottomControls';
+import {
+  OnboardingCenterUnlockedCard,
+  OnboardingCityReactionCard,
+  OnboardingEceBriefingCard,
+  OnboardingFieldBriefingCard,
+  OnboardingFirstImpactCard,
+} from '@/features/onboarding/components/onboarding/OnboardingContinuationCards';
 import { EventsOnboardingPage } from '@/features/onboarding/components/onboarding/steps/EventsOnboardingPage';
 import { RegionOnboardingPage } from '@/features/onboarding/components/onboarding/steps/RegionOnboardingPage';
-import { RoadmapOnboardingPage } from '@/features/onboarding/components/onboarding/steps/RoadmapOnboardingPage';
-import { WelcomeOnboardingPage } from '@/features/onboarding/components/onboarding/steps/WelcomeOnboardingPage';
-import { ONBOARDING_STEPS } from '@/features/onboarding/data/onboardingData';
 import { onboardingTokens } from '@/features/onboarding/theme/onboardingTokens';
-import { buildRoadmapStepSubtitle } from '@/features/onboarding/utils/onboardingRoadmapPresentation';
+import { ONBOARDING_CONTINUATION_STEPS } from '@/features/onboarding/utils/onboardingContinuationConstants';
+import {
+  buildOnboardingContinuationViewModel,
+  mapOnboardingDistrictToGameDistrict,
+  mapStarterDecisionToContinuationStyle,
+} from '@/features/onboarding/utils/onboardingContinuationPresentation';
+import type { OnboardingPilotDistrictId } from '@/features/onboarding/utils/onboardingContinuationTypes';
+import { CreviaAnimatedCard, useCreviaReducedMotion } from '@/shared/motion';
 
-const TOTAL = ONBOARDING_STEPS.length;
+const TOTAL = ONBOARDING_CONTINUATION_STEPS.length;
 
 export type OnboardingFinishPayload = {
   districtId: PilotDistrictId;
@@ -45,6 +53,7 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
   const pagerRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
+  const reducedMotion = useCreviaReducedMotion();
   const [stepIndex, setStepIndex] = useState(0);
   const isCompact = height < 900 || width <= 390;
   const isSmallPhone = width <= 370 || height < 740;
@@ -53,10 +62,10 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
   const subtitleFont = isCompact ? 12 : 14;
   const ctaHeight = isCompact ? 50 : 58;
   const [selectedRegionId, setSelectedRegionId] =
-    useState<PilotDistrictId>(DEFAULT_PILOT_DISTRICT_ID);
-  const [selectedDecisionId, setSelectedDecisionId] = useState('fast');
+    useState<OnboardingPilotDistrictId | null>(null);
+  const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(null);
 
-  const step = ONBOARDING_STEPS[stepIndex]!;
+  const step = ONBOARDING_CONTINUATION_STEPS[stepIndex]!;
   const isLast = stepIndex === TOTAL - 1;
   const logoSize = isCompact
     ? stepIndex === 0
@@ -75,14 +84,23 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
   );
 
   const handleFinish = () => {
-    const starterDecision = isOnboardingStarterDecisionId(selectedDecisionId)
-      ? selectedDecisionId
+    const selectedStarterDecision = selectedDecisionId ?? '';
+    const starterDecision: OnboardingStarterDecisionId = isOnboardingStarterDecisionId(
+      selectedStarterDecision,
+    )
+      ? selectedStarterDecision
       : 'fast';
 
-    void onFinish({ districtId: selectedRegionId, starterDecision });
+    const districtId: PilotDistrictId = mapOnboardingDistrictToGameDistrict(selectedRegionId);
+    void onFinish({ districtId, starterDecision });
   };
 
+  const isPrimaryDisabled =
+    (step.id === 'region' && selectedRegionId == null) ||
+    (step.id === 'decision' && !isOnboardingStarterDecisionId(selectedDecisionId ?? ''));
+
   const handlePrimary = () => {
+    if (isPrimaryDisabled) return;
     if (isLast) {
       handleFinish();
       return;
@@ -102,13 +120,15 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
   };
 
   const titleLines = step.titleLines ?? [step.title];
-  const stepBody =
-    stepIndex === TOTAL - 1
-      ? buildRoadmapStepSubtitle(
-          selectedRegionId,
-          isOnboardingStarterDecisionId(selectedDecisionId) ? selectedDecisionId : 'fast',
-        )
-      : step.body;
+  const stepBody = step.body;
+  const continuationModel = useMemo(
+    () =>
+      buildOnboardingContinuationViewModel(
+        selectedRegionId,
+        mapStarterDecisionToContinuationStyle(selectedDecisionId),
+      ),
+    [selectedDecisionId, selectedRegionId],
+  );
 
   return (
     <View style={styles.root}>
@@ -155,20 +175,12 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
         ref={pagerRef}
         horizontal
         pagingEnabled
+        scrollEnabled={false}
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={onScrollEnd}
         scrollEventThrottle={16}
         style={styles.pager}
         contentContainerStyle={styles.pagerContent}>
-        <View style={[styles.page, { width }]}>
-          <ScrollView
-            style={styles.pageInnerScroll}
-            showsVerticalScrollIndicator={false}
-            bounces
-            contentContainerStyle={[styles.pageScroll, { paddingHorizontal: horizontalPadding }]}>
-            <WelcomeOnboardingPage compact={isCompact} />
-          </ScrollView>
-        </View>
         <View style={[styles.page, { width }]}>
           <ScrollView
             style={styles.pageInnerScroll}
@@ -201,11 +213,73 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
             showsVerticalScrollIndicator={false}
             bounces
             contentContainerStyle={[styles.pageScroll, { paddingHorizontal: horizontalPadding }]}>
-            <RoadmapOnboardingPage
-              compact={isCompact}
-              districtId={selectedRegionId}
-              decisionId={selectedDecisionId}
-            />
+            <CreviaAnimatedCard
+              surface="onboarding"
+              index={0}
+              reducedMotion={reducedMotion}
+              motionKind="onboarding_step_transition">
+              <OnboardingEceBriefingCard model={continuationModel} compact={isCompact} />
+            </CreviaAnimatedCard>
+          </ScrollView>
+        </View>
+        <View style={[styles.page, { width }]}>
+          <ScrollView
+            style={styles.pageInnerScroll}
+            showsVerticalScrollIndicator={false}
+            bounces
+            contentContainerStyle={[styles.pageScroll, { paddingHorizontal: horizontalPadding }]}>
+            <CreviaAnimatedCard
+              surface="onboarding"
+              index={0}
+              reducedMotion={reducedMotion}
+              motionKind="onboarding_step_transition">
+              <OnboardingFieldBriefingCard model={continuationModel} compact={isCompact} />
+            </CreviaAnimatedCard>
+          </ScrollView>
+        </View>
+        <View style={[styles.page, { width }]}>
+          <ScrollView
+            style={styles.pageInnerScroll}
+            showsVerticalScrollIndicator={false}
+            bounces
+            contentContainerStyle={[styles.pageScroll, { paddingHorizontal: horizontalPadding }]}>
+            <CreviaAnimatedCard
+              surface="onboarding"
+              index={0}
+              reducedMotion={reducedMotion}
+              motionKind="onboarding_step_transition">
+              <OnboardingFirstImpactCard model={continuationModel} compact={isCompact} />
+            </CreviaAnimatedCard>
+          </ScrollView>
+        </View>
+        <View style={[styles.page, { width }]}>
+          <ScrollView
+            style={styles.pageInnerScroll}
+            showsVerticalScrollIndicator={false}
+            bounces
+            contentContainerStyle={[styles.pageScroll, { paddingHorizontal: horizontalPadding }]}>
+            <CreviaAnimatedCard
+              surface="onboarding"
+              index={0}
+              reducedMotion={reducedMotion}
+              motionKind="onboarding_step_transition">
+              <OnboardingCityReactionCard model={continuationModel} compact={isCompact} />
+            </CreviaAnimatedCard>
+          </ScrollView>
+        </View>
+        <View style={[styles.page, { width }]}>
+          <ScrollView
+            style={styles.pageInnerScroll}
+            showsVerticalScrollIndicator={false}
+            bounces
+            contentContainerStyle={[styles.pageScroll, { paddingHorizontal: horizontalPadding }]}>
+            <CreviaAnimatedCard
+              surface="onboarding"
+              index={0}
+              reducedMotion={reducedMotion}
+              motionKind="onboarding_step_transition">
+              <OnboardingCenterUnlockedCard model={continuationModel} compact={isCompact} />
+            </CreviaAnimatedCard>
           </ScrollView>
         </View>
       </ScrollView>
@@ -222,11 +296,12 @@ export function CreviaOnboardingScreen({ onFinish }: CreviaOnboardingScreenProps
         <OnboardingBottomControls
           activeIndex={stepIndex}
           total={TOTAL}
-          primaryLabel={isLast ? 'Oyuna Devam Et' : 'Devam'}
+          primaryLabel={step.primaryLabel}
           onPrimaryPress={handlePrimary}
           onBackPress={handleBack}
           showBack={stepIndex > 0}
           isFinal={isLast}
+          disabled={isPrimaryDisabled}
           ctaHeight={ctaHeight}
           compact={isCompact}
         />

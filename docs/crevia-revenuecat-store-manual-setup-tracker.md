@@ -2,6 +2,10 @@
 
 Bu dosya RevenueCat, App Store Connect, Google Play Console, EAS ve sandbox tester manuel kurulumlarının izlenmesini sağlar. Gerçek dashboard işlemi yapılmaz; sadece checklist ve durum takibi.
 
+**Aşama 2 — Dashboard entry checklist:** Alan bazlı ASC / Play / RevenueCat giriş eşlemesi, sandbox matrix ve evidence kuralları için bkz. `docs/crevia-iap-dashboard-entry-checklist.md`.
+
+**IAP product copy pack:** `docs/crevia-iap-product-copy-trust-review.md`
+
 > **UYARI:** Gerçek API key değerlerini bu dosyaya veya repo'ya yazmayın. Key'ler yalnızca EAS secrets'ta saklanır.
 
 ---

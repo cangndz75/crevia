@@ -323,7 +323,7 @@ export function verifySecretRotationClosureScenario(): VerifySecretRotationClosu
     assert(checks, verifySoftLaunchReviewScenario().ok, 'verify:soft-launch-review', 'Review broken') && ok;
   ok = assert(checks, runFullLoopAnalysis().totalFAIL === 0, 'verify:full-loop', 'Full loop fail') && ok;
   ok = assert(checks, verifyFullUxFlowScenario().ok, 'verify:full-ux-flow', 'UX flow broken') && ok;
-  ok = assert(checks, SAVE_VERSION === 23, 'SAVE_VERSION 23', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION 23', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
 
   const persist = readRepo('src/store/gamePersist.ts');
   ok =

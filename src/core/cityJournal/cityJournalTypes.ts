@@ -8,6 +8,7 @@ import type { DailyReport } from '@/core/models/DailyReport';
 import type { DecisionRecord } from '@/core/models/DecisionRecord';
 import type { MainOperationFeelModel } from '@/core/mainOperationFeel/mainOperationFeelTypes';
 import type { PostPilotPhase } from '@/core/postPilot/postPilotOperationTypes';
+import type { CityArchiveV1State } from '@/core/cityArchive/cityArchiveTypes';
 import type { TomorrowRiskModel } from '@/core/tomorrowRisk/tomorrowRiskTypes';
 
 export type CityJournalLiteVisibility =
@@ -132,6 +133,7 @@ export type CityJournalLiteInput = {
   focusDistrictId?: MapDistrictId | string | null;
   recentDecisions?: DecisionRecord[];
   existingLines?: string[];
+  cityArchive?: CityArchiveV1State | null;
 };
 
 export type CityJournalHubPresentation = {

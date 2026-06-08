@@ -130,7 +130,22 @@ export type {
   CreviaIapManualSetupWarning,
   CreviaIapManualSetupPlatformStatus,
   CreviaIapManualSetupTrackerResult,
+  IapDashboardEntryChecklist,
+  IapDashboardEntryChecklistAuditResult,
+  IapDashboardEntryChecklistStatus,
+  IapSandboxTestMatrixCase,
 } from './iapManualSetupTrackerTypes';
+
+export {
+  IAP_DASHBOARD_ENTRY_CHECKLIST_DOCS_PATH,
+  IAP_DASHBOARD_ENTRY_CHECKLIST_ID,
+  IAP_DASHBOARD_ENTRY_PLACEHOLDERS,
+  assertIapDashboardEntryChecklistIntegrity,
+  buildIapDashboardEntryChecklist,
+  buildIapDashboardEntryConsoleSummary,
+  buildIapSandboxTestMatrix,
+  runIapDashboardEntryChecklistAudit,
+} from './iapDashboardEntryChecklist';
 
 export {
   IAP_MANUAL_SETUP_TRACKER_DOCS_PATH,

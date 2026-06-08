@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 
+import { CreviaAnimatedCard, useCreviaReducedMotion } from '@/shared/motion';
 import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
@@ -16,13 +16,20 @@ type Props = {
 };
 
 export function MentionFeedCard({ mention, index }: Props) {
+  const reducedMotion = useCreviaReducedMotion();
   const theme = MENTION_CATEGORY_THEME[mention.category];
   const timeLabel = mention.timeAgo.includes('önce')
     ? mention.timeAgo
     : `${mention.timeAgo} önce`;
 
   return (
-    <Animated.View entering={FadeInUp.delay(index * 50).duration(320)}>
+    <CreviaAnimatedCard
+      surface="social"
+      index={index}
+      reducedMotion={reducedMotion}
+      disabled={index >= 2}
+      motionKind="compact_card_enter"
+      intensity="subtle">
       <View style={[styles.card, shadows.card]}>
         <View style={[styles.accentBar, { backgroundColor: theme.border }]} />
 
@@ -88,7 +95,7 @@ export function MentionFeedCard({ mention, index }: Props) {
           </View>
         </View>
       </View>
-    </Animated.View>
+    </CreviaAnimatedCard>
   );
 }
 

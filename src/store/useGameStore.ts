@@ -411,6 +411,13 @@ import {
 } from '@/features/tutorial/tutorialTypes';
 
 import {
+  appendDayCloseCityArchive,
+  buildCityArchiveDayCloseInput,
+} from '@/core/cityArchive/cityArchiveWiring';
+import { createInitialCityArchiveState } from '@/core/cityArchive/cityArchiveState';
+import type { CityArchiveV1State } from '@/core/cityArchive/cityArchiveTypes';
+
+import {
   clearPersistedGame,
   GAME_STORAGE_KEY,
   gameJsonStorage,
@@ -463,6 +470,7 @@ type GameStoreState = {
   crisisActionState: CrisisActionState;
   microDecisionState: MicroDecisionState;
   operationalResources: OperationalResourcesState;
+  cityArchive: CityArchiveV1State;
   /** Oturum içi mahalle hamlesi seçimi — persist edilmez. */
   districtOperationActionState: CreviaDistrictOperationActionState;
   tutorialState: TutorialState;
@@ -817,6 +825,7 @@ function applySeedBundle(
   | 'crisisActionState'
   | 'microDecisionState'
   | 'operationalResources'
+  | 'cityArchive'
   | 'districtOperationActionState'
   | 'tutorialState'
   | 'bestPilotScores'
@@ -881,6 +890,7 @@ function applySeedBundle(
     operationalResources: createInitialOperationalResourcesState(
       bundle.gameState.city.day,
     ),
+    cityArchive: createInitialCityArchiveState(bundle.gameState.city.day),
     districtOperationActionState: createInitialDistrictOperationActionState(),
     tutorialState: { ...INITIAL_TUTORIAL_STATE },
     bestPilotScores: [],
@@ -3446,6 +3456,32 @@ export const useGameStore = create<GameStore>()(
           ),
         };
 
+        const archiveCloseInput = buildCityArchiveDayCloseInput({
+          closingDay,
+          pilotStatus: current.gameState.pilot.status,
+          postPilotPhase: current.gameState.pilot.postPilotOperation?.phase ?? null,
+          dailyReportSummary:
+            dailyReport.title ??
+            dailyReport.summaryLines?.[0] ??
+            `Gün ${closingDay} raporu kayda geçti.`,
+          dailyReportHeadline: dailyReport.rewardTitle,
+          dayDecisions: current.decisionHistory
+            .filter((r) => r.day === closingDay)
+            .map((r) => ({
+              id: r.id,
+              day: r.day,
+              eventId: r.eventId,
+              decisionId: r.decisionId,
+              neighborhoodId: r.neighborhoodId,
+              summary: r.decisionLabel || r.eventTitle,
+            })),
+          carryOverLine: carryOverSummaryLines[0],
+        });
+        const cityArchiveAfterClose = appendDayCloseCityArchive(
+          current.cityArchive,
+          archiveCloseInput,
+        );
+
         set({
           gameState: withSyncedPulse({
             ...nextGameState,
@@ -3507,6 +3543,7 @@ export const useGameStore = create<GameStore>()(
           crisisActionState: crisisActionStateForNextDay,
           microDecisionState: microStateForNextDay,
           operationalResources: operationalResourcesAfterDay,
+          cityArchive: cityArchiveAfterClose,
         });
       },
 

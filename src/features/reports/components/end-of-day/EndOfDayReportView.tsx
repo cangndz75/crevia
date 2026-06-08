@@ -116,6 +116,7 @@ import {
   useGameStore,
 } from '@/store/useGameStore';
 import { useGameStatus } from '@/store/gameSelectors';
+import { CreviaAnimatedChip, CreviaAnimatedLine, useCreviaReducedMotion } from '@/shared/motion';
 
 type Props = {
   report: DailyReport;
@@ -164,6 +165,7 @@ export function EndOfDayReportView({
   const operationalResources = useGameStore((s) => s.operationalResources);
   const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
   const operationSignals = useGameStore((s) => s.operationSignals);
+  const cityArchive = useGameStore((s) => s.cityArchive);
   const crisisActionState = useGameStore((s) => s.crisisActionState);
   const districtOperationActionState = useGameStore(
     (s) => s.districtOperationActionState,
@@ -173,6 +175,7 @@ export function EndOfDayReportView({
   const socialPulseScore = useGameStore((s) => s.socialPulseState.globalPulseScore);
   const socialPulseState = useGameStore((s) => s.socialPulseState);
   const eventPool = useGameStore((s) => s.eventPool);
+  const reducedMotion = useCreviaReducedMotion();
 
   const reportGuard = useMemo(
     () => buildFirstTenMinutesReportGuard(gameState),
@@ -657,10 +660,12 @@ export function EndOfDayReportView({
       },
       focusDistrictId: lastDecisionForDay?.neighborhoodId,
       existingLines,
+      cityArchive,
     });
 
     return buildCityJournalReportLine(model, existingLines);
   }, [
+    cityArchive,
     cityEchoReportLine,
     decisionImpactReportEcho,
     eventDomainFocus?.reportEchoLine,
@@ -1177,29 +1182,43 @@ export function EndOfDayReportView({
       </Animated.View>
 
       {cityEchoReportLine || decisionImpactReportEcho ? (
-        <View style={styles.decisionImpactReportRow}>
+        <CreviaAnimatedLine
+          surface="report"
+          index={0}
+          day={report.day}
+          reducedMotion={reducedMotion}
+          containerStyle={styles.decisionImpactReportRow}>
           <Text style={styles.decisionImpactReportLabel} numberOfLines={1}>
             Kararın etkisi
           </Text>
           <Text style={styles.decisionImpactReportText} numberOfLines={2}>
             {cityEchoReportLine ?? decisionImpactReportEcho}
           </Text>
-        </View>
+        </CreviaAnimatedLine>
       ) : null}
 
       {cityJournalReportLine ? (
-        <View style={styles.cityJournalReportRow}>
+        <CreviaAnimatedChip
+          surface="report"
+          index={1}
+          reducedMotion={reducedMotion}
+          style={styles.cityJournalReportRow}>
           <Text style={styles.cityJournalReportLabel} numberOfLines={1}>
             Şehir günlüğü
           </Text>
           <Text style={styles.cityJournalReportText} numberOfLines={reportSecondaryMaxLines}>
             {cityJournalReportLine}
           </Text>
-        </View>
+        </CreviaAnimatedChip>
       ) : null}
 
       {rewardComebackReportLine ? (
-        <View style={styles.rewardComebackReportRow}>
+        <CreviaAnimatedChip
+          surface="report"
+          index={2}
+          reducedMotion={reducedMotion}
+          style={styles.rewardComebackReportRow}
+          tone="success">
           <Text style={styles.rewardComebackReportLabel} numberOfLines={1}>
             Olumlu iz
           </Text>
@@ -1209,7 +1228,7 @@ export function EndOfDayReportView({
             ellipsizeMode="tail">
             {rewardComebackReportLine}
           </Text>
-        </View>
+        </CreviaAnimatedChip>
       ) : null}
 
       {districtReportCardLine ? (

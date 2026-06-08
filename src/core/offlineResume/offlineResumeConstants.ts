@@ -2,7 +2,7 @@ import type { OfflineResumePhase } from './offlineResumeTypes';
 
 export const OFFLINE_RESUME_DOCS_PATH = 'docs/crevia-offline-resume-robustness.md';
 
-export const OFFLINE_RESUME_EXPECTED_SAVE_VERSION = 23;
+export const OFFLINE_RESUME_EXPECTED_SAVE_VERSION = 24;
 
 export const OFFLINE_RESUME_KNOWN_BACKLOG = [
   'eventFamilySelectionEngine full pack gating — V1.1 backlog',

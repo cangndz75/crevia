@@ -42,7 +42,7 @@ import {
 } from './mapPresenceValidation';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 23;
+const EXPECTED_SAVE_VERSION = 24;
 
 const CONTAINER_EVENT = {
   id: 'map-container-cumhuriyet',
@@ -437,7 +437,15 @@ export function verifyMapPresenceScenario(): VerifyMapPresenceOutcome {
   record(assert(checks, !readRepo('src/core/mapPresence/mapPresencePresentation.ts').includes('Math.random'), 'no Math.random', 'random used'));
 
   record(assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION, `SAVE_VERSION ${SAVE_VERSION}`, 'SAVE_VERSION changed'));
-  record(assert(checks, !readRepo('src/store/gamePersist.ts').includes('SAVE_VERSION = 24'), 'no SAVE bump in file', 'save bump'));
+  record(
+    assert(
+      checks,
+      !readRepo('src/store/gamePersist.ts').includes('mapPresenceState') &&
+        !readRepo('src/store/useGameStore.ts').includes('mapPresenceState'),
+      'mapPresence persist shape unchanged',
+      'mapPresence persisted',
+    ),
+  );
 
   const presenceSrc = [
     readRepo('src/core/mapPresence/mapPresencePresentation.ts'),

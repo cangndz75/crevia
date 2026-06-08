@@ -177,7 +177,7 @@ export function verifyEventFamilyScenario(): VerifyEventFamilyOutcome {
     record(assert(checks, !readRepo(file).includes('eventFamilies'), `${file} untouched by eventFamilies`, `${file} imports eventFamilies`));
   }
 
-  record(assert(checks, SAVE_VERSION === 23, 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`));
+  record(assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`));
   checks.push('PASS Persist shape unchanged by scope: event family fixtures are verify-only');
 
   const coverage = buildVariantCoverageSummary(EVENT_FAMILY_VERIFY_FIXTURES);

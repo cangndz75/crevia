@@ -1,5 +1,5 @@
-import type { StoreScreenshotNarrativeAuditResult } from './storeScreenshotNarrativeTypes';
 import { STORE_SCREENSHOT_NARRATIVE_VISUAL_DIRECTION } from './storeScreenshotNarrativeConstants';
+import type { StoreScreenshotNarrativeAuditResult } from './storeScreenshotNarrativeTypes';
 
 export function buildStoreScreenshotNarrativeConsoleSummary(
   result: StoreScreenshotNarrativeAuditResult,
@@ -16,15 +16,24 @@ export function buildStoreScreenshotNarrativeConsoleSummary(
     '',
     '--- Narrative order ---',
     ...result.screenshots.map(
-      (s) =>
-        `${s.order}. [${s.captureStatus}] ${s.titleTR} / ${s.titleEN} (${s.screenKey})${s.optional ? ' [optional]' : ''}`,
+      (screenshot) =>
+        `${screenshot.order}. [${screenshot.captureStatus}] ${screenshot.titleTR} / ${screenshot.titleEN} (${screenshot.screenKey})${screenshot.optional ? ' [optional]' : ''}`,
     ),
     '',
     '--- Capture scenarios ---',
-    ...result.captureScenarios.map((c) => `${c.id}: ${c.title} — ${c.targetDayRange}`),
+    ...result.captureScenarios.map(
+      (scenario) => `${scenario.scenarioId}: ${scenario.label} - day ${scenario.targetDay}`,
+    ),
     '',
     '--- Device matrix ---',
-    ...result.deviceMatrix.map((d) => `${d.platform}: ${d.label}`),
+    ...result.deviceMatrix.map(
+      (device) => `${device.platform}: ${device.deviceClass} (${device.priority})`,
+    ),
+    '',
+    '--- False-claim guard ---',
+    ...result.falseClaimFindings.map(
+      (finding) => `${finding.passed ? 'PASS' : 'FAIL'} ${finding.id}: ${finding.message}`,
+    ),
     '',
     '--- Visual direction ---',
     `Theme: ${STORE_SCREENSHOT_NARRATIVE_VISUAL_DIRECTION.theme}`,
@@ -32,11 +41,11 @@ export function buildStoreScreenshotNarrativeConsoleSummary(
     '',
     '--- Blockers ---',
     ...(result.blockerSummary.length > 0
-      ? result.blockerSummary.map((b) => `- ${b.id}: ${b.message}`)
+      ? result.blockerSummary.map((blocker) => `- ${blocker.id}: ${blocker.message}`)
       : ['(none)']),
     '',
     '--- Next actions ---',
-    ...result.nextActions.map((a) => `- ${a}`),
+    ...result.nextActions.map((action) => `- ${action}`),
     '',
     `Docs: ${result.docsPath}`,
   ];
@@ -49,8 +58,8 @@ export function buildStoreScreenshotNarrativeCaptionTable(
   const header = '| # | TR Title | EN Title | TR Subtitle | EN Subtitle |';
   const sep = '|---|----------|----------|-------------|-------------|';
   const rows = result.screenshots.map(
-    (s) =>
-      `| ${s.order} | ${s.titleTR} | ${s.titleEN} | ${s.subtitleTR} | ${s.subtitleEN} |`,
+    (screenshot) =>
+      `| ${screenshot.order} | ${screenshot.titleTR} | ${screenshot.titleEN} | ${screenshot.subtitleTR} | ${screenshot.subtitleEN} |`,
   );
   return [header, sep, ...rows].join('\n');
 }

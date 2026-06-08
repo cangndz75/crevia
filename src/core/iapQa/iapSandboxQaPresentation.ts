@@ -1,3 +1,7 @@
+import { IAP_PRODUCT_COPY_DOCS_PATH } from '@/core/iapProductCopy';
+
+import { IAP_DASHBOARD_ENTRY_CHECKLIST_DOCS_PATH } from './iapDashboardEntryChecklist';
+
 import type {
   IapSandboxQaArea,
   IapSandboxQaAuditResult,
@@ -44,6 +48,8 @@ export function buildIapSandboxQaNextSteps(result: IapSandboxQaAuditResult): str
   steps.push('Run EAS development build — do not test real IAP in Expo Go.');
   steps.push('iOS: enable In-App Purchase capability after prebuild.');
   steps.push('Android: verify com.android.vending.BILLING in manifest after prebuild.');
+  steps.push(`Apply IAP product copy pack before dashboard entry: ${IAP_PRODUCT_COPY_DOCS_PATH}`);
+  steps.push(`Follow dashboard entry checklist (ASC / Play / RevenueCat): ${IAP_DASHBOARD_ENTRY_CHECKLIST_DOCS_PATH}`);
   steps.push('Complete sandbox purchase + restore smoke tests on device (docs/crevia-iap-sandbox-qa.md).');
   steps.push('Run npm run verify:iap-sandbox-qa && verify:iap-integration && verify:soft-launch-readiness.');
 

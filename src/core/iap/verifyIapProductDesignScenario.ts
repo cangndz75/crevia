@@ -353,7 +353,7 @@ export function verifyIapProductDesignScenario(): VerifyIapProductDesignOutcome 
     assert(checks, !iapImplBlob.includes('fetch('), 'No network in iap core', 'Network in iap') &&
     ok;
 
-  ok = assert(checks, SAVE_VERSION === 23, 'SAVE_VERSION 23', 'SAVE_VERSION changed') && ok;
+  ok = assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION 23', 'SAVE_VERSION changed') && ok;
 
   for (const bridge of Object.values(MOCK_PURCHASE_ANALYTICS_BRIDGE)) {
     ok =

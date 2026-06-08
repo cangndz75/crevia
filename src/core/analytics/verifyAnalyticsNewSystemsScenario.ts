@@ -311,7 +311,7 @@ export function verifyAnalyticsNewSystemsScenario(): VerifyAnalyticsNewSystemsOu
       'New systems coverage summary debug-safe',
       'Coverage summary missing',
     ) && ok;
-  ok = record(checks, SAVE_VERSION === 23, 'SAVE_VERSION unchanged', 'SAVE_VERSION changed') && ok;
+  ok = record(checks, SAVE_VERSION === 24, 'SAVE_VERSION unchanged', 'SAVE_VERSION changed') && ok;
 
   const consoleReport = [
     '=== Analytics New Systems Scenario ===',

@@ -29,6 +29,11 @@ type Props = {
   crisisHighlightDistrictIds?: MapDistrictId[];
   resourceHighlightDistrictIds?: MapDistrictId[];
   reactionHighlightDistrictIds?: MapDistrictId[];
+  reactionMotionCues?: import('@/core/mapReactionsMotion/mapReactionMotionTypes').MapDistrictMotionCue[];
+  operationScopeMotionDistrictIds?: MapDistrictId[];
+  journalMotionCue?: import('@/core/mapReactionsMotion/mapReactionMotionTypes').MapJournalMotionCue;
+  bubbleMotionCue?: import('@/core/mapReactionsMotion/mapReactionMotionTypes').MapBubbleMotionCue;
+  reducedMotionMode?: boolean;
   mapPresenceViewModel?: MapPresenceViewModel | null;
   activeOperationOverlay?: MapActiveOperationOverlayModel | null;
   onLayersPress: () => void;

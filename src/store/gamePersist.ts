@@ -94,6 +94,9 @@ import {
   normalizeOperationalResourcesState,
 } from '@/core/operationalResources/operationalResourceState';
 import type { OperationalResourcesState } from '@/core/operationalResources/operationalResourceTypes';
+import { normalizeCityArchiveState } from '@/core/cityArchive/cityArchiveState';
+import { resolveCityArchiveOnPersistLoad } from '@/core/cityArchive/cityArchiveMigration';
+import type { CityArchiveV1State } from '@/core/cityArchive/cityArchiveTypes';
 
 import type { GameStore } from './useGameStore';
 
@@ -101,7 +104,8 @@ import type { GameStore } from './useGameStore';
 // Save version & storage key
 // ---------------------------------------------------------------------------
 
-export const SAVE_VERSION = 23;
+export const SAVE_VERSION = 24;
+const SAVE_VERSION_23 = 23;
 const SAVE_VERSION_22 = 22;
 const SAVE_VERSION_21 = 21;
 const SAVE_VERSION_20 = 20;
@@ -164,6 +168,7 @@ export type PersistedGameState = Pick<
   | 'microDecisionState'
   | 'crisisActionState'
   | 'operationalResources'
+  | 'cityArchive'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -210,6 +215,7 @@ export function partialiseGameState(
     microDecisionState: state.microDecisionState,
     crisisActionState: state.crisisActionState,
     operationalResources: state.operationalResources,
+    cityArchive: state.cityArchive,
     tutorialState: state.tutorialState,
     bestPilotScores: state.bestPilotScores,
     lastPilotScore: state.lastPilotScore,
@@ -478,6 +484,7 @@ export function normalizePersistedSave(
     version !== SAVE_VERSION_20 &&
     version !== SAVE_VERSION_21 &&
     version !== SAVE_VERSION_22 &&
+    version !== SAVE_VERSION_23 &&
     version !== SAVE_VERSION
   ) {
     return null;
@@ -690,6 +697,39 @@ export function normalizePersistedSave(
         return normalizeOperationalResourcesState(raw.operationalResources, currentDay);
       }
       return createInitialOperationalResourcesState(currentDay);
+    })(),
+    cityArchive: ((): CityArchiveV1State => {
+      const pilot = (raw.gameState as GameState)?.pilot;
+      if (version === SAVE_VERSION_23 || raw.cityArchive == null) {
+        return resolveCityArchiveOnPersistLoad({
+          rawArchive: raw.cityArchive,
+          saveVersion: typeof version === 'number' ? version : SAVE_VERSION_23,
+          currentDay,
+          backfillInput: {
+            currentDay,
+            saveVersion: typeof version === 'number' ? version : SAVE_VERSION_23,
+            pilotStatus: pilot?.status,
+            postPilotPhase: pilot?.postPilotOperation?.phase ?? null,
+            lastDailyReport: isRecord(raw.lastDailyReport)
+              ? {
+                  summary: String((raw.lastDailyReport as Record<string, unknown>).summary ?? ''),
+                  headline: String((raw.lastDailyReport as Record<string, unknown>).headline ?? ''),
+                }
+              : null,
+            decisionHistory: Array.isArray(raw.decisionHistory)
+              ? (raw.decisionHistory as Array<{
+                  id?: string;
+                  day?: number;
+                  eventId?: string;
+                  decisionId?: string;
+                  neighborhoodId?: string;
+                  summary?: string;
+                }>)
+              : [],
+          },
+        });
+      }
+      return normalizeCityArchiveState(raw.cityArchive, currentDay);
     })(),
     tutorialState: isValidTutorialState(raw.tutorialState)
       ? raw.tutorialState

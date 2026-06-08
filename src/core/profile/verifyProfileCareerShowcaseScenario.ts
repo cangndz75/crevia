@@ -202,7 +202,7 @@ export function verifyProfileCareerShowcaseScenario(): VerifyProfileCareerShowca
     'ProfileScreen renders ProfileCareerShowcaseCard after ProfileAuthorityCard',
   );
 
-  record(checks, 'SAVE_VERSION değişmez', SAVE_VERSION === 23, String(SAVE_VERSION));
+  record(checks, 'SAVE_VERSION değişmez', SAVE_VERSION === 24, String(SAVE_VERSION));
 
   const failCount = checks.filter((check) => !check.ok).length;
   return {

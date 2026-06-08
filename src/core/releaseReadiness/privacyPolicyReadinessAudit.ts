@@ -1,6 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import {
+  PRIVACY_POLICY_TEXT_DOCS_PATH,
+  runPrivacyPolicyTextAudit,
+} from '@/core/privacyPolicyText';
 import { isPrivacyPolicyUrlPlaceholder } from './storeListingReadinessAudit';
 import { STORE_LISTING_PRIVACY_POLICY_PLACEHOLDER } from './storeListingReadinessConstants';
 import {
@@ -161,6 +165,7 @@ export function runPrivacyPolicyReadinessAudit(
   options: RunPrivacyPolicyReadinessAuditOptions = {},
 ): CreviaPrivacyPolicyReadinessResult {
   const mode = options.mode ?? 'internal_device_test';
+  const privacyText = runPrivacyPolicyTextAudit();
 
   const privacyDraftDocs = readRepo(PRIVACY_POLICY_DRAFT_DOCS_PATH);
   const dataSafetyDraftDocs = readRepo(DATA_SAFETY_DRAFT_DOCS_PATH);
@@ -223,6 +228,7 @@ export function runPrivacyPolicyReadinessAudit(
 
   const nextActions: string[] = [
     'Review drafts with legal counsel before publication.',
+    `Privacy text pack (${privacyText.status}): ${PRIVACY_POLICY_TEXT_DOCS_PATH}`,
     PRIVACY_POLICY_DRAFT_DOCS_PATH,
     DATA_SAFETY_DRAFT_DOCS_PATH,
   ];
@@ -251,6 +257,13 @@ export function runPrivacyPolicyReadinessAudit(
     riskyWordingScanPassed,
     thirdPartyConfirmationPending,
     legalReviewPending: true,
+    privacyTextPackId: privacyText.packId,
+    privacyTextStatus: privacyText.status,
+    privacyDocsPath: PRIVACY_POLICY_TEXT_DOCS_PATH,
+    dataSafetyChecklistStatus: privacyText.dataSafetyFormStatus,
+    sdkDisclosureMatrixStatus: privacyText.sdkDisclosureMatrix.length >= 4 ? 'draft_ready' : 'incomplete',
+    legalReviewStatus: privacyText.legalReviewStatus,
+    privacyUrlStatus: privacyText.privacyUrlStatus,
     nextActions,
   };
 }

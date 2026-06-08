@@ -9,7 +9,7 @@ type OnboardingFlowProps = {
   onComplete: (payload: OnboardingFinishPayload) => void | Promise<void>;
 };
 
-/** 4 adımlı premium onboarding — tamamlanınca `onComplete` çağrılır. */
+/** 7 adımlı premium onboarding — tamamlanınca `onComplete` çağrılır. */
 export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>

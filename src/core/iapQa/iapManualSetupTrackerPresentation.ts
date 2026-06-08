@@ -97,6 +97,13 @@ export function buildIapManualSetupConsoleSummary(
     `Manual verification pending: ${result.manualVerificationPending}`,
     `All verified: ${result.allVerified}`,
     '',
+    '--- Dashboard entry checklist ---',
+    `  Checklist: ${result.dashboardChecklistId ?? 'n/a'} (${result.dashboardChecklistStatus ?? 'n/a'})`,
+    `  App Store: ${result.appStoreChecklistStatus ?? 'n/a'} | Play: ${result.playChecklistStatus ?? 'n/a'} | RC: ${result.revenueCatChecklistStatus ?? 'n/a'}`,
+    `  Placeholders: ${result.placeholderCount ?? 0} | Verified evidence: ${result.verifiedEvidenceCount ?? 0}`,
+    `  Sandbox matrix: ${result.sandboxMatrixStatus ?? 'n/a'} | Can start sandbox: ${result.canStartSandboxTesting ?? false}`,
+    `  Docs: ${result.dashboardChecklistDocsPath ?? 'n/a'}`,
+    '',
     '--- Platform status ---',
     ...result.platformStatuses.map(
       (ps) =>

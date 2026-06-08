@@ -390,7 +390,7 @@ export function verifyEventDomainUiPrioritizationScenario(): VerifyEventDomainUi
   record(assert(checks, !allUiText.toLowerCase().includes('rank up'), 'no rank up', 'rank up found'));
   record(assert(checks, !/\bxp\b/i.test(allUiText), 'no xp', 'xp found'));
 
-  record(assert(checks, SAVE_VERSION === 23, 'SAVE_VERSION unchanged', 'SAVE_VERSION changed'));
+  record(assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION unchanged', 'SAVE_VERSION changed'));
 
   const persistSrc = readRepo('src/store/gamePersist.ts');
   record(

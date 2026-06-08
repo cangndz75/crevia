@@ -3,6 +3,9 @@ import type { MapDistrictId } from '@/core/districts/districtIdentityTypes';
 import { getNeighborhoodDisplayName } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 
+import { convertArchiveEntryToJournalEntry } from '@/core/cityArchive/cityArchivePresentation';
+import { selectPlayerVisibleArchiveEntriesForJournal } from '@/core/cityArchive/cityArchiveSelectors';
+
 import {
   CITY_JOURNAL_EARLY_MAX_DAY,
   CITY_JOURNAL_ENTRY_FRAGMENTS,
@@ -631,8 +634,21 @@ export function buildCityJournalLiteModel(input: CityJournalLiteInput = {}): Cit
     };
   }
 
+  const archiveEntries = input.cityArchive
+    ? selectPlayerVisibleArchiveEntriesForJournal(
+        input.cityArchive,
+        visibilityConfig.maxEntries,
+        day,
+      ).map((entry, index) => convertArchiveEntryToJournalEntry(entry, index))
+    : [];
+
   const drafts = collectDraftEntries(input, day);
-  const entries = finalizeEntries(drafts, input, visibilityConfig.maxEntries);
+  const derivedEntries = finalizeEntries(drafts, input, visibilityConfig.maxEntries);
+
+  const entries =
+    archiveEntries.length > 0
+      ? archiveEntries.slice(0, visibilityConfig.maxEntries)
+      : derivedEntries;
 
   const summaryLine =
     entries.length > 0 ? entries[0]!.line : CITY_JOURNAL_LITE_SUMMARY_RECENT;

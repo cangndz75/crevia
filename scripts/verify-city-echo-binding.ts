@@ -30,7 +30,7 @@ record('Report integration helper var', report.includes('buildCityEchoReportLine
 record('Hub compact integration helper var', hub.includes('buildCityEchoHubLine'));
 record('Decision Impact Explanation ile bağ kuruluyor', report.includes('buildDecisionImpactExplanation') && hub.includes('buildDecisionImpactExplanationForHub'));
 record('Tomorrow Risk ile bağ kuruluyor', report.includes('tomorrowRiskPresentation') && hub.includes('tomorrowRiskPresentation'));
-record('SAVE_VERSION değişmedi', persist.includes('export const SAVE_VERSION = 23;'));
+record('SAVE_VERSION değişmedi', persist.includes('export const SAVE_VERSION = 24;'));
 record('applyDecision değişmedi', !applyDecision.includes('cityEchoBinding'));
 record('event generation değişmedi', !dayPipeline.includes('cityEchoBinding'));
 record('package.json script var', packageJson.includes('"verify:city-echo-binding"'));

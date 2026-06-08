@@ -158,7 +158,7 @@ export function verifySecretHygieneScenario(): VerifySecretHygieneOutcome {
   ok = assert(checks, verifyFullUxFlowScenario().ok, 'verify:full-ux-flow', 'UX flow broken') && ok;
 
   // SAVE_VERSION
-  ok = assert(checks, SAVE_VERSION === 23, 'SAVE_VERSION 23', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION 23', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
 
   // No persist pollution
   const persist = readRepo('src/store/gamePersist.ts');

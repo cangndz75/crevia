@@ -518,7 +518,7 @@ export function verifyIapIntegrationScenario(): VerifyIapIntegrationOutcome {
       'SDK key doc missing',
     ) && ok;
 
-  ok = assert(checks, SAVE_VERSION === 23, 'SAVE_VERSION 23', 'SAVE_VERSION changed') && ok;
+  ok = assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION 23', 'SAVE_VERSION changed') && ok;
 
   const persistSource = readRepo('src/store/gamePersist.ts');
   ok =

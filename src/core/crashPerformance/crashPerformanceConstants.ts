@@ -5,7 +5,7 @@ export const CRASH_PERFORMANCE_DOCS_PATH = 'docs/crevia-crash-performance-sdk-in
 export const CRASH_PERFORMANCE_MANUAL_LAUNCH_TRACKER_PATH =
   'docs/crevia-manual-launch-blocker-tracker.md';
 
-export const CRASH_PERFORMANCE_EXPECTED_SAVE_VERSION = 23;
+export const CRASH_PERFORMANCE_EXPECTED_SAVE_VERSION = 24;
 
 export const CRASH_PERFORMANCE_SELECTED_PROVIDER: CrashReportingProvider = 'sentry';
 

@@ -216,7 +216,7 @@ export function verifyRankPermissionScenario(): VerifyRankPermissionOutcome {
       'Status label mismatch',
     ) && ok;
 
-  ok = assert(checks, SAVE_VERSION === 23, 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
   checks.push('PASS Persist shape unchanged by scope: rank permissions are presentation-only');
   checks.push('PASS Existing authority engine imported only for type/constant compatibility, not mutated');
   ok =

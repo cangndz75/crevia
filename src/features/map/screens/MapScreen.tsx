@@ -36,6 +36,11 @@ import {
   buildMapReactionHighlightDistrictIds,
   buildMapReactionLiteInputFromMapContext,
 } from '@/core/mapReactions';
+import {
+  buildMapReactionMotionIntegrationModel,
+  shouldShowMapReactionMotion,
+  useReduceMotionPreference,
+} from '@/core/mapReactionsMotion';
 import { buildRewardComebackMapPresentation } from '@/core/rewardComeback';
 import { deriveMainOperationAccessMode } from '@/core/mainOperation/mainOperationEngine';
 import { resolveContentPackMetaForWiring } from '@/core/contentRuntimeActivation';
@@ -119,6 +124,7 @@ import type {
 } from '../types/map';
 
 export function MapScreen() {
+  const reducedMotionMode = useReduceMotionPreference();
   const selectedDistrictId: PilotDistrictId =
     useGameStore(selectSelectedPilotDistrictId) ?? DEFAULT_PILOT_DISTRICT_ID;
   const gameDay = useGameStore(selectCurrentPilotDay) ?? 1;
@@ -899,6 +905,41 @@ export function MapScreen() {
     [focusDistrictId, mapReactionLiteModel, neighborhoodStripItems],
   );
 
+  const mapReactionMotionModel = useMemo(() => {
+    if (!showPostPilotMapChrome || gameDay <= 1) return null;
+    const guard = [
+      ...(mapDistrictIntelligence?.visibleLines.map((line) => line.text) ?? []),
+      mapDistrictReportCard?.primaryLine ?? '',
+      mapDistrictReportCard?.recentEffectLine ?? '',
+      operationalResourcePresenceModel?.mapPresenceLine ?? '',
+      mainOperationScopeHintLine ?? '',
+      rewardComebackMapPresentation?.mapLine ?? '',
+      ...mapResourcePresentation.panelLines.map((line) => line.summary),
+    ].filter(Boolean);
+    return buildMapReactionMotionIntegrationModel({
+      reactionModel: mapReactionLiteModel,
+      selectedDistrictId: focusDistrictId,
+      accessMode: deriveMainOperationAccessMode(gameStateForMap, monetization),
+      reducedMotionMode,
+      existingTextLines: guard,
+    });
+  }, [
+    focusDistrictId,
+    gameDay,
+    gameStateForMap,
+    mainOperationScopeHintLine,
+    mapDistrictIntelligence?.visibleLines,
+    mapDistrictReportCard?.primaryLine,
+    mapDistrictReportCard?.recentEffectLine,
+    mapReactionLiteModel,
+    mapResourcePresentation.panelLines,
+    monetization,
+    operationalResourcePresenceModel?.mapPresenceLine,
+    reducedMotionMode,
+    rewardComebackMapPresentation?.mapLine,
+    showPostPilotMapChrome,
+  ]);
+
   const operationPanel = useMemo(() => {
     const merged = mergeMapPanelCrisisAndResourceLines({
       crisisLines: mapCrisisPresentation.visible
@@ -1026,6 +1067,17 @@ export function MapScreen() {
           crisisHighlightDistrictIds={crisisHighlightDistrictIds}
           resourceHighlightDistrictIds={resourceHighlightDistrictIds}
           reactionHighlightDistrictIds={reactionHighlightDistrictIds}
+          reactionMotionCues={
+            shouldShowMapReactionMotion(mapReactionMotionModel)
+              ? mapReactionMotionModel!.globalMotionCues
+              : undefined
+          }
+          operationScopeMotionDistrictIds={
+            mapReactionMotionModel?.operationScopeCue?.districtIds
+          }
+          journalMotionCue={mapReactionMotionModel?.journalCue}
+          bubbleMotionCue={mapReactionMotionModel?.bubbleCue}
+          reducedMotionMode={reducedMotionMode}
           mapPresenceViewModel={mapPresenceViewModel}
           activeOperationOverlay={activeOperationOverlay}
           onLayersPress={() => setLayerPanelOpen(true)}
