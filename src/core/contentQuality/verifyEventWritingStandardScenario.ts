@@ -450,7 +450,7 @@ export function verifyEventWritingStandardScenario(
   record(
     assert(
       checks,
-      SAVE_VERSION === 24,
+      SAVE_VERSION === 25,
       `SAVE_VERSION değişmedi (${SAVE_VERSION})`,
       'SAVE_VERSION değişti',
     ),

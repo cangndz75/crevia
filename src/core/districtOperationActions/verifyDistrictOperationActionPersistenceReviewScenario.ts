@@ -66,7 +66,7 @@ export function verifyDistrictOperationActionPersistenceReviewScenario(): Verify
   ok =
     assert(
       checks,
-      !result.saveImpact.saveVersionChanged && SAVE_VERSION === 24,
+      !result.saveImpact.saveVersionChanged && SAVE_VERSION === 25,
       'SAVE_VERSION unchanged (23)',
       `SAVE_VERSION=${SAVE_VERSION}`,
     ) && ok;

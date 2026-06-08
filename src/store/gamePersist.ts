@@ -97,6 +97,8 @@ import type { OperationalResourcesState } from '@/core/operationalResources/oper
 import { normalizeCityArchiveState } from '@/core/cityArchive/cityArchiveState';
 import { resolveCityArchiveOnPersistLoad } from '@/core/cityArchive/cityArchiveMigration';
 import type { CityArchiveV1State } from '@/core/cityArchive/cityArchiveTypes';
+import { resolveVehicleMaintenanceOnPersistLoad } from '@/core/vehicleMaintenance/vehicleMaintenanceMigration';
+import type { VehicleMaintenanceStateV1 } from '@/core/vehicleMaintenance/vehicleMaintenanceRuntimeTypes';
 
 import type { GameStore } from './useGameStore';
 
@@ -104,7 +106,8 @@ import type { GameStore } from './useGameStore';
 // Save version & storage key
 // ---------------------------------------------------------------------------
 
-export const SAVE_VERSION = 24;
+export const SAVE_VERSION = 25;
+const SAVE_VERSION_24 = 24;
 const SAVE_VERSION_23 = 23;
 const SAVE_VERSION_22 = 22;
 const SAVE_VERSION_21 = 21;
@@ -169,6 +172,7 @@ export type PersistedGameState = Pick<
   | 'crisisActionState'
   | 'operationalResources'
   | 'cityArchive'
+  | 'vehicleMaintenance'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -216,6 +220,7 @@ export function partialiseGameState(
     crisisActionState: state.crisisActionState,
     operationalResources: state.operationalResources,
     cityArchive: state.cityArchive,
+    vehicleMaintenance: state.vehicleMaintenance,
     tutorialState: state.tutorialState,
     bestPilotScores: state.bestPilotScores,
     lastPilotScore: state.lastPilotScore,
@@ -485,6 +490,7 @@ export function normalizePersistedSave(
     version !== SAVE_VERSION_21 &&
     version !== SAVE_VERSION_22 &&
     version !== SAVE_VERSION_23 &&
+    version !== SAVE_VERSION_24 &&
     version !== SAVE_VERSION
   ) {
     return null;
@@ -730,6 +736,46 @@ export function normalizePersistedSave(
         });
       }
       return normalizeCityArchiveState(raw.cityArchive, currentDay);
+    })(),
+    vehicleMaintenance: ((): VehicleMaintenanceStateV1 => {
+      const operationSignalsRaw = raw.operationSignals;
+      const vehiclesStatus =
+        isRecord(operationSignalsRaw) &&
+        isRecord(operationSignalsRaw.vehicles) &&
+        typeof operationSignalsRaw.vehicles.status === 'string'
+          ? operationSignalsRaw.vehicles.status
+          : undefined;
+      const priorityDistrictId =
+        isRecord(operationSignalsRaw) &&
+        typeof operationSignalsRaw.priorityDistrictId === 'string'
+          ? operationSignalsRaw.priorityDistrictId
+          : undefined;
+      const archiveState =
+        version === SAVE_VERSION_23 || raw.cityArchive == null
+          ? undefined
+          : normalizeCityArchiveState(raw.cityArchive, currentDay);
+      if (version === SAVE_VERSION_24 || raw.vehicleMaintenance == null) {
+        return resolveVehicleMaintenanceOnPersistLoad({
+          rawVehicleMaintenance: raw.vehicleMaintenance,
+          saveVersion: typeof version === 'number' ? version : SAVE_VERSION_24,
+          currentDay,
+          operationSignals: {
+            vehicles: vehiclesStatus ? { status: vehiclesStatus } : undefined,
+            priorityDistrictId,
+          },
+          cityArchive: archiveState,
+        });
+      }
+      return resolveVehicleMaintenanceOnPersistLoad({
+        rawVehicleMaintenance: raw.vehicleMaintenance,
+        saveVersion: typeof version === 'number' ? version : SAVE_VERSION,
+        currentDay,
+        operationSignals: {
+          vehicles: vehiclesStatus ? { status: vehiclesStatus } : undefined,
+          priorityDistrictId,
+        },
+        cityArchive: archiveState,
+      });
     })(),
     tutorialState: isValidTutorialState(raw.tutorialState)
       ? raw.tutorialState

@@ -3,3 +3,7 @@ export * from './teamSpecializationConstants';
 export * from './teamSpecializationCatalog';
 export * from './teamSpecializationModel';
 export * from './teamSpecializationPresentation';
+export * from './teamSpecializationPlanningTypes';
+export * from './teamSpecializationPlanningConstants';
+export * from './teamSpecializationPlanningAudit';
+export * from './teamSpecializationPlanningPresentation';

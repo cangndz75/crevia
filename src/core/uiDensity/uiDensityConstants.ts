@@ -2,7 +2,7 @@ import type { UiDensityDayMode } from './uiDensityTypes';
 
 export const UI_DENSITY_DOCS_PATH = 'docs/crevia-ui-density-accessibility-polish.md';
 
-export const UI_DENSITY_EXPECTED_SAVE_VERSION = 24;
+export const UI_DENSITY_EXPECTED_SAVE_VERSION = 25;
 
 export const UI_DENSITY_MAX_HUB_PRIMARY_CARDS = 4;
 export const UI_DENSITY_MAX_HUB_SECONDARY_STRIPS = 3;

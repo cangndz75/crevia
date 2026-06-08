@@ -24,7 +24,7 @@ import type { FinalPolishVerifyOutcome } from './finalPolishTypes';
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..');
 const MIN_ROADMAP_ITEMS = 30;
 const MIN_GUARDS = 17;
-const EXPECTED_SAVE_VERSION = 24;
+const EXPECTED_SAVE_VERSION = 25;
 
 export type VerifyFinalPolishOptions = {
   docsContent?: string;

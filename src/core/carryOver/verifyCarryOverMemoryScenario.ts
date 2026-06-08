@@ -339,7 +339,7 @@ export function verifyCarryOverMemoryScenario(): VerifyCarryOverMemoryOutcome {
       'random',
     ),
   );
-  record(assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION', 'save version'));
+  record(assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION', 'save version'));
   record(assert(checks, !readRepo('src/core/game/applyDecision.ts').includes('carryOver'), 'applyDecision untouched', 'apply'));
   record(assert(checks, !readRepo('src/core/postPilot/postPilotEventEngine.ts').includes('carryOver'), 'postPilot untouched', 'postPilot'));
 

@@ -309,7 +309,7 @@ export function verifyGameplayImpactBalanceScenario(): VerifyGameplayImpactBalan
   const simSummary = `14g sim: güçlü ort. overall ${sim.strongAvgOverall.toFixed(1)}, zayıf ort. ${sim.weakAvgOverall.toFixed(1)}, kritik gün ${sim.allCriticalDays}`;
   add(sim.weakAvgOverall > sim.strongAvgOverall, '14-day weak > strong pressure', 'sim compare');
   add(sim.allCriticalDays < 10, '14-day not all critical every day', 'sim critical');
-  add(SAVE_VERSION === 24, 'SAVE_VERSION remains 22', 'save version');
+  add(SAVE_VERSION === 25, 'SAVE_VERSION remains 22', 'save version');
 
   hasWarn = !warn(checks, true, 'Long-run balance needs real playtest', 'playtest') || hasWarn;
   hasWarn = !warn(checks, true, 'Hard fail states not implemented', 'hard fail') || hasWarn;

@@ -164,7 +164,7 @@ export function verifyDistrictOperationActionScenario(): VerifyDistrictOperation
     'analytics payload contains raw copy',
   ) && ok;
 
-  ok = record(checks, SAVE_VERSION === 24, 'SAVE_VERSION unchanged without persist', `SAVE_VERSION ${SAVE_VERSION}`) && ok;
+  ok = record(checks, SAVE_VERSION === 25, 'SAVE_VERSION unchanged without persist', `SAVE_VERSION ${SAVE_VERSION}`) && ok;
   ok = record(
     checks,
     !readRepo('src/store/gamePersist.ts').includes('districtOperationActionState'),

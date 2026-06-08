@@ -386,7 +386,7 @@ export function verifyMonetizationScenario(): VerifyMonetizationOutcome {
   ok =
     assert(
       checks,
-      SAVE_VERSION === 24,
+      SAVE_VERSION === 25,
       'Full loop SAVE_VERSION 22 ile çalışıyor',
       `SAVE_VERSION=${SAVE_VERSION}`,
     ) && ok;

@@ -293,7 +293,7 @@ export function verifyIapSandboxQaScenario(): VerifyIapSandboxQaOutcome {
       'Missing soft launch IAP sandbox finding',
     ) && ok;
 
-  ok = assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION 23', 'SAVE_VERSION changed') && ok;
+  ok = assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION 23', 'SAVE_VERSION changed') && ok;
 
   const persist = readRepo('src/store/gamePersist.ts');
   ok =

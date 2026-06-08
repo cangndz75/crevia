@@ -163,7 +163,7 @@ export function verifyStoryChainPersistentRuntimeScenario(): VerifyStoryChainPer
   const ece = buildPersistentStoryChainEceHint(archive, 5, []);
   record(assert(checks, ece == null || ece.startsWith('Ece'), 'Ece hint safe'));
 
-  record(assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION remains 24'));
+  record(assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION remains 24'));
   record(assert(checks, !readRepo('src/core/game/applyDecision.ts').includes('storyChainPersistent'), 'applyDecision unchanged'));
   record(assert(checks, !readRepo('src/store/gamePersist.ts').includes('storyChainState'), 'no new persist field'));
   record(assert(checks, readRepo('src/store/useGameStore.ts').includes('appendDayCloseCityArchiveWithStoryChains'), 'endCurrentDay story chain wiring'));

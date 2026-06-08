@@ -18,6 +18,10 @@ export const CITY_ARCHIVE_ENTRY_KINDS: CityArchiveEntryKind[] = [
   'ece_prediction_confirmed',
   'story_chain_step',
   'report_milestone',
+  'vehicle_maintenance_suggested',
+  'vehicle_maintenance_completed',
+  'vehicle_fatigue_warning',
+  'fleet_recovered',
 ];
 
 export const CITY_ARCHIVE_MAX_DAILY_APPEND = 3;
@@ -80,6 +84,10 @@ export const CITY_ARCHIVE_ENTRY_KIND_LABELS: Record<CityArchiveEntryKind, string
   ece_prediction_confirmed: 'Ece öngörüsü',
   story_chain_step: 'Hikâye adımı',
   report_milestone: 'Rapor dönüm noktası',
+  vehicle_maintenance_suggested: 'Bakım penceresi',
+  vehicle_maintenance_completed: 'Araç bakım izi',
+  vehicle_fatigue_warning: 'Araç bakım izi',
+  fleet_recovered: 'Filo toparlandı',
 };
 
 export const CITY_ARCHIVE_BACKFILL_MAX = 3;

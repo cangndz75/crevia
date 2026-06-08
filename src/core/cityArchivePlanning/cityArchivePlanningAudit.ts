@@ -24,7 +24,7 @@ function check(condition: boolean, id: string, message: string): CityArchivePlan
 
 export function runCityArchivePlanningAudit(): CityArchivePlanningAuditResult {
   const checks: CityArchivePlanningAuditCheck[] = [
-    check(CITY_ARCHIVE_TARGET_SAVE_VERSION === 24, 'migration.target_v24', 'Implementation target is SAVE_VERSION 24.'),
+    check(CITY_ARCHIVE_TARGET_SAVE_VERSION === 24, 'migration.target_v24', 'City Archive implementation target is SAVE_VERSION 24.'),
     check(CITY_ARCHIVE_ENTRY_KINDS.length >= 12, 'model.entry_kinds', 'Entry kind set covers at least 12 archive moments.'),
     check(
       CITY_ARCHIVE_CREATED_FROM_SOURCES.includes('decisionImpact') &&

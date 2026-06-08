@@ -29,7 +29,7 @@ import {
 import type { CityArchiveEntry } from './cityArchiveTypes';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 24;
+const EXPECTED_SAVE_VERSION = 25;
 
 export type VerifyCityArchiveOutcome = {
   ok: boolean;
@@ -62,7 +62,7 @@ export function verifyCityArchiveScenario(): VerifyCityArchiveOutcome {
 
   const initial = createInitialCityArchiveState(1);
   record(assert(checks, initial.version === 1, 'createInitialCityArchiveState'));
-  record(assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION, 'SAVE_VERSION 24'));
+  record(assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION, 'SAVE_VERSION 25'));
 
   const gamePersist = readRepo('src/store/gamePersist.ts');
   record(assert(checks, gamePersist.includes('cityArchive'), 'cityArchive field in persist'));
@@ -183,7 +183,7 @@ export function verifyCityArchiveScenario(): VerifyCityArchiveOutcome {
   };
   const hydrated = normalizePersistedSave(partial);
   record(assert(checks, hydrated?.cityArchive != null, 'v23 save hydrates cityArchive'));
-  record(assert(checks, hydrated?.saveVersion === 24, 'hydrated saveVersion 24'));
+  record(assert(checks, hydrated?.saveVersion === 25, 'hydrated saveVersion 25'));
 
   record(assert(checks, existsSync(join(REPO_ROOT, 'docs/crevia-city-archive-persistence-v1.md')), 'docs exist'));
   record(assert(checks, readRepo('package.json').includes('verify:city-archive'), 'package.json script'));

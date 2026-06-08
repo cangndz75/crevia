@@ -296,7 +296,7 @@ export function verifyContentSafetyPackStage1Scenario(): VerifyContentSafetyPack
   );
 
   record(assert(checks, buildNextContentPackStep().includes('Aşama 2'), 'Next step Aşama 2', 'Next step hatalı'));
-  record(assert(checks, SAVE_VERSION === 24, `SAVE_VERSION (${SAVE_VERSION})`, 'SAVE_VERSION değişti'));
+  record(assert(checks, SAVE_VERSION === 25, `SAVE_VERSION (${SAVE_VERSION})`, 'SAVE_VERSION değişti'));
   record(assert(checks, !readRepo('src/core/game/generateDailyEventSet.ts').includes('applyDecision'), 'generateDailyEventSet applyDecision yok', 'n/a'));
   record(
     assert(

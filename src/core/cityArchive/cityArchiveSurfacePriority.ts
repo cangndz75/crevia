@@ -44,6 +44,10 @@ export const CITY_ARCHIVE_JOURNAL_ENTRY_LABELS: Partial<Record<CityArchiveEntryK
   route_balanced: 'Rota dengesi',
   container_relief: 'Konteyner rahatladı',
   trust_recovery: 'Güven toparlandı',
+  vehicle_maintenance_suggested: 'Bakım penceresi',
+  vehicle_maintenance_completed: 'Araç bakım izi',
+  vehicle_fatigue_warning: 'Araç bakım izi',
+  fleet_recovered: 'Filo toparlandı',
 };
 
 export const MAP_JOURNAL_TRACE_PRIORITY_KINDS: readonly CityArchiveEntryKind[] = [

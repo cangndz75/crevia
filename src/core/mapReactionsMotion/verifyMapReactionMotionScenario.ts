@@ -20,7 +20,7 @@ import {
 } from './mapReactionMotionHelpers';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 24;
+const EXPECTED_SAVE_VERSION = 25;
 
 export type VerifyMapReactionMotionOutcome = {
   ok: boolean;

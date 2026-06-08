@@ -424,7 +424,7 @@ export function verifyDynamicSocialEchoScenario(): VerifyDynamicSocialEchoOutcom
     ),
   );
 
-  record(assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION unchanged', `save=${SAVE_VERSION}`));
+  record(assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION unchanged', `save=${SAVE_VERSION}`));
 
   const modelValidation = validateSocialEchoModel(sampleEcho);
   record(assert(checks, modelValidation.ok, 'model validation', modelValidation.issues.join(',')));

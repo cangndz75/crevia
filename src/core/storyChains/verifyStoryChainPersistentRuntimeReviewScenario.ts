@@ -86,7 +86,7 @@ export function verifyStoryChainPersistentRuntimeReviewScenario(): VerifyStoryCh
   ok =
     assert(
       checks,
-      !result.saveImpact.saveVersionChanged && SAVE_VERSION === 24,
+      !result.saveImpact.saveVersionChanged && SAVE_VERSION === 25,
       'SAVE_VERSION unchanged (23)',
       `SAVE_VERSION=${SAVE_VERSION}`,
     ) && ok;
@@ -304,7 +304,7 @@ export function verifyStoryChainPersistentRuntimeReviewScenario(): VerifyStoryCh
       'Telemetry readiness audit missing',
     ) && ok;
 
-  ok = assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION 23 unchanged (cross-verify)', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION 23 unchanged (cross-verify)', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
 
   const markdown = buildStoryChainPersistentRuntimeReviewMarkdown(result);
   ok = assert(checks, markdown.includes('## Persistence seçenekleri'), 'Markdown persistence options', 'missing') && ok;

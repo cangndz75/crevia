@@ -7,7 +7,7 @@ import type {
 
 export const NO_NEW_SYSTEM_FREEZE_DOCS_PATH = 'docs/crevia-no-new-system-freeze.md';
 
-export const NO_NEW_SYSTEM_FREEZE_EXPECTED_SAVE_VERSION = 24;
+export const NO_NEW_SYSTEM_FREEZE_EXPECTED_SAVE_VERSION = 25;
 
 export const NO_NEW_SYSTEM_FREEZE_ALLOWED_SCOPES: readonly CreviaFreezeAllowedScope[] = [
   'bugfix',

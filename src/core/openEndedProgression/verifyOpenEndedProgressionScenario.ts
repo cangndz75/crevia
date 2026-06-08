@@ -287,7 +287,7 @@ export function verifyOpenEndedProgressionScenario(): VerifyOpenEndedProgression
     hasWarn = true;
   }
 
-  ok = assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION unchanged at 23', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION unchanged at 23', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
   hasWarn = !warn(checks, true, 'Persist shape unchanged by this patch (manual scope note)', 'Persist shape manual check needed') || hasWarn;
 
   return {

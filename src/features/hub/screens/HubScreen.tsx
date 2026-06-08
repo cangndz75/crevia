@@ -38,6 +38,7 @@ import {
   buildDistrictReportCardSummaryForHub,
 } from '@/core/districtReportCard';
 import { buildHubArchiveContinuityModel } from '@/core/cityArchive/cityArchiveSurfaceWiring';
+import { selectVehicleMaintenanceSurfaceLines } from '@/core/vehicleMaintenance/vehicleMaintenanceSelectors';
 import { buildPersistentStoryChainHubLine } from '@/core/storyChains/storyChainPersistentPresentation';
 import {
   buildMainOperationFeelEceLine,
@@ -85,6 +86,7 @@ export function HubScreen() {
   const eventPool = useGameStore((s) => s.eventPool);
   const socialPulseState = useGameStore((s) => s.socialPulseState);
   const cityArchive = useGameStore((s) => s.cityArchive);
+  const vehicleMaintenance = useGameStore((s) => s.vehicleMaintenance);
   const tutorialActive = useGameStore(selectIsDay1TutorialActive);
   const hubTutorialStep = useGameStore((s) =>
     selectActiveTutorialStepForScreen(s, 'hub'),
@@ -494,6 +496,26 @@ export function HubScreen() {
     tomorrowRiskPresentation.hub?.mainLine,
   ]);
 
+  const hubVehicleMaintenanceLine = useMemo(() => {
+    const existingLines = [
+      hubStoryChainLine ?? '',
+      hubCityJournalPresentation?.primaryLine ?? '',
+      tomorrowRiskPresentation.hub?.mainLine ?? '',
+      cityEchoHubLine ?? '',
+    ].filter(Boolean);
+    return selectVehicleMaintenanceSurfaceLines(vehicleMaintenance, {
+      day: hubDay,
+      existingHubLines: existingLines,
+    }).hubLine;
+  }, [
+    cityEchoHubLine,
+    hubCityJournalPresentation?.primaryLine,
+    hubDay,
+    hubStoryChainLine,
+    tomorrowRiskPresentation.hub?.mainLine,
+    vehicleMaintenance,
+  ]);
+
   const hubDistrictReportContinuityLine = useMemo(() => {
     if (hubDay <= 1) return null;
     const existingLines = [
@@ -605,6 +627,7 @@ export function HubScreen() {
         hubEceContextLine={hubEceContextLine}
         hubDistrictReportLine={hubDistrictReportContinuityLine}
         hubStoryChainLine={hubStoryChainLine}
+        hubVehicleMaintenanceLine={hubVehicleMaintenanceLine}
         showMainOperationSeason={showMainOperationSeasonCard}
         mainOperationSeasonCompact={mainOperationSeasonCompact}
         showAdvisor={hubCardVisibility.showAdvisor}

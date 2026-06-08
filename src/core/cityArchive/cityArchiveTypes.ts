@@ -15,7 +15,11 @@ export type CityArchiveEntryKind =
   | 'comeback_completed'
   | 'ece_prediction_confirmed'
   | 'story_chain_step'
-  | 'report_milestone';
+  | 'report_milestone'
+  | 'vehicle_maintenance_suggested'
+  | 'vehicle_maintenance_completed'
+  | 'vehicle_fatigue_warning'
+  | 'fleet_recovered';
 
 export type CityArchiveEntrySourceKind =
   | 'decisionImpact'
@@ -26,6 +30,7 @@ export type CityArchiveEntrySourceKind =
   | 'storyChain'
   | 'operationSignals'
   | 'contentPackMeta'
+  | 'vehicleMaintenance'
   | 'manualFallback';
 
 export type CityArchiveTrustDeltaBand = 'down' | 'flat' | 'up' | 'recovered';

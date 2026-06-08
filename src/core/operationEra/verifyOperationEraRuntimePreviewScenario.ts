@@ -331,7 +331,7 @@ export function verifyOperationEraRuntimePreviewScenario(): VerifyOperationEraRu
       'generation untouched',
     ) && ok;
 
-  ok = record(checks, SAVE_VERSION === 24, 'SAVE_VERSION değişmez', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = record(checks, SAVE_VERSION === 25, 'SAVE_VERSION değişmez', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
 
   const hubModel = buildHubOpenEndedIntegrationModel({
     day: 9,

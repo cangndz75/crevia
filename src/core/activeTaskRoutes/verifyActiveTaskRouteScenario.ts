@@ -263,7 +263,7 @@ export function verifyActiveTaskRouteScenario(): VerifyActiveTaskRouteOutcome {
   for (const permissionId of ACTIVE_TASK_ROUTE_PERMISSION_IDS) {
     record(assert(results, typeof permissionId === 'string' && permissionId.length > 0, `permission string ${permissionId}`, `permission string invalid ${permissionId}`));
   }
-  record(assert(results, SAVE_VERSION === 24, 'SAVE_VERSION unchanged note', `SAVE_VERSION changed: ${SAVE_VERSION}`));
+  record(assert(results, SAVE_VERSION === 25, 'SAVE_VERSION unchanged note', `SAVE_VERSION changed: ${SAVE_VERSION}`));
   pushResult(results, 'PASS', 'Persist shape unchanged note', 'active task route state is not stored');
 
   for (const file of [

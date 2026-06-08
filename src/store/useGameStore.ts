@@ -417,6 +417,12 @@ import {
 } from '@/core/cityArchive/cityArchiveWiring';
 import { createInitialCityArchiveState } from '@/core/cityArchive/cityArchiveState';
 import type { CityArchiveV1State } from '@/core/cityArchive/cityArchiveTypes';
+import { createInitialVehicleMaintenanceState } from '@/core/vehicleMaintenance/vehicleMaintenanceState';
+import {
+  appendVehicleMaintenanceDayCloseArchive,
+  buildVehicleMaintenanceDayCloseBundle,
+} from '@/core/vehicleMaintenance/vehicleMaintenanceWiring';
+import type { VehicleMaintenanceStateV1 } from '@/core/vehicleMaintenance/vehicleMaintenanceRuntimeTypes';
 import { buildDistrictReportCardFullModel } from '@/core/districtReportCard/districtReportCardModel';
 import { buildRewardComebackVisibilityModel } from '@/core/rewardComeback/rewardComebackModel';
 import { buildTomorrowRiskModel } from '@/core/tomorrowRisk/tomorrowRiskModel';
@@ -475,6 +481,7 @@ type GameStoreState = {
   microDecisionState: MicroDecisionState;
   operationalResources: OperationalResourcesState;
   cityArchive: CityArchiveV1State;
+  vehicleMaintenance: VehicleMaintenanceStateV1;
   /** Oturum içi mahalle hamlesi seçimi — persist edilmez. */
   districtOperationActionState: CreviaDistrictOperationActionState;
   tutorialState: TutorialState;
@@ -830,6 +837,7 @@ function applySeedBundle(
   | 'microDecisionState'
   | 'operationalResources'
   | 'cityArchive'
+  | 'vehicleMaintenance'
   | 'districtOperationActionState'
   | 'tutorialState'
   | 'bestPilotScores'
@@ -895,6 +903,7 @@ function applySeedBundle(
       bundle.gameState.city.day,
     ),
     cityArchive: createInitialCityArchiveState(bundle.gameState.city.day),
+    vehicleMaintenance: createInitialVehicleMaintenanceState(bundle.gameState.city.day),
     districtOperationActionState: createInitialDistrictOperationActionState(),
     tutorialState: { ...INITIAL_TUTORIAL_STATE },
     bestPilotScores: [],
@@ -3521,6 +3530,51 @@ export const useGameStore = create<GameStore>()(
             })),
           carryOverLine: carryOverSummaryLines[0],
         });
+        const vehicleMaintenanceCloseInput = {
+          day: closingDay,
+          operationSignals: {
+            vehicles: operationSignalsAfterDay.vehicles,
+            containers: operationSignalsAfterDay.containers,
+            personnel: operationSignalsAfterDay.personnel,
+            districts: operationSignalsAfterDay.districts,
+            priorityDistrictId: operationSignalsAfterDay.priorityDistrictId,
+          },
+          operationalResources: operationalResourcesAfterDay,
+          assignmentVehicleGroup: Object.values(
+            assignmentProcessed.state.assignmentsByEventId,
+          ).find((a) => a.day === closingDay && a.status === 'confirmed')?.vehicleType,
+          assignmentCompatibilityScore: undefined,
+          assignmentApproach: Object.values(
+            assignmentProcessed.state.assignmentsByEventId,
+          ).find((a) => a.day === closingDay && a.status === 'confirmed')?.approachType,
+          cityArchiveRecentKinds: current.cityArchive.entries
+            .filter((e) => e.day === closingDay)
+            .map((e) => e.kind),
+          storyChainKinds: current.cityArchive.entries
+            .filter((e) => e.kind === 'story_chain_step' && e.day >= closingDay - 2)
+            .map((e) => e.domain ?? 'story_chain'),
+          contentPackDomains: [],
+          routeBalanced: operationSignalsAfterDay.vehicles?.status === 'stable',
+          resourceRecovery: operationSignalsAfterDay.personnel?.status === 'stable',
+          comebackCompleted:
+            rewardComebackForStoryChain.primaryMoment?.kind === 'comeback_completed',
+          resourcePressure:
+            operationSignalsAfterDay.vehicles?.status === 'strained' ||
+            operationSignalsAfterDay.vehicles?.status === 'critical',
+          vehicleRoutePressure:
+            operationSignalsAfterDay.vehicles?.status === 'watch' ||
+            operationSignalsAfterDay.vehicles?.status === 'strained' ||
+            operationSignalsAfterDay.vehicles?.status === 'critical',
+          districtId: storyChainDistrictId as
+            | import('@/core/districts/districtIdentityTypes').MapDistrictId
+            | undefined,
+        };
+
+        const vehicleMaintenanceBundle = buildVehicleMaintenanceDayCloseBundle(
+          current.vehicleMaintenance,
+          vehicleMaintenanceCloseInput,
+        );
+
         const cityArchiveAfterClose = appendDayCloseCityArchiveWithStoryChains(
           current.cityArchive,
           archiveCloseInput,
@@ -3567,6 +3621,12 @@ export const useGameStore = create<GameStore>()(
               districtReportForStoryChain?.recoveryState === 'comeback_completed' ||
               districtReportForStoryChain?.recoveryState === 'improving',
           },
+        );
+
+        const cityArchiveWithVehicleMaintenance = appendVehicleMaintenanceDayCloseArchive(
+          cityArchiveAfterClose,
+          vehicleMaintenanceBundle.vehicleMaintenance,
+          vehicleMaintenanceCloseInput,
         );
 
         set({
@@ -3630,7 +3690,8 @@ export const useGameStore = create<GameStore>()(
           crisisActionState: crisisActionStateForNextDay,
           microDecisionState: microStateForNextDay,
           operationalResources: operationalResourcesAfterDay,
-          cityArchive: cityArchiveAfterClose,
+          cityArchive: cityArchiveWithVehicleMaintenance,
+          vehicleMaintenance: vehicleMaintenanceBundle.vehicleMaintenance,
         });
       },
 
@@ -4202,6 +4263,16 @@ export const useGameStore = create<GameStore>()(
           operationalResources:
             saved.operationalResources ??
             createInitialOperationalResourcesState(
+              withSyncedPulse(pilotRefresh.gameState).city.day,
+            ),
+          cityArchive:
+            saved.cityArchive ??
+            createInitialCityArchiveState(
+              withSyncedPulse(pilotRefresh.gameState).city.day,
+            ),
+          vehicleMaintenance:
+            saved.vehicleMaintenance ??
+            createInitialVehicleMaintenanceState(
               withSyncedPulse(pilotRefresh.gameState).city.day,
             ),
           districtOperationActionState: createInitialDistrictOperationActionState(),

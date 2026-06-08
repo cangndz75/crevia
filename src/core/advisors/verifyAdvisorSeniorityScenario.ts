@@ -38,7 +38,7 @@ import {
 } from './advisorSeniorityValidation';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 24;
+const EXPECTED_SAVE_VERSION = 25;
 
 function readRepo(rel: string): string {
   return existsSync(join(REPO_ROOT, rel)) ? readFileSync(join(REPO_ROOT, rel), 'utf8') : '';

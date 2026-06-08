@@ -3,9 +3,9 @@
  * Çalıştır: npm run verify:vehicle-maintenance
  */
 
-import { verifyVehicleMaintenanceScenario } from '../src/core/vehicleMaintenance/verifyVehicleMaintenanceScenario';
+import { verifyVehicleMaintenanceRuntimeScenario } from '../src/core/vehicleMaintenance/verifyVehicleMaintenanceRuntimeScenario';
 
-const outcome = verifyVehicleMaintenanceScenario();
+const outcome = verifyVehicleMaintenanceRuntimeScenario();
 
 for (const line of outcome.checks) {
   // eslint-disable-next-line no-console

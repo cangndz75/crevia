@@ -411,7 +411,7 @@ export function verifyContentProductionScenario(): VerifyContentProductionOutcom
 
   record(assert(checks, Object.keys(CONTENT_PRODUCTION_ISSUE_LABELS).length >= 10, 'issue labels', 'issue labels missing'));
   record(assert(checks, buildContentCoverageTargets().length > 0, 'coverage targets', 'empty targets'));
-  record(assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION 23', 'SAVE_VERSION changed'));
+  record(assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION 23', 'SAVE_VERSION changed'));
 
   const indexSource = readRepo('src/core/contentProduction/index.ts');
   record(assert(checks, indexSource.includes('export type'), 'type exports', 'missing type exports'));

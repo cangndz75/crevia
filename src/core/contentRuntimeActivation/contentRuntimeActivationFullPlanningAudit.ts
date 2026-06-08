@@ -205,7 +205,7 @@ export function runContentPackFullPlanningAudit(): ContentPackFullPlanningAuditR
     check(CONTENT_PACK_FULL_SURFACE_DENSITY_RULES.length >= 8, 'guard.surface_density', 'Report/Hub/Map density guard exists.'),
     check(CONTENT_PACK_FULL_SEMANTIC_CLUSTERS.length === 10, 'guard.semantic_clusters', '10 semantic clusters defined.'),
     check(Boolean(CONTENT_PACK_FULL_IMPLEMENTATION_SCOPE.stage), 'plan.implementation_scope', 'Next implementation scope defined.'),
-    check(CONTENT_PACK_FULL_TARGET_SAVE_VERSION === 24, 'safety.save_version', 'SAVE_VERSION 24 unchanged in plan.'),
+    check(CONTENT_PACK_FULL_TARGET_SAVE_VERSION === 24, 'safety.save_version', 'Planning doc SAVE_VERSION 24 unchanged in plan.'),
     check(
       CONTENT_PACK_FULL_ARCHIVE_NOT_STORED.includes('raw_pack_metadata'),
       'safety.no_raw_pack_metadata',

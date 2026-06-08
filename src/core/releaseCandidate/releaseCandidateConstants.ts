@@ -6,7 +6,7 @@ import type {
 
 export const RELEASE_CANDIDATE_DOCS_PATH = 'docs/crevia-release-candidate-audit.md';
 
-export const RELEASE_CANDIDATE_EXPECTED_SAVE_VERSION = 24;
+export const RELEASE_CANDIDATE_EXPECTED_SAVE_VERSION = 25;
 
 export const RELEASE_CANDIDATE_MANUAL_LAUNCH_TRACKER_PATH =
   'docs/crevia-manual-launch-blocker-tracker.md';

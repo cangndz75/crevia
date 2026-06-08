@@ -30,6 +30,7 @@ import {
 } from '@/core/districtReportCard';
 import { buildReportArchiveContinuityFromCandidates } from '@/core/cityArchive/cityArchiveSurfaceWiring';
 import { buildPersistentStoryChainReportLine } from '@/core/storyChains/storyChainPersistentPresentation';
+import { selectVehicleMaintenanceSurfaceLines } from '@/core/vehicleMaintenance/vehicleMaintenanceSelectors';
 import {
   reportSecondaryLineMaxLines,
   resolveReportSecondaryCompactMode,
@@ -168,6 +169,7 @@ export function EndOfDayReportView({
   const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
   const operationSignals = useGameStore((s) => s.operationSignals);
   const cityArchive = useGameStore((s) => s.cityArchive);
+  const vehicleMaintenance = useGameStore((s) => s.vehicleMaintenance);
   const crisisActionState = useGameStore((s) => s.crisisActionState);
   const districtOperationActionState = useGameStore(
     (s) => s.districtOperationActionState,
@@ -883,6 +885,30 @@ export function EndOfDayReportView({
     tomorrowRiskPresentation.report?.mainLine,
   ]);
 
+  const vehicleMaintenanceReportLine = useMemo(() => {
+    const existingLines = [
+      cityEchoReportLine ?? '',
+      cityJournalReportLine ?? '',
+      districtReportCardLine ?? '',
+      rewardComebackReportLine ?? '',
+      storyChainReportLine ?? '',
+      tomorrowRiskPresentation.report?.mainLine ?? '',
+    ].filter(Boolean);
+    return selectVehicleMaintenanceSurfaceLines(vehicleMaintenance, {
+      day: report.day,
+      existingReportLines: existingLines,
+    }).reportLine;
+  }, [
+    cityEchoReportLine,
+    cityJournalReportLine,
+    districtReportCardLine,
+    report.day,
+    rewardComebackReportLine,
+    storyChainReportLine,
+    tomorrowRiskPresentation.report?.mainLine,
+    vehicleMaintenance,
+  ]);
+
   const reportArchiveContinuity = useMemo(() => {
     const existingLines = [
       cityEchoReportLine ?? '',
@@ -1258,6 +1284,17 @@ export function EndOfDayReportView({
           </Text>
           <Text style={styles.districtReportCardText} numberOfLines={reportSecondaryMaxLines}>
             {reportArchiveContinuity.storyChainLine}
+          </Text>
+        </View>
+      ) : null}
+
+      {vehicleMaintenanceReportLine ? (
+        <View style={styles.districtReportCardRow}>
+          <Text style={styles.districtReportCardLabel} numberOfLines={1}>
+            Araç bakım izi
+          </Text>
+          <Text style={styles.districtReportCardText} numberOfLines={reportSecondaryMaxLines}>
+            {vehicleMaintenanceReportLine.replace(/^Araç bakım izi:\s*/i, '')}
           </Text>
         </View>
       ) : null}

@@ -237,7 +237,7 @@ export function verifySelectorAuditScenario(): VerifySelectorAuditOutcome {
       'Forbidden words in audit',
     ) && ok;
 
-  ok = assert(checks, SAVE_VERSION === 24, 'SAVE_VERSION 23', 'SAVE_VERSION changed') && ok;
+  ok = assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION 23', 'SAVE_VERSION changed') && ok;
 
   const seasonEndCard = readRepo(
     'src/features/reports/components/ReportSeasonEndEvaluationCard.tsx',

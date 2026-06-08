@@ -317,7 +317,7 @@ export function verifyOperationalResourcesScenario(): VerifyOperationalResources
     'v22 whitelist',
   );
 
-  add(SAVE_VERSION === 24, 'SAVE_VERSION 23', String(SAVE_VERSION));
+  add(SAVE_VERSION === 25, 'SAVE_VERSION 23', String(SAVE_VERSION));
 
   const hubContracts = getInteractionContractsForComponent('HubOperationalResourcesCard');
   add(hubContracts.length >= 1, 'Contract HubOperationalResourcesCard', 'contract hub');

@@ -50,12 +50,12 @@ function TabNavigator() {
       <Tabs.Screen
         name="events"
         options={{
-          title: "Olaylar",
+          title: "Operasyon",
           headerShown: false,
         }}
       />
-      <Tabs.Screen name="risks" options={{ title: "Riskler" }} />
-      <Tabs.Screen name="progression" options={{ title: "Yetkiler" }} />
+      <Tabs.Screen name="risks" options={{ title: "Harita" }} />
+      <Tabs.Screen name="progression" options={{ title: "Başarılar" }} />
       <Tabs.Screen name="social" options={{ href: null, title: "Sosyal Nabız" }} />
       <Tabs.Screen name="reports" options={{ title: "Rapor" }} />
       <Tabs.Screen name="profile" options={{ href: null, title: "Profil" }} />

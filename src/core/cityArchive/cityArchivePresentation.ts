@@ -33,6 +33,10 @@ const ARCHIVE_KIND_TO_JOURNAL_KIND: Partial<
   ece_prediction_confirmed: 'district_trust_shift',
   story_chain_step: 'carry_over_created',
   report_milestone: 'fallback',
+  vehicle_maintenance_suggested: 'resource_pressure_noted',
+  vehicle_maintenance_completed: 'recovery_momentum',
+  vehicle_fatigue_warning: 'resource_pressure_noted',
+  fleet_recovered: 'recovery_momentum',
 };
 
 function journalToneForArchive(entry: CityArchiveEntry): CityJournalLiteEntryTone {
