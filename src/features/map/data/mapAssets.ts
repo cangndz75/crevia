@@ -30,11 +30,14 @@ function resolveAsset(
   fallbackWidth: number,
   fallbackHeight: number,
 ): MapImageAsset {
-  const resolved = Image.resolveAssetSource(moduleId);
+  const resolved =
+    typeof Image.resolveAssetSource === 'function'
+      ? Image.resolveAssetSource(moduleId)
+      : undefined;
   return {
     src: moduleId,
-    width: resolved.width ?? fallbackWidth,
-    height: resolved.height ?? fallbackHeight,
+    width: resolved?.width ?? fallbackWidth,
+    height: resolved?.height ?? fallbackHeight,
   };
 }
 

@@ -3,7 +3,7 @@ import { Image, type ImageSource } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useMemo } from 'react';
 import {
   Platform,
   Pressable,
@@ -23,10 +23,16 @@ import { creviaAssets } from '@/core/assets/creviaAssets';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import type { HubCardVisibilityModel } from '@/core/onboarding/firstTenMinutesTypes';
 import { hubAssets } from '@/features/hub/utils/hubAssets';
+import { HubActiveTaskCardStack } from '@/features/hub/components/HubActiveTaskCardStack';
+import { HubAuthorityPermissionPreviewChip } from '@/features/hub/components/HubAuthorityPermissionPreviewChip';
+import { HubBadgeShowcaseChip } from '@/features/hub/components/HubBadgeShowcaseChip';
+import { HubDistrictExpansionChip } from '@/features/hub/components/HubDistrictExpansionChip';
+import { buildAuthorityPermissionPreviewCompactSummary } from '@/core/authority/authorityPermissionPreviewModel';
+import { buildDistrictOperationUnlockBindingCompactSummary } from '@/core/progression/districtOperationUnlockBindingModel';
+import { buildHubBadgeShowcaseSummary } from '@/features/hub/utils/hubBadgeShowcaseModel';
 import { useGameStatus } from '@/store/gameSelectors';
 import { useGameStore } from '@/store/useGameStore';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
-import { HeaderAvatar } from '@/ui/components/game-header/HeaderAvatar';
 import { CreviaAnimatedCard, useCreviaReducedMotion } from '@/shared/motion';
 
 const compactBreakpoint = 370;
@@ -51,10 +57,13 @@ const palette = {
   white: '#FFFFFF',
 } as const;
 
-const cityHeroImage = require('@/assets/districts/central/district_central_overview_01.png');
 const routeHeroImage = require('@/assets/districts/route/district_route_network_01.png');
 const greenHeroImage = require('@/assets/districts/status/district_safe_zone_01.png');
-const marketHeroImage = require('@/assets/districts/market/district_marketplace_overview_01.png');
+const profilePortraitImage = require('@/assets/pp1.png');
+const prestigeBadgeImage = require('@/assets/badge1.png');
+const peopleResourceImage = require('@/assets/person1.png');
+const statusBarPrimaryImage = require('@/assets/status_bar_2.png');
+const statusBarSecondaryImage = require('@/assets/status_bar_1.png');
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -90,7 +99,7 @@ function useHubLayoutMetrics() {
     width,
     isCompact,
     topInset,
-    scrollBottomPadding: tabBarHeight + (isCompact ? 24 : 30),
+    scrollBottomPadding: tabBarHeight + 32,
   };
 }
 
@@ -139,7 +148,14 @@ function HeaderSummary() {
           accessibilityRole="button"
           accessibilityLabel="Profili aç"
           style={({ pressed }) => [styles.avatarButton, pressedScale(pressed)]}>
-          <HeaderAvatar size={isCompact ? 56 : 62} level={status.level} showLevelBadge borderColor={palette.gold} />
+          <Image
+            source={profilePortraitImage}
+            style={[styles.profilePortrait, { width: isCompact ? 62 : 68, height: isCompact ? 62 : 68 }]}
+            contentFit="contain"
+          />
+          <View style={styles.profileLevelBadge}>
+            <Text style={styles.profileLevelText}>{status.level}</Text>
+          </View>
         </Pressable>
         <View style={styles.headerIdentity}>
           <Text style={styles.headerName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
@@ -153,28 +169,25 @@ function HeaderSummary() {
           </View>
         </View>
         <View style={styles.reputationBadge}>
-          <Ionicons name="star" size={13} color={palette.goldSoft} />
-          <Text style={styles.reputationLabel} numberOfLines={1}>
-            ŞEHİR İTİBARI
-          </Text>
-          <Text style={styles.reputationValue} numberOfLines={1}>
-            4.650
-          </Text>
+          <Image source={prestigeBadgeImage} style={styles.reputationBadgeImage} contentFit="contain" />
+          <Text style={styles.reputationLabel} numberOfLines={1}>ŞEHİR İTİBARI</Text>
+          <Text style={styles.reputationValue} numberOfLines={1}>4.650</Text>
         </View>
       </View>
       <View style={styles.resourceRow}>
-        <ResourceChip icon="cash-outline" value="12,4M" />
-        <ResourceChip icon="people-outline" value="2,35M" />
-        <ResourceChip icon="diamond-outline" value="1.250" accent />
+        <HeaderChip icon="cash-outline" value="12,4M" tone="gold" />
+        <PeopleHeaderChip value="2,35M" />
+        <HeaderChip icon="diamond" value="1.250" tone="purple" />
       </View>
     </View>
   );
 }
 
-function ResourceChip({ icon, value, accent = false }: { icon: IconName; value: string; accent?: boolean }) {
+function HeaderChip({ icon, value, tone = 'gold' }: { icon: IconName; value: string; tone?: 'gold' | 'purple' }) {
+  const color = tone === 'purple' ? '#8747C8' : palette.goldDark;
   return (
     <View style={styles.resourceChip}>
-      <Ionicons name={icon} size={15} color={accent ? '#8747C8' : palette.goldDark} />
+      <Ionicons name={icon} size={15} color={color} />
       <Text style={styles.resourceValue} numberOfLines={1}>
         {value}
       </Text>
@@ -185,112 +198,26 @@ function ResourceChip({ icon, value, accent = false }: { icon: IconName; value: 
   );
 }
 
-function ActiveTaskStack() {
-  const router = useRouter();
-  const [activeIndex, setActiveIndex] = useState(0);
-  const tasks = [
-    {
-      title: 'Ulaşımı Güçlendirelim!',
-      body: 'Toplu taşıma hattını geliştirerek şehirdeki ulaşım memnuniyetini artır.',
-      image: routeHeroImage,
-      reward: '+%18 Mutluluk',
-      progress: '3 / 5',
-      progressWidth: '62%',
-    },
-    {
-      title: 'Boğaz Parkı Projesi',
-      body: 'Sahil hattında yeşil alanı büyüt ve kent yaşam kalitesini yükselt.',
-      image: greenHeroImage,
-      reward: '+650K Bütçe',
-      progress: '2 / 4',
-      progressWidth: '48%',
-    },
-    {
-      title: 'Enerji Verimliliği',
-      body: 'Kritik bölgelerde enerji üretimini dengele ve kaynak baskısını azalt.',
-      image: marketHeroImage,
-      reward: '+12 Enerji',
-      progress: '1 / 3',
-      progressWidth: '34%',
-    },
-  ] as const;
-  const task = tasks[activeIndex];
-
-  const handleNext = () => {
-    playLightImpactHaptic();
-    setActiveIndex((current) => (current + 1) % tasks.length);
-  };
-
+function GameStatusBar({ progress = 0.62, variant = 'primary' }: { progress?: number; variant?: 'primary' | 'secondary' }) {
+  const width = `${Math.max(0, Math.min(1, progress)) * 100}%` as `${number}%`;
   return (
-    <View style={styles.taskStackWrap}>
-      <Pressable
-        onPress={handleNext}
-        accessibilityRole="button"
-        accessibilityLabel="Diğer görevi göster"
-        style={({ pressed }) => [styles.stackBackTwo, pressedScale(pressed)]}
+    <View style={styles.gameStatusBar}>
+      <Image
+        source={variant === 'primary' ? statusBarPrimaryImage : statusBarSecondaryImage}
+        style={styles.gameStatusBarImage}
+        contentFit="fill"
       />
-      <Pressable
-        onPress={handleNext}
-        accessibilityRole="button"
-        accessibilityLabel="Diğer görevi göster"
-        style={({ pressed }) => [styles.stackBackOne, pressedScale(pressed)]}
-      />
-      <LinearGradient
-        colors={[palette.card, '#FFF8EC']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.taskCard}>
-        <View style={styles.taskLabel}>
-          <Ionicons name="star" size={12} color={palette.gold} />
-          <Text style={styles.taskLabelText}>AKTİF GÖREV</Text>
-        </View>
-        <View style={styles.taskHero}>
-          <AssetImage source={task.image} />
-        </View>
-        <View style={styles.taskMainRow}>
-          <View style={styles.taskCopy}>
-            <View style={styles.taskTitleRow}>
-              <MiniIcon icon="train-outline" />
-              <Text style={styles.taskTitle} numberOfLines={2}>
-                {task.title}
-              </Text>
-            </View>
-            <Text style={styles.taskBody} numberOfLines={2}>
-              {task.body}
-            </Text>
-          </View>
-          <View style={styles.rewardCapsule}>
-            <Ionicons name="happy-outline" size={20} color={palette.green} />
-            <Text style={styles.rewardText} numberOfLines={2}>
-              {task.reward}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.progressBlock}>
-          <View style={styles.progressHeader}>
-            <Text style={styles.progressLabel}>İLERLEME</Text>
-            <Text style={styles.progressValue}>{task.progress}</Text>
-          </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: task.progressWidth }]} />
-          </View>
-        </View>
-        <Pressable
-          onPress={() => {
-            playLightImpactHaptic();
-            router.push('/events' as Href);
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Göreve devam et"
-          style={({ pressed }) => [styles.taskCta, pressedScale(pressed)]}>
-          <Text style={styles.taskCtaText}>GÖREVE DEVAM ET</Text>
-          <View style={styles.ctaArrow}>
-            <Ionicons name="chevron-forward" size={18} color={palette.tealDark} />
-          </View>
-        </Pressable>
-      </LinearGradient>
-      <Text style={styles.stackHint} numberOfLines={1}>
-        Kartları değiştirerek diğer görevleri gör
+      <View style={[styles.gameStatusBarFill, { width }]} />
+    </View>
+  );
+}
+
+function PeopleHeaderChip({ value }: { value: string }) {
+  return (
+    <View style={styles.resourceChipImageWrap}>
+      <Image source={peopleResourceImage} style={styles.resourceChipImage} contentFit="fill" />
+      <Text style={styles.resourceChipImageValue} numberOfLines={1}>
+        {value}
       </Text>
     </View>
   );
@@ -300,7 +227,7 @@ function EceInsightCard({ contextLine }: { contextLine?: string | null }) {
   const router = useRouter();
   const text =
     contextLine?.trim() ||
-    'Ulaşım yatırımlarına odaklanmaya devam edin. İstasyon geliştirmeleri mutluluğu hızla artırıyor!';
+    'Toplu taşıma hatlarını aktifleştirmek, vatandaşların mutluluğunu en hızlı artıracak adım.';
 
   return (
     <Pressable
@@ -347,6 +274,7 @@ function FocusCarousel() {
       image: routeHeroImage,
       icon: 'bus-outline' as IconName,
       tone: 'teal' as const,
+      progress: 0.72,
     },
     {
       title: 'Enerji',
@@ -355,6 +283,7 @@ function FocusCarousel() {
       image: creviaAssets.districts.industrialBlock,
       icon: 'flash-outline' as IconName,
       tone: 'gold' as const,
+      progress: 0.56,
     },
     {
       title: 'Çevre',
@@ -363,6 +292,7 @@ function FocusCarousel() {
       image: greenHeroImage,
       icon: 'leaf-outline' as IconName,
       tone: 'green' as const,
+      progress: 0.43,
     },
   ];
 
@@ -388,9 +318,7 @@ function FocusCarousel() {
             <Text style={styles.focusLevel} numberOfLines={1}>
               {item.level}
             </Text>
-            <View style={styles.focusProgressTrack}>
-              <View style={styles.focusProgressFill} />
-            </View>
+            <GameStatusBar progress={item.progress} variant="secondary" />
             <Text style={styles.focusValue} numberOfLines={1}>
               {item.value}
             </Text>
@@ -413,7 +341,7 @@ function DailyStreakStrip() {
       <View style={styles.streakHeader}>
         <Text style={styles.darkSectionTitle}>GÜNLÜK SERİ</Text>
         <Text style={styles.streakSub} numberOfLines={1}>
-          Serini sürdür ve ödülleri katla.
+          Bugünün kararını tamamla, şehir hafızası güçlensin.
         </Text>
       </View>
       <View style={styles.streakDays}>
@@ -448,31 +376,31 @@ function OperationSignalsList({
   const operationSignals = useGameStore((s) => s.operationSignals);
   const signals = [
     {
-      icon: 'bus-outline' as IconName,
-      title: 'Ulaşım Talebi Artıyor',
-      body: hubTomorrowRisk?.mainLine ?? 'T1 hattında yolcu talebi %18 arttı.',
-      impact: 'YÜKSEK',
+      icon: 'shield-half-outline' as IconName,
+      title: 'Cumhuriyet’te güven hassas',
+      body: hubTomorrowRisk?.mainLine ?? 'Bugünün saha planı hazırlanıyor.',
+      impact: 'ETKİ YÜKSEK',
       tone: 'teal' as const,
     },
     {
-      icon: 'flash-outline' as IconName,
-      title: 'Enerji Fırsatı',
-      body: hubImpactExplanationLine ?? 'Rüzgar enerjisi verimliliği %12 arttı.',
-      impact: operationSignals.overall.status === 'stable' ? 'ORTA' : 'YÜKSEK',
+      icon: 'car-sport-outline' as IconName,
+      title: 'Araç yorgunluğu yükseliyor',
+      body: hubImpactExplanationLine ?? 'Ece ilk sinyalleri izliyor.',
+      impact: operationSignals.overall.status === 'stable' ? 'İZLE' : 'ETKİ ORTA',
       tone: 'gold' as const,
     },
     {
-      icon: 'leaf-outline' as IconName,
-      title: 'Çevre Uyarısı',
-      body: 'Yeşil alan yatırımı sosyal güveni destekleyebilir.',
-      impact: 'ORTA',
+      icon: 'cube-outline' as IconName,
+      title: 'Konteyner doluluk baskısı',
+      body: 'Operasyon odağı gün sonunda netleşecek.',
+      impact: 'YARINA SARKAR',
       tone: 'green' as const,
     },
   ];
 
   return (
     <View style={styles.section}>
-      <SectionTitle title="OPERASYON SİNYALLERİ" action="TÜMÜNÜ GÖR" />
+      <SectionTitle title="OPERASYON SİNYALLERİ" action="TÜMÜ" />
       <View style={styles.signalList}>
         {signals.map((signal) => (
           <View key={signal.title} style={styles.signalItem}>
@@ -486,7 +414,7 @@ function OperationSignalsList({
               </Text>
             </View>
             <View style={styles.impactBadge}>
-              <Text style={styles.impactLabel}>ETKİ</Text>
+              <Text style={styles.impactLabel}>DURUM</Text>
               <Text style={styles.impactValue}>{signal.impact}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={palette.goldDark} />
@@ -500,12 +428,12 @@ function OperationSignalsList({
 function QuickActionsGrid() {
   const router = useRouter();
   const actions = [
-    { title: 'Hat Planla', caption: 'Kapasiteyi artır.', icon: 'bus-outline' as IconName, route: '/events' as Href },
-    { title: 'Enerji Dağıt', caption: 'Üretimi dengele.', icon: 'flash-outline' as IconName, route: '/events' as Href },
-    { title: 'Yeşil Yatırım', caption: 'Alanları aç.', icon: 'leaf-outline' as IconName, route: '/risks' as Href },
-    { title: 'Bütçe Ayarla', caption: 'Kaynak satın al.', icon: 'cart-outline' as IconName, route: '/events' as Href },
-    { title: 'Ekip Ata', caption: 'Ekipleri yönet.', icon: 'people-outline' as IconName, route: '/events' as Href },
-    { title: 'Rapor Oluştur', caption: 'Günü incele.', icon: 'bar-chart-outline' as IconName, route: '/reports' as Href },
+    { title: 'Planı İncele', caption: 'Günün akışını aç.', icon: 'clipboard-outline' as IconName, route: '/events' as Href },
+    { title: 'Ekip Ata', caption: 'Personel dengesini kur.', icon: 'people-outline' as IconName, route: '/events' as Href },
+    { title: 'Haritayı Aç', caption: 'Saha baskısını gör.', icon: 'map-outline' as IconName, route: '/risks' as Href },
+    { title: 'Raporu Gör', caption: 'Gün sonunu incele.', icon: 'bar-chart-outline' as IconName, route: '/reports' as Href },
+    { title: 'Kaynakları Kontrol Et', caption: 'Araç ve konteyner.', icon: 'construct-outline' as IconName, route: '/events' as Href },
+    { title: 'Sinyalleri İncele', caption: 'Ece notlarını oku.', icon: 'radio-outline' as IconName, route: '/events' as Href },
   ];
 
   return (
@@ -519,7 +447,7 @@ function QuickActionsGrid() {
             accessibilityRole="button"
             accessibilityLabel={action.title}
             style={({ pressed }) => [styles.quickAction, pressedScale(pressed)]}>
-            <MiniIcon icon={action.icon} tone={action.icon === 'flash-outline' ? 'gold' : action.icon === 'leaf-outline' ? 'green' : 'teal'} />
+            <MiniIcon icon={action.icon} tone={action.icon === 'construct-outline' ? 'gold' : action.icon === 'map-outline' ? 'green' : 'teal'} />
             <View style={styles.quickCopy}>
               <Text style={styles.quickTitle} numberOfLines={1}>
                 {action.title}
@@ -551,26 +479,27 @@ function RecommendedPlanCard({
     hubDistrictReportLine ||
     hubStoryChainLine ||
     hubVehicleMaintenanceLine ||
-    'Şehir gelişimini hızlandıracak plan sahil hattında yeni bir yeşil alan oluşturur.';
+    'Güven kaybı büyümeden ekip ve araç planını netleştir.';
 
   return (
     <View style={styles.section}>
       <SectionTitle title="ÖNERİLEN PLAN" />
       <View style={styles.planCard}>
         <View style={styles.planImage}>
-          <AssetImage source={cityHeroImage} />
+          <View style={styles.planPatternOne} />
+          <View style={styles.planPatternTwo} />
+          <Ionicons name="git-merge-outline" size={34} color={palette.teal} />
         </View>
         <View style={styles.planCopy}>
           <Text style={styles.planTitle} numberOfLines={2}>
-            Boğaz Parkı Projesi
+            Cumhuriyet saha dengesi
           </Text>
           <Text style={styles.planBody} numberOfLines={3}>
             {contextLine}
           </Text>
           <View style={styles.planStats}>
-            <PlanStat icon="happy-outline" label="+18" />
-            <PlanStat icon="time-outline" label="2sa 30dk" />
-            <PlanStat icon="cash-outline" label="650K" />
+            <PlanStat icon="bulb-outline" label="Ece önerisi" />
+            <PlanStat icon="time-outline" label="Yarın etkisi var" />
           </View>
         </View>
         <View style={styles.bookmark}>
@@ -602,14 +531,14 @@ function ApprovePlanCTA() {
         router.push('/events' as Href);
       }}
       accessibilityRole="button"
-      accessibilityLabel="Planı onayla"
+      accessibilityLabel="Planı incele"
       style={({ pressed }) => [styles.approveButtonWrap, pressedScale(pressed)]}>
       <LinearGradient
         colors={[palette.tealDark, palette.teal, '#0D7168']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.approveButton}>
-        <Text style={styles.approveText}>PLANI ONAYLA</Text>
+        <Text style={styles.approveText}>PLANI İNCELE</Text>
         <View style={styles.ctaArrow}>
           <Ionicons name="chevron-forward" size={18} color={palette.tealDark} />
         </View>
@@ -630,9 +559,36 @@ export function HubReferenceHome({
 }: HubReferenceHomeProps = {}) {
   const { scrollBottomPadding } = useHubLayoutMetrics();
   const status = useGameStatus();
+  const pilotDay = useGameStore((s) => s.gameState.pilot.currentPilotDay);
+  const badgeState = useGameStore((s) => s.gameState.pilot.badgeState);
+  const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
   const reducedMotion = useCreviaReducedMotion();
   const motionDay = status.currentDay;
   const hubMotionEnabled = motionDay > 1;
+  const hubBadgeShowcase = useMemo(
+    () => buildHubBadgeShowcaseSummary(badgeState, pilotDay),
+    [badgeState, pilotDay],
+  );
+  const gameDay = useGameStore((s) => s.gameState.city.day);
+  const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
+  const hubAuthorityPermissionPreview = useMemo(
+    () =>
+      buildAuthorityPermissionPreviewCompactSummary({
+        authorityState,
+        day: pilotDay,
+      }),
+    [authorityState, pilotDay],
+  );
+  const hubDistrictExpansion = useMemo(
+    () =>
+      buildDistrictOperationUnlockBindingCompactSummary({
+        currentDay: gameDay,
+        pilotDay,
+        authorityState,
+        mainOperationSeason,
+      }),
+    [authorityState, gameDay, mainOperationSeason, pilotDay],
+  );
 
   const premiumContextLine = useMemo(
     () =>
@@ -662,11 +618,17 @@ export function HubReferenceHome({
             disabled={!hubMotionEnabled}
             motionKind="card_enter"
             intensity="highlighted">
-            <ActiveTaskStack />
+            <HubActiveTaskCardStack />
           </CreviaAnimatedCard>
           <EceInsightCard contextLine={hubEceContextLine ?? premiumContextLine} />
           <FocusCarousel />
           <DailyStreakStrip />
+          <HubBadgeShowcaseChip summary={hubBadgeShowcase} />
+          {hubDistrictExpansion.visible ? (
+            <HubDistrictExpansionChip summary={hubDistrictExpansion} />
+          ) : (
+            <HubAuthorityPermissionPreviewChip summary={hubAuthorityPermissionPreview} />
+          )}
           <OperationSignalsList
             hubTomorrowRisk={hubTomorrowRisk}
             hubImpactExplanationLine={premiumContextLine}
@@ -704,8 +666,8 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   header: {
-    paddingHorizontal: 18,
-    paddingBottom: 18,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
     overflow: 'hidden',
   },
   skylineOne: {
@@ -746,6 +708,29 @@ const styles = StyleSheet.create({
   },
   avatarButton: {
     flexShrink: 0,
+    position: 'relative',
+  },
+  profilePortrait: {
+    flexShrink: 0,
+  },
+  profileLevelBadge: {
+    position: 'absolute',
+    left: 0,
+    bottom: 1,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    backgroundColor: palette.goldDark,
+    borderWidth: 1,
+    borderColor: palette.goldSoft,
+  },
+  profileLevelText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: palette.white,
   },
   headerIdentity: {
     flex: 1,
@@ -772,26 +757,27 @@ const styles = StyleSheet.create({
     color: palette.tealMid,
   },
   reputationBadge: {
-    width: 104,
-    minHeight: 86,
-    borderRadius: 18,
+    width: 88,
+    height: 88,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 8,
-    gap: 2,
-    backgroundColor: palette.tealDark,
-    borderWidth: 2,
-    borderColor: palette.gold,
+    paddingTop: 14,
+    flexShrink: 0,
+  },
+  reputationBadgeImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
   },
   reputationLabel: {
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: '900',
     color: palette.goldSoft,
     textAlign: 'center',
   },
   reputationValue: {
-    fontSize: 24,
-    lineHeight: 27,
+    fontSize: 19,
+    lineHeight: 22,
     fontWeight: '900',
     color: palette.goldSoft,
     fontVariant: ['tabular-nums'],
@@ -799,13 +785,13 @@ const styles = StyleSheet.create({
   resourceRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 13,
+    marginTop: 11,
     minWidth: 0,
   },
   resourceChip: {
     flex: 1,
     minWidth: 0,
-    minHeight: 36,
+    minHeight: 34,
     borderRadius: 999,
     paddingHorizontal: 9,
     flexDirection: 'row',
@@ -819,7 +805,7 @@ const styles = StyleSheet.create({
   resourceValue: {
     flexShrink: 1,
     minWidth: 0,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '900',
     color: palette.text,
     fontVariant: ['tabular-nums'],
@@ -833,192 +819,45 @@ const styles = StyleSheet.create({
     backgroundColor: palette.tealMid,
     flexShrink: 0,
   },
-  body: {
-    paddingHorizontal: 16,
-    gap: 14,
-  },
-  taskStackWrap: {
-    paddingTop: 4,
-    paddingRight: 14,
-    minHeight: 434,
-  },
-  stackBackTwo: {
-    position: 'absolute',
-    top: 34,
-    right: 0,
-    width: '86%',
-    height: 352,
-    borderRadius: 22,
-    backgroundColor: '#E5D4A7',
-    borderWidth: 1,
-    borderColor: 'rgba(155,116,29,0.28)',
-    transform: [{ rotate: '4deg' }],
-  },
-  stackBackOne: {
-    position: 'absolute',
-    top: 20,
-    right: 8,
-    width: '90%',
-    height: 368,
-    borderRadius: 22,
-    backgroundColor: '#D7E5DE',
-    borderWidth: 1,
-    borderColor: 'rgba(7,86,79,0.18)',
-    transform: [{ rotate: '2deg' }],
-  },
-  taskCard: {
-    minHeight: 398,
-    borderRadius: 24,
-    padding: 12,
-    gap: 11,
-    borderWidth: 2,
-    borderColor: palette.tealMid,
-    shadowColor: '#0B302C',
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 9 },
-    elevation: 5,
-  },
-  taskLabel: {
-    position: 'absolute',
-    left: 16,
-    top: 12,
-    zIndex: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderRadius: 999,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    backgroundColor: 'rgba(7,86,79,0.88)',
-  },
-  taskLabelText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: palette.white,
-  },
-  taskHero: {
-    height: 150,
-    borderRadius: 18,
-    overflow: 'hidden',
-    backgroundColor: palette.tealSoft,
-  },
-  taskMainRow: {
-    flexDirection: 'row',
-    gap: 10,
-    minWidth: 0,
-  },
-  taskCopy: {
+  resourceChipImageWrap: {
     flex: 1,
     minWidth: 0,
-    gap: 8,
-  },
-  taskTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    minWidth: 0,
-  },
-  taskTitle: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 20,
-    lineHeight: 24,
-    fontWeight: '900',
-    color: palette.text,
-  },
-  taskBody: {
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '600',
-    color: palette.muted,
-  },
-  rewardCapsule: {
-    width: 82,
-    minHeight: 78,
-    borderRadius: 16,
-    alignItems: 'center',
+    height: 34,
     justifyContent: 'center',
-    padding: 8,
-    gap: 4,
-    backgroundColor: palette.tealSoft,
-    borderWidth: 1,
-    borderColor: palette.border,
   },
-  rewardText: {
-    fontSize: 12,
-    lineHeight: 14,
-    fontWeight: '900',
-    color: palette.teal,
-    textAlign: 'center',
+  resourceChipImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
   },
-  progressBlock: {
-    gap: 6,
-    minWidth: 0,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  progressLabel: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: palette.muted,
-  },
-  progressValue: {
+  resourceChipImageValue: {
+    marginLeft: 37,
+    marginRight: 27,
     fontSize: 11,
     fontWeight: '900',
-    color: palette.teal,
+    color: palette.text,
+    textAlign: 'center',
     fontVariant: ['tabular-nums'],
   },
-  progressTrack: {
-    height: 11,
-    borderRadius: 999,
-    backgroundColor: '#E2D8BE',
+  gameStatusBar: {
+    height: 15,
+    justifyContent: 'center',
     overflow: 'hidden',
   },
-  progressFill: {
+  gameStatusBarImage: {
+    position: 'absolute',
+    width: '100%',
     height: '100%',
+  },
+  gameStatusBarFill: {
+    height: 5,
+    marginHorizontal: 13,
     borderRadius: 999,
     backgroundColor: palette.tealMid,
   },
-  taskCta: {
-    minHeight: 52,
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: palette.teal,
-    borderWidth: 1,
-    borderColor: palette.gold,
-  },
-  taskCtaText: {
-    flexShrink: 1,
-    minWidth: 0,
-    fontSize: 14,
-    fontWeight: '900',
-    color: palette.goldSoft,
-    textAlign: 'center',
-  },
-  ctaArrow: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: palette.goldSoft,
-    flexShrink: 0,
-  },
-  stackHint: {
-    marginTop: 8,
-    textAlign: 'center',
-    fontSize: 10,
-    fontWeight: '700',
-    color: palette.muted,
+  body: {
+    paddingHorizontal: 16,
+    gap: 16,
   },
   eceCard: {
     minHeight: 86,
@@ -1253,10 +1092,13 @@ const styles = StyleSheet.create({
   quickGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    columnGap: 10,
+    rowGap: 10,
   },
   quickAction: {
-    width: '48.8%',
+    flexGrow: 1,
+    flexBasis: '47%',
+    maxWidth: '48.5%',
     minHeight: 74,
     borderRadius: 17,
     padding: 10,
@@ -1283,7 +1125,8 @@ const styles = StyleSheet.create({
     color: palette.muted,
   },
   planCard: {
-    minHeight: 178,
+    minHeight: 124,
+    maxHeight: 144,
     borderRadius: 20,
     padding: 10,
     flexDirection: 'row',
@@ -1294,10 +1137,32 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   planImage: {
-    width: 126,
+    width: 106,
+    height: 104,
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: palette.tealSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  planPatternOne: {
+    position: 'absolute',
+    left: -12,
+    top: 18,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(13,113,104,0.10)',
+  },
+  planPatternTwo: {
+    position: 'absolute',
+    right: -16,
+    bottom: -8,
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    backgroundColor: 'rgba(216,167,46,0.16)',
   },
   planCopy: {
     flex: 1,
@@ -1370,5 +1235,14 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: palette.goldSoft,
     textAlign: 'center',
+  },
+  ctaArrow: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.goldSoft,
+    flexShrink: 0,
   },
 });

@@ -6,7 +6,8 @@ import {
   AuthorityTabsPill,
   type AuthorityTabKey,
 } from '@/features/progression/components/authorities/AuthorityTabsPill';
-import { BadgesTabPanel } from '@/features/progression/components/authorities/BadgesTabPanel';
+import { BadgeShowcasePanel } from '@/features/progression/components/badgeShowcase/BadgeShowcasePanel';
+import { DistrictExpansionBindingPanel } from '@/features/progression/components/districtExpansion/DistrictExpansionBindingPanel';
 import { CollectionProgressHeroCard } from '@/features/progression/components/authorities/CollectionProgressHeroCard';
 import {
   AUTHORITY_COLLECTION_THEME,
@@ -23,6 +24,11 @@ export function ProgressionScreen() {
   const totalXp = useGameStore((s) => s.playerProgress?.totalXp ?? 0);
   const pilotDay = useGameStore((s) => s.gameState.pilot.currentPilotDay);
   const badgeState = useGameStore((s) => s.gameState.pilot.badgeState);
+  const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
+  const gameDay = useGameStore((s) => s.gameState.city.day);
+  const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
+  const operationSignals = useGameStore((s) => s.operationSignals);
+  const socialPulse = useGameStore((s) => s.socialPulseState);
   const [tab, setTab] = useState<AuthorityTabKey>('authorities');
 
   const model = useMemo(
@@ -63,9 +69,21 @@ export function ProgressionScreen() {
           daysLeft={model.daysLeftThisWeek}
           weeklyItems={weeklyItems}
           previewItems={previewItems}
+          authorityState={authorityState}
+          pilotDay={pilotDay}
+          totalXp={totalXp}
         />
+      ) : tab === 'badges' ? (
+        <BadgeShowcasePanel badgeState={badgeState} pilotDay={pilotDay} />
       ) : (
-        <BadgesTabPanel badgeTabItems={model.badgeTabItems} />
+        <DistrictExpansionBindingPanel
+          currentDay={gameDay}
+          pilotDay={pilotDay}
+          authorityState={authorityState}
+          mainOperationSeason={mainOperationSeason}
+          operationSignals={operationSignals}
+          socialPulse={socialPulse}
+        />
       )}
     </GameScreenShell>
   );

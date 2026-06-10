@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
+import { buildAuthorityPermissionPreviewCompactSummary } from '@/core/authority/authorityPermissionPreviewModel';
 import {
   buildHubAuthorityChipSummaryFromPilot,
   type HubAuthorityChipSummary,
@@ -29,6 +30,14 @@ export function HubAuthorityProgressChip({
         pilot.currentPilotDay,
       ),
     [summaryProp, pilot.authorityState, pilot.currentPilotDay],
+  );
+  const permissionPreview = useMemo(
+    () =>
+      buildAuthorityPermissionPreviewCompactSummary({
+        authorityState: pilot.authorityState,
+        day: pilot.currentPilotDay,
+      }),
+    [pilot.authorityState, pilot.currentPilotDay],
   );
 
   const accentColor =
@@ -68,7 +77,11 @@ export function HubAuthorityProgressChip({
           </Text>
         ) : null}
 
-        {summary.nextUnlockLine ? (
+        {permissionPreview.visible && permissionPreview.nextPermissionLine ? (
+          <Text style={styles.nextUnlockLine} numberOfLines={1} ellipsizeMode="tail">
+            {permissionPreview.nextPermissionLine}
+          </Text>
+        ) : summary.nextUnlockLine ? (
           <Text style={styles.nextUnlockLine} numberOfLines={1} ellipsizeMode="tail">
             {summary.nextUnlockLine}
           </Text>

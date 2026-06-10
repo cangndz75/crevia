@@ -2,6 +2,7 @@ import { BADGE_DEFINITIONS } from '@/core/badges/badgeConstants';
 import { BADGE_COLLECTION_TOTAL } from '@/features/progression/content/authoritiesDisplay';
 import type { AuthorityTheme } from '@/features/progression/content/authoritiesDisplay';
 import type { ProgressionIconName } from '@/core/content/progressionRoadmap';
+import { buildBadgeShowcaseSummary } from '@/core/badges/badgeShowcaseModel';
 import { buildProfileBadgeShowcaseSummary } from '@/features/profile/utils/profileBadgeModel';
 
 import type {
@@ -53,6 +54,7 @@ export function buildCollectionHeroModel(
   fallback?: CollectionFallback,
 ): CollectionHeroModel {
   const badgeSummary = buildProfileBadgeShowcaseSummary(badgeStateInput, pilotDay);
+  const showcaseSummary = buildBadgeShowcaseSummary(badgeStateInput, pilotDay);
   const total =
     badgeSummary.totalCount > 0
       ? badgeSummary.totalCount
@@ -61,13 +63,16 @@ export function buildCollectionHeroModel(
     badgeStateInput != null ? badgeSummary.earnedCount : fallback?.collected ?? badgeSummary.earnedCount;
   const progress =
     total > 0 ? Math.min(1, collected / total) : fallback?.progress ?? 0;
+  const nearUnlock = showcaseSummary.nearUnlockBadges[0]?.title;
 
   return {
     collected,
     total,
     progress,
     countLabel: `${collected} / ${total} toplandı`,
-    hint: 'Yeni rozetler keşfetmeye devam et!',
+    hint: nearUnlock
+      ? `Yakında: ${nearUnlock}`
+      : showcaseSummary.subline,
   };
 }
 

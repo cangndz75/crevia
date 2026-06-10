@@ -24,6 +24,9 @@ import {
   buildProfileViewModel,
 } from '@/features/profile/utils/profileModel';
 import { buildProfileAuthoritySummaryFromPilot } from '@/features/profile/utils/profileAuthorityModel';
+import { buildAuthorityPermissionPreviewCompactSummary } from '@/core/authority/authorityPermissionPreviewModel';
+import { buildBadgeShowcaseSummary } from '@/core/badges/badgeShowcaseModel';
+import { ProfileAuthorityPermissionPreviewCard } from '@/features/profile/components/ProfileAuthorityPermissionPreviewCard';
 import { buildProfileBadgeShowcaseSummary } from '@/features/profile/utils/profileBadgeModel';
 import { buildProfileScreenLayoutModel } from '@/features/profile/utils/profileScreenPresentation';
 import { useGameStatus } from '@/store/gameSelectors';
@@ -72,6 +75,19 @@ export function ProfileScreen() {
         pilot.currentPilotDay,
       ),
     [pilot.badgeState, pilot.currentPilotDay],
+  );
+  const badgeShowcaseModel = useMemo(
+    () => buildBadgeShowcaseSummary(pilot.badgeState, pilot.currentPilotDay),
+    [pilot.badgeState, pilot.currentPilotDay],
+  );
+  const authorityPermissionPreview = useMemo(
+    () =>
+      buildAuthorityPermissionPreviewCompactSummary({
+        authorityState: pilot.authorityState,
+        day: pilot.currentPilotDay,
+        xp: model.totalXp,
+      }),
+    [model.totalXp, pilot.authorityState, pilot.currentPilotDay],
   );
   const careerShowcase = useMemo(
     () =>
@@ -155,6 +171,10 @@ export function ProfileScreen() {
             <ProfileAuthorityCard summary={authoritySummary} />
           </Animated.View>
 
+          <Animated.View entering={FadeIn.duration(280).delay(90)}>
+            <ProfileAuthorityPermissionPreviewCard summary={authorityPermissionPreview} />
+          </Animated.View>
+
           <Animated.View entering={FadeIn.duration(280).delay(100)}>
             <ProfileCareerShowcaseCard
               model={careerShowcase}
@@ -163,7 +183,10 @@ export function ProfileScreen() {
           </Animated.View>
 
           <Animated.View entering={FadeIn.duration(280).delay(120)}>
-            <ProfileBadgeShowcaseCard summary={badgeShowcaseSummary} />
+            <ProfileBadgeShowcaseCard
+              summary={badgeShowcaseSummary}
+              showcase={badgeShowcaseModel}
+            />
           </Animated.View>
 
           <Animated.View entering={FadeIn.duration(280).delay(140)}>

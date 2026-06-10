@@ -8,7 +8,7 @@ import { colors } from '@/ui/theme/colors';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
-export type AuthorityTabKey = 'authorities' | 'badges';
+export type AuthorityTabKey = 'authorities' | 'badges' | 'expansions';
 
 type AuthorityTabsPillProps = {
   active: AuthorityTabKey;
@@ -22,6 +22,7 @@ const TABS: {
 }[] = [
   { key: 'authorities', label: 'Yetkiler', icon: 'shield-checkmark' },
   { key: 'badges', label: 'Rozetler', icon: 'medal-outline' },
+  { key: 'expansions', label: 'Açılımlar', icon: 'map-outline' },
 ];
 
 export function AuthorityTabsPill({ active, onChange }: AuthorityTabsPillProps) {
@@ -89,7 +90,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   tabLabel: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.textSecondary,
     flexShrink: 1,

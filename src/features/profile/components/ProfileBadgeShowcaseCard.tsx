@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { StyleSheet, Text, View } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { useEntranceAnimation } from '@/core/animations/useEntranceAnimation';
-
+import type { BadgeShowcaseSummary } from '@/core/badges/badgeShowcaseTypes';
 import type { BadgeRarity } from '@/core/badges/badgeTypes';
 import { PROFILE_UI_COPY } from '@/features/profile/utils/profileScreenPresentation';
 import type {
@@ -18,6 +19,7 @@ import { spacing } from '@/ui/theme/spacing';
 
 type ProfileBadgeShowcaseCardProps = {
   summary: ProfileBadgeShowcaseSummary;
+  showcase?: BadgeShowcaseSummary;
 };
 
 type RarityStyle = {
@@ -105,8 +107,15 @@ function BadgeTile({ item }: { item: ProfileBadgeShowcaseItem }) {
   );
 }
 
-export function ProfileBadgeShowcaseCard({ summary }: ProfileBadgeShowcaseCardProps) {
+export function ProfileBadgeShowcaseCard({
+  summary,
+  showcase,
+}: ProfileBadgeShowcaseCardProps) {
+  const router = useRouter();
   const { animatedStyle } = useEntranceAnimation();
+  const headline = showcase?.headline ?? 'Operasyon kariyerinde kazandığın başarılar';
+  const prestigeLabel = showcase?.prestigeLabel;
+  const nearUnlock = showcase?.nearUnlockBadges[0]?.title;
 
   return (
     <Animated.View style={[styles.card, shadows.soft, animatedStyle]}>
@@ -118,9 +127,14 @@ export function ProfileBadgeShowcaseCard({ summary }: ProfileBadgeShowcaseCardPr
           <Text style={styles.cardTitle} numberOfLines={1}>
             {PROFILE_UI_COPY.badgesTitle}
           </Text>
-          <Text style={styles.subtitle} numberOfLines={1}>
-            Operasyon kariyerinde kazandığın başarılar
+          <Text style={styles.subtitle} numberOfLines={2}>
+            {headline}
           </Text>
+          {prestigeLabel ? (
+            <Text style={styles.prestige} numberOfLines={1}>
+              {prestigeLabel}
+            </Text>
+          ) : null}
         </View>
       </View>
 
@@ -130,6 +144,12 @@ export function ProfileBadgeShowcaseCard({ summary }: ProfileBadgeShowcaseCardPr
         </Text>
         <Text style={styles.countPercent}>%{summary.completionPercent}</Text>
       </View>
+
+      {nearUnlock ? (
+        <Text style={styles.nearUnlock} numberOfLines={1}>
+          Yakında: {nearUnlock}
+        </Text>
+      ) : null}
 
       {summary.latestBadge ? (
         <View style={styles.latestBlock}>
@@ -154,6 +174,15 @@ export function ProfileBadgeShowcaseCard({ summary }: ProfileBadgeShowcaseCardPr
           ))}
         </View>
       ) : null}
+
+      <Pressable
+        style={styles.cta}
+        onPress={() => router.push('/progression' as Href)}
+        accessibilityRole="button"
+        accessibilityLabel="Rozet vitrine git">
+        <Text style={styles.ctaText}>Vitrine bak</Text>
+        <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+      </Pressable>
     </Animated.View>
   );
 }
@@ -199,6 +228,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
     lineHeight: 15,
+  },
+  prestige: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.hubGoldDark,
+    marginTop: 2,
+  },
+  nearUnlock: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
   },
   countRow: {
     flexDirection: 'row',
@@ -284,5 +324,17 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: colors.textSecondary,
+  },
+  cta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+    minHeight: 36,
+  },
+  ctaText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.primary,
   },
 });
