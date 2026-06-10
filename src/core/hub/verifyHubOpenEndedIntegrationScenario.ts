@@ -214,7 +214,7 @@ export function verifyHubOpenEndedIntegrationScenario(): VerifyHubOpenEndedInteg
     validateHubOpenEndedIntegrationModel(day8) && validateHubOpenEndedIntegrationModel(highRank),
     'day8 + highRank',
   );
-  record(checks, 'SAVE_VERSION değişmedi', SAVE_VERSION === 25, String(SAVE_VERSION));
+  record(checks, 'SAVE_VERSION değişmedi', SAVE_VERSION === 26, String(SAVE_VERSION));
 
   const rendered = checks.map((check) =>
     `${check.ok ? 'PASS' : 'FAIL'} ${check.name}: ${check.detail}`,

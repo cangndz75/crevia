@@ -113,7 +113,7 @@ export function verifySoftLaunchReadinessScenario(): VerifySoftLaunchReadinessOu
       `Unexpected ${result.health}`,
     ) && ok;
 
-  ok = assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION 23 check', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 23 check', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
 
   ok =
     assert(

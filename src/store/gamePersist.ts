@@ -97,6 +97,8 @@ import type { OperationalResourcesState } from '@/core/operationalResources/oper
 import { normalizeCityArchiveState } from '@/core/cityArchive/cityArchiveState';
 import { resolveCityArchiveOnPersistLoad } from '@/core/cityArchive/cityArchiveMigration';
 import type { CityArchiveV1State } from '@/core/cityArchive/cityArchiveTypes';
+import { resolveTeamSpecializationOnPersistLoad } from '@/core/teamSpecialization/teamSpecializationMigration';
+import type { TeamSpecializationStateV1 } from '@/core/teamSpecialization/teamSpecializationRuntimeTypes';
 import { resolveVehicleMaintenanceOnPersistLoad } from '@/core/vehicleMaintenance/vehicleMaintenanceMigration';
 import type { VehicleMaintenanceStateV1 } from '@/core/vehicleMaintenance/vehicleMaintenanceRuntimeTypes';
 
@@ -106,7 +108,8 @@ import type { GameStore } from './useGameStore';
 // Save version & storage key
 // ---------------------------------------------------------------------------
 
-export const SAVE_VERSION = 25;
+export const SAVE_VERSION = 26;
+const SAVE_VERSION_25 = 25;
 const SAVE_VERSION_24 = 24;
 const SAVE_VERSION_23 = 23;
 const SAVE_VERSION_22 = 22;
@@ -173,6 +176,7 @@ export type PersistedGameState = Pick<
   | 'operationalResources'
   | 'cityArchive'
   | 'vehicleMaintenance'
+  | 'teamSpecialization'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -221,6 +225,7 @@ export function partialiseGameState(
     operationalResources: state.operationalResources,
     cityArchive: state.cityArchive,
     vehicleMaintenance: state.vehicleMaintenance,
+    teamSpecialization: state.teamSpecialization,
     tutorialState: state.tutorialState,
     bestPilotScores: state.bestPilotScores,
     lastPilotScore: state.lastPilotScore,
@@ -491,6 +496,7 @@ export function normalizePersistedSave(
     version !== SAVE_VERSION_22 &&
     version !== SAVE_VERSION_23 &&
     version !== SAVE_VERSION_24 &&
+    version !== SAVE_VERSION_25 &&
     version !== SAVE_VERSION
   ) {
     return null;
@@ -775,6 +781,62 @@ export function normalizePersistedSave(
           priorityDistrictId,
         },
         cityArchive: archiveState,
+      });
+    })(),
+    teamSpecialization: ((): TeamSpecializationStateV1 => {
+      const operationSignalsRaw = raw.operationSignals;
+      const vehiclesStatus =
+        isRecord(operationSignalsRaw) &&
+        isRecord(operationSignalsRaw.vehicles) &&
+        typeof operationSignalsRaw.vehicles.status === 'string'
+          ? operationSignalsRaw.vehicles.status
+          : undefined;
+      const priorityDistrictId =
+        isRecord(operationSignalsRaw) &&
+        typeof operationSignalsRaw.priorityDistrictId === 'string'
+          ? operationSignalsRaw.priorityDistrictId
+          : undefined;
+      const assignmentsRaw = isRecord(raw.assignments) ? raw.assignments : null;
+      const assignmentsByEvent =
+        assignmentsRaw && isRecord(assignmentsRaw.assignmentsByEventId)
+          ? (assignmentsRaw.assignmentsByEventId as Record<
+              string,
+              { day?: number; status?: string; personnelType?: string; compatibilityScore?: number }
+            >)
+          : {};
+      const dayAssignment = Object.values(assignmentsByEvent).find(
+        (a) => a?.day === currentDay && a?.status === 'confirmed',
+      );
+      const archiveStateForTeam =
+        raw.cityArchive != null
+          ? normalizeCityArchiveState(raw.cityArchive, currentDay)
+          : undefined;
+      const saveVersionForTeam =
+        typeof version === 'number' ? version : SAVE_VERSION;
+      return resolveTeamSpecializationOnPersistLoad({
+        rawTeamSpecialization: raw.teamSpecialization,
+        saveVersion: saveVersionForTeam,
+        currentDay,
+        operationSignals: {
+          vehicles: vehiclesStatus ? { status: vehiclesStatus } : undefined,
+          priorityDistrictId,
+        },
+        cityArchive: archiveStateForTeam,
+        assignmentPersonnelGroup: dayAssignment?.personnelType,
+        assignmentCompatibilityScore: dayAssignment?.compatibilityScore,
+        vehicleMaintenance:
+          raw.vehicleMaintenance != null
+            ? resolveVehicleMaintenanceOnPersistLoad({
+                rawVehicleMaintenance: raw.vehicleMaintenance,
+                saveVersion: saveVersionForTeam,
+                currentDay,
+                operationSignals: {
+                  vehicles: vehiclesStatus ? { status: vehiclesStatus } : undefined,
+                  priorityDistrictId,
+                },
+                cityArchive: archiveStateForTeam,
+              })
+            : undefined,
       });
     })(),
     tutorialState: isValidTutorialState(raw.tutorialState)

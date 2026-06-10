@@ -88,7 +88,7 @@ export function verifySoftLaunchCoreCompletenessScenario(): VerifySoftLaunchCore
     ) && ok;
   }
 
-  ok = assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION at 24', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION at 24', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
   ok = assert(
     checks,
     result.nonGoalsConfirmed.some((line) => line.includes('SAVE_VERSION remains 24')),

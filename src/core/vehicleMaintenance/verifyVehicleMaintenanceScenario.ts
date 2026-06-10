@@ -470,7 +470,7 @@ export function verifyVehicleMaintenanceScenario(): VerifyVehicleMaintenanceOutc
   }
 
   record(assert(checks, getVehicleMaintenanceSignalSources(baseContext()).length > 0, 'signal sources builder', 'signal sources empty'));
-  record(assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`));
+  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`));
 
   const indexSrc = readRepo('src/core/vehicleMaintenance/index.ts');
   record(assert(checks, indexSrc.includes('vehicleMaintenanceTypes'), 'type exports runtime-safe', 'index exports missing'));

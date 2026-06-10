@@ -3,9 +3,9 @@
  * Çalıştır: npm run verify:team-specialization
  */
 
-import { verifyTeamSpecializationScenario } from '../src/core/teamSpecialization/verifyTeamSpecializationScenario';
+import { verifyTeamSpecializationRuntimeScenario } from '../src/core/teamSpecialization/verifyTeamSpecializationRuntimeScenario';
 
-const outcome = verifyTeamSpecializationScenario();
+const outcome = verifyTeamSpecializationRuntimeScenario();
 
 for (const line of outcome.checks) {
   // eslint-disable-next-line no-console

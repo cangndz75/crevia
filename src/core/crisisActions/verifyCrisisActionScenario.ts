@@ -216,7 +216,7 @@ export function verifyCrisisActionScenario(): VerifyCrisisActionOutcome {
     'migrate',
   );
 
-  add(SAVE_VERSION === 25, 'Full loop SAVE_VERSION 22', 'save version');
+  add(SAVE_VERSION === 26, 'Full loop SAVE_VERSION 22', 'save version');
 
   const cta = getInteractionContractsForComponent('HubCrisisActionCard').find(
     (c) => c.label === 'Hamleyi Seç',

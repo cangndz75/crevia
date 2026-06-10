@@ -182,7 +182,7 @@ export function verifyIapConversionReadinessScenario(): VerifyIapConversionReadi
 
   ok = assert(checks, verifyMonetizationScenario().ok, 'verify:monetization-gate compatible', 'Monetization broken') && ok;
 
-  ok = assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION 23 unchanged', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 23 unchanged', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
 
   const persist = readRepo('src/store/gamePersist.ts');
   ok = assert(checks,

@@ -1399,6 +1399,6 @@ export function runFullLoopAnalysis(): FullLoopAnalysisResult {
     totalFAIL,
     topWarnings: topWarnings.slice(0, 12),
     recommendedSmallFixes: collectRecommendedFixes(scenarios),
-    saveVersionOk: SAVE_VERSION === 25,
+    saveVersionOk: SAVE_VERSION === 26,
   };
 }

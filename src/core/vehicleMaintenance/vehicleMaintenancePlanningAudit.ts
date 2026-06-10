@@ -184,12 +184,12 @@ export function runVehicleMaintenancePlanningAudit(): VehicleMaintenancePlanning
     check(
       VEHICLE_MAINTENANCE_CURRENT_SAVE_VERSION === 25,
       'safety.save_version',
-      'SAVE_VERSION 25 runtime active.',
+      'Planning baseline SAVE_VERSION 25 preserved in planning constants.',
     ),
     check(
       VEHICLE_MAINTENANCE_TARGET_SAVE_VERSION === 25,
       'plan.target_save_version',
-      'Target SAVE_VERSION 25 documented for implementation.',
+      'Planning target SAVE_VERSION 25 preserved (pre-implementation snapshot).',
     ),
     check(
       VEHICLE_MAINTENANCE_ARCHIVE_ENTRY_RECOMMENDATIONS.every((e) => !e.storeRawMetadata),

@@ -430,7 +430,7 @@ export function verifyIapManualSetupTrackerScenario(): VerifyIapManualSetupTrack
   ok = assert(checks, verifyFullUxFlowScenario().ok, 'verify:full-ux-flow', 'UX flow broken') && ok;
 
   // SAVE_VERSION
-  ok = assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION 23', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 23', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
 
   // No persist pollution
   const persist = readRepo('src/store/gamePersist.ts');

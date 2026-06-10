@@ -66,10 +66,6 @@ export function verifyTeamSpecializationPlanningScenario(): VerifyTeamSpecializa
 
   const audit = runTeamSpecializationPlanningAudit();
   for (const c of audit.checks) {
-    if (c.id === 'runtime.implementation_closed') {
-      record(assert(checks, c.status === 'WARN', c.message, c.message));
-      continue;
-    }
     record(assert(checks, c.status !== 'FAIL', c.message, c.message));
   }
 
@@ -106,8 +102,8 @@ export function verifyTeamSpecializationPlanningScenario(): VerifyTeamSpecializa
     ),
   );
   record(assert(checks, score.daySafetyScore === 100, 'Day one safety score max'));
-  record(assert(checks, audit.implementationBlocked, 'Runtime implementation blocked (planning pass)'));
-  record(assert(checks, !audit.runtimeOpen, 'Team specialization runtime not open'));
+  record(assert(checks, !audit.implementationBlocked, 'Runtime implementation unblocked'));
+  record(assert(checks, audit.runtimeOpen, 'Team specialization runtime open'));
 
   const day1 = evaluateTeamSpecializationDaySafety(1);
   record(assert(checks, !day1.allowed && day1.visibility === 'hidden', 'Day 1 hidden'));
@@ -127,9 +123,9 @@ export function verifyTeamSpecializationPlanningScenario(): VerifyTeamSpecializa
     ),
   );
 
-  record(assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION 25 unchanged'));
-  record(assert(checks, TEAM_SPECIALIZATION_CURRENT_SAVE_VERSION === 25, 'Planning current SAVE_VERSION 25'));
-  record(assert(checks, TEAM_SPECIALIZATION_TARGET_SAVE_VERSION === 25, 'Target SAVE_VERSION 25 (no increment)'));
+  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 26 after runtime V1'));
+  record(assert(checks, TEAM_SPECIALIZATION_CURRENT_SAVE_VERSION === 25, 'Planning baseline SAVE_VERSION 25'));
+  record(assert(checks, TEAM_SPECIALIZATION_TARGET_SAVE_VERSION === 25, 'Planning target SAVE_VERSION 25 (pre-implementation)'));
   record(
     assert(
       checks,
@@ -140,8 +136,8 @@ export function verifyTeamSpecializationPlanningScenario(): VerifyTeamSpecializa
   record(
     assert(
       checks,
-      !readRepo('src/store/gamePersist.ts').includes('teamSpecialization'),
-      'persist shape does not include teamSpecialization',
+      readRepo('src/store/gamePersist.ts').includes('teamSpecialization'),
+      'persist shape includes teamSpecialization',
     ),
   );
   record(assert(checks, !readRepo('src/core/game/applyDecision.ts').includes('teamSpecialization'), 'applyDecision unchanged'));
@@ -167,7 +163,7 @@ export function verifyTeamSpecializationPlanningScenario(): VerifyTeamSpecializa
       assert(
         checks,
         !content.includes('teamSpecialization') && !content.includes('TeamSpecialization'),
-        `${file} unchanged by team specialization planning`,
+        `${file} unchanged by team specialization runtime`,
       ),
     );
   }

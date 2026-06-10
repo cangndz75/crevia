@@ -13,11 +13,13 @@ import {
   DISTRICT_REPORT_CARD_LITE_BAND_STATUS_TONE,
   DISTRICT_REPORT_CARD_LITE_DISTRICT_IDENTITY_HINTS,
   DISTRICT_REPORT_CARD_LITE_FALLBACK_LINE,
-  DISTRICT_REPORT_CARD_LITE_FORBIDDEN_WORDS,
   DISTRICT_REPORT_CARD_LITE_ISSUE_LABELS,
   DISTRICT_REPORT_CARD_LITE_MAX_COPY_LENGTH,
   DISTRICT_REPORT_CARD_LITE_MAX_VISIBLE_LINES,
   DISTRICT_REPORT_CARD_LITE_TRUST_LABELS,
+  DISTRICT_REPORT_CARD_PLAYER_STYLE_LINES,
+  DISTRICT_REPORT_CARD_PUBLIC_TONE_LINES,
+  DISTRICT_REPORT_CARD_RECOVERY_LINES,
 } from './districtReportCardConstants';
 import {
   buildEceDistrictLineFromArchive,
@@ -32,10 +34,9 @@ import {
   maxRecentEventsForDay,
 } from './districtReportCardArchiveModel';
 import {
-  DISTRICT_REPORT_CARD_PLAYER_STYLE_LINES,
-  DISTRICT_REPORT_CARD_PUBLIC_TONE_LINES,
-  DISTRICT_REPORT_CARD_RECOVERY_LINES,
-} from './districtReportCardConstants';
+  districtReportCardContainsForbiddenWords,
+  isDistrictReportCardDuplicate,
+} from './districtReportCardTextUtils';
 import type {
   DistrictReportCardDominantIssueKind,
   DistrictReportCardFullInput,
@@ -56,32 +57,6 @@ function cleanText(value: string | null | undefined, limit = DISTRICT_REPORT_CAR
   const text = (value ?? '').replace(/\s+/g, ' ').trim();
   if (text.length <= limit) return text;
   return `${text.slice(0, limit - 1).trimEnd()}…`;
-}
-
-export function normalizeDistrictReportCardText(text: string): string {
-  return text.toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ').trim();
-}
-
-export function districtReportCardContainsForbiddenWords(text: string | null | undefined): boolean {
-  if (!text?.trim()) return false;
-  const normalized = normalizeDistrictReportCardText(text);
-  return DISTRICT_REPORT_CARD_LITE_FORBIDDEN_WORDS.some((word) => normalized.includes(word));
-}
-
-export function isDistrictReportCardDuplicate(
-  line: string | null | undefined,
-  existingLines: string[] = [],
-): boolean {
-  if (!line?.trim()) return true;
-  const normalized = normalizeDistrictReportCardText(line);
-  return existingLines.some((existing) => {
-    const other = normalizeDistrictReportCardText(existing);
-    if (!other) return false;
-    if (other === normalized) return true;
-    if (normalized.length >= 22 && other.includes(normalized.slice(0, 22))) return true;
-    if (other.length >= 22 && normalized.includes(other.slice(0, 22))) return true;
-    return false;
-  });
 }
 
 function sanitizeCopy(text: string, fallback: string): string {
@@ -801,3 +776,9 @@ export function buildDistrictReportCardFullModel(
     eceLine: eceDistrictLine ?? lite.eceLine,
   };
 }
+
+export {
+  districtReportCardContainsForbiddenWords,
+  isDistrictReportCardDuplicate,
+  normalizeDistrictReportCardText,
+} from './districtReportCardTextUtils';

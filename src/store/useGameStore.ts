@@ -418,6 +418,12 @@ import {
 import { createInitialCityArchiveState } from '@/core/cityArchive/cityArchiveState';
 import type { CityArchiveV1State } from '@/core/cityArchive/cityArchiveTypes';
 import { createInitialVehicleMaintenanceState } from '@/core/vehicleMaintenance/vehicleMaintenanceState';
+import { createInitialTeamSpecializationState } from '@/core/teamSpecialization/teamSpecializationState';
+import {
+  appendTeamSpecializationDayCloseArchive,
+  buildTeamSpecializationDayCloseBundle,
+} from '@/core/teamSpecialization/teamSpecializationWiring';
+import type { TeamSpecializationStateV1 } from '@/core/teamSpecialization/teamSpecializationRuntimeTypes';
 import {
   appendVehicleMaintenanceDayCloseArchive,
   buildVehicleMaintenanceDayCloseBundle,
@@ -482,6 +488,7 @@ type GameStoreState = {
   operationalResources: OperationalResourcesState;
   cityArchive: CityArchiveV1State;
   vehicleMaintenance: VehicleMaintenanceStateV1;
+  teamSpecialization: TeamSpecializationStateV1;
   /** Oturum içi mahalle hamlesi seçimi — persist edilmez. */
   districtOperationActionState: CreviaDistrictOperationActionState;
   tutorialState: TutorialState;
@@ -838,6 +845,7 @@ function applySeedBundle(
   | 'operationalResources'
   | 'cityArchive'
   | 'vehicleMaintenance'
+  | 'teamSpecialization'
   | 'districtOperationActionState'
   | 'tutorialState'
   | 'bestPilotScores'
@@ -904,6 +912,7 @@ function applySeedBundle(
     ),
     cityArchive: createInitialCityArchiveState(bundle.gameState.city.day),
     vehicleMaintenance: createInitialVehicleMaintenanceState(bundle.gameState.city.day),
+    teamSpecialization: createInitialTeamSpecializationState(bundle.gameState.city.day),
     districtOperationActionState: createInitialDistrictOperationActionState(),
     tutorialState: { ...INITIAL_TUTORIAL_STATE },
     bestPilotScores: [],
@@ -3623,10 +3632,77 @@ export const useGameStore = create<GameStore>()(
           },
         );
 
+        const confirmedDayAssignment = Object.values(
+          assignmentProcessed.state.assignmentsByEventId,
+        ).find((a) => a.day === closingDay && a.status === 'confirmed');
+
+        const teamSpecializationCloseInput = {
+          day: closingDay,
+          operationSignals: {
+            vehicles: operationSignalsAfterDay.vehicles,
+            containers: operationSignalsAfterDay.containers,
+            personnel: operationSignalsAfterDay.personnel,
+            districts: operationSignalsAfterDay.districts,
+            priorityDistrictId: operationSignalsAfterDay.priorityDistrictId,
+          },
+          assignmentPersonnelGroup: confirmedDayAssignment?.personnelType,
+          assignmentVehicleGroup: confirmedDayAssignment?.vehicleType,
+          assignmentCompatibilityScore: confirmedDayAssignment?.compatibilityScore,
+          assignmentApproach: confirmedDayAssignment?.approachType,
+          assignmentDomain: confirmedDayAssignment?.eventId
+            ? current.gameState.events.find((e) => e.id === confirmedDayAssignment.eventId)
+                ?.category
+            : undefined,
+          assignmentOutcomePositive:
+            current.decisionHistory.filter((r) => r.day === closingDay).length > 0,
+          cityArchiveRecentKinds: current.cityArchive.entries
+            .filter((e) => e.day === closingDay)
+            .map((e) => e.kind),
+          storyChainKinds: current.cityArchive.entries
+            .filter((e) => e.kind === 'story_chain_step' && e.day >= closingDay - 2)
+            .map((e) => e.domain ?? 'story_chain'),
+          contentPackDomains: [],
+          routeBalanced: operationSignalsAfterDay.vehicles?.status === 'stable',
+          resourceRecovery: operationSignalsAfterDay.personnel?.status === 'stable',
+          comebackCompleted:
+            rewardComebackForStoryChain.primaryMoment?.kind === 'comeback_completed',
+          resourcePressure:
+            operationSignalsAfterDay.vehicles?.status === 'strained' ||
+            operationSignalsAfterDay.vehicles?.status === 'critical',
+          crisisAdjacent:
+            crisisStateAfterDay.activeIncident != null ||
+            crisisStateAfterDay.riskLevel === 'elevated' ||
+            crisisStateAfterDay.riskLevel === 'critical',
+          socialTrustPositive: socialPulseStateAfterNight.globalPulseScore > 55,
+          teamCapacityStable: operationSignalsAfterDay.personnel?.status === 'stable',
+          recoveryRestWindow:
+            tomorrowRiskForStoryChain?.tone === 'recovery' ||
+            tomorrowRiskForStoryChain?.tone === 'calm',
+          storyChainClosure: current.cityArchive.entries.some(
+            (e) => e.kind === 'story_chain_step' && e.day === closingDay,
+          ),
+          repeatedDistrictSuccess: Boolean(storyChainDistrictId),
+          districtId: storyChainDistrictId as
+            | import('@/core/districts/districtIdentityTypes').MapDistrictId
+            | undefined,
+          vehicleMaintenance: vehicleMaintenanceBundle.vehicleMaintenance,
+        };
+
+        const teamSpecializationBundle = buildTeamSpecializationDayCloseBundle(
+          current.teamSpecialization,
+          teamSpecializationCloseInput,
+        );
+
         const cityArchiveWithVehicleMaintenance = appendVehicleMaintenanceDayCloseArchive(
           cityArchiveAfterClose,
           vehicleMaintenanceBundle.vehicleMaintenance,
           vehicleMaintenanceCloseInput,
+        );
+
+        const cityArchiveWithTeamSpecialization = appendTeamSpecializationDayCloseArchive(
+          cityArchiveWithVehicleMaintenance,
+          teamSpecializationBundle.teamSpecialization,
+          teamSpecializationCloseInput,
         );
 
         set({
@@ -3690,8 +3766,9 @@ export const useGameStore = create<GameStore>()(
           crisisActionState: crisisActionStateForNextDay,
           microDecisionState: microStateForNextDay,
           operationalResources: operationalResourcesAfterDay,
-          cityArchive: cityArchiveWithVehicleMaintenance,
+          cityArchive: cityArchiveWithTeamSpecialization,
           vehicleMaintenance: vehicleMaintenanceBundle.vehicleMaintenance,
+          teamSpecialization: teamSpecializationBundle.teamSpecialization,
         });
       },
 
@@ -4273,6 +4350,11 @@ export const useGameStore = create<GameStore>()(
           vehicleMaintenance:
             saved.vehicleMaintenance ??
             createInitialVehicleMaintenanceState(
+              withSyncedPulse(pilotRefresh.gameState).city.day,
+            ),
+          teamSpecialization:
+            saved.teamSpecialization ??
+            createInitialTeamSpecializationState(
               withSyncedPulse(pilotRefresh.gameState).city.day,
             ),
           districtOperationActionState: createInitialDistrictOperationActionState(),

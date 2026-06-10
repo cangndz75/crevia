@@ -70,13 +70,13 @@ export function verifyVehicleMaintenanceRuntimeScenario(): VerifyVehicleMaintena
   };
 
   const gamePersist = readRepo('src/store/gamePersist.ts');
-  record(assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION 25'));
+  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 26'));
   record(assert(checks, gamePersist.includes('vehicleMaintenance'), 'vehicleMaintenance in gamePersist'));
   record(assert(checks, gamePersist.includes('SAVE_VERSION_24'), 'v24 migration path exists'));
 
   const v24Save = { ...createDay1Seed(), saveVersion: 24 };
   const migrated = normalizePersistedSave(v24Save);
-  record(assert(checks, migrated != null && migrated.saveVersion === 25, 'v24 save migrates to 25'));
+  record(assert(checks, migrated != null && migrated.saveVersion === 26, 'v24 save migrates to 26'));
   record(assert(checks, migrated != null && migrated.vehicleMaintenance != null, 'migrated save has vehicleMaintenance'));
 
   const normalizedMissing = resolveVehicleMaintenanceOnPersistLoad({

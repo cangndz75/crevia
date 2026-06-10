@@ -45,7 +45,7 @@ export function verifyMapDistrictIntelligenceScenario(): VerifyMapDistrictIntell
     if (!pass) ok = false;
   };
 
-  record(assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION 23', `SAVE_VERSION ${SAVE_VERSION}`));
+  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 23', `SAVE_VERSION ${SAVE_VERSION}`));
 
   let emptyCrash = false;
   try {

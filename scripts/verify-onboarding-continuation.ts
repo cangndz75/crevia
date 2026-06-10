@@ -119,7 +119,7 @@ const persist = repo('src/store/gamePersist.ts');
 const applyDecision = repo('src/core/game/applyDecision.ts');
 const dayPipeline = repo('src/core/dayPipeline/dayPipelineOrchestrator.ts');
 const eventGeneration = repo('src/core/game/generateDailyEventSet.ts');
-add(SAVE_VERSION === 25 && persist.includes('export const SAVE_VERSION = 25;'), 'SAVE_VERSION 25');
+add(SAVE_VERSION === 26 && persist.includes('export const SAVE_VERSION = 26;'), 'SAVE_VERSION 25');
 add(!applyDecision.includes('onboardingContinuation'), 'applyDecision untouched by continuation');
 add(!dayPipeline.includes('onboardingContinuation'), 'dayPipeline untouched by continuation');
 add(!eventGeneration.includes('onboardingContinuation'), 'event generation untouched by continuation');

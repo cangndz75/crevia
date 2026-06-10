@@ -471,7 +471,7 @@ export function verifyDistrictOperationScenario(): VerifyDistrictOperationOutcom
   const indexSrc = readRepo('src/core/districtOperations/index.ts');
   record(assert(checks, indexSrc.includes('districtOperationTypes'), 'type exports runtime-safe', 'index exports missing'));
 
-  record(assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`));
+  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`));
   checks.push('PASS Persist shape unchanged by scope: district operation state is not stored');
 
   return { ok, warn, checks };

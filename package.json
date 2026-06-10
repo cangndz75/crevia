@@ -137,6 +137,7 @@
     "verify:district-operations": "npx tsx scripts/verify-district-operations.ts",
     "verify:team-specialization": "npx tsx scripts/verify-team-specialization.ts",
     "verify:team-specialization-planning": "npx tsx scripts/verify-team-specialization-planning.ts",
+    "verify:team-specialization-ui-density": "npx tsx scripts/verify-team-specialization-ui-density.ts",
     "verify:vehicle-maintenance": "npx tsx scripts/verify-vehicle-maintenance.ts",
     "verify:container-network": "npx tsx scripts/verify-container-network.ts",
     "verify:operation-era": "npx tsx scripts/verify-operation-era.ts",

@@ -136,6 +136,16 @@ export type TeamSpecializationDayCloseInput = {
   existingHubLines?: string[];
   existingReportLines?: string[];
   existingMapHints?: string[];
+  existingAssignmentHints?: string[];
+  hubDensityContext?: {
+    existingInsightLineCount?: number;
+    hasActiveOperationInsight?: boolean;
+    hasAuthorityPreview?: boolean;
+    hasBadgeShowcase?: boolean;
+    hasDistrictExpansion?: boolean;
+  };
+  vehicleMaintenanceStrainActive?: boolean;
+  vehicleMaintenanceLine?: string;
   vehicleMaintenance?: {
     fleetGroups?: Record<
       string,
@@ -167,4 +177,6 @@ export type TeamSpecializationSurfaceLines = {
   mapHint?: string;
   assignmentHint?: string;
   journalLabel?: string;
+  suppressVehicleMaintenanceLine?: boolean;
+  mergedStrainLine?: string;
 };

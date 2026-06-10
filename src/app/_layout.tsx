@@ -17,10 +17,7 @@ import {
   type AppBootstrapPhase,
 } from "@/features/onboarding/hooks/useAppBootstrap";
 import { SplashGateScreen } from "@/features/onboarding/screens/SplashGateScreen";
-import {
-  ANIMATED_TAB_BAR_HEIGHT,
-  AnimatedTabBar,
-} from "@/ui/components/AnimatedTabBar";
+import { CreviaBottomTabBar } from "@/components/navigation/CreviaBottomTabBar";
 import { CreviaErrorBoundary } from "@/ui/components/CreviaErrorBoundary";
 import { GestureRootProvider } from "@/ui/providers/GestureRootProvider";
 import { colors } from "@/ui/theme/colors";
@@ -33,16 +30,23 @@ markAppStart();
 function TabNavigator() {
   return (
     <Tabs
-      tabBar={(props) => <AnimatedTabBar {...props} />}
+      tabBar={(props) => <CreviaBottomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
+        sceneStyle: {
+          backgroundColor: colors.background,
+        },
+        tabBarBackground: () => null,
         tabBarStyle: {
           position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
           backgroundColor: "transparent",
           borderTopWidth: 0,
           elevation: 0,
-          height: ANIMATED_TAB_BAR_HEIGHT,
+          shadowOpacity: 0,
         },
       }}
     >

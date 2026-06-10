@@ -18,7 +18,7 @@ import {
   districtReportCardContainsForbiddenWords,
   isDistrictReportCardDuplicate,
   normalizeDistrictReportCardText,
-} from './districtReportCardModel';
+} from './districtReportCardTextUtils';
 import type {
   DistrictReportCardDominantIssueKind,
   DistrictReportCardFullInput,

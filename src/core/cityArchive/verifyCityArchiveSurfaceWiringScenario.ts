@@ -243,7 +243,7 @@ export function verifyCityArchiveSurfaceWiringScenario(): VerifyCityArchiveSurfa
   const corrupt = normalizeCorruptArchive();
   record(assert(checks, buildHubArchiveContinuityModel({ day: 5, cityArchive: corrupt, existingLines: [] }).maxLines >= 0, 'Corrupt archive safe'));
 
-  record(assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION 24'));
+  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 24'));
   record(assert(checks, !readRepo('src/core/game/applyDecision.ts').includes('cityArchiveSurfaceWiring'), 'applyDecision unchanged'));
   record(assert(checks, readRepo('src/features/map/screens/MapScreen.tsx').includes('cityArchive'), 'Map integration'));
   record(assert(checks, readRepo('src/features/reports/components/end-of-day/EndOfDayReportView.tsx').includes('buildReportArchiveContinuityFromCandidates'), 'Report integration'));

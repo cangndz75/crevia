@@ -20,7 +20,7 @@ import {
 } from '@/features/pilot/utils/mainOperationPreviewUiModel';
 import { MAIN_OP_PREVIEW_COLORS } from '@/features/pilot/utils/mainOperationPreviewTheme';
 import { useGameStore } from '@/store/useGameStore';
-import { ANIMATED_TAB_BAR_HEIGHT } from '@/ui/components/AnimatedTabBar';
+import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
 
 /**
  * Anasayfa / pilot raporu → "Ana Operasyon Önizlemesi" (yakında açılacak).
@@ -92,7 +92,8 @@ export function MainOperationPreviewScreen() {
     router.push('/reports');
   };
 
-  const bottomPadding = insets.bottom + ANIMATED_TAB_BAR_HEIGHT + 24;
+  const tabBarHeight = useAppTabBarHeight();
+  const bottomPadding = tabBarHeight + 24;
 
   return (
     <View style={styles.root}>

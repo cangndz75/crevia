@@ -32,7 +32,7 @@ import {
 } from './districtReportCardPresentation';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 25;
+const EXPECTED_SAVE_VERSION = 26;
 
 export type VerifyDistrictReportCardOutcome = {
   ok: boolean;

@@ -224,12 +224,12 @@ export function runTeamSpecializationPlanningAudit(): TeamSpecializationPlanning
     check(
       TEAM_SPECIALIZATION_CURRENT_SAVE_VERSION === 25,
       'safety.save_version_unchanged',
-      'SAVE_VERSION 25 unchanged in planning pass.',
+      'Planning baseline SAVE_VERSION 25 preserved in planning constants.',
     ),
     check(
       TEAM_SPECIALIZATION_TARGET_SAVE_VERSION === 25,
       'plan.target_save_version',
-      'Target SAVE_VERSION 25 documented (no increment in planning pass).',
+      'Planning target SAVE_VERSION 25 preserved (pre-implementation snapshot).',
     ),
     check(
       TEAM_SPECIALIZATION_IMPLEMENTATION_SAVE_VERSION === 26,
@@ -272,10 +272,9 @@ export function runTeamSpecializationPlanningAudit(): TeamSpecializationPlanning
       'Individual personnel profiles excluded from scope.',
     ),
     check(
-      false,
-      'runtime.implementation_closed',
-      'Team specialization runtime V1 not open (planning pass only).',
       true,
+      'runtime.implementation_open',
+      'Team specialization runtime V1 open.',
     ),
   ];
 
@@ -284,7 +283,7 @@ export function runTeamSpecializationPlanningAudit(): TeamSpecializationPlanning
   return {
     checks,
     readinessScore,
-    runtimeOpen: false,
-    implementationBlocked: true,
+    runtimeOpen: true,
+    implementationBlocked: false,
   };
 }

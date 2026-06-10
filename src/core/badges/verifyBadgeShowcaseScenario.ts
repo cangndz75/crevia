@@ -74,7 +74,7 @@ export function verifyBadgeShowcaseScenario(): VerifyBadgeShowcaseOutcome {
   ok =
     assert(
       checks,
-      SAVE_VERSION === 25,
+      SAVE_VERSION === 26,
       'SAVE_VERSION değişmedi (25)',
       `SAVE_VERSION beklenmeyen: ${SAVE_VERSION}`,
     ) && ok;

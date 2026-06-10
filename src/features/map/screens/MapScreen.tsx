@@ -44,6 +44,7 @@ import {
 import { buildRewardComebackMapPresentation } from '@/core/rewardComeback';
 import { deriveMainOperationAccessMode } from '@/core/mainOperation/mainOperationEngine';
 import { resolveContentPackMetaForWiring } from '@/core/contentRuntimeActivation';
+import { selectTeamSpecializationSurfaceLines } from '@/core/teamSpecialization/teamSpecializationSelectors';
 import { selectVehicleMaintenanceSurfaceLines } from '@/core/vehicleMaintenance/vehicleMaintenanceSelectors';
 import { buildMapBeforeAfterSummary, buildMapPresenceViewModel } from '@/core/mapPresence';
 import { buildMainOperationMapScopeBadges } from '@/core/mainOperation/mainOperationPresentation';
@@ -231,6 +232,7 @@ export function MapScreen() {
   const operationalResources = useGameStore((s) => s.operationalResources);
   const cityArchive = useGameStore((s) => s.cityArchive);
   const vehicleMaintenance = useGameStore((s) => s.vehicleMaintenance);
+  const teamSpecialization = useGameStore((s) => s.teamSpecialization);
   const eventPool = useGameStore((s) => s.eventPool);
   const postPilotCatalog =
     postPilotOperation?.postPilotDailyEventSet?.catalog ?? [];
@@ -863,8 +865,8 @@ export function MapScreen() {
     showPostPilotMapChrome,
   ]);
 
-  const mapVehicleMaintenanceHint = useMemo(() => {
-    const existingLines = [
+  const { mapVehicleMaintenanceHint, mapTeamSpecializationHint } = useMemo(() => {
+    const baseExistingLines = [
       ...(mapDistrictIntelligence?.visibleLines.map((line) => line.text) ?? []),
       mapDistrictReportCard?.primaryLine ?? '',
       mapDistrictReportCard?.recentEffectLine ?? '',
@@ -873,11 +875,35 @@ export function MapScreen() {
       rewardComebackMapPresentation?.mapLine ?? '',
       ...mapResourcePresentation.panelLines.map((line) => line.summary),
     ].filter(Boolean);
-    return selectVehicleMaintenanceSurfaceLines(vehicleMaintenance, {
+    const rawVehicleHint = selectVehicleMaintenanceSurfaceLines(vehicleMaintenance, {
       day: gameDay,
-      existingHubLines: existingLines,
+      existingHubLines: baseExistingLines,
     }).mapHint;
+    const existingLines = [...baseExistingLines, rawVehicleHint ?? ''].filter(Boolean);
+    const surfaces = selectTeamSpecializationSurfaceLines(teamSpecialization, {
+      day: gameDay,
+      districtId: focusDistrictId,
+      existingMapHints: existingLines,
+      vehicleMaintenanceLine: rawVehicleHint ?? undefined,
+      vehicleMaintenanceStrainActive: Boolean(
+        rawVehicleHint &&
+          (rawVehicleHint.toLocaleLowerCase('tr-TR').includes('yorgunluk') ||
+            rawVehicleHint.toLocaleLowerCase('tr-TR').includes('bakım') ||
+            rawVehicleHint.toLocaleLowerCase('tr-TR').includes('baskı')),
+      ),
+    });
+    if (surfaces.suppressVehicleMaintenanceLine && surfaces.mergedStrainLine) {
+      return {
+        mapVehicleMaintenanceHint: undefined,
+        mapTeamSpecializationHint: surfaces.mergedStrainLine,
+      };
+    }
+    return {
+      mapVehicleMaintenanceHint: rawVehicleHint,
+      mapTeamSpecializationHint: surfaces.mapHint,
+    };
   }, [
+    focusDistrictId,
     gameDay,
     mainOperationScopeHintLine,
     mapDistrictIntelligence?.visibleLines,
@@ -886,6 +912,7 @@ export function MapScreen() {
     mapResourcePresentation.panelLines,
     operationalResourcePresenceModel?.mapPresenceLine,
     rewardComebackMapPresentation?.mapLine,
+    teamSpecialization,
     vehicleMaintenance,
   ]);
 
@@ -898,6 +925,7 @@ export function MapScreen() {
       mainOperationScopeHintLine ?? '',
       rewardComebackMapPresentation?.mapLine ?? '',
       mapVehicleMaintenanceHint ?? '',
+      mapTeamSpecializationHint ?? '',
       ...mapResourcePresentation.panelLines.map((line) => line.summary),
     ].filter(Boolean);
     return buildMapReactionPanelPresentation(mapReactionLiteModel, guard);
@@ -908,6 +936,7 @@ export function MapScreen() {
     mapDistrictReportCard?.recentEffectLine,
     mapReactionLiteModel,
     mapResourcePresentation.panelLines,
+    mapTeamSpecializationHint,
     mapVehicleMaintenanceHint,
     operationalResourcePresenceModel?.mapPresenceLine,
     rewardComebackMapPresentation?.mapLine,
@@ -1010,7 +1039,7 @@ export function MapScreen() {
       presenceLines,
       mapReactionHintLine: mapReactionPanel.visible
         ? mapReactionPanel.hintLine
-        : mapVehicleMaintenanceHint ?? undefined,
+        : mapTeamSpecializationHint ?? mapVehicleMaintenanceHint ?? undefined,
       mapReactionHintTone: mapReactionPanel.visible ? mapReactionPanel.hintTone : 'neutral',
     });
   }, [
@@ -1028,6 +1057,7 @@ export function MapScreen() {
     mapReactionPanel.hintTone,
     mapReactionPanel.visible,
     mapResourcePresentation.panelLines,
+    mapTeamSpecializationHint,
     mapVehicleMaintenanceHint,
     mapResourcePresentation.visible,
     mapViewMode,

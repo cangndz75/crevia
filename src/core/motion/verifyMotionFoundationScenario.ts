@@ -122,7 +122,7 @@ export function verifyMotionFoundationScenario(): VerifyMotionFoundationOutcome 
   record(docs.includes('VoiceOver/TalkBack manual QA pending'), 'Docs manual accessibility QA pending');
 
   const persist = readRepo('src/store/gamePersist.ts');
-  record(SAVE_VERSION === 25 && persist.includes('SAVE_VERSION = 24'), 'SAVE_VERSION unchanged');
+  record(SAVE_VERSION === 26 && persist.includes('SAVE_VERSION = 24'), 'SAVE_VERSION unchanged');
   record(!persist.includes('motionFoundationState'), 'Persist shape unchanged');
   record(!readRepo('src/core/game/applyDecision.ts').includes('motionFoundation'), 'applyDecision unchanged');
   record(!readRepo('src/core/dayPipeline/dayPipelineOrchestrator.ts').includes('motionFoundation'), 'dayPipeline unchanged');

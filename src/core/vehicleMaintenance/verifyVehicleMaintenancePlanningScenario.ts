@@ -111,9 +111,9 @@ export function verifyVehicleMaintenancePlanningScenario(): VerifyVehicleMainten
     ),
   );
 
-  record(assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION 25'));
+  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 26 runtime active'));
   record(assert(checks, VEHICLE_MAINTENANCE_CURRENT_SAVE_VERSION === 25, 'Planning current SAVE_VERSION 25'));
-  record(assert(checks, VEHICLE_MAINTENANCE_TARGET_SAVE_VERSION === 25, 'Target SAVE_VERSION 25 for implementation'));
+  record(assert(checks, VEHICLE_MAINTENANCE_TARGET_SAVE_VERSION === 25, 'Target SAVE_VERSION 25 for planning snapshot'));
   record(assert(checks, readRepo('src/store/gamePersist.ts').includes('vehicleMaintenance'), 'persist shape includes vehicleMaintenance'));
   record(assert(checks, !readRepo('src/core/game/applyDecision.ts').includes('vehicleMaintenance'), 'applyDecision unchanged'));
   record(assert(checks, !readRepo('src/core/dayPipeline/dayPipelineOrchestrator.ts').includes('vehicleMaintenance'), 'dayPipeline unchanged'));

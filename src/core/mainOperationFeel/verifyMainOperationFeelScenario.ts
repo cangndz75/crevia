@@ -31,7 +31,7 @@ import {
 } from './mainOperationFeelPresentation';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 25;
+const EXPECTED_SAVE_VERSION = 26;
 
 export type VerifyMainOperationFeelOutcome = {
   ok: boolean;

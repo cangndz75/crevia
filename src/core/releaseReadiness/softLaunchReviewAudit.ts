@@ -1460,8 +1460,8 @@ function auditAreaSaveMigration(): CreviaSoftLaunchReviewFinding[] {
   findings.push(
     makeFinding(
       'save_migration_offline',
-      SAVE_VERSION === 25 ? 'save.version_stable' : 'save.version_changed',
-      SAVE_VERSION === 25 ? 'pass' : 'blocker',
+      SAVE_VERSION === 26 ? 'save.version_stable' : 'save.version_changed',
+      SAVE_VERSION === 26 ? 'pass' : 'blocker',
       `SAVE_VERSION ${SAVE_VERSION}`,
       'Expected 23 for this review pass.',
       'Do not bump SAVE_VERSION without migration plan.',

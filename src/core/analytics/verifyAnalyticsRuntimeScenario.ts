@@ -504,7 +504,7 @@ export function verifyAnalyticsRuntimeScenario(): VerifyAnalyticsRuntimeOutcome 
   ok =
     assert(
       checks,
-      SAVE_VERSION === 25,
+      SAVE_VERSION === 26,
       `SAVE_VERSION unchanged (${SAVE_VERSION})`,
       'SAVE_VERSION changed',
     ) && ok;

@@ -245,7 +245,7 @@ export function verifyPerformanceSelectorPassTwoScenario(): VerifyPerformanceSel
   ok = record(
     checks,
     'FAIL',
-    SAVE_VERSION === 25,
+    SAVE_VERSION === 26,
     'SAVE_VERSION unchanged',
     `SAVE_VERSION changed: ${SAVE_VERSION}`,
   ) && ok;

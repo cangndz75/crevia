@@ -438,7 +438,7 @@ export function verifyDailyPlanningScenario(): VerifyDailyPlanningOutcome {
     snapshots: seed.snapshots,
   });
   const persistOk =
-    SAVE_VERSION === 25 &&
+    SAVE_VERSION === 26 &&
     hydrated != null &&
     hydrated.dailyOperationsPlan.day === seed.gameState.city.day;
 
@@ -489,7 +489,7 @@ export function verifyDailyPlanningScenario(): VerifyDailyPlanningOutcome {
       'Suggested plan başarısız',
     ) && ok;
 
-  if (!warn(checks, SAVE_VERSION === 25, 'Full loop SAVE_VERSION 22', `SAVE_VERSION=${SAVE_VERSION}`)) {
+  if (!warn(checks, SAVE_VERSION === 26, 'Full loop SAVE_VERSION 22', `SAVE_VERSION=${SAVE_VERSION}`)) {
     hasWarn = true;
   }
 

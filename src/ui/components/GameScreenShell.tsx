@@ -30,6 +30,8 @@ type GameScreenShellProps = {
   backgroundColor?: string;
   /** Kompakt header'da gösterilecek ekran başlığı */
   screenTitle?: string;
+  /** false ise alt sekme boşluğu kabuk tarafından eklenmez (iç scroll kendi padding'ini yönetir). */
+  reserveTabBarInset?: boolean;
 };
 
 /**
@@ -47,9 +49,14 @@ export function GameScreenShell({
   safeEdges = ['left', 'right'],
   backgroundColor = colors.background,
   screenTitle = 'Crevia',
+  reserveTabBarInset = true,
 }: GameScreenShellProps) {
   const tabBarHeight = useAppTabBarHeight();
-  const bottomPadding = tabBarHeight > 0 ? tabBarHeight + spacing.md : spacing.lg;
+  const bottomPadding = reserveTabBarInset
+    ? tabBarHeight > 0
+      ? tabBarHeight + spacing.md
+      : spacing.lg
+    : 0;
   const resolvedVariant: GameScreenHeaderVariant =
     showHeader === false ? 'none' : headerVariant;
 

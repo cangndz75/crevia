@@ -29,7 +29,7 @@ const dayPipeline = read('src/core/game/ensureDailyEventsForDay.ts');
 record('result screen integration var', resultScreen.includes('EventResultImpactExplanationCard'));
 record('report echo integration var', reportView.includes('decisionImpactReportEcho'));
 record('hub carry-over echo integration var', hubScreen.includes('hubImpactExplanationLine') && hubHome.includes('previousImpactLine'));
-record('SAVE_VERSION 25', persist.includes('export const SAVE_VERSION = 25;'));
+record('SAVE_VERSION 25', persist.includes('export const SAVE_VERSION = 26;'));
 record('applyDecision değiştirilmedi', !applyDecision.includes('decisionImpactExplanation'));
 record('event generation değiştirilmedi', !dayPipeline.includes('decisionImpactExplanation'));
 record('package.json script var', packageJson.includes('"verify:decision-impact-explanation"'));

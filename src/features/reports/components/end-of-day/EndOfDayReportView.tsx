@@ -30,6 +30,10 @@ import {
 } from '@/core/districtReportCard';
 import { buildReportArchiveContinuityFromCandidates } from '@/core/cityArchive/cityArchiveSurfaceWiring';
 import { buildPersistentStoryChainReportLine } from '@/core/storyChains/storyChainPersistentPresentation';
+import {
+  resolveTeamVehicleStrainReportPresentation,
+  selectTeamSpecializationSurfaceLines,
+} from '@/core/teamSpecialization/teamSpecializationSelectors';
 import { selectVehicleMaintenanceSurfaceLines } from '@/core/vehicleMaintenance/vehicleMaintenanceSelectors';
 import {
   reportSecondaryLineMaxLines,
@@ -170,6 +174,7 @@ export function EndOfDayReportView({
   const operationSignals = useGameStore((s) => s.operationSignals);
   const cityArchive = useGameStore((s) => s.cityArchive);
   const vehicleMaintenance = useGameStore((s) => s.vehicleMaintenance);
+  const teamSpecialization = useGameStore((s) => s.teamSpecialization);
   const crisisActionState = useGameStore((s) => s.crisisActionState);
   const districtOperationActionState = useGameStore(
     (s) => s.districtOperationActionState,
@@ -909,6 +914,48 @@ export function EndOfDayReportView({
     vehicleMaintenance,
   ]);
 
+  const teamSpecializationSurfaces = useMemo(() => {
+    const existingLines = [
+      cityEchoReportLine ?? '',
+      cityJournalReportLine ?? '',
+      districtReportCardLine ?? '',
+      rewardComebackReportLine ?? '',
+      storyChainReportLine ?? '',
+      tomorrowRiskPresentation.report?.mainLine ?? '',
+      vehicleMaintenanceReportLine ?? '',
+    ].filter(Boolean);
+    return selectTeamSpecializationSurfaceLines(teamSpecialization, {
+      day: report.day,
+      existingReportLines: existingLines,
+      vehicleMaintenanceLine: vehicleMaintenanceReportLine ?? undefined,
+      vehicleMaintenanceStrainActive: Boolean(
+        vehicleMaintenanceReportLine &&
+          (vehicleMaintenanceReportLine.toLocaleLowerCase('tr-TR').includes('yorgunluk') ||
+            vehicleMaintenanceReportLine.toLocaleLowerCase('tr-TR').includes('bakım')),
+      ),
+    });
+  }, [
+    cityEchoReportLine,
+    cityJournalReportLine,
+    districtReportCardLine,
+    report.day,
+    rewardComebackReportLine,
+    storyChainReportLine,
+    teamSpecialization,
+    tomorrowRiskPresentation.report?.mainLine,
+    vehicleMaintenanceReportLine,
+  ]);
+
+  const { vehicleMaintenanceReportLine: resolvedVehicleMaintenanceReportLine, teamSpecializationReportLine } =
+    useMemo(
+      () =>
+        resolveTeamVehicleStrainReportPresentation({
+          vehicleMaintenanceReportLine,
+          teamSurfaces: teamSpecializationSurfaces,
+        }),
+      [teamSpecializationSurfaces, vehicleMaintenanceReportLine],
+    );
+
   const reportArchiveContinuity = useMemo(() => {
     const existingLines = [
       cityEchoReportLine ?? '',
@@ -1288,13 +1335,24 @@ export function EndOfDayReportView({
         </View>
       ) : null}
 
-      {vehicleMaintenanceReportLine ? (
+      {resolvedVehicleMaintenanceReportLine ? (
         <View style={styles.districtReportCardRow}>
           <Text style={styles.districtReportCardLabel} numberOfLines={1}>
             Araç bakım izi
           </Text>
           <Text style={styles.districtReportCardText} numberOfLines={reportSecondaryMaxLines}>
-            {vehicleMaintenanceReportLine.replace(/^Araç bakım izi:\s*/i, '')}
+            {resolvedVehicleMaintenanceReportLine.replace(/^Araç bakım izi:\s*/i, '')}
+          </Text>
+        </View>
+      ) : null}
+
+      {teamSpecializationReportLine ? (
+        <View style={styles.districtReportCardRow}>
+          <Text style={styles.districtReportCardLabel} numberOfLines={1}>
+            Ekip izi
+          </Text>
+          <Text style={styles.districtReportCardText} numberOfLines={reportSecondaryMaxLines}>
+            {teamSpecializationReportLine.replace(/^Ekip (izi|yorgunluğu|gelişimi):\s*/i, '')}
           </Text>
         </View>
       ) : null}

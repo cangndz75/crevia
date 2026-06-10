@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image, type ImageSource } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -20,6 +20,7 @@ import { useCreviaReducedMotion } from '@/shared/motion';
 
 const palette = {
   card: '#FFFCF5',
+  cardWarm: '#FFF8EC',
   teal: '#07564F',
   tealMid: '#0D7168',
   tealDark: '#043A36',
@@ -29,18 +30,21 @@ const palette = {
   green: '#3E9E6A',
   text: '#173D3A',
   muted: '#6D736C',
-  border: 'rgba(7, 86, 79, 0.14)',
+  border: 'rgba(7, 86, 79, 0.12)',
+  cardBorder: 'rgba(7, 86, 79, 0.32)',
   white: '#FFFFFF',
 } as const;
 
 const routeHeroImage = require('@/assets/districts/route/district_route_network_01.png');
 const greenHeroImage = require('@/assets/districts/status/district_safe_zone_01.png');
 const marketHeroImage = require('@/assets/districts/market/district_marketplace_overview_01.png');
-const statusBarPrimaryImage = require('@/assets/status_bar_2.png');
+/** Sabit slot: kart içeriği değişse de sayfa yüksekliği oynamaz. */
+const STACK_SLOT_HEIGHT = 372;
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
 type HubActiveTask = {
+  id: string;
   title: string;
   body: string;
   image: ImageSource;
@@ -52,6 +56,7 @@ type HubActiveTask = {
 
 const HUB_ACTIVE_TASKS: HubActiveTask[] = [
   {
+    id: 'transport',
     title: 'Ulaşımı Güçlendirelim!',
     body: 'Toplu taşıma ağını geliştirerek şehirdeki ulaşım memnuniyetini artır.',
     image: routeHeroImage,
@@ -61,6 +66,7 @@ const HUB_ACTIVE_TASKS: HubActiveTask[] = [
     icon: 'bus-outline',
   },
   {
+    id: 'park',
     title: 'Boğaz Parkı Projesi',
     body: 'Sahil hattında yeşil alanı büyüt ve kent yaşam kalitesini yükselt.',
     image: greenHeroImage,
@@ -70,6 +76,7 @@ const HUB_ACTIVE_TASKS: HubActiveTask[] = [
     icon: 'leaf-outline',
   },
   {
+    id: 'energy',
     title: 'Enerji Verimliliği',
     body: 'Kritik bölgelerde enerji üretimini dengele ve kaynak baskısını azalt.',
     image: marketHeroImage,
@@ -83,6 +90,14 @@ const HUB_ACTIVE_TASKS: HubActiveTask[] = [
 const SWIPE_THRESHOLD = 72;
 const CARD_EXIT_DISTANCE = 360;
 
+const frontCardShadow = {
+  shadowColor: palette.tealDark,
+  shadowOpacity: 0.08,
+  shadowRadius: 20,
+  shadowOffset: { width: 0, height: 10 },
+  elevation: 4,
+} as const;
+
 function pressedScale(pressed: boolean) {
   return {
     opacity: pressed ? 0.92 : 1,
@@ -91,11 +106,10 @@ function pressedScale(pressed: boolean) {
 }
 
 function TaskStatusBar({ progress }: { progress: number }) {
-  const width = `${Math.max(0, Math.min(1, progress)) * 100}%` as `${number}%`;
+  const ratio = Math.max(0, Math.min(1, progress));
   return (
     <View style={styles.statusBar}>
-      <Image source={statusBarPrimaryImage} style={styles.statusBarImage} contentFit="fill" />
-      <View style={[styles.statusBarFill, { width }]} />
+      <View style={[styles.statusBarFill, { width: `${ratio * 100}%` }]} />
     </View>
   );
 }
@@ -108,15 +122,21 @@ function MiniIcon({ icon }: { icon: IconName }) {
   );
 }
 
-function TaskCardFace({ task }: { task: HubActiveTask }) {
+const TaskCardFace = memo(function TaskCardFace({ task }: { task: HubActiveTask }) {
   return (
     <>
-      <View style={styles.taskLabel}>
-        <Ionicons name="star" size={11} color={palette.gold} />
-        <Text style={styles.taskLabelText}>AKTİF GÖREV</Text>
-      </View>
       <View style={styles.taskHero}>
-        <Image source={task.image} style={styles.taskHeroImage} contentFit="cover" transition={200} />
+        <Image
+          source={task.image}
+          style={styles.taskHeroImage}
+          contentFit="cover"
+          transition={0}
+          cachePolicy="memory-disk"
+        />
+        <View style={styles.taskLabel}>
+          <Ionicons name="star" size={11} color={palette.gold} />
+          <Text style={styles.taskLabelText}>AKTİF GÖREV</Text>
+        </View>
       </View>
       <View style={styles.taskMainRow}>
         <View style={styles.taskCopy}>
@@ -131,7 +151,7 @@ function TaskCardFace({ task }: { task: HubActiveTask }) {
           </Text>
         </View>
         <View style={styles.rewardCapsule}>
-          <Ionicons name="happy-outline" size={22} color={palette.green} />
+          <Ionicons name="happy-outline" size={20} color={palette.green} />
           <Text style={styles.rewardText} numberOfLines={2}>
             {task.reward}
           </Text>
@@ -151,61 +171,110 @@ function TaskCardFace({ task }: { task: HubActiveTask }) {
       </View>
     </>
   );
-}
+});
 
-function StackBackCard({ task, depth }: { task: HubActiveTask; depth: 1 | 2 }) {
-  const isNear = depth === 1;
+function TaskCtaButton({ onPress }: { onPress?: () => void }) {
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel="Göreve devam et"
+        style={({ pressed }) => [styles.taskCta, pressedScale(pressed)]}>
+        <Text style={styles.taskCtaText}>GÖREVE DEVAM ET</Text>
+        <View style={styles.ctaArrow}>
+          <Ionicons name="chevron-forward" size={18} color={palette.tealDark} />
+        </View>
+      </Pressable>
+    );
+  }
+
   return (
-    <View
-      style={[
-        styles.stackBackCard,
-        isNear ? styles.stackBackNear : styles.stackBackFar,
-        { backgroundColor: isNear ? '#F3EBD8' : '#E7EFE9' },
-      ]}>
-      <View style={[styles.stackBackHero, isNear && styles.stackBackHeroNear]}>
-        <Image source={task.image} style={styles.taskHeroImage} contentFit="cover" />
+    <View style={styles.taskCta} pointerEvents="none">
+      <Text style={styles.taskCtaText}>GÖREVE DEVAM ET</Text>
+      <View style={styles.ctaArrow}>
+        <Ionicons name="chevron-forward" size={18} color={palette.tealDark} />
       </View>
     </View>
   );
 }
 
+const FrontTaskCard = memo(function FrontTaskCard({
+  task,
+  onCtaPress,
+}: {
+  task: HubActiveTask;
+  onCtaPress: () => void;
+}) {
+  return (
+    <LinearGradient
+      colors={[palette.card, palette.cardWarm]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[styles.taskCard, styles.taskCardFront]}>
+      <TaskCardFace task={task} />
+      <TaskCtaButton onPress={onCtaPress} />
+    </LinearGradient>
+  );
+});
+
+/** Arka kartlar: sadece çerçeve + hero; LinearGradient/gölge yok → daha akıcı. */
+const StackBackPeek = memo(function StackBackPeek({ task }: { task: HubActiveTask }) {
+  return (
+    <View style={styles.backPeekCard}>
+      <View style={styles.taskHero}>
+        <Image source={task.image} style={styles.taskHeroImage} contentFit="cover" transition={0} />
+        <View style={styles.taskLabel}>
+          <Ionicons name="star" size={11} color={palette.gold} />
+          <Text style={styles.taskLabelText}>AKTİF GÖREV</Text>
+        </View>
+      </View>
+      <View style={styles.backPeekBody} />
+      <View style={styles.backPeekCta} />
+    </View>
+  );
+});
+
 export function HubActiveTaskCardStack() {
   const router = useRouter();
   const reducedMotion = useCreviaReducedMotion();
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [deckIndex, setDeckIndex] = useState(0);
   const translateX = useSharedValue(0);
   const isTransitioning = useSharedValue(false);
 
   const tasks = HUB_ACTIVE_TASKS;
   const taskCount = tasks.length;
 
-  const activeTask = tasks[activeIndex]!;
-  const backOneTask = tasks[(activeIndex + 1) % taskCount]!;
-  const backTwoTask = tasks[(activeIndex + 2) % taskCount]!;
+  const frontTask = tasks[deckIndex % taskCount]!;
+  const nearTask = tasks[(deckIndex + 1) % taskCount]!;
+  const farTask = tasks[(deckIndex + 2) % taskCount]!;
 
-  const completeSwipe = useCallback(() => {
+  const openTask = useCallback(() => {
     playLightImpactHaptic();
-    setActiveIndex((current) => (current + 1) % taskCount);
-    translateX.value = reducedMotion ? 0 : 26;
-    if (!reducedMotion) {
-      translateX.value = withSpring(0, { damping: 20, stiffness: 240, mass: 0.8 });
-    }
+    router.push('/events' as Href);
+  }, [router]);
+
+  const advanceDeck = useCallback(() => {
+    setDeckIndex((current) => (current + 1) % taskCount);
     isTransitioning.value = false;
-  }, [isTransitioning, reducedMotion, taskCount, translateX]);
+  }, [isTransitioning, taskCount]);
 
   const dismissCard = useCallback(() => {
+    playLightImpactHaptic();
+
     if (reducedMotion) {
-      completeSwipe();
+      advanceDeck();
       return;
     }
+
     isTransitioning.value = true;
-    translateX.value = withTiming(-CARD_EXIT_DISTANCE, { duration: 220 }, (finished) => {
+    translateX.value = withTiming(-CARD_EXIT_DISTANCE, { duration: 180 }, (finished) => {
       if (finished) {
         translateX.value = 0;
-        runOnJS(completeSwipe)();
+        runOnJS(advanceDeck)();
       }
     });
-  }, [completeSwipe, isTransitioning, reducedMotion, translateX]);
+  }, [advanceDeck, isTransitioning, reducedMotion, translateX]);
 
   const panGesture = useMemo(
     () =>
@@ -214,8 +283,7 @@ export function HubActiveTaskCardStack() {
         .failOffsetY([-22, 22])
         .onUpdate((event) => {
           if (isTransitioning.value) return;
-          const drag = Math.min(0, event.translationX);
-          translateX.value = drag;
+          translateX.value = Math.min(0, event.translationX);
         })
         .onEnd((event) => {
           if (isTransitioning.value) return;
@@ -223,7 +291,7 @@ export function HubActiveTaskCardStack() {
             runOnJS(dismissCard)();
             return;
           }
-          translateX.value = withSpring(0, { damping: 18, stiffness: 220 });
+          translateX.value = withSpring(0, { damping: 20, stiffness: 260 });
         }),
     [dismissCard, isTransitioning, translateX],
   );
@@ -232,19 +300,22 @@ export function HubActiveTaskCardStack() {
     transform: [
       { translateX: translateX.value },
       {
-        rotate: `${interpolate(translateX.value, [-180, 0], [-7, 0], Extrapolation.CLAMP)}deg`,
+        rotate: `${interpolate(translateX.value, [-180, 0], [-3, 0], Extrapolation.CLAMP)}deg`,
       },
     ],
-    opacity: interpolate(translateX.value, [-220, -40, 0], [0.35, 0.92, 1], Extrapolation.CLAMP),
+    opacity: interpolate(translateX.value, [-300, -60, 0], [0, 1, 1], Extrapolation.CLAMP),
   }));
 
   const backNearStyle = useAnimatedStyle(() => ({
     transform: [
       {
-        translateX: interpolate(translateX.value, [-160, 0], [0, 12], Extrapolation.CLAMP),
+        translateX: interpolate(translateX.value, [-160, 0], [0, 14], Extrapolation.CLAMP),
       },
       {
-        scale: interpolate(translateX.value, [-160, 0], [1, 0.975], Extrapolation.CLAMP),
+        rotate: `${interpolate(translateX.value, [-160, 0], [0, 2.4], Extrapolation.CLAMP)}deg`,
+      },
+      {
+        scale: interpolate(translateX.value, [-160, 0], [1, 0.976], Extrapolation.CLAMP),
       },
     ],
   }));
@@ -252,47 +323,36 @@ export function HubActiveTaskCardStack() {
   const backFarStyle = useAnimatedStyle(() => ({
     transform: [
       {
-        translateX: interpolate(translateX.value, [-160, 0], [4, 24], Extrapolation.CLAMP),
+        translateX: interpolate(translateX.value, [-160, 0], [10, 26], Extrapolation.CLAMP),
       },
       {
-        scale: interpolate(translateX.value, [-160, 0], [0.99, 0.95], Extrapolation.CLAMP),
+        rotate: `${interpolate(translateX.value, [-160, 0], [1.2, 4], Extrapolation.CLAMP)}deg`,
+      },
+      {
+        scale: interpolate(translateX.value, [-160, 0], [0.99, 0.952], Extrapolation.CLAMP),
       },
     ],
   }));
 
   return (
     <View style={styles.wrap}>
-      <Animated.View style={[styles.stackBackLayer, backFarStyle]}>
-        <StackBackCard task={backTwoTask} depth={2} />
-      </Animated.View>
-      <Animated.View style={[styles.stackBackLayer, backNearStyle]}>
-        <StackBackCard task={backOneTask} depth={1} />
-      </Animated.View>
-
-      <GestureDetector gesture={panGesture}>
-        <Animated.View style={[styles.frontCardLayer, frontCardStyle]}>
-          <LinearGradient
-            colors={[palette.card, '#FFF8EC']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.taskCard}>
-            <TaskCardFace task={activeTask} />
-            <Pressable
-              onPress={() => {
-                playLightImpactHaptic();
-                router.push('/events' as Href);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Göreve devam et"
-              style={({ pressed }) => [styles.taskCta, pressedScale(pressed)]}>
-              <Text style={styles.taskCtaText}>GÖREVE DEVAM ET</Text>
-              <View style={styles.ctaArrow}>
-                <Ionicons name="chevron-forward" size={18} color={palette.tealDark} />
-              </View>
-            </Pressable>
-          </LinearGradient>
+      <View style={styles.stackSlot}>
+        <Animated.View
+          style={[styles.stackLayer, styles.stackFarLayer, backFarStyle]}
+          pointerEvents="none">
+          <StackBackPeek task={farTask} />
         </Animated.View>
-      </GestureDetector>
+        <Animated.View
+          style={[styles.stackLayer, styles.stackNearLayer, backNearStyle]}
+          pointerEvents="none">
+          <StackBackPeek task={nearTask} />
+        </Animated.View>
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={[styles.stackLayer, styles.stackFrontLayer, frontCardStyle]}>
+            <FrontTaskCard task={frontTask} onCtaPress={openTask} />
+          </Animated.View>
+        </GestureDetector>
+      </View>
 
       <View style={styles.stackHintRow}>
         <Ionicons name="hand-left-outline" size={13} color={palette.muted} />
@@ -300,6 +360,7 @@ export function HubActiveTaskCardStack() {
           Kartları kaydırarak diğer görevleri gör
         </Text>
         <Ionicons name="chevron-forward" size={12} color={palette.muted} />
+        <Ionicons name="chevron-forward" size={12} color={palette.muted} style={styles.stackHintChevron} />
       </View>
     </View>
   );
@@ -307,67 +368,80 @@ export function HubActiveTaskCardStack() {
 
 const styles = StyleSheet.create({
   wrap: {
-    paddingTop: 6,
-    paddingRight: 18,
-    minHeight: 430,
+    paddingTop: 4,
+    paddingRight: 22,
+    paddingBottom: 2,
   },
-  stackBackLayer: {
+  stackSlot: {
+    height: STACK_SLOT_HEIGHT,
+    position: 'relative',
+  },
+  stackLayer: {
     position: 'absolute',
     left: 0,
     right: 0,
-    top: 18,
+    top: 0,
+    height: STACK_SLOT_HEIGHT,
   },
-  stackBackCard: {
-    minHeight: 388,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: palette.border,
-    overflow: 'hidden',
-    shadowColor: '#0B302C',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+  stackFarLayer: {
+    zIndex: 1,
   },
-  stackBackNear: {
-    marginLeft: 10,
-    marginRight: 2,
-    marginTop: 8,
+  stackNearLayer: {
+    zIndex: 2,
   },
-  stackBackFar: {
-    marginLeft: 18,
-    marginRight: 0,
-    marginTop: 18,
-  },
-  stackBackHero: {
-    flex: 1,
-    minHeight: 388,
-    opacity: 0.35,
-  },
-  stackBackHeroNear: {
-    opacity: 0.5,
-  },
-  frontCardLayer: {
+  stackFrontLayer: {
     zIndex: 3,
   },
   taskCard: {
-    minHeight: 404,
+    height: STACK_SLOT_HEIGHT,
     borderRadius: 24,
     padding: 12,
     gap: 12,
-    borderWidth: 1.5,
-    borderColor: 'rgba(7, 86, 79, 0.22)',
-    shadowColor: '#0B302C',
-    shadowOpacity: 0.16,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 6,
+    borderWidth: 2,
+    borderColor: palette.cardBorder,
+    overflow: 'hidden',
+  },
+  taskCardFront: {
+    ...frontCardShadow,
+  },
+  backPeekCard: {
+    height: STACK_SLOT_HEIGHT,
+    borderRadius: 24,
+    padding: 12,
+    gap: 12,
+    borderWidth: 2,
+    borderColor: palette.cardBorder,
+    backgroundColor: palette.card,
+    overflow: 'hidden',
+  },
+  backPeekBody: {
+    flex: 1,
+    borderRadius: 12,
+    backgroundColor: palette.cardWarm,
+  },
+  backPeekCta: {
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: palette.teal,
+    opacity: 0.22,
+  },
+  taskHero: {
+    height: 140,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: palette.tealSoft,
+    position: 'relative',
+    flexShrink: 0,
+  },
+  taskHeroImage: {
+    width: '100%',
+    height: '100%',
   },
   taskLabel: {
     position: 'absolute',
-    left: 16,
+    left: 12,
     top: 12,
-    zIndex: 4,
+    zIndex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -382,76 +456,76 @@ const styles = StyleSheet.create({
     color: palette.white,
     letterSpacing: 0.3,
   },
-  taskHero: {
-    height: 168,
-    borderRadius: 18,
-    overflow: 'hidden',
-    backgroundColor: palette.tealSoft,
-  },
-  taskHeroImage: {
-    width: '100%',
-    height: '100%',
-  },
   taskMainRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: 10,
     minWidth: 0,
+    minHeight: 76,
   },
   taskCopy: {
     flex: 1,
+    flexShrink: 1,
     minWidth: 0,
-    gap: 8,
+    gap: 6,
   },
   taskTitleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 8,
     minWidth: 0,
   },
   miniIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: palette.tealSoft,
+    flexShrink: 0,
+    marginTop: 1,
   },
   taskTitle: {
     flex: 1,
+    flexShrink: 1,
     minWidth: 0,
-    fontSize: 20,
-    lineHeight: 24,
+    fontSize: 19,
+    lineHeight: 23,
     fontWeight: '900',
     color: palette.text,
   },
   taskBody: {
+    flexShrink: 1,
     fontSize: 12,
     lineHeight: 17,
-    fontWeight: '600',
+    fontWeight: '500',
     color: palette.muted,
   },
   rewardCapsule: {
-    width: 84,
-    minHeight: 80,
-    borderRadius: 16,
+    width: 78,
+    alignSelf: 'flex-start',
+    flexShrink: 0,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 8,
-    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 8,
+    gap: 3,
     backgroundColor: palette.tealSoft,
     borderWidth: 1,
     borderColor: palette.border,
   },
   rewardText: {
-    fontSize: 12,
-    lineHeight: 14,
+    fontSize: 11,
+    lineHeight: 13,
     fontWeight: '900',
     color: palette.teal,
     textAlign: 'center',
   },
   progressBlock: {
-    gap: 6,
+    gap: 5,
     minWidth: 0,
+    minHeight: 34,
   },
   progressHeader: {
     flexDirection: 'row',
@@ -468,7 +542,7 @@ const styles = StyleSheet.create({
   progressMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
   },
   progressValue: {
     fontSize: 11,
@@ -477,34 +551,33 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   chestIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 8,
+    width: 22,
+    height: 22,
+    borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFF4D8',
     borderWidth: 1,
-    borderColor: 'rgba(216,167,46,0.35)',
+    borderColor: 'rgba(216,167,46,0.28)',
   },
   statusBar: {
-    height: 15,
+    height: 11,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: '#C9A227',
+    backgroundColor: '#DDE8E4',
+    paddingHorizontal: 3,
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  statusBarImage: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-  },
   statusBarFill: {
     height: 5,
-    marginHorizontal: 13,
     borderRadius: 999,
     backgroundColor: palette.tealMid,
   },
   taskCta: {
-    minHeight: 52,
-    borderRadius: 18,
+    height: 50,
+    borderRadius: 16,
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -513,6 +586,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.teal,
     borderWidth: 1,
     borderColor: palette.gold,
+    flexShrink: 0,
   },
   taskCtaText: {
     flexShrink: 1,
@@ -532,18 +606,21 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   stackHintRow: {
-    marginTop: 10,
+    marginTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
+    gap: 4,
     paddingHorizontal: 8,
   },
   stackHint: {
     flexShrink: 1,
     textAlign: 'center',
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '600',
     color: palette.muted,
+  },
+  stackHintChevron: {
+    marginLeft: -3,
   },
 });

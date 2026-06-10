@@ -38,7 +38,11 @@ import {
   buildDistrictReportCardSummaryForHub,
 } from '@/core/districtReportCard';
 import { buildHubArchiveContinuityModel } from '@/core/cityArchive/cityArchiveSurfaceWiring';
+import { buildAuthorityPermissionPreviewCompactSummary } from '@/core/authority/authorityPermissionPreviewModel';
+import { buildDistrictOperationUnlockBindingCompactSummary } from '@/core/progression/districtOperationUnlockBindingModel';
+import { selectTeamSpecializationSurfaceLines } from '@/core/teamSpecialization/teamSpecializationSelectors';
 import { selectVehicleMaintenanceSurfaceLines } from '@/core/vehicleMaintenance/vehicleMaintenanceSelectors';
+import { buildHubBadgeShowcaseSummary } from '@/features/hub/utils/hubBadgeShowcaseModel';
 import { buildPersistentStoryChainHubLine } from '@/core/storyChains/storyChainPersistentPresentation';
 import {
   buildMainOperationFeelEceLine,
@@ -87,6 +91,7 @@ export function HubScreen() {
   const socialPulseState = useGameStore((s) => s.socialPulseState);
   const cityArchive = useGameStore((s) => s.cityArchive);
   const vehicleMaintenance = useGameStore((s) => s.vehicleMaintenance);
+  const teamSpecialization = useGameStore((s) => s.teamSpecialization);
   const tutorialActive = useGameStore(selectIsDay1TutorialActive);
   const hubTutorialStep = useGameStore((s) =>
     selectActiveTutorialStepForScreen(s, 'hub'),
@@ -496,22 +501,78 @@ export function HubScreen() {
     tomorrowRiskPresentation.hub?.mainLine,
   ]);
 
-  const hubVehicleMaintenanceLine = useMemo(() => {
-    const existingLines = [
+  const { hubVehicleMaintenanceLine, hubTeamSpecializationLine } = useMemo(() => {
+    const baseExistingLines = [
       hubStoryChainLine ?? '',
       hubCityJournalPresentation?.primaryLine ?? '',
       tomorrowRiskPresentation.hub?.mainLine ?? '',
       cityEchoHubLine ?? '',
     ].filter(Boolean);
-    return selectVehicleMaintenanceSurfaceLines(vehicleMaintenance, {
+    const rawVehicleLine = selectVehicleMaintenanceSurfaceLines(vehicleMaintenance, {
+      day: hubDay,
+      existingHubLines: baseExistingLines,
+    }).hubLine;
+    const existingLines = [...baseExistingLines, rawVehicleLine ?? ''].filter(Boolean);
+    const pilotDay = gameState.pilot.currentPilotDay;
+    const authorityState = gameState.pilot.authorityState;
+    const hubDistrictExpansion = buildDistrictOperationUnlockBindingCompactSummary({
+      currentDay: hubDay,
+      pilotDay,
+      authorityState,
+      mainOperationSeason,
+    });
+    const hubAuthorityPermissionPreview = buildAuthorityPermissionPreviewCompactSummary({
+      authorityState,
+      day: pilotDay,
+    });
+    const showHubDistrictExpansion = hubDistrictExpansion.visible;
+    const showHubAuthorityPreview =
+      !showHubDistrictExpansion &&
+      hubAuthorityPermissionPreview.visible &&
+      Boolean(hubAuthorityPermissionPreview.nextPermissionLine);
+    const hubBadgeShowcase = buildHubBadgeShowcaseSummary(gameState.pilot.badgeState, pilotDay);
+    const showHubBadgeShowcase =
+      hubBadgeShowcase.visible &&
+      Number(showHubDistrictExpansion) + Number(showHubAuthorityPreview) < 2;
+    const surfaces = selectTeamSpecializationSurfaceLines(teamSpecialization, {
       day: hubDay,
       existingHubLines: existingLines,
-    }).hubLine;
+      hubDensityContext: {
+        existingInsightLineCount: existingLines.length,
+        hasActiveOperationInsight: Boolean(
+          hubStoryChainLine || tomorrowRiskPresentation.hub?.mainLine || cityEchoHubLine,
+        ),
+        hasAuthorityPreview: showHubAuthorityPreview,
+        hasBadgeShowcase: showHubBadgeShowcase,
+        hasDistrictExpansion: showHubDistrictExpansion,
+      },
+      vehicleMaintenanceLine: rawVehicleLine ?? undefined,
+      vehicleMaintenanceStrainActive: Boolean(
+        rawVehicleLine &&
+          (rawVehicleLine.toLocaleLowerCase('tr-TR').includes('yorgunluk') ||
+            rawVehicleLine.toLocaleLowerCase('tr-TR').includes('bakım')),
+      ),
+    });
+    if (surfaces.suppressVehicleMaintenanceLine && surfaces.mergedStrainLine) {
+      return {
+        hubVehicleMaintenanceLine: undefined,
+        hubTeamSpecializationLine: surfaces.mergedStrainLine,
+      };
+    }
+    return {
+      hubVehicleMaintenanceLine: rawVehicleLine,
+      hubTeamSpecializationLine: surfaces.hubLine,
+    };
   }, [
     cityEchoHubLine,
+    gameState.pilot.authorityState,
+    gameState.pilot.badgeState,
+    gameState.pilot.currentPilotDay,
     hubCityJournalPresentation?.primaryLine,
     hubDay,
     hubStoryChainLine,
+    mainOperationSeason,
+    teamSpecialization,
     tomorrowRiskPresentation.hub?.mainLine,
     vehicleMaintenance,
   ]);
@@ -616,9 +677,10 @@ export function HubScreen() {
   return (
     <GameScreenShell
       scrollable={false}
+      reserveTabBarInset={false}
       headerVariant="none"
-      backgroundColor="#F7F1E6"
-      contentStyle={{ paddingHorizontal: 0, paddingTop: 0, gap: 0 }}>
+      backgroundColor="#F8F1E4"
+      contentStyle={{ flex: 1, paddingHorizontal: 0, paddingTop: 0, gap: 0 }}>
       <HubReferenceHome
         hubCarryOverMemory={hubCarryOverMemory}
         hubImpactExplanationLine={cityEchoHubLine ?? hubImpactExplanationLine}
@@ -628,6 +690,7 @@ export function HubScreen() {
         hubDistrictReportLine={hubDistrictReportContinuityLine}
         hubStoryChainLine={hubStoryChainLine}
         hubVehicleMaintenanceLine={hubVehicleMaintenanceLine}
+        hubTeamSpecializationLine={hubTeamSpecializationLine}
         showMainOperationSeason={showMainOperationSeasonCard}
         mainOperationSeasonCompact={mainOperationSeasonCompact}
         showAdvisor={hubCardVisibility.showAdvisor}

@@ -6,7 +6,7 @@ import type {
 export const SOFT_LAUNCH_REGRESSION_CLEANUP_DOCS_PATH =
   'docs/crevia-soft-launch-regression-cleanup.md';
 
-export const SOFT_LAUNCH_REGRESSION_CLEANUP_EXPECTED_SAVE_VERSION = 25;
+export const SOFT_LAUNCH_REGRESSION_CLEANUP_EXPECTED_SAVE_VERSION = 26;
 
 export const SOFT_LAUNCH_MANUAL_BLOCKERS: readonly SoftLaunchManualBlocker[] = [
   {

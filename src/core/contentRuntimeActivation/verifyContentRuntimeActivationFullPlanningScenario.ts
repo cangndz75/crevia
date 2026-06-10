@@ -101,7 +101,7 @@ export function verifyContentRuntimeActivationFullPlanningScenario(): VerifyCont
   record(assert(checks, CONTENT_PACK_FULL_IMPLEMENTATION_SCOPE.included.length >= 6, 'Implementation scope defined'));
   record(assert(checks, CONTENT_PACK_FULL_IMPLEMENTATION_SCOPE.notIncluded.includes('Remote config'), 'Remote config not in scope'));
 
-  record(assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION 24'));
+  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 24'));
   record(assert(checks, CITY_ARCHIVE_MAX_ENTRIES === 120, 'cityArchive maxEntries 120'));
 
   for (const file of CONTENT_PACK_FULL_RUNTIME_UNCHANGED_FILES) {

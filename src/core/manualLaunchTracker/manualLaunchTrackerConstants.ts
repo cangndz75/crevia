@@ -9,7 +9,7 @@ export const MANUAL_LAUNCH_TRACKER_DOCS_PATH = 'docs/crevia-manual-launch-blocke
 
 export const MANUAL_LAUNCH_RELEASE_CANDIDATE_AUDIT_PATH = 'docs/crevia-release-candidate-audit.md';
 
-export const MANUAL_LAUNCH_TRACKER_EXPECTED_SAVE_VERSION = 25;
+export const MANUAL_LAUNCH_TRACKER_EXPECTED_SAVE_VERSION = 26;
 
 export const MANUAL_LAUNCH_TRACKER_MIN_BLOCKER_COUNT = 30;
 

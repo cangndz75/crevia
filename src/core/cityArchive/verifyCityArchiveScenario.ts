@@ -29,7 +29,7 @@ import {
 import type { CityArchiveEntry } from './cityArchiveTypes';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 25;
+const EXPECTED_SAVE_VERSION = 26;
 
 export type VerifyCityArchiveOutcome = {
   ok: boolean;
@@ -183,7 +183,7 @@ export function verifyCityArchiveScenario(): VerifyCityArchiveOutcome {
   };
   const hydrated = normalizePersistedSave(partial);
   record(assert(checks, hydrated?.cityArchive != null, 'v23 save hydrates cityArchive'));
-  record(assert(checks, hydrated?.saveVersion === 25, 'hydrated saveVersion 25'));
+  record(assert(checks, hydrated?.saveVersion === 26, 'hydrated saveVersion 26'));
 
   record(assert(checks, existsSync(join(REPO_ROOT, 'docs/crevia-city-archive-persistence-v1.md')), 'docs exist'));
   record(assert(checks, readRepo('package.json').includes('verify:city-archive'), 'package.json script'));

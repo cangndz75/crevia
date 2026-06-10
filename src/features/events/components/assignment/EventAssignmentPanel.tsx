@@ -20,9 +20,7 @@ import {
 } from '@/core/resources';
 import { ResourceFatigueSummaryStrip } from '@/features/resources/components/ResourceFatigueSummaryStrip';
 import { buildAssignmentResourceFitLine } from '@/core/operationalResources/operationalResourcePresentation';
-import {
-  buildAssignmentTeamSpecializationPreviewLine,
-} from '@/core/teamSpecialization/teamSpecializationModel';
+import { selectTeamSpecializationAssignmentHint } from '@/core/teamSpecialization/teamSpecializationSelectors';
 import { buildAssignmentAnalyticsPayload } from '@/core/analytics/analyticsPayloadBuilders';
 import { trackCreviaEvent } from '@/core/analytics/analyticsRuntime';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
@@ -55,6 +53,7 @@ export function EventAssignmentPanel({ event, compactTutorial = false }: Props) 
       assignments: s.assignments,
       tutorialState: s.tutorialState,
       operationalResources: s.operationalResources,
+      teamSpecialization: s.teamSpecialization,
     })),
   );
   const assignment = useGameStore((s) => s.assignments.assignmentsByEventId[event.id]);
@@ -80,22 +79,22 @@ export function EventAssignmentPanel({ event, compactTutorial = false }: Props) 
     );
   }, [assignment, event, storeSlice]);
 
-  const teamSpecializationLine = useMemo(() => {
-    if (!assignment || assignmentSimpleMode) return null;
-    const day = storeSlice.gameState.city.day;
-    return buildAssignmentTeamSpecializationPreviewLine({
-      day,
-      assignment,
-      operationalResources: storeSlice.operationalResources,
-      operationSignals: storeSlice.operationSignals,
-      isDispatchPhase: true,
-    });
-  }, [assignment, assignmentSimpleMode, event, storeSlice]);
-
   const domainDispatchFocus = useMemo(() => {
     const day = storeSlice.gameState.city.day;
     return buildEventDomainDispatchFocus(event, assignment, day);
   }, [assignment, event, storeSlice.gameState.city.day]);
+
+  const teamSpecializationLine = useMemo(() => {
+    if (!assignment || assignmentSimpleMode) return null;
+    const day = storeSlice.gameState.city.day;
+    return (
+      selectTeamSpecializationAssignmentHint(storeSlice.teamSpecialization, {
+        day,
+        assignmentPersonnelGroup: assignment.personnelType,
+        assignmentDomain: domainDispatchFocus.model.focus,
+      }) ?? null
+    );
+  }, [assignment, assignmentSimpleMode, domainDispatchFocus.model.focus, storeSlice]);
 
   const fatigueSummary = useMemo(() => {
     const day = storeSlice.gameState.city.day;

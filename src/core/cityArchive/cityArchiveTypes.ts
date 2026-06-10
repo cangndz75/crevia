@@ -19,7 +19,12 @@ export type CityArchiveEntryKind =
   | 'vehicle_maintenance_suggested'
   | 'vehicle_maintenance_completed'
   | 'vehicle_fatigue_warning'
-  | 'fleet_recovered';
+  | 'fleet_recovered'
+  | 'team_specialization_gained'
+  | 'team_fatigue_warning'
+  | 'team_morale_recovered'
+  | 'team_domain_mastery'
+  | 'backup_team_overused';
 
 export type CityArchiveEntrySourceKind =
   | 'decisionImpact'
@@ -31,6 +36,7 @@ export type CityArchiveEntrySourceKind =
   | 'operationSignals'
   | 'contentPackMeta'
   | 'vehicleMaintenance'
+  | 'teamSpecialization'
   | 'manualFallback';
 
 export type CityArchiveTrustDeltaBand = 'down' | 'flat' | 'up' | 'recovered';

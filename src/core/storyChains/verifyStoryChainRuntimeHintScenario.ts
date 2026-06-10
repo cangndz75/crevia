@@ -316,7 +316,7 @@ export function verifyStoryChainRuntimeHintScenario(): VerifyStoryChainRuntimeHi
       allHintTexts.join(' | '),
     ) && ok;
 
-  ok = record(checks, SAVE_VERSION === 25, 'SAVE_VERSION değişmez', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = record(checks, SAVE_VERSION === 26, 'SAVE_VERSION değişmez', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
 
   ok =
     record(checks, scenarioOk(verifyStoryChainScenario()), 'verify:story-chains bozulmaz', 'story-chains regressed') &&

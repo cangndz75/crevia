@@ -404,7 +404,7 @@ export function verifyVehicleRoutePackOneScenario(): VerifyVehicleRoutePackOneOu
     record(assert(checks, !playerCopy.includes(term), `player copy avoids ${term}`, `player copy contains ${term}`));
   }
 
-  record(assert(checks, SAVE_VERSION === 25, 'SAVE_VERSION remains 23', 'SAVE_VERSION changed'));
+  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION remains 23', 'SAVE_VERSION changed'));
 
   const packSource = readRepo('src/core/contentProduction/contentPacks/vehicleRoutePackOne.ts');
   record(assert(checks, !packSource.includes('Math.random'), 'no Math.random', 'Math.random present'));

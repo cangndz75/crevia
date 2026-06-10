@@ -42,7 +42,7 @@ import {
 } from './mapPresenceValidation';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 25;
+const EXPECTED_SAVE_VERSION = 26;
 
 const CONTAINER_EVENT = {
   id: 'map-container-cumhuriyet',

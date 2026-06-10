@@ -22,6 +22,11 @@ export const CITY_ARCHIVE_ENTRY_KINDS: CityArchiveEntryKind[] = [
   'vehicle_maintenance_completed',
   'vehicle_fatigue_warning',
   'fleet_recovered',
+  'team_specialization_gained',
+  'team_fatigue_warning',
+  'team_morale_recovered',
+  'team_domain_mastery',
+  'backup_team_overused',
 ];
 
 export const CITY_ARCHIVE_MAX_DAILY_APPEND = 3;
@@ -88,6 +93,11 @@ export const CITY_ARCHIVE_ENTRY_KIND_LABELS: Record<CityArchiveEntryKind, string
   vehicle_maintenance_completed: 'Araç bakım izi',
   vehicle_fatigue_warning: 'Araç bakım izi',
   fleet_recovered: 'Filo toparlandı',
+  team_specialization_gained: 'Ekip izi',
+  team_fatigue_warning: 'Ekip yorgunluğu',
+  team_morale_recovered: 'Ekip toparlandı',
+  team_domain_mastery: 'Ekip gelişimi',
+  backup_team_overused: 'Yedek ekip izi',
 };
 
 export const CITY_ARCHIVE_BACKFILL_MAX = 3;
