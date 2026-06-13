@@ -60,5 +60,7 @@ Ana fonksiyon: `buildCenterHomePresentation(input)`
 
 Verify: `npm run verify:center-home-ia`, `npm run verify:center-header`
 
+**Final polish completed** — bkz. [crevia-center-ui-polish-performance-qa.md](./crevia-center-ui-polish-performance-qa.md)
+
 Header detayı: [crevia-center-header-resource-strip.md](./crevia-center-header-resource-strip.md)  
 Merkez Özeti: [crevia-center-city-summary.md](./crevia-center-city-summary.md)

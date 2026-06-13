@@ -21,6 +21,8 @@ import { creviaAssets } from '@/core/assets/creviaAssets';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import { hubAssets } from '@/features/hub/utils/hubAssets';
 import type { CenterHomePresentation, CenterHomeVisibilityState } from '@/features/hub/utils/centerHomePresentation';
+import { resolveCenterSectionGap } from '@/features/hub/utils/centerLayoutTokens';
+import { isCenterModuleRenderable } from '@/features/hub/utils/centerStatePolicy';
 import { CenterCitySummaryCard } from '@/features/hub/components/CenterCitySummaryCard';
 import { CenterAdvisorCard } from '@/features/hub/components/CenterAdvisorCard';
 import { CenterDailyRewardRoute } from '@/features/hub/components/CenterDailyRewardRoute';
@@ -37,6 +39,10 @@ import { buildHubBadgeShowcaseSummary } from '@/features/hub/utils/hubBadgeShowc
 import { resolveMotionDensity } from '@/core/motion';
 import { CenterMotionEnter } from '@/features/hub/components/CenterMotionEnter';
 import { CenterOperationFocusSection } from '@/features/hub/components/CenterOperationFocusSection';
+import { CenterOperationSignalsSection } from '@/features/hub/components/CenterOperationSignalsSection';
+import { CenterQuickActionsSection } from '@/features/hub/components/CenterQuickActionsSection';
+import { CenterRecommendedPlanCard } from '@/features/hub/components/CenterRecommendedPlanCard';
+import { CenterContinuationCardsSection } from '@/features/hub/components/CenterContinuationCardsSection';
 import { useCreviaReducedMotion } from '@/shared/motion';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
 import { useGameStore } from '@/store/useGameStore';
@@ -120,10 +126,6 @@ function MiniIcon({ icon, tone = 'teal' }: { icon: IconName; tone?: 'teal' | 'go
   );
 }
 
-function isCenterModuleRenderable(state: CenterHomeVisibilityState): boolean {
-  return state !== 'hidden';
-}
-
 function GameStatusBar({ progress = 0.62 }: { progress?: number; variant?: 'primary' | 'secondary' }) {
   const ratio = Math.max(0, Math.min(1, progress));
   return (
@@ -194,359 +196,6 @@ function ModernSectionHeader({
   );
 }
 
-function OperationSignalRow({
-  icon,
-  accentColor,
-  iconGradient,
-  title,
-  body,
-  impactLevel,
-  impactTone,
-}: {
-  icon: IconName;
-  accentColor: string;
-  iconGradient: [string, string];
-  title: string;
-  body: string;
-  impactLevel: string;
-  impactTone: 'high' | 'medium';
-}) {
-  const impactColor = impactTone === 'high' ? palette.green : palette.amber;
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={title}
-      style={({ pressed }) => [styles.signalRow, pressedScale(pressed)]}>
-      <View style={[styles.signalAccentBar, { backgroundColor: accentColor }]} />
-      <LinearGradient
-        colors={iconGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.signalIconRing}>
-        <View style={styles.signalIconCore}>
-          <Ionicons name={icon} size={19} color={accentColor} />
-        </View>
-      </LinearGradient>
-      <View style={styles.signalCopy}>
-        <View style={styles.signalTitleRow}>
-          <View style={[styles.signalLiveDot, { backgroundColor: accentColor }]} />
-          <Text style={styles.signalTitle} numberOfLines={1}>
-            {title}
-          </Text>
-        </View>
-        <Text style={styles.signalBody} numberOfLines={2}>
-          {body}
-        </Text>
-      </View>
-      <View style={styles.signalTrailing}>
-        <Text style={styles.signalImpactLabel}>ETKİ</Text>
-        <View style={[styles.signalImpactPill, { backgroundColor: `${impactColor}14`, borderColor: `${impactColor}55` }]}>
-          <Text style={[styles.signalImpactValue, { color: impactColor }]} numberOfLines={1}>
-            {impactLevel}
-          </Text>
-        </View>
-        <View style={styles.signalChevronBtn}>
-          <Ionicons name="chevron-forward" size={14} color={palette.tealMid} />
-        </View>
-      </View>
-    </Pressable>
-  );
-}
-
-function OperationSignalsList({
-  signalsSection,
-}: {
-  signalsSection: CenterHomePresentation['operationSignals'];
-}) {
-  if (!isCenterModuleRenderable(signalsSection.visibility)) {
-    return null;
-  }
-
-  if (signalsSection.visibility === 'empty' || signalsSection.signals.length === 0) {
-    return (
-      <View style={styles.section}>
-        <ModernSectionHeader title="OPERASYON SİNYALLERİ" />
-        <View style={styles.signalEmptyCard}>
-          <Text style={styles.signalEmptyText} numberOfLines={2}>
-            {signalsSection.emptyLabel ?? 'Bugün kritik sinyal yok'}
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.section}>
-      <ModernSectionHeader
-        title="OPERASYON SİNYALLERİ"
-        action={signalsSection.showViewAll ? 'TÜMÜNÜ GÖR' : undefined}
-      />
-      <View style={styles.signalList}>
-        {signalsSection.signals.map((signal) => (
-          <OperationSignalRow
-            key={signal.id}
-            icon={signal.icon}
-            accentColor={signal.impactTone === 'high' ? palette.green : palette.amber}
-            iconGradient={
-              signal.impactTone === 'high'
-                ? (['#E8F8EE', '#D0EFDB'] as [string, string])
-                : ([palette.goldSoft, '#F8EAC4'] as [string, string])
-            }
-            title={signal.title}
-            body={signal.body}
-            impactLevel={signal.impactLevel}
-            impactTone={signal.impactTone === 'low' ? 'medium' : signal.impactTone}
-          />
-        ))}
-      </View>
-    </View>
-  );
-}
-
-function QuickActionTile({
-  title,
-  caption,
-  icon,
-  iconTone,
-  locked = false,
-  onPress,
-}: {
-  title: string;
-  caption: string;
-  icon: IconName;
-  iconTone: 'teal' | 'gold' | 'green';
-  locked?: boolean;
-  onPress: () => void;
-}) {
-  const toneConfig = {
-    teal: {
-      color: palette.teal,
-      gradient: ['#F4FAF8', '#E4F2EE'] as [string, string],
-      ring: palette.tealSoft,
-    },
-    gold: {
-      color: palette.goldDark,
-      gradient: ['#FFFAF0', '#F8EFD4'] as [string, string],
-      ring: palette.goldSoft,
-    },
-    green: {
-      color: palette.green,
-      gradient: ['#F2FAF4', '#E2F3E8'] as [string, string],
-      ring: '#E8F5EA',
-    },
-  }[iconTone];
-
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={locked}
-      accessibilityRole="button"
-      accessibilityLabel={title}
-      style={({ pressed }) => [
-        styles.quickActionTileOuter,
-        locked ? styles.quickActionTileLocked : undefined,
-        pressedScale(pressed),
-      ]}>
-      <LinearGradient
-        colors={toneConfig.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.quickActionTile}>
-        <View style={styles.quickActionTopRow}>
-          <View style={[styles.quickActionIconRing, { backgroundColor: toneConfig.ring }]}>
-            <View style={styles.quickActionIconCore}>
-              <Ionicons name={icon} size={17} color={toneConfig.color} />
-            </View>
-          </View>
-          <View style={styles.quickActionArrowChip}>
-            <Ionicons name="arrow-forward" size={11} color={palette.tealMid} />
-          </View>
-        </View>
-        <Text style={styles.quickTitle} numberOfLines={1}>
-          {title}
-        </Text>
-        <Text style={styles.quickCaption} numberOfLines={1}>
-          {caption}
-        </Text>
-      </LinearGradient>
-    </Pressable>
-  );
-}
-
-function QuickActionsGrid({
-  quickActions,
-}: {
-  quickActions: CenterHomePresentation['quickActions'];
-}) {
-  const router = useRouter();
-  const { isCompact } = useHubLayoutMetrics();
-
-  if (!isCenterModuleRenderable(quickActions.visibility)) {
-    return null;
-  }
-
-  const visibleActions = quickActions.actions;
-
-  return (
-    <View style={styles.section}>
-      <ModernSectionHeader title="HIZLI İŞLEMLER" />
-      {quickActions.visibility === 'locked' ? (
-        <View style={styles.quickLockedBanner}>
-          <Text style={styles.quickLockedText} numberOfLines={2}>
-            Gün 2&apos;den itibaren hızlı işlemler açılır.
-          </Text>
-        </View>
-      ) : null}
-      <View style={styles.quickGrid}>
-        {visibleActions.map((action) => (
-          <View
-            key={action.id}
-            style={[styles.quickGridCell, isCompact ? styles.quickGridCellCompact : styles.quickGridCellWide]}>
-            <QuickActionTile
-              title={action.title}
-              caption={action.caption}
-              icon={action.icon as IconName}
-              iconTone={action.iconTone}
-              locked={action.locked}
-              onPress={() => {
-                if (!action.locked) {
-                  router.push(action.route as Href);
-                }
-              }}
-            />
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-function PlanMiniIllustration() {
-  return (
-    <View style={styles.planIllustration}>
-      <LinearGradient
-        colors={['#8ECAE6', '#B8DFF0', '#D4EAF5']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.planIllustrationSky}
-      />
-      <View style={styles.planIllustrationWater} />
-      <View style={styles.planIllustrationPark} />
-      <View style={styles.planIllustrationPath} />
-      <View style={styles.planIllustrationBuildingLeft} />
-      <View style={styles.planIllustrationBuildingRight} />
-      <View style={styles.planIllustrationMosque} />
-      <View style={styles.planIllustrationTreeOne} />
-      <View style={styles.planIllustrationTreeTwo} />
-    </View>
-  );
-}
-
-function RecommendedPlanCard({
-  plan,
-}: {
-  plan: CenterHomePresentation['recommendedPlan'];
-}) {
-  if (!isCenterModuleRenderable(plan.visibility)) {
-    return null;
-  }
-
-  if (plan.visibility === 'locked') {
-    return (
-      <View style={styles.section}>
-        <SectionTitle title="ÖNERİLEN PLAN" />
-        <View style={styles.planLockedCard}>
-          <Text style={styles.planLockedText} numberOfLines={2}>
-            {plan.lockedTeaser ?? 'Günlük plan özeti yakında açılır.'}
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.section}>
-      <SectionTitle title="ÖNERİLEN PLAN" />
-      <View style={styles.planCard}>
-        <PlanMiniIllustration />
-        <View style={styles.planCopy}>
-          <Text style={styles.planTitle} numberOfLines={2}>
-            {plan.title}
-          </Text>
-          <Text style={styles.planBody} numberOfLines={3}>
-            {plan.body}
-          </Text>
-        </View>
-        <View style={styles.bookmark}>
-          <Ionicons name="star" size={14} color={palette.goldSoft} />
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function ApprovePlanCTA({ label }: { label: string }) {
-  const router = useRouter();
-
-  return (
-    <Pressable
-      onPress={() => {
-        playLightImpactHaptic();
-        router.push('/events' as Href);
-      }}
-      accessibilityRole="button"
-      accessibilityLabel="Planı onayla"
-      style={({ pressed }) => [styles.approveButtonWrap, pressedScale(pressed)]}>
-      <LinearGradient
-        colors={[palette.tealDark, palette.teal, '#0D7168']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.approveButton}>
-        <Text style={styles.approveText}>{label}</Text>
-        <View style={styles.ctaArrow}>
-          <Ionicons name="arrow-forward" size={18} color={palette.tealDark} />
-        </View>
-      </LinearGradient>
-    </Pressable>
-  );
-}
-
-function ContinuationCardsSection({
-  continuation,
-}: {
-  continuation: CenterHomePresentation['continuationCards'];
-}) {
-  const router = useRouter();
-
-  if (!isCenterModuleRenderable(continuation.visibility) || continuation.cards.length === 0) {
-    return null;
-  }
-
-  return (
-    <View style={styles.section}>
-      <SectionTitle title="DEVAM" />
-      <View style={styles.continuationList}>
-        {continuation.cards.map((card) => (
-          <Pressable
-            key={card.id}
-            onPress={() => router.push(card.route as Href)}
-            accessibilityRole="button"
-            accessibilityLabel={card.title}
-            style={({ pressed }) => [styles.continuationCard, pressedScale(pressed)]}>
-            <Text style={styles.continuationTitle} numberOfLines={1}>
-              {card.title}
-            </Text>
-            <Text style={styles.continuationBody} numberOfLines={2}>
-              {card.body}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
-}
-
 function shouldRenderActiveTarget(
   target: CenterHomePresentation['activeTarget'],
 ): boolean {
@@ -557,7 +206,7 @@ export function HubReferenceHome({
   presentation,
   scrollFooter,
 }: HubReferenceHomeProps) {
-  const { scrollBottomPadding } = useHubLayoutMetrics();
+  const { scrollBottomPadding, isCompact } = useHubLayoutMetrics();
   const pilotDay = useGameStore((s) => s.gameState.pilot.currentPilotDay);
   const badgeState = useGameStore((s) => s.gameState.pilot.badgeState);
   const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
@@ -596,7 +245,11 @@ export function HubReferenceHome({
 
   const activeTarget = presentation.activeTarget;
   const reducedMotion = useCreviaReducedMotion();
-  const hubMotionEnabled = resolveMotionDensity({ day: pilotDay }) !== 'day1_minimal';
+  const hubMotionEnabled = useMemo(() => {
+    if (reducedMotion) return false;
+    return resolveMotionDensity({ day: pilotDay }) !== 'day1_minimal';
+  }, [pilotDay, reducedMotion]);
+  const sectionGap = resolveCenterSectionGap(isCompact);
 
   return (
     <View style={styles.root}>
@@ -614,7 +267,7 @@ export function HubReferenceHome({
           hubMotionEnabled={hubMotionEnabled}>
           <CenterHomeHeader header={presentation.headerSummary} />
         </CenterMotionEnter>
-        <View style={styles.body}>
+        <View style={[styles.body, { gap: sectionGap }]}>
           <CenterMotionEnter
             index={1}
             reducedMotion={reducedMotion}
@@ -656,14 +309,22 @@ export function HubReferenceHome({
             focus={presentation.operationFocus}
             reducedMotion={reducedMotion}
           />
-          <OperationSignalsList signalsSection={presentation.operationSignals} />
-          <QuickActionsGrid quickActions={presentation.quickActions} />
-          <RecommendedPlanCard plan={presentation.recommendedPlan} />
-          {isCenterModuleRenderable(presentation.recommendedPlan.visibility) &&
-          presentation.recommendedPlan.visibility !== 'locked' ? (
-            <ApprovePlanCTA label={presentation.recommendedPlan.ctaLabel} />
-          ) : null}
-          <ContinuationCardsSection continuation={presentation.continuationCards} />
+          <CenterOperationSignalsSection
+            signalsSection={presentation.operationSignals}
+            reducedMotion={reducedMotion}
+          />
+          <CenterQuickActionsSection
+            quickActions={presentation.quickActions}
+            reducedMotion={reducedMotion}
+          />
+          <CenterRecommendedPlanCard
+            plan={presentation.recommendedPlan}
+            reducedMotion={reducedMotion}
+          />
+          <CenterContinuationCardsSection
+            continuation={presentation.continuationCards}
+            reducedMotion={reducedMotion}
+          />
           {showHubAuthorityPreview ? (
             <HubAuthorityPermissionPreviewChip summary={hubAuthorityPermissionPreview} />
           ) : null}
@@ -887,7 +548,6 @@ const styles = StyleSheet.create({
   },
   body: {
     paddingHorizontal: 16,
-    gap: 16,
   },
   eceCard: {
     borderRadius: 20,

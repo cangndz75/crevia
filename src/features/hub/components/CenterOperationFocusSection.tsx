@@ -3,6 +3,7 @@ import { useRouter, type Href } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
+import { CENTER_SUPPORT_SECTION_MARGIN } from '@/features/hub/utils/centerLayoutTokens';
 import { CreviaAnimatedPressable } from '@/shared/motion';
 import type {
   CenterOperationFocus,
@@ -254,7 +255,7 @@ export function CenterOperationFocusSection({
 
 const styles = StyleSheet.create({
   section: {
-    marginBottom: 18,
+    marginBottom: CENTER_SUPPORT_SECTION_MARGIN,
   },
   headerRow: {
     flexDirection: 'row',

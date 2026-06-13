@@ -58,9 +58,9 @@ export function verifyCenterHomeIaScenario(): {
   );
   assert(
     checks,
-    day1.quickActions.actions.length <= 4,
+    day1.quickActions.items.length <= 4,
     'quick actions capped at safe count',
-    `count=${day1.quickActions.actions.length}`,
+    `count=${day1.quickActions.items.length}`,
   );
   assert(
     checks,

@@ -7,6 +7,7 @@ import type {
   CenterCitySummaryMetric,
   CenterCitySummaryTone,
 } from '@/features/hub/utils/centerCitySummaryPresentation';
+import { sanitizeCenterDisplayText } from '@/features/hub/utils/centerStatePolicy';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -77,7 +78,7 @@ function SummaryMetricCell({ metric }: { metric: CenterCitySummaryMetric }) {
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.8}>
-        {metric.valueText}
+        {sanitizeCenterDisplayText(metric.valueText, '—')}
       </Text>
       {metric.helperText ? (
         <Text style={[styles.metricHelper, { color: tone.helper }]} numberOfLines={2}>

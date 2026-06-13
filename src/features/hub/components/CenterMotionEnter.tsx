@@ -24,7 +24,7 @@ export function CenterMotionEnter({
   style,
 }: CenterMotionEnterProps) {
   const capped = index >= MOTION_DENSITY_CAPS.hub.maxAnimatedItems;
-  const isDisabled = disabled ?? (!hubMotionEnabled || capped);
+  const isDisabled = disabled ?? (reducedMotion || !hubMotionEnabled || capped);
 
   return (
     <CreviaAnimatedCard

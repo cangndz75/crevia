@@ -11,6 +11,7 @@ import {
   useCenterSpeechReveal,
 } from '@/shared/motion';
 import { hubAssets } from '@/features/hub/utils/hubAssets';
+import { sanitizeCenterDisplayText } from '@/features/hub/utils/centerStatePolicy';
 import type {
   CenterAdvisorSuggestion,
   CenterAdvisorTone,
@@ -132,16 +133,16 @@ export function CenterAdvisorCard({
         </View>
 
         <Text style={styles.contextLine} numberOfLines={compact ? 1 : 2}>
-          {advisor.contextLine}
+          {sanitizeCenterDisplayText(advisor.contextLine, 'Bugünkü akışa odaklan.')}
         </Text>
 
         {!compact ? (
           <Animated.Text style={[styles.recommendation, speechStyle]} numberOfLines={2}>
-            {advisor.recommendation}
+            {sanitizeCenterDisplayText(advisor.recommendation, 'Önce aktif hedefi incele.')}
           </Animated.Text>
         ) : (
           <Text style={styles.recommendationCompact} numberOfLines={1}>
-            {advisor.recommendation}
+            {sanitizeCenterDisplayText(advisor.recommendation, 'Önce aktif hedefi incele.')}
           </Text>
         )}
 
