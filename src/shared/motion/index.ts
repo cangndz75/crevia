@@ -7,3 +7,10 @@ export { CreviaSoftPulseDot } from './CreviaSoftPulseDot';
 export { useCreviaEntranceMotion } from './useCreviaEntranceMotion';
 export { useCreviaPressMotion } from './useCreviaPressMotion';
 export { useCreviaReducedMotion } from './useCreviaReducedMotion';
+export {
+  useCenterAvatarAttention,
+  useCenterCtaPulse,
+  useCenterProgressHighlight,
+  useCenterRewardPulse,
+  useCenterSpeechReveal,
+} from './useCenterMotionPresets';

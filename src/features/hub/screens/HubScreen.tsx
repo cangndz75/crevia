@@ -49,7 +49,6 @@ import {
   buildMainOperationFeelFromStore,
   buildMainOperationFeelHubPresentation,
 } from '@/core/mainOperationFeel';
-import { RELEASE_CANDIDATE_POLISH_HUB_WIRING } from '@/core/releaseCandidatePolish/releaseCandidatePolishConstants';
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 import {
   buildHubCarryOverMemory,
@@ -60,6 +59,7 @@ import { buildHubCardVisibilityModel } from '@/core/onboarding/firstTenMinutesPr
 import { HubDevTools } from '@/features/hub/components/HubDevTools';
 import { HubReferenceHome } from '@/features/hub/components/HubReferenceHome';
 import { buildHubScreenLayoutModel } from '@/features/hub/utils/hubScreenPresentation';
+import { buildCenterHomePresentation } from '@/features/hub/utils/centerHomePresentation';
 import { OnboardingCoachBubble } from '@/features/onboarding/components/OnboardingCoachBubble';
 import { useOnboardingHint } from '@/features/onboarding/hooks/useOnboardingHint';
 import {
@@ -74,6 +74,7 @@ import {
   selectDecisionHistory,
   useGameStore,
 } from '@/store/useGameStore';
+import { useGameStatus } from '@/store/gameSelectors';
 import { GameScreenShell } from '@/ui/components/GameScreenShell';
 
 /**
@@ -83,6 +84,8 @@ import { GameScreenShell } from '@/ui/components/GameScreenShell';
 export function HubScreen() {
   const gameState = useGameStore((s) => s.gameState);
   const monetization = useGameStore((s) => s.monetization);
+  const dailyGoalState = useGameStore((s) => s.dailyGoalState);
+  const hubQuickActionState = useGameStore((s) => s.hubQuickActionState);
   const crisisState = useGameStore((s) => s.crisisState);
   const operationalResources = useGameStore((s) => s.operationalResources);
   const operationSignals = useGameStore((s) => s.operationSignals);
@@ -102,6 +105,7 @@ export function HubScreen() {
   const postPilotOperation = useGameStore((s) => s.gameState.pilot.postPilotOperation);
 
   const hubCardVisibility = buildHubCardVisibilityModel(gameState, monetization);
+  const gameStatus = useGameStatus();
   const hubDay = gameState.city.day;
   const hubLayoutModel = useMemo(
     () =>
@@ -333,27 +337,6 @@ export function HubScreen() {
     () => buildMainOperationFeelHubPresentation(mainOperationFeel),
     [mainOperationFeel],
   );
-
-  const showMainOperationSeasonCard = useMemo(() => {
-    if (!hubCardVisibility.showMainOperationSeason) return false;
-    if (hubDay >= RELEASE_CANDIDATE_POLISH_HUB_WIRING.seasonCardMinDay) return true;
-    if (
-      RELEASE_CANDIDATE_POLISH_HUB_WIRING.seasonCardDay8OnlyWhenFeelHidden &&
-      hubDay === POST_PILOT_FIRST_OPERATION_DAY &&
-      !mainOperationFeelPresentation.visible
-    ) {
-      return true;
-    }
-    if (hubDay >= 4 && hubDay <= 7) return true;
-    return false;
-  }, [
-    hubCardVisibility.showMainOperationSeason,
-    hubDay,
-    mainOperationFeelPresentation.visible,
-  ]);
-
-  const mainOperationSeasonCompact =
-    hubDay >= RELEASE_CANDIDATE_POLISH_HUB_WIRING.seasonCompactFromDay;
 
   const hubEceContextLine = useMemo(
     () =>
@@ -674,6 +657,55 @@ export function HubScreen() {
   const { coachHint, dismissHint } = useOnboardingHint('hub');
   void hubLayoutModel;
 
+  const centerHomePresentation = useMemo(
+    () =>
+      buildCenterHomePresentation({
+        gameState,
+        monetization,
+        dailyGoalState,
+        hubQuickActionState,
+        operationSignals,
+        socialPulseState,
+        mainOperationFeelPresentation,
+        hubEceContextLine,
+        hubTomorrowRisk: tomorrowRiskPresentation.hub,
+        hubImpactExplanationLine: cityEchoHubLine ?? hubImpactExplanationLine,
+        hubCityJournal: hubCityJournalPresentation,
+        hubDistrictReportLine: hubDistrictReportContinuityLine,
+        hubStoryChainLine,
+        hubVehicleMaintenanceLine,
+        hubTeamSpecializationLine,
+        cardVisibility: hubCardVisibility,
+        economySource: gameStatus.source,
+        budgetDeltaLabel: gameStatus.budgetDeltaLabel,
+        playerLevel: gameStatus.level,
+        selectedDistrictName: gameStatus.selectedDistrictName,
+      }),
+    [
+      cityEchoHubLine,
+      gameState,
+      gameStatus.budgetDeltaLabel,
+      gameStatus.level,
+      gameStatus.selectedDistrictName,
+      gameStatus.source,
+      hubCardVisibility,
+      hubCityJournalPresentation,
+      hubDistrictReportContinuityLine,
+      hubEceContextLine,
+      hubImpactExplanationLine,
+      hubQuickActionState,
+      hubStoryChainLine,
+      hubTeamSpecializationLine,
+      hubVehicleMaintenanceLine,
+      dailyGoalState,
+      mainOperationFeelPresentation,
+      monetization,
+      operationSignals,
+      socialPulseState,
+      tomorrowRiskPresentation.hub,
+    ],
+  );
+
   return (
     <GameScreenShell
       scrollable={false}
@@ -682,25 +714,7 @@ export function HubScreen() {
       backgroundColor="#F8F1E4"
       contentStyle={{ flex: 1, paddingHorizontal: 0, paddingTop: 0, gap: 0 }}>
       <HubReferenceHome
-        hubCarryOverMemory={hubCarryOverMemory}
-        hubImpactExplanationLine={cityEchoHubLine ?? hubImpactExplanationLine}
-        hubTomorrowRisk={tomorrowRiskPresentation.hub}
-        hubCityJournal={hubCityJournalPresentation}
-        hubEceContextLine={hubEceContextLine}
-        hubDistrictReportLine={hubDistrictReportContinuityLine}
-        hubStoryChainLine={hubStoryChainLine}
-        hubVehicleMaintenanceLine={hubVehicleMaintenanceLine}
-        hubTeamSpecializationLine={hubTeamSpecializationLine}
-        showMainOperationSeason={showMainOperationSeasonCard}
-        mainOperationSeasonCompact={mainOperationSeasonCompact}
-        showAdvisor={hubCardVisibility.showAdvisor}
-        hubMainOperationFeelExistingLines={[
-          showHubCarryOver ? hubCarryOverMemory?.summary ?? '' : '',
-          tomorrowRiskPresentation.hub?.mainLine ?? '',
-          cityEchoHubLine ?? '',
-        ].filter(Boolean)}
-        showHubCarryOver={showHubCarryOver}
-        showOperationalResources={hubCardVisibility.showOperationalResources}
+        presentation={centerHomePresentation}
         scrollFooter={
           __DEV__ && !hubCardVisibility.suppressDevTools ? <HubDevTools /> : undefined
         }

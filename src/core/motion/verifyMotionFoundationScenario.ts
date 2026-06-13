@@ -95,14 +95,20 @@ export function verifyMotionFoundationScenario(): VerifyMotionFoundationOutcome 
   record(sharedSources.includes('accessibilityLabel'), 'Pressable label is preserved');
 
   const hub = readRepo('src/features/hub/components/HubReferenceHome.tsx');
+  const centerMotion = readRepo('src/features/hub/components/CenterMotionEnter.tsx');
+  const motionTokens = readRepo('src/core/motion/motionTokens.ts');
+  const motionPresets = readRepo('src/core/motion/motionPresets.ts');
   const result = readRepo('src/features/events/screens/DecisionResultScreen.tsx');
   const report = readRepo('src/features/reports/components/end-of-day/EndOfDayReportView.tsx');
   const onboarding = readRepo('src/features/onboarding/screens/CreviaOnboardingScreen.tsx');
   const social = readRepo('src/features/social/components/mentions/MentionFeedCard.tsx');
   const mapLayer = readRepo('src/features/map/components/MapReactionMotionLayer.tsx');
 
-  record(hub.includes('CreviaAnimatedCard') && hub.includes('surface="hub"'), 'Hub integration present');
-  record(hub.includes('disabled={!hubMotionEnabled}') && hub.includes('index={3}') && hub.includes('disabled'), 'Hub animation cap guarded');
+  record(hub.includes('CenterMotionEnter') && hub.includes('hubMotionEnabled'), 'Hub integration present');
+  record(centerMotion.includes('CreviaAnimatedCard') && centerMotion.includes('surface="hub"'), 'Center motion enter uses hub surface');
+  record(hub.includes('disabled={!hubMotionEnabled}') && hub.includes('index={3}'), 'Hub animation cap guarded');
+  record(motionTokens.includes('MOTION_TOKEN_DURATION'), 'Center motion tokens present');
+  record(motionPresets.includes('centerCtaPulseConfig'), 'Center motion presets present');
   record(result.includes('surface="decision_result"'), 'DecisionResult integration present');
   record(result.includes('motionKind="result_emphasis"'), 'Result emphasis motion present');
   record(result.includes('CreviaAnimatedPressable'), 'DecisionResult CTA press motion present');
@@ -122,7 +128,7 @@ export function verifyMotionFoundationScenario(): VerifyMotionFoundationOutcome 
   record(docs.includes('VoiceOver/TalkBack manual QA pending'), 'Docs manual accessibility QA pending');
 
   const persist = readRepo('src/store/gamePersist.ts');
-  record(SAVE_VERSION === 26 && persist.includes('SAVE_VERSION = 24'), 'SAVE_VERSION unchanged');
+  record(SAVE_VERSION === 26 && persist.includes('export const SAVE_VERSION = 26'), 'SAVE_VERSION unchanged');
   record(!persist.includes('motionFoundationState'), 'Persist shape unchanged');
   record(!readRepo('src/core/game/applyDecision.ts').includes('motionFoundation'), 'applyDecision unchanged');
   record(!readRepo('src/core/dayPipeline/dayPipelineOrchestrator.ts').includes('motionFoundation'), 'dayPipeline unchanged');

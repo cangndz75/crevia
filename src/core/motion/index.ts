@@ -9,6 +9,32 @@ export {
 } from './motionConstants';
 
 export {
+  MOTION_TOKEN_DELAY,
+  MOTION_TOKEN_DURATION,
+  MOTION_TOKEN_MAX_STAGGER_TOTAL,
+  MOTION_TOKEN_PULSE,
+  centerCardEnterDelay,
+  centerCardEnterStaggerTotal,
+  motionTokenDurationsValid,
+  motionTokenDuration,
+} from './motionTokens';
+
+export {
+  centerAvatarAttentionConfig,
+  centerCardEnterConfig,
+  centerCtaPulseConfig,
+  centerCtaPulseIsBounded,
+  centerPressScaleValue,
+  centerProgressFillConfig,
+  centerRewardPulseConfig,
+  centerSpeechRevealConfig,
+  isGlowPresetDisabled,
+  isPulsePresetDisabled,
+} from './motionPresets';
+
+export type { CenterAttentionLevel, CenterRevealLevel } from './motionPresets';
+
+export {
   buildMotionAccessibilityModel,
   fetchCreviaReducedMotionPreference,
   useCreviaReducedMotion,

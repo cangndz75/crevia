@@ -17,23 +17,29 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import type { CarryOverMemoryModel } from '@/core/carryOver';
-import type { CityJournalHubPresentation } from '@/core/cityJournal';
-import type { TomorrowRiskModel } from '@/core/tomorrowRisk';
 import { creviaAssets } from '@/core/assets/creviaAssets';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
-import type { HubCardVisibilityModel } from '@/core/onboarding/firstTenMinutesTypes';
 import { hubAssets } from '@/features/hub/utils/hubAssets';
-import { HubActiveTaskCardStack } from '@/features/hub/components/HubActiveTaskCardStack';
+import type { CenterHomePresentation, CenterHomeVisibilityState } from '@/features/hub/utils/centerHomePresentation';
+import { CenterCitySummaryCard } from '@/features/hub/components/CenterCitySummaryCard';
+import { CenterAdvisorCard } from '@/features/hub/components/CenterAdvisorCard';
+import { CenterDailyRewardRoute } from '@/features/hub/components/CenterDailyRewardRoute';
+import { CenterHomeHeader } from '@/features/hub/components/CenterHomeHeader';
+import {
+  HubActiveTaskCardStack,
+} from '@/features/hub/components/HubActiveTaskCardStack';
 import { HubAuthorityPermissionPreviewChip } from '@/features/hub/components/HubAuthorityPermissionPreviewChip';
 import { HubBadgeShowcaseChip } from '@/features/hub/components/HubBadgeShowcaseChip';
 import { HubDistrictExpansionChip } from '@/features/hub/components/HubDistrictExpansionChip';
 import { buildAuthorityPermissionPreviewCompactSummary } from '@/core/authority/authorityPermissionPreviewModel';
 import { buildDistrictOperationUnlockBindingCompactSummary } from '@/core/progression/districtOperationUnlockBindingModel';
 import { buildHubBadgeShowcaseSummary } from '@/features/hub/utils/hubBadgeShowcaseModel';
-import { useGameStatus } from '@/store/gameSelectors';
-import { useGameStore } from '@/store/useGameStore';
+import { resolveMotionDensity } from '@/core/motion';
+import { CenterMotionEnter } from '@/features/hub/components/CenterMotionEnter';
+import { CenterOperationFocusSection } from '@/features/hub/components/CenterOperationFocusSection';
+import { useCreviaReducedMotion } from '@/shared/motion';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
+import { useGameStore } from '@/store/useGameStore';
 
 const compactBreakpoint = 370;
 
@@ -59,27 +65,11 @@ const palette = {
 
 const routeHeroImage = require('@/assets/districts/route/district_route_network_01.png');
 const greenHeroImage = require('@/assets/districts/status/district_safe_zone_01.png');
-const profilePortraitImage = require('@/assets/pp1.png');
-const prestigeBadgeImage = require('@/assets/badge1.png');
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
 type HubReferenceHomeProps = {
-  hubCarryOverMemory?: CarryOverMemoryModel | null;
-  hubImpactExplanationLine?: string | null;
-  hubTomorrowRisk?: TomorrowRiskModel | null;
-  hubCityJournal?: CityJournalHubPresentation | null;
-  hubEceContextLine?: string | null;
-  hubDistrictReportLine?: string | null;
-  hubStoryChainLine?: string | null;
-  hubVehicleMaintenanceLine?: string | null;
-  hubTeamSpecializationLine?: string | null;
-  hubMainOperationFeelExistingLines?: string[];
-  showHubCarryOver?: boolean;
-  showOperationalResources?: boolean;
-  showMainOperationSeason?: boolean;
-  mainOperationSeasonCompact?: boolean;
-  showAdvisor?: HubCardVisibilityModel['showAdvisor'];
+  presentation: CenterHomePresentation;
   scrollFooter?: ReactNode;
 };
 
@@ -130,79 +120,8 @@ function MiniIcon({ icon, tone = 'teal' }: { icon: IconName; tone?: 'teal' | 'go
   );
 }
 
-function HeaderSummary() {
-  const router = useRouter();
-  const status = useGameStatus();
-  const { topInset, isCompact } = useHubLayoutMetrics();
-
-  return (
-    <View style={[styles.header, { paddingTop: topInset + 12 }]}>
-      <View style={styles.skylineOne} />
-      <View style={styles.skylineTwo} />
-      <View style={styles.skylineThree} />
-      <View style={styles.headerTop}>
-        <Pressable
-          onPress={() => router.push('/profile' as Href)}
-          accessibilityRole="button"
-          accessibilityLabel="Profili aç"
-          style={({ pressed }) => [styles.avatarButton, pressedScale(pressed)]}>
-          <Image
-            source={profilePortraitImage}
-            style={[styles.profilePortrait, { width: isCompact ? 62 : 68, height: isCompact ? 62 : 68 }]}
-            contentFit="contain"
-          />
-          <View style={styles.profileLevelBadge}>
-            <Text style={styles.profileLevelText}>{status.level}</Text>
-          </View>
-        </Pressable>
-        <View style={styles.headerIdentity}>
-          <Text style={styles.headerName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
-            Başkan
-          </Text>
-          <View style={styles.locationRow}>
-            <Ionicons name="location" size={13} color={palette.tealMid} />
-            <Text style={styles.locationText} numberOfLines={1}>
-              İstanbul
-            </Text>
-          </View>
-        </View>
-        <View style={styles.reputationBadge}>
-          <Image source={prestigeBadgeImage} style={styles.reputationBadgeImage} contentFit="contain" />
-          <Text style={styles.reputationLabel} numberOfLines={1}>ŞEHİR İTİBARI</Text>
-          <Text style={styles.reputationValue} numberOfLines={1}>4.650</Text>
-        </View>
-      </View>
-      <View style={styles.resourceRow}>
-        <HeaderChip icon="cash-outline" value="12,4M" tone="gold" />
-        <HeaderChip icon="people-outline" value="2,35M" tone="teal" />
-        <HeaderChip icon="diamond" value="1.250" tone="purple" />
-      </View>
-    </View>
-  );
-}
-
-function HeaderChip({
-  icon,
-  value,
-  tone = 'gold',
-}: {
-  icon: IconName;
-  value: string;
-  tone?: 'gold' | 'purple' | 'teal';
-}) {
-  const color =
-    tone === 'purple' ? '#8747C8' : tone === 'teal' ? palette.tealMid : palette.goldDark;
-  return (
-    <View style={styles.resourceChip}>
-      <Ionicons name={icon} size={15} color={color} />
-      <Text style={styles.resourceValue} numberOfLines={1}>
-        {value}
-      </Text>
-      <View style={styles.resourcePlus}>
-        <Ionicons name="add" size={12} color={palette.white} />
-      </View>
-    </View>
-  );
+function isCenterModuleRenderable(state: CenterHomeVisibilityState): boolean {
+  return state !== 'hidden';
 }
 
 function GameStatusBar({ progress = 0.62 }: { progress?: number; variant?: 'primary' | 'secondary' }) {
@@ -214,30 +133,14 @@ function GameStatusBar({ progress = 0.62 }: { progress?: number; variant?: 'prim
   );
 }
 
-function EceInsightCard({ contextLine }: { contextLine?: string | null }) {
-  const router = useRouter();
-  const text =
-    contextLine?.trim() ||
-    'Toplu taşıma hatlarını aktifleştirmek, vatandaşların mutluluğunu en hızlı artıracak adım.';
-
-  return (
-    <Pressable
-      onPress={() => router.push('/events' as Href)}
-      accessibilityRole="button"
-      accessibilityLabel="Ece önerisini aç"
-      style={({ pressed }) => [styles.eceCard, pressedScale(pressed)]}>
-      <View style={styles.eceAvatarWrap}>
-        <Image source={hubAssets.advisorPortrait} style={styles.eceAvatar} contentFit="cover" />
-      </View>
-      <View style={styles.eceTextBlock}>
-        <Text style={styles.eceName}>ECE</Text>
-        <Text style={styles.eceText} numberOfLines={2}>
-          {text}
-        </Text>
-      </View>
-      <MiniIcon icon="bulb-outline" tone="gold" />
-    </Pressable>
-  );
+function EceInsightCard({
+  advisor,
+  reducedMotion = false,
+}: {
+  advisor: CenterHomePresentation['advisorSuggestion'];
+  reducedMotion?: boolean;
+}) {
+  return <CenterAdvisorCard advisor={advisor} reducedMotion={reducedMotion} />;
 }
 
 function SectionTitle({ title, action }: { title: string; action?: string }) {
@@ -287,243 +190,6 @@ function ModernSectionHeader({
           <Ionicons name="chevron-forward" size={12} color={palette.tealMid} />
         </Pressable>
       ) : null}
-    </View>
-  );
-}
-
-function FocusCarousel() {
-  const domains = [
-    {
-      title: 'Ulaşım',
-      level: 'Seviye 14',
-      value: '720 / 1.000',
-      image: routeHeroImage,
-      icon: 'bus-outline' as IconName,
-      tone: 'teal' as const,
-      progress: 0.72,
-    },
-    {
-      title: 'Enerji',
-      level: 'Seviye 13',
-      value: '560 / 1.000',
-      image: creviaAssets.districts.industrialBlock,
-      icon: 'flash-outline' as IconName,
-      tone: 'gold' as const,
-      progress: 0.56,
-    },
-    {
-      title: 'Çevre',
-      level: 'Seviye 12',
-      value: '430 / 1.000',
-      image: greenHeroImage,
-      icon: 'leaf-outline' as IconName,
-      tone: 'green' as const,
-      progress: 0.43,
-    },
-  ];
-
-  return (
-    <View style={styles.section}>
-      <SectionTitle title="OPERASYON ODAĞI" action="TÜMÜNÜ GÖR" />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.focusScroll}>
-        {domains.map((item) => (
-          <Pressable
-            key={item.title}
-            accessibilityRole="button"
-            accessibilityLabel={`${item.title} odağı`}
-            style={({ pressed }) => [styles.focusCard, pressedScale(pressed)]}>
-            <View style={styles.focusImage}>
-              <AssetImage source={item.image} />
-              <View style={styles.focusIconFloat}>
-                <MiniIcon icon={item.icon} tone={item.tone} />
-              </View>
-            </View>
-            <Text style={styles.focusTitle} numberOfLines={1}>
-              {item.title}
-            </Text>
-            <Text style={styles.focusLevel} numberOfLines={1}>
-              {item.level}
-            </Text>
-            <GameStatusBar progress={item.progress} variant="secondary" />
-            <Text style={styles.focusValue} numberOfLines={1}>
-              {item.value}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-    </View>
-  );
-}
-
-type RewardStepStatus = 'done' | 'active' | 'locked';
-
-function RewardStepNode({
-  day,
-  status,
-}: {
-  day: number;
-  status: RewardStepStatus;
-}) {
-  const isActive = status === 'active';
-  const isDone = status === 'done';
-
-  return (
-    <View style={[styles.rewardStepWrap, isActive ? styles.rewardStepWrapActive : undefined]}>
-      {isActive ? (
-        <View style={styles.rewardStepGlow}>
-          <View style={styles.rewardStepActiveRing}>
-            <View style={styles.rewardStepActiveInner}>
-              <Ionicons name="gift" size={22} color={palette.tealDark} />
-            </View>
-          </View>
-          <View style={styles.rewardStepActivePill}>
-            <Text style={styles.rewardStepActivePillText} numberOfLines={1}>
-              {day}. Gün
-            </Text>
-          </View>
-        </View>
-      ) : (
-        <View style={styles.rewardStepColumn}>
-          <View style={[styles.rewardStepCoin, isDone ? styles.rewardStepCoinDone : undefined]}>
-            {isDone ? (
-              <>
-                <Ionicons name="logo-bitcoin" size={14} color={palette.goldDark} />
-                <View style={styles.rewardStepCheckBadge}>
-                  <Ionicons name="checkmark" size={7} color={palette.white} />
-                </View>
-              </>
-            ) : (
-              <Ionicons name="gift-outline" size={13} color="rgba(255,255,255,0.38)" />
-            )}
-          </View>
-          <Text style={[styles.rewardStepLabel, isDone ? styles.rewardStepLabelDone : undefined]} numberOfLines={1}>
-            {day}. Gün
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
-function GrandRewardChest() {
-  return (
-    <View style={styles.grandRewardArea}>
-      <View style={styles.grandRewardDivider} />
-      <View style={styles.grandRewardContent}>
-        <Text style={styles.grandRewardLabel} numberOfLines={1}>
-          BÜYÜK ÖDÜL
-        </Text>
-        <View style={styles.grandRewardChestWrap}>
-          <View style={styles.grandRewardChestLid} />
-          <View style={styles.grandRewardChestBody}>
-            <View style={styles.grandRewardChestBand} />
-            <Ionicons name="lock-closed" size={10} color={palette.goldSoft} />
-          </View>
-          <View style={styles.grandRewardChestGlow} />
-        </View>
-        <View style={styles.grandRewardValueRow}>
-          <Text style={styles.grandRewardValue}>250</Text>
-          <Ionicons name="diamond" size={14} color="#8747C8" />
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function DailyRewardRoadCard() {
-  const steps: { day: number; status: RewardStepStatus }[] = [
-    { day: 1, status: 'done' },
-    { day: 2, status: 'done' },
-    { day: 3, status: 'active' },
-    { day: 4, status: 'locked' },
-    { day: 5, status: 'locked' },
-  ];
-
-  return (
-    <LinearGradient
-      colors={[palette.tealDark, palette.teal, '#0B665E']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.rewardRoadCard}>
-      <View style={styles.rewardRoadHeader}>
-        <Text style={styles.rewardRoadTitle} numberOfLines={1}>
-          ✦ GÜNLÜK ÖDÜL ROTASI
-        </Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Günlük ödül bilgisi"
-          hitSlop={8}
-          style={({ pressed }) => [styles.rewardRoadInfoBtn, pressedScale(pressed)]}>
-          <Ionicons name="information-circle-outline" size={18} color={palette.goldSoft} />
-        </Pressable>
-      </View>
-      <View style={styles.rewardRoadBody}>
-        <View style={styles.rewardRoadPath}>
-          <View style={styles.rewardRoadLine} />
-          <View style={styles.rewardRoadSteps}>
-            {steps.map((step) => (
-              <RewardStepNode key={step.day} day={step.day} status={step.status} />
-            ))}
-          </View>
-        </View>
-        <GrandRewardChest />
-      </View>
-    </LinearGradient>
-  );
-}
-
-function CityCrestMiniIllustration() {
-  return (
-    <View style={styles.cityCrestWrap}>
-      <View style={styles.cityCrestDiamond}>
-        <View style={styles.cityCrestSky} />
-        <View style={styles.cityCrestBuildingLeft} />
-        <View style={styles.cityCrestBuildingCenter} />
-        <View style={styles.cityCrestBuildingRight} />
-        <View style={styles.cityCrestSpire} />
-        <View style={styles.cityCrestGoldAccent} />
-      </View>
-    </View>
-  );
-}
-
-function CityDevelopmentCard() {
-  const reputation = '4.650';
-  const nextLevel = '5.000';
-  const progressCurrent = 350;
-  const progressTotal = 1000;
-  const progressRatio = progressCurrent / progressTotal;
-
-  return (
-    <View style={styles.section}>
-      <SectionTitle title="ŞEHİR GELİŞİMİ" />
-      <LinearGradient
-        colors={[palette.tealDark, palette.teal, '#0B665E']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.cityDevCard}>
-        <View style={styles.cityDevBadge}>
-          <Ionicons name="star" size={18} color={palette.gold} />
-        </View>
-        <View style={styles.cityDevCenter}>
-          <Text style={styles.cityDevLabel} numberOfLines={1}>
-            Şehir İtibarı
-          </Text>
-          <Text style={styles.cityDevValue} numberOfLines={1}>
-            {reputation}
-          </Text>
-          <Text style={styles.cityDevNext} numberOfLines={1}>
-            Sonraki Seviye: {nextLevel}
-          </Text>
-          <View style={styles.cityDevProgressTrack}>
-            <View style={[styles.cityDevProgressFill, { width: `${progressRatio * 100}%` }]} />
-          </View>
-          <Text style={styles.cityDevProgressText} numberOfLines={1}>
-            {progressCurrent} / {progressTotal.toLocaleString('tr-TR')}
-          </Text>
-        </View>
-        <CityCrestMiniIllustration />
-      </LinearGradient>
     </View>
   );
 }
@@ -589,44 +255,49 @@ function OperationSignalRow({
 }
 
 function OperationSignalsList({
-  hubTomorrowRisk,
-  hubImpactExplanationLine,
+  signalsSection,
 }: {
-  hubTomorrowRisk?: TomorrowRiskModel | null;
-  hubImpactExplanationLine?: string | null;
+  signalsSection: CenterHomePresentation['operationSignals'];
 }) {
-  const transportBody =
-    hubTomorrowRisk?.mainLine ?? "T1 Hattı'nda yolcu talebi %18 arttı.";
-  const energyBody =
-    hubImpactExplanationLine ?? 'Rüzgar enerjisi verimliliği %12 arttı.';
+  if (!isCenterModuleRenderable(signalsSection.visibility)) {
+    return null;
+  }
 
-  const signals = [
-    {
-      icon: 'trending-up' as IconName,
-      accentColor: palette.green,
-      iconGradient: ['#E8F8EE', '#D0EFDB'] as [string, string],
-      title: 'Ulaşım Talebi Yükseliyor',
-      body: transportBody,
-      impactLevel: 'YÜKSEK',
-      impactTone: 'high' as const,
-    },
-    {
-      icon: 'flash' as IconName,
-      accentColor: palette.amber,
-      iconGradient: [palette.goldSoft, '#F8EAC4'] as [string, string],
-      title: 'Enerji Üretimi Artıyor',
-      body: energyBody,
-      impactLevel: 'ORTA',
-      impactTone: 'medium' as const,
-    },
-  ];
+  if (signalsSection.visibility === 'empty' || signalsSection.signals.length === 0) {
+    return (
+      <View style={styles.section}>
+        <ModernSectionHeader title="OPERASYON SİNYALLERİ" />
+        <View style={styles.signalEmptyCard}>
+          <Text style={styles.signalEmptyText} numberOfLines={2}>
+            {signalsSection.emptyLabel ?? 'Bugün kritik sinyal yok'}
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.section}>
-      <ModernSectionHeader title="OPERASYON SİNYALLERİ" action="TÜMÜNÜ GÖR" />
+      <ModernSectionHeader
+        title="OPERASYON SİNYALLERİ"
+        action={signalsSection.showViewAll ? 'TÜMÜNÜ GÖR' : undefined}
+      />
       <View style={styles.signalList}>
-        {signals.map((signal) => (
-          <OperationSignalRow key={signal.title} {...signal} />
+        {signalsSection.signals.map((signal) => (
+          <OperationSignalRow
+            key={signal.id}
+            icon={signal.icon}
+            accentColor={signal.impactTone === 'high' ? palette.green : palette.amber}
+            iconGradient={
+              signal.impactTone === 'high'
+                ? (['#E8F8EE', '#D0EFDB'] as [string, string])
+                : ([palette.goldSoft, '#F8EAC4'] as [string, string])
+            }
+            title={signal.title}
+            body={signal.body}
+            impactLevel={signal.impactLevel}
+            impactTone={signal.impactTone === 'low' ? 'medium' : signal.impactTone}
+          />
         ))}
       </View>
     </View>
@@ -638,12 +309,14 @@ function QuickActionTile({
   caption,
   icon,
   iconTone,
+  locked = false,
   onPress,
 }: {
   title: string;
   caption: string;
   icon: IconName;
   iconTone: 'teal' | 'gold' | 'green';
+  locked?: boolean;
   onPress: () => void;
 }) {
   const toneConfig = {
@@ -667,9 +340,14 @@ function QuickActionTile({
   return (
     <Pressable
       onPress={onPress}
+      disabled={locked}
       accessibilityRole="button"
       accessibilityLabel={title}
-      style={({ pressed }) => [styles.quickActionTileOuter, pressedScale(pressed)]}>
+      style={({ pressed }) => [
+        styles.quickActionTileOuter,
+        locked ? styles.quickActionTileLocked : undefined,
+        pressedScale(pressed),
+      ]}>
       <LinearGradient
         colors={toneConfig.gradient}
         start={{ x: 0, y: 0 }}
@@ -696,32 +374,46 @@ function QuickActionTile({
   );
 }
 
-function QuickActionsGrid() {
+function QuickActionsGrid({
+  quickActions,
+}: {
+  quickActions: CenterHomePresentation['quickActions'];
+}) {
   const router = useRouter();
   const { isCompact } = useHubLayoutMetrics();
-  const actions = [
-    { title: 'Hat Yükselt', caption: 'Kapasiteyi artır.', icon: 'bus-outline' as IconName, iconTone: 'teal' as const, route: '/events' as Href },
-    { title: 'Çevre Yatırımı', caption: 'Yeşil alanı da artır.', icon: 'leaf-outline' as IconName, iconTone: 'green' as const, route: '/events' as Href },
-    { title: 'Enerji Desteği', caption: 'Üretimi hızlandır.', icon: 'flash-outline' as IconName, iconTone: 'gold' as const, route: '/events' as Href },
-    { title: 'Personel Atama', caption: 'Ekipleri yönet.', icon: 'people-outline' as IconName, iconTone: 'teal' as const, route: '/events' as Href },
-    { title: 'Malzeme Al', caption: 'Kaynak satın al.', icon: 'cart-outline' as IconName, iconTone: 'gold' as const, route: '/events' as Href },
-    { title: 'Bina Onar', caption: 'Yapıları iyileştir.', icon: 'hammer-outline' as IconName, iconTone: 'teal' as const, route: '/events' as Href },
-  ];
+
+  if (!isCenterModuleRenderable(quickActions.visibility)) {
+    return null;
+  }
+
+  const visibleActions = quickActions.actions;
 
   return (
     <View style={styles.section}>
       <ModernSectionHeader title="HIZLI İŞLEMLER" />
+      {quickActions.visibility === 'locked' ? (
+        <View style={styles.quickLockedBanner}>
+          <Text style={styles.quickLockedText} numberOfLines={2}>
+            Gün 2&apos;den itibaren hızlı işlemler açılır.
+          </Text>
+        </View>
+      ) : null}
       <View style={styles.quickGrid}>
-        {actions.map((action) => (
+        {visibleActions.map((action) => (
           <View
-            key={action.title}
+            key={action.id}
             style={[styles.quickGridCell, isCompact ? styles.quickGridCellCompact : styles.quickGridCellWide]}>
             <QuickActionTile
               title={action.title}
               caption={action.caption}
-              icon={action.icon}
+              icon={action.icon as IconName}
               iconTone={action.iconTone}
-              onPress={() => router.push(action.route)}
+              locked={action.locked}
+              onPress={() => {
+                if (!action.locked) {
+                  router.push(action.route as Href);
+                }
+              }}
             />
           </View>
         ))}
@@ -751,42 +443,27 @@ function PlanMiniIllustration() {
   );
 }
 
-function PlanMetaItem({ icon, label, value }: { icon: IconName; label: string; value: string }) {
-  return (
-    <View style={styles.planMetaItem}>
-      <Ionicons name={icon} size={12} color={palette.goldDark} />
-      <Text style={styles.planMetaLabel} numberOfLines={1}>
-        {label}
-      </Text>
-      <Text style={styles.planMetaValue} numberOfLines={1}>
-        {value}
-      </Text>
-    </View>
-  );
-}
-
 function RecommendedPlanCard({
-  hubCityJournal,
-  hubDistrictReportLine,
-  hubStoryChainLine,
-  hubVehicleMaintenanceLine,
-  hubTeamSpecializationLine,
+  plan,
 }: {
-  hubCityJournal?: CityJournalHubPresentation | null;
-  hubDistrictReportLine?: string | null;
-  hubStoryChainLine?: string | null;
-  hubVehicleMaintenanceLine?: string | null;
-  hubTeamSpecializationLine?: string | null;
+  plan: CenterHomePresentation['recommendedPlan'];
 }) {
-  const contextLine =
-    hubCityJournal?.primaryLine ||
-    hubDistrictReportLine ||
-    hubStoryChainLine ||
-    hubVehicleMaintenanceLine ||
-    hubTeamSpecializationLine ||
-    'Sahil şeridinde yeni bir yeşil alan oluşturarak yaşam kalitesini artır.';
+  if (!isCenterModuleRenderable(plan.visibility)) {
+    return null;
+  }
 
-  const planTitle = hubCityJournal?.title?.trim() || 'Boğaz Park Projesi';
+  if (plan.visibility === 'locked') {
+    return (
+      <View style={styles.section}>
+        <SectionTitle title="ÖNERİLEN PLAN" />
+        <View style={styles.planLockedCard}>
+          <Text style={styles.planLockedText} numberOfLines={2}>
+            {plan.lockedTeaser ?? 'Günlük plan özeti yakında açılır.'}
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.section}>
@@ -795,16 +472,11 @@ function RecommendedPlanCard({
         <PlanMiniIllustration />
         <View style={styles.planCopy}>
           <Text style={styles.planTitle} numberOfLines={2}>
-            {planTitle}
+            {plan.title}
           </Text>
           <Text style={styles.planBody} numberOfLines={3}>
-            {contextLine}
+            {plan.body}
           </Text>
-          <View style={styles.planMetaRow}>
-            <PlanMetaItem icon="happy-outline" label="ETKİ" value="+18" />
-            <PlanMetaItem icon="time-outline" label="SÜRE" value="2sa 30dk" />
-            <PlanMetaItem icon="cash-outline" label="ÖDÜL" value="650K" />
-          </View>
         </View>
         <View style={styles.bookmark}>
           <Ionicons name="star" size={14} color={palette.goldSoft} />
@@ -814,7 +486,7 @@ function RecommendedPlanCard({
   );
 }
 
-function ApprovePlanCTA() {
+function ApprovePlanCTA({ label }: { label: string }) {
   const router = useRouter();
 
   return (
@@ -831,7 +503,7 @@ function ApprovePlanCTA() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.approveButton}>
-        <Text style={styles.approveText}>PLANI ONAYLA</Text>
+        <Text style={styles.approveText}>{label}</Text>
         <View style={styles.ctaArrow}>
           <Ionicons name="arrow-forward" size={18} color={palette.tealDark} />
         </View>
@@ -840,19 +512,52 @@ function ApprovePlanCTA() {
   );
 }
 
+function ContinuationCardsSection({
+  continuation,
+}: {
+  continuation: CenterHomePresentation['continuationCards'];
+}) {
+  const router = useRouter();
+
+  if (!isCenterModuleRenderable(continuation.visibility) || continuation.cards.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={styles.section}>
+      <SectionTitle title="DEVAM" />
+      <View style={styles.continuationList}>
+        {continuation.cards.map((card) => (
+          <Pressable
+            key={card.id}
+            onPress={() => router.push(card.route as Href)}
+            accessibilityRole="button"
+            accessibilityLabel={card.title}
+            style={({ pressed }) => [styles.continuationCard, pressedScale(pressed)]}>
+            <Text style={styles.continuationTitle} numberOfLines={1}>
+              {card.title}
+            </Text>
+            <Text style={styles.continuationBody} numberOfLines={2}>
+              {card.body}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function shouldRenderActiveTarget(
+  target: CenterHomePresentation['activeTarget'],
+): boolean {
+  return target.visibility !== 'hidden';
+}
+
 export function HubReferenceHome({
-  hubImpactExplanationLine,
-  hubTomorrowRisk,
-  hubCityJournal,
-  hubEceContextLine,
-  hubDistrictReportLine,
-  hubStoryChainLine,
-  hubVehicleMaintenanceLine,
-  hubTeamSpecializationLine,
+  presentation,
   scrollFooter,
-}: HubReferenceHomeProps = {}) {
+}: HubReferenceHomeProps) {
   const { scrollBottomPadding } = useHubLayoutMetrics();
-  const status = useGameStatus();
   const pilotDay = useGameStore((s) => s.gameState.pilot.currentPilotDay);
   const badgeState = useGameStore((s) => s.gameState.pilot.badgeState);
   const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
@@ -889,15 +594,9 @@ export function HubReferenceHome({
     hubBadgeShowcase.visible &&
     Number(showHubDistrictExpansion) + Number(showHubAuthorityPreview) < 2;
 
-  const premiumContextLine = useMemo(
-    () =>
-      [
-        hubImpactExplanationLine,
-        hubTomorrowRisk?.mainLine,
-        hubCityJournal?.primaryLine,
-      ].find((line) => Boolean(line?.trim())) ?? null,
-    [hubCityJournal?.primaryLine, hubImpactExplanationLine, hubTomorrowRisk?.mainLine],
-  );
+  const activeTarget = presentation.activeTarget;
+  const reducedMotion = useCreviaReducedMotion();
+  const hubMotionEnabled = resolveMotionDensity({ day: pilotDay }) !== 'day1_minimal';
 
   return (
     <View style={styles.root}>
@@ -908,26 +607,63 @@ export function HubReferenceHome({
         keyboardShouldPersistTaps="handled"
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{ paddingBottom: scrollBottomPadding }}>
-        <HeaderSummary />
+        <CenterMotionEnter
+          index={0}
+          reducedMotion={reducedMotion}
+          day={pilotDay}
+          hubMotionEnabled={hubMotionEnabled}>
+          <CenterHomeHeader header={presentation.headerSummary} />
+        </CenterMotionEnter>
         <View style={styles.body}>
-          <HubActiveTaskCardStack />
-          <EceInsightCard contextLine={hubEceContextLine ?? premiumContextLine} />
-          <FocusCarousel />
-          <DailyRewardRoadCard />
-          <CityDevelopmentCard />
-          <OperationSignalsList
-            hubTomorrowRisk={hubTomorrowRisk}
-            hubImpactExplanationLine={premiumContextLine}
+          <CenterMotionEnter
+            index={1}
+            reducedMotion={reducedMotion}
+            day={pilotDay}
+            hubMotionEnabled={hubMotionEnabled}>
+            <CenterCitySummaryCard summary={presentation.citySummary} />
+          </CenterMotionEnter>
+          <CenterMotionEnter
+            index={2}
+            reducedMotion={reducedMotion}
+            day={pilotDay}
+            hubMotionEnabled={hubMotionEnabled}>
+            <CenterDailyRewardRoute reward={presentation.dailyReward} reducedMotion={reducedMotion} />
+          </CenterMotionEnter>
+          {shouldRenderActiveTarget(activeTarget) ? (
+            <CenterMotionEnter
+              index={3}
+              reducedMotion={reducedMotion}
+              day={pilotDay}
+              disabled={!hubMotionEnabled}
+              hubMotionEnabled={hubMotionEnabled}>
+              <HubActiveTaskCardStack activeTarget={activeTarget} reducedMotion={reducedMotion} />
+            </CenterMotionEnter>
+          ) : null}
+          {isCenterModuleRenderable(presentation.advisorSuggestion.visibility) ? (
+            <CenterMotionEnter
+              index={4}
+              reducedMotion={reducedMotion}
+              day={pilotDay}
+              disabled={!hubMotionEnabled}
+              hubMotionEnabled={hubMotionEnabled}>
+              <EceInsightCard
+                advisor={presentation.advisorSuggestion}
+                reducedMotion={reducedMotion}
+              />
+            </CenterMotionEnter>
+          ) : null}
+          <CenterOperationFocusSection
+            focus={presentation.operationFocus}
+            reducedMotion={reducedMotion}
           />
-          <QuickActionsGrid />
-          <RecommendedPlanCard
-            hubCityJournal={hubCityJournal}
-            hubDistrictReportLine={hubDistrictReportLine}
-            hubStoryChainLine={hubStoryChainLine}
-            hubVehicleMaintenanceLine={hubVehicleMaintenanceLine}
-            hubTeamSpecializationLine={hubTeamSpecializationLine}
-          />
-          <ApprovePlanCTA />
+          <OperationSignalsList signalsSection={presentation.operationSignals} />
+          <QuickActionsGrid quickActions={presentation.quickActions} />
+          <RecommendedPlanCard plan={presentation.recommendedPlan} />
+          {isCenterModuleRenderable(presentation.recommendedPlan.visibility) &&
+          presentation.recommendedPlan.visibility !== 'locked' ? (
+            <ApprovePlanCTA label={presentation.recommendedPlan.ctaLabel} />
+          ) : null}
+          <ContinuationCardsSection continuation={presentation.continuationCards} />
           {showHubAuthorityPreview ? (
             <HubAuthorityPermissionPreviewChip summary={hubAuthorityPermissionPreview} />
           ) : null}
@@ -1062,6 +798,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: palette.tealMid,
   },
+  headerAlertLine: {
+    marginTop: 4,
+    fontSize: 11,
+    fontWeight: '600',
+    color: palette.amber,
+  },
   reputationBadge: {
     width: 84,
     height: 84,
@@ -1187,6 +929,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: palette.text,
   },
+  eceActionLine: {
+    marginTop: 2,
+    fontSize: 10,
+    fontWeight: '700',
+    color: palette.tealMid,
+  },
   miniIcon: {
     width: 36,
     height: 36,
@@ -1274,241 +1022,26 @@ const styles = StyleSheet.create({
     color: palette.goldDark,
     fontVariant: ['tabular-nums'],
   },
-  rewardRoadCard: {
-    borderRadius: 23,
-    paddingHorizontal: 13,
-    paddingVertical: 12,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: palette.gold,
-    minHeight: 108,
-    overflow: 'hidden',
-  },
-  rewardRoadHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minWidth: 0,
-  },
-  rewardRoadTitle: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 11,
-    fontWeight: '900',
-    color: palette.goldSoft,
-    letterSpacing: 0.3,
-  },
-  rewardRoadInfoBtn: {
-    flexShrink: 0,
-    marginLeft: 6,
-  },
-  rewardRoadBody: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minWidth: 0,
-    gap: 4,
-  },
-  rewardRoadPath: {
-    flex: 1,
-    minWidth: 0,
-    justifyContent: 'center',
-    paddingTop: 2,
-  },
-  rewardRoadLine: {
-    position: 'absolute',
-    left: 8,
-    right: 8,
-    top: 14,
-    height: 2,
-    borderRadius: 999,
-    backgroundColor: 'rgba(216,167,46,0.35)',
-  },
-  rewardRoadSteps: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    minWidth: 0,
-  },
-  rewardStepWrap: {
-    flex: 1,
-    alignItems: 'center',
-    minWidth: 0,
-    zIndex: 1,
-  },
-  rewardStepWrapActive: {
-    flex: 1.35,
-    marginTop: -4,
-  },
-  rewardStepColumn: {
-    alignItems: 'center',
-    gap: 3,
-    minWidth: 0,
-  },
-  rewardStepCoin: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.10)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
-  },
-  rewardStepCoinDone: {
-    backgroundColor: palette.gold,
-    borderColor: palette.goldSoft,
-  },
-  rewardStepCheckBadge: {
-    position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: palette.green,
-    borderWidth: 1,
-    borderColor: palette.white,
-  },
-  rewardStepLabel: {
-    fontSize: 7,
-    fontWeight: '800',
-    color: 'rgba(255,255,255,0.50)',
-  },
-  rewardStepLabelDone: {
-    color: palette.goldSoft,
-  },
-  rewardStepGlow: {
-    alignItems: 'center',
-    gap: 3,
-  },
-  rewardStepActiveRing: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(216,167,46,0.22)',
-    borderWidth: 2,
-    borderColor: palette.gold,
-    shadowColor: palette.gold,
-    shadowOpacity: 0.45,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 4,
-  },
-  rewardStepActiveInner: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: palette.gold,
-    borderWidth: 1.5,
-    borderColor: palette.goldSoft,
-  },
-  rewardStepActivePill: {
-    borderRadius: 999,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    backgroundColor: 'rgba(216,167,46,0.28)',
-    borderWidth: 1,
-    borderColor: 'rgba(245,227,175,0.45)',
-  },
-  rewardStepActivePillText: {
-    fontSize: 7,
-    fontWeight: '900',
-    color: palette.goldSoft,
-  },
-  grandRewardArea: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 0,
-    minWidth: 58,
-  },
-  grandRewardDivider: {
-    width: 1,
-    height: 62,
-    backgroundColor: 'rgba(245,227,175,0.22)',
-    marginRight: 6,
-  },
-  grandRewardContent: {
-    alignItems: 'center',
-    gap: 2,
-    minWidth: 0,
-  },
-  grandRewardLabel: {
-    fontSize: 7,
-    fontWeight: '900',
-    color: palette.goldSoft,
-    letterSpacing: 0.2,
-  },
-  grandRewardChestWrap: {
-    width: 38,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    position: 'relative',
-  },
-  grandRewardChestLid: {
-    position: 'absolute',
-    top: 2,
-    width: 34,
-    height: 10,
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
-    backgroundColor: '#0A5C55',
-    borderWidth: 1,
-    borderColor: palette.gold,
-  },
-  grandRewardChestBody: {
-    width: 34,
-    height: 22,
-    borderRadius: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: palette.tealDark,
-    borderWidth: 1,
-    borderColor: palette.gold,
-  },
-  grandRewardChestBand: {
-    position: 'absolute',
-    top: 8,
-    width: '100%',
-    height: 4,
-    backgroundColor: palette.gold,
-  },
-  grandRewardChestGlow: {
-    position: 'absolute',
-    bottom: -2,
-    width: 30,
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: 'rgba(216,167,46,0.30)',
-  },
-  grandRewardValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  grandRewardValue: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: palette.goldSoft,
-    fontVariant: ['tabular-nums'],
-  },
   cityDevCard: {
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
     gap: 8,
     borderWidth: 1,
     borderColor: palette.gold,
     minHeight: 86,
     overflow: 'hidden',
+  },
+  citySummaryMetrics: {
+    flexDirection: 'row',
+    gap: 8,
+    minWidth: 0,
+  },
+  citySummaryMetric: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   cityDevBadge: {
     width: 38,
@@ -1676,6 +1209,19 @@ const styles = StyleSheet.create({
   signalList: {
     gap: 10,
   },
+  signalEmptyCard: {
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: palette.card,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  signalEmptyText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: palette.muted,
+  },
   signalRow: {
     borderRadius: 20,
     paddingRight: 10,
@@ -1806,6 +1352,21 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     ...cardShadow,
   },
+  quickActionTileLocked: {
+    opacity: 0.55,
+  },
+  quickLockedBanner: {
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: palette.tealSoft,
+    marginBottom: 4,
+  },
+  quickLockedText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: palette.tealMid,
+  },
   quickActionTile: {
     borderRadius: 18,
     paddingHorizontal: 10,
@@ -1875,6 +1436,42 @@ const styles = StyleSheet.create({
     borderColor: palette.border,
     overflow: 'hidden',
     ...cardShadow,
+  },
+  planLockedCard: {
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: palette.card,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  planLockedText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: palette.muted,
+  },
+  continuationList: {
+    gap: 8,
+  },
+  continuationCard: {
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: palette.card,
+    borderWidth: 1,
+    borderColor: palette.border,
+    gap: 4,
+  },
+  continuationTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: palette.teal,
+  },
+  continuationBody: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600',
+    color: palette.muted,
   },
   planIllustration: {
     width: 138,
