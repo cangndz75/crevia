@@ -46,6 +46,7 @@ Kaynak: `buildHubCardVisibilityModel` + `buildCenterHomePresentation` içi kural
 ## Fallback state’leri
 
 - **Ece:** `hubEceContextLine` → `mainOperationFeel.eceLine` → genel onboarding metni
+- **Operasyon odağı:** `mainOperationFeelPresentation` → `buildOperationFocus` içinde feel satırı merge
 - **Aktif hedef:** primary daily goal → main operation feel → gün 1 giriş hedefi
 - **Operasyon sinyalleri:** tomorrow risk + city echo; yoksa empty
 - **Önerilen plan:** city journal → district report → story chain → bakım/ekip hatları

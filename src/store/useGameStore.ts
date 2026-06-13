@@ -460,6 +460,8 @@ type GameStoreState = {
   lastBudgetDelta: number | null;
   /** Son başarılı karar sonucu — persist edilmez, karar sonuç ekranında gösterilir */
   lastDecisionResult: DecisionResultSnapshot | null;
+  /** Son operasyon plan stratejisi — persist edilmez, sonuç ekranı context için */
+  lastOperationPlanStrategyId: import('@/features/events/utils/eventPlanPhasePresentation').EventPlanStrategyId | null;
   /**
    * Yeni XP / seviye modülü ilerlemesi.
    * gameState.player (mock header XP) ile ayrı tutulur — UI bu alanı henüz göstermiyor.
@@ -506,6 +508,9 @@ type GameStoreActions = {
   applyDecision: (eventId: string, decisionId: string) => ApplyDecisionStoreResult;
   setLastDecisionResult: (result: DecisionResultSnapshot | null) => void;
   clearLastDecisionResult: () => void;
+  setLastOperationPlanStrategyId: (
+    strategyId: import('@/features/events/utils/eventPlanPhasePresentation').EventPlanStrategyId | null,
+  ) => void;
   ensureDailyGoalsForDay: (day?: number) => void;
   clearDailyGoals: () => void;
   ensureDailyPriorityForDay: (day?: number) => void;
@@ -821,6 +826,7 @@ function applySeedBundle(
   | 'lastClosedDay'
   | 'lastBudgetDelta'
   | 'lastDecisionResult'
+  | 'lastOperationPlanStrategyId'
   | 'playerProgress'
   | 'dailyGoalState'
   | 'dailyGoalsByDay'
@@ -862,6 +868,7 @@ function applySeedBundle(
     lastClosedDay: null,
     lastBudgetDelta: null,
     lastDecisionResult: null,
+    lastOperationPlanStrategyId: null,
     playerProgress: createInitialPlayerProgress(),
     dailyGoalState: createDailyGoalsForDay({
       day: bundle.gameState.city.day,
@@ -1199,11 +1206,14 @@ export const useGameStore = create<GameStore>()(
       lastPilotScore: undefined,
       lastBudgetDelta: null,
       lastDecisionResult: null,
+      lastOperationPlanStrategyId: null,
       districtOperationActionState: createInitialDistrictOperationActionState(),
       _hasHydrated: false,
 
       setLastDecisionResult: (result) => set({ lastDecisionResult: result }),
       clearLastDecisionResult: () => set({ lastDecisionResult: null }),
+      setLastOperationPlanStrategyId: (strategyId) =>
+        set({ lastOperationPlanStrategyId: strategyId }),
 
       ensureDailyGoalsForDay: (day) => {
         const current = get();
@@ -4363,6 +4373,7 @@ export const useGameStore = create<GameStore>()(
           lastPilotScore: saved.lastPilotScore,
           lastBudgetDelta: null,
           lastDecisionResult: null,
+          lastOperationPlanStrategyId: null,
           _hasHydrated: true,
         };
       },

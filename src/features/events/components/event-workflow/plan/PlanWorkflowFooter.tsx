@@ -10,15 +10,18 @@ type PlanWorkflowFooterProps = {
   onPress: () => void;
   disabled?: boolean;
   loading?: boolean;
+  ctaLabel?: string;
 };
 
 export function PlanWorkflowFooter({
   onPress,
   disabled = false,
   loading = false,
+  ctaLabel,
 }: PlanWorkflowFooterProps) {
   const insets = useSafeAreaInsets();
   const inactive = disabled && !loading;
+  const label = ctaLabel ?? WORKFLOW_CTA_LABELS.plan;
 
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 8) }]}>
@@ -32,11 +35,11 @@ export function PlanWorkflowFooter({
           pressed && !disabled && !loading && styles.pressed,
         ]}
         accessibilityRole="button"
-        accessibilityLabel={loading ? 'Yükleniyor' : WORKFLOW_CTA_LABELS.plan}
+        accessibilityLabel={loading ? 'Yükleniyor' : label}
         accessibilityState={{ disabled: disabled || loading, busy: loading }}>
         <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
         <Text style={styles.label} numberOfLines={1}>
-          {loading ? 'Hazırlanıyor...' : WORKFLOW_CTA_LABELS.plan}
+          {loading ? 'Hazırlanıyor...' : label}
         </Text>
         <View style={styles.ctaSpacer} />
       </Pressable>

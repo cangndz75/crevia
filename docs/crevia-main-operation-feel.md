@@ -52,10 +52,16 @@ Day 8+ oyuncuya ana operasyon başlangıcı yeterince güçlü hissettirilmiyord
 
 ## Hub entegrasyonu
 
-- `HubMainOperationFeelCard` — kompakt hero kart
-- `HubReferenceHome` — TomorrowRisk strip sonrası, Ece kartından önce
-- `HubScreen` — feel model + Ece context line üretir
-- `HubMainOperationSeasonCard` ayrı kalır (season goals); feel kartı duplicate etmez
+Day 8+ main operation feel artık ayrı `HubMainOperationFeelCard` yerine Merkez **Operasyon Odağı** modülüne akar:
+
+- `HubScreen` — `buildMainOperationFeelFromStore` + `buildMainOperationFeelHubPresentation`
+- `centerHomePresentation` — `mainOperationFeelPresentation` orchestrator input’u
+- `centerOperationFocusPresentation` — feel `detailLine` operasyon odağı kartına merge
+- `HubReferenceHome` — `CenterOperationFocusSection` + `presentation.operationFocus`
+- `HubMainOperationFeelCard` — legacy/standalone bileşen; verify helper olarak kalabilir
+- `HubMainOperationSeasonCard` ayrı kalır (season goals); feel duplicate etmez
+
+Verify: `HubReferenceHome entegrasyonu` → CenterOperationFocusSection + presentation zinciri kontrol edilir.
 
 ## Report entegrasyonu
 

@@ -8,7 +8,7 @@ import type { MapFilterId } from '../types/map';
 type LegendItem = { color: string; label: string };
 
 type Props = {
-  filter: MapFilterId;
+  filter?: MapFilterId;
 };
 
 const EVENT_RISK_LEGEND: LegendItem[] = [
@@ -37,8 +37,8 @@ const COMPACT_LEGENDS: Record<MapFilterId, LegendItem[]> = {
   ],
 };
 
-export function MapLegend({ filter }: Props) {
-  const items = COMPACT_LEGENDS[filter];
+export function MapLegend({ filter = 'events' }: Props) {
+  const items = COMPACT_LEGENDS[filter] ?? COMPACT_LEGENDS.events;
 
   return (
     <View style={[styles.wrap, shadows.soft]}>

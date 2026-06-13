@@ -76,6 +76,7 @@ function formatSigned(value: number, suffix: string): string {
 export function buildDispatchScreenModel(params: {
   event: EventCard;
   selectedDecision?: EventDecision | null;
+  selectedPlanStrategyLabel?: string | null;
 }): DispatchScreenModel {
   const chips = buildInspectHeroChips(params.event);
   const riskLabel = getRiskLevelLabel(params.event.riskLevel);
@@ -91,9 +92,15 @@ export function buildDispatchScreenModel(params: {
     ? 'Ekibi doğru rota ve öncelikle sahaya çıkar.'
     : 'Kaynak seç; ekibi doğru rota ve öncelikle sahaya yönlendir.';
 
+  const planPrefix = params.selectedPlanStrategyLabel?.trim()
+    ? `${params.selectedPlanStrategyLabel.trim()} · `
+    : '';
+
   const footerSummaryLine = params.selectedDecision
-    ? `${params.selectedDecision.title} · ${presentation?.tradeoff ?? 'Operasyon hazır'}`
-    : 'Kaynak seçimi tamamlandığında sahaya yönlendir.';
+    ? `${planPrefix}${params.selectedDecision.title} · ${presentation?.tradeoff ?? 'Operasyon hazır'}`
+    : planPrefix
+      ? `${planPrefix}Kaynak seçimi tamamlandığında sahaya yönlendir.`
+      : 'Kaynak seçimi tamamlandığında sahaya yönlendir.';
 
   return {
     title: params.event.title,

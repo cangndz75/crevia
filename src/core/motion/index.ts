@@ -30,6 +30,8 @@ export {
   centerSpeechRevealConfig,
   isGlowPresetDisabled,
   isPulsePresetDisabled,
+  operationFindingRevealConfig,
+  operationInspectScanConfig,
 } from './motionPresets';
 
 export type { CenterAttentionLevel, CenterRevealLevel } from './motionPresets';

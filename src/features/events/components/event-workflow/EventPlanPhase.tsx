@@ -1,98 +1,136 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { EventWorkflowStepper } from '@/features/events/components/event-workflow/EventWorkflowStepper';
+import {
+  EventPlanAdvisorCommentCard,
+  EventPlanImpactPreviewCard,
+  EventPlanStrategyCardView,
+  PlanInspectSummaryStrip,
+} from '@/features/events/components/event-workflow/plan/EventPlanStrategyBoard';
 import { PlanEventSummaryCard } from '@/features/events/components/event-workflow/plan/PlanEventSummaryCard';
-import { PlanOptionPicker } from '@/features/events/components/event-workflow/plan/PlanOptionPicker';
-import { PlanSummaryCard } from '@/features/events/components/event-workflow/plan/PlanSummaryCard';
 import { PlanWorkflowFooter } from '@/features/events/components/event-workflow/plan/PlanWorkflowFooter';
+import { OnboardingPhaseHint } from '@/features/onboarding/components/OnboardingPhaseHint';
 import type { EventCard } from '@/core/models/EventCard';
+import { eventDetail } from '@/features/events/theme/eventDetailTokens';
+import {
+  buildEventPlanPhasePresentation,
+  type EventPlanStrategyId,
+} from '@/features/events/utils/eventPlanPhasePresentation';
 import { getInspectNeighborhoodHero } from '@/features/events/utils/eventWorkflowAssets';
 import {
-  buildPlanDisplayOptions,
-  buildPlanSummaryUi,
-} from '@/features/events/utils/eventWorkflowPlanUiPresentation';
-import {
-  buildPlanScreenModel,
-  type PlanOptionId,
+  buildInspectHeroChips,
   resolveInspectDistrictId,
-} from '@/features/events/utils/eventWorkflowPlanPresentation';
+} from '@/features/events/utils/eventWorkflowPresentation';
+import { useCreviaReducedMotion } from '@/shared/motion';
 
 type EventPlanPhaseProps = {
   event: EventCard;
   bottomPadding: number;
+  selectedStrategyId: EventPlanStrategyId;
+  onSelectStrategy: (strategyId: EventPlanStrategyId) => void;
   onConfirmPlan: () => void;
   phaseHint?: string | null;
+  gameDay?: number;
+  isDay1LearningEvent?: boolean;
 };
 
 export function EventPlanPhase({
   event,
   bottomPadding,
+  selectedStrategyId,
+  onSelectStrategy,
   onConfirmPlan,
-  phaseHint: _phaseHint = null,
+  phaseHint = null,
+  gameDay = 1,
+  isDay1LearningEvent = false,
 }: EventPlanPhaseProps) {
   const insets = useSafeAreaInsets();
-  const model = useMemo(() => buildPlanScreenModel(event), [event]);
-  const [selectedId, setSelectedId] = useState<PlanOptionId>(model.recommendedOptionId);
+  const reducedMotion = useCreviaReducedMotion();
 
-  const selectedPlan = model.planByOption[selectedId];
-  const displayOptions = useMemo(() => buildPlanDisplayOptions(model), [model]);
-  const summaryUi = useMemo(
-    () => buildPlanSummaryUi(selectedId, selectedPlan),
-    [selectedId, selectedPlan],
+  const presentation = useMemo(
+    () =>
+      buildEventPlanPhasePresentation({
+        event,
+        selectedStrategyId,
+        day: gameDay,
+        isDay1LearningEvent,
+      }),
+    [event, gameDay, isDay1LearningEvent, selectedStrategyId],
   );
 
+  const heroChips = useMemo(() => buildInspectHeroChips(event), [event]);
   const thumbnail = useMemo(
     () => getInspectNeighborhoodHero(resolveInspectDistrictId(event)),
     [event],
   );
 
   return (
-    <View style={styles.root}>
+    <View
+      style={styles.root}
+      accessibilityLabel={presentation.accessibilityLabel}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scroll,
           { paddingTop: Math.max(insets.top + 8, 18), paddingBottom: bottomPadding },
         ]}>
-        <View style={styles.headerRow}>
+        <View style={styles.headerBlock}>
           <Text style={styles.screenTitle} numberOfLines={1}>
-            Operasyon Planı
+            {presentation.title}
           </Text>
-          <View style={styles.guideRow}>
-            <Ionicons name="information-circle-outline" size={16} color="#5D706E" />
-            <Text style={styles.guideText} numberOfLines={1}>
-              Planlama Rehberi
+          {presentation.subtitle ? (
+            <Text style={styles.subtitle} numberOfLines={2}>
+              {presentation.subtitle}
             </Text>
-          </View>
+          ) : null}
         </View>
+
+        <EventWorkflowStepper activeStep="plan" />
 
         <PlanEventSummaryCard
           title={event.title}
           location={event.district}
-          priorityLabel={model.priorityLabel}
-          remainingLabel={model.remainingLabel}
+          priorityLabel={heroChips.priority}
+          remainingLabel={heroChips.remaining}
           thumbnail={thumbnail}
         />
 
-        <PlanOptionPicker
-          options={displayOptions}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
+        {phaseHint ? <OnboardingPhaseHint text={phaseHint} /> : null}
+
+        <PlanInspectSummaryStrip
+          items={presentation.inspectSummary}
+          reducedMotion={reducedMotion}
         />
 
-        <View style={styles.summaryGap}>
-          <PlanSummaryCard
-            summary={summaryUi}
-            selectedPlanTitle={selectedPlan.title}
-            selectedPlanNote={selectedPlan.note}
-            selectedPlanId={selectedId}
-          />
+        <View style={styles.strategyList}>
+          {presentation.strategies.map((strategy) => (
+            <EventPlanStrategyCardView
+              key={strategy.id}
+              strategy={strategy}
+              onSelect={() => onSelectStrategy(strategy.id)}
+              reducedMotion={reducedMotion}
+            />
+          ))}
         </View>
+
+        <EventPlanImpactPreviewCard
+          preview={presentation.impactPreview}
+          reducedMotion={reducedMotion}
+        />
+
+        <EventPlanAdvisorCommentCard
+          comment={presentation.advisorComment}
+          reducedMotion={reducedMotion}
+        />
       </ScrollView>
 
-      <PlanWorkflowFooter onPress={onConfirmPlan} />
+      <PlanWorkflowFooter
+        onPress={onConfirmPlan}
+        disabled={!presentation.primaryCta.enabled}
+        ctaLabel={presentation.primaryCta.label}
+      />
     </View>
   );
 }
@@ -103,35 +141,23 @@ const styles = StyleSheet.create({
   },
   scroll: {
     gap: 12,
-    paddingTop: 8,
   },
-  summaryGap: {
-    marginTop: -2,
-  },
-  headerRow: {
-    marginHorizontal: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+  headerBlock: {
+    marginHorizontal: eventDetail.screenPadding,
+    gap: 4,
   },
   screenTitle: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
-    color: '#123D3A',
-    letterSpacing: 0,
+    color: eventDetail.textDark,
   },
-  guideRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    flexShrink: 0,
+  subtitle: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: eventDetail.textMuted,
+    lineHeight: 18,
   },
-  guideText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#123D3A',
+  strategyList: {
+    gap: 10,
   },
 });

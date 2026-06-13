@@ -260,7 +260,21 @@ export function verifyMainOperationFeelScenario(): VerifyMainOperationFeelOutcom
   record(
     assert(
       checks,
-      readRepo('src/features/hub/components/HubReferenceHome.tsx').includes('HubMainOperationFeelCard'),
+      (() => {
+        const hubHome = readRepo('src/features/hub/components/HubReferenceHome.tsx');
+        const centerHome = readRepo('src/features/hub/utils/centerHomePresentation.ts');
+        const opFocusPresentation = readRepo(
+          'src/features/hub/utils/centerOperationFocusPresentation.ts',
+        );
+        const hubScreen = readRepo('src/features/hub/screens/HubScreen.tsx');
+        return (
+          hubHome.includes('CenterOperationFocusSection') &&
+          hubHome.includes('presentation.operationFocus') &&
+          centerHome.includes('mainOperationFeelPresentation') &&
+          opFocusPresentation.includes('input.mainOperationFeelPresentation') &&
+          hubScreen.includes('buildMainOperationFeelHubPresentation')
+        );
+      })(),
       'HubReferenceHome entegrasyonu',
     ),
   );

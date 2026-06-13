@@ -14,6 +14,7 @@ type Props = {
   onPress: () => void;
   disabled?: boolean;
   loading?: boolean;
+  ctaLabel?: string;
 };
 
 export function FieldWorkflowFooter({
@@ -21,9 +22,11 @@ export function FieldWorkflowFooter({
   onPress,
   disabled = false,
   loading = false,
+  ctaLabel,
 }: Props) {
   const insets = useSafeAreaInsets();
   const inactive = disabled && !loading;
+  const label = ctaLabel ?? WORKFLOW_CTA_LABELS.field;
 
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 12) }]}>
@@ -39,9 +42,7 @@ export function FieldWorkflowFooter({
         disabled={disabled || loading}
         style={[styles.pressable, inactive && styles.disabled]}
         accessibilityRole="button"
-        accessibilityLabel={
-          loading ? 'Sonuç hazırlanıyor' : WORKFLOW_CTA_LABELS.field
-        }
+        accessibilityLabel={loading ? 'Sonuç hazırlanıyor' : label}
         accessibilityState={{ disabled: disabled || loading, busy: loading }}>
         <LinearGradient
           colors={
@@ -54,7 +55,7 @@ export function FieldWorkflowFooter({
           style={styles.gradient}>
           <Ionicons name="arrow-forward-circle-outline" size={22} color="#FFFFFF" />
           <Text style={styles.label} numberOfLines={1}>
-            {loading ? 'Hazırlanıyor…' : WORKFLOW_CTA_LABELS.field}
+            {loading ? 'Hazırlanıyor…' : label}
           </Text>
         </LinearGradient>
       </CreviaAnimatedPressable>

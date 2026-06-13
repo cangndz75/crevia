@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Animated, { FadeIn } from 'react-native-reanimated';
 import { StyleSheet, View } from 'react-native';
 
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
@@ -32,7 +31,6 @@ import {
 } from '@/core/operationalResourcePresence';
 import {
   buildMapReactionLiteModel,
-  buildMapReactionPanelPresentation,
   buildMapReactionHighlightDistrictIds,
   buildMapReactionLiteInputFromMapContext,
 } from '@/core/mapReactions';
@@ -44,10 +42,7 @@ import {
 import { buildRewardComebackMapPresentation } from '@/core/rewardComeback';
 import { deriveMainOperationAccessMode } from '@/core/mainOperation/mainOperationEngine';
 import { resolveContentPackMetaForWiring } from '@/core/contentRuntimeActivation';
-import { selectTeamSpecializationSurfaceLines } from '@/core/teamSpecialization/teamSpecializationSelectors';
-import { selectVehicleMaintenanceSurfaceLines } from '@/core/vehicleMaintenance/vehicleMaintenanceSelectors';
 import { buildMapBeforeAfterSummary, buildMapPresenceViewModel } from '@/core/mapPresence';
-import { buildMainOperationMapScopeBadges } from '@/core/mainOperation/mainOperationPresentation';
 import {
   buildMainOperationFeelFromStore,
   buildMainOperationFeelMapHint,
@@ -56,18 +51,13 @@ import { buildEventDomainFocusModel } from '@/core/events/eventDomainPresentatio
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 import { buildPostPilotMapContextLineForGameState } from '@/core/postPilot/postPilotOperationUxPresentation';
 import { buildReportTomorrowPreview } from '@/core/reports/reportTomorrowPreviewPresentation';
-import { MapNeighborhoodStrip } from '@/features/map/components/MapNeighborhoodStrip';
-import { MapDistrictReportCard } from '@/features/map/components/MapDistrictReportCard';
-import { MapOperationBottomPanel } from '@/features/map/components/MapOperationBottomPanel';
 import { buildMapCrisisPresentationBundle } from '@/features/map/utils/mapCrisisPresentation';
 import {
   buildMapResourcePresentationBundle,
   buildMapResourceEngineInputFromStore,
-  mergeMapPanelCrisisAndResourceLines,
   isMapDistrictId,
 } from '@/features/map/utils/mapResourcePresentation';
 import { selectIsDay1TutorialActive } from '@/features/tutorial/tutorialSelectors';
-import { useGameStatus } from '@/store/gameSelectors';
 import {
   selectActiveEvents,
   selectContainerState,
@@ -80,16 +70,10 @@ import {
 } from '@/store/useGameStore';
 import { GameScreenShell } from '@/ui/components/GameScreenShell';
 import { colors } from '@/ui/theme/colors';
-import { spacing } from '@/ui/theme/spacing';
 
 import { LayerPanel } from '../components/LayerPanel';
-import { MapFilterChips } from '../components/MapFilterChips';
 import { MapGuideModal } from '../components/MapGuideModal';
 import { MapHeroPanel } from '../components/MapHeroPanel';
-import { MapOperationSignalCard } from '../components/MapOperationSignalCard';
-import { MapPilotDistrictStatusCard } from '../components/MapPilotDistrictStatusCard';
-import { MapScreenHeader } from '../components/MapScreenHeader';
-import { MapScreenTitleRow } from '../components/MapScreenTitleRow';
 import {
   DEFAULT_MAP_DISTRICT_ID,
   MAP_DISTRICT_IDS,
@@ -97,26 +81,11 @@ import {
 } from '../data/mapAssets';
 import { mapDistrictFromPilot } from '../data/mapDistrictMapping';
 import { pilotAreaFromDistrict } from '../data/pilotAreaMapping';
+import { getDefaultLayers } from '../data/mapSelectors';
 import {
-  getActiveOperation,
-  getCrews,
-  getDayEvent,
-  getDefaultLayers,
-} from '../data/mapSelectors';
-import {
-  buildMapFilterChipModel,
   buildMapActiveOperationOverlayModel,
-  buildMapNeighborhoodStripItems,
-  buildMapOperationPanelModel,
   shouldShowMapCrisisChrome,
 } from '../utils/mapUiPresentation';
-import {
-  buildMapFilterChipItems,
-  buildMapOperationSignalModel,
-  buildMapPilotDistrictStatusModel,
-  buildMapScreenHeaderModel,
-} from '../presentation/mapScreenPresentation';
-import { applyMapReactionStripOverlay } from '../utils/mapReactionMapIntegration';
 import type {
   ActiveLayers,
   LayerId,
@@ -134,15 +103,9 @@ export function MapScreen() {
   const containerState = useGameStore(selectContainerState);
   const vehicleState = useGameStore(selectVehicleStateFromStore);
   const hideMapFleetSignals = useGameStore(selectIsDay1TutorialActive);
-  const gameStatus = useGameStatus();
 
   const pilotAreaId: PilotAreaId = pilotAreaFromDistrict(selectedDistrictId);
-  const dayEvent = useMemo(
-    () => getDayEvent(pilotAreaId, gameDay),
-    [pilotAreaId, gameDay],
-  );
-
-  const [selectedFilter, setSelectedFilter] = useState<MapFilterId>('events');
+  const [selectedFilter] = useState<MapFilterId>('events');
   const [activeLayers, setActiveLayers] = useState<ActiveLayers>(() =>
     getDefaultLayers(pilotAreaId),
   );
@@ -168,43 +131,9 @@ export function MapScreen() {
     setSelectedPinId(null);
   }, []);
 
-  const handleFocusDistrict = useCallback(() => {
-    if (mapViewMode === 'detail') {
-      handleBackToOverview();
-      return;
-    }
-    handleDistrictSelect(focusDistrictId);
-  }, [focusDistrictId, handleBackToOverview, handleDistrictSelect, mapViewMode]);
-
   useEffect(() => {
     setActiveLayers(getDefaultLayers(pilotAreaId));
   }, [pilotAreaId]);
-
-  const crews = useMemo(() => getCrews(pilotAreaId), [pilotAreaId]);
-  const activeOperation = useMemo(
-    () => getActiveOperation(pilotAreaId, gameDay),
-    [pilotAreaId, gameDay],
-  );
-
-  const filterChips = useMemo(
-    () => buildMapFilterChipModel({ gameDay, pilotAreaId }),
-    [gameDay, pilotAreaId],
-  );
-
-  const headerModel = useMemo(
-    () => buildMapScreenHeaderModel(gameStatus, gameDay),
-    [gameStatus, gameDay],
-  );
-
-  const chipItems = useMemo(
-    () =>
-      buildMapFilterChipItems({
-        gameDay,
-        districtLabel: filterChips.districtLabel,
-        selectedFilter,
-      }),
-    [filterChips.districtLabel, gameDay, selectedFilter],
-  );
 
   const activeOperationOverlay = useMemo(
     () =>
@@ -231,8 +160,6 @@ export function MapScreen() {
   const crisisActionState = useGameStore((s) => s.crisisActionState);
   const operationalResources = useGameStore((s) => s.operationalResources);
   const cityArchive = useGameStore((s) => s.cityArchive);
-  const vehicleMaintenance = useGameStore((s) => s.vehicleMaintenance);
-  const teamSpecialization = useGameStore((s) => s.teamSpecialization);
   const eventPool = useGameStore((s) => s.eventPool);
   const postPilotCatalog =
     postPilotOperation?.postPilotDailyEventSet?.catalog ?? [];
@@ -254,23 +181,6 @@ export function MapScreen() {
       mainOperationSeason,
       monetization,
       operationSignals,
-    ],
-  );
-
-  const mainOperationScopeBadges = useMemo(
-    () =>
-      showPostPilotMapChrome
-        ? buildMainOperationMapScopeBadges(
-            gameStateForMap,
-            monetization,
-            mainOperationSeason,
-          )
-        : [],
-    [
-      gameStateForMap,
-      mainOperationSeason,
-      monetization,
-      showPostPilotMapChrome,
     ],
   );
 
@@ -395,75 +305,6 @@ export function MapScreen() {
     showPostPilotMapChrome,
   ]);
 
-  const neighborhoodStripItems = useMemo(
-    () => {
-      const items = buildMapNeighborhoodStripItems({
-        pilotDistrictId: selectedDistrictId,
-        focusDistrictId,
-        gameDay,
-        postPilot:
-          gameDay >= POST_PILOT_FIRST_OPERATION_DAY
-            ? {
-                pilotStatus: gameStateForMap.pilot.status,
-                postPilotOperation,
-                authorityState,
-              }
-            : undefined,
-        mainOperationScopeBadges,
-        crisisDistrictBadges: mapCrisisPresentation.districtBadges,
-        crisisAccessMode: crisisState.accessMode,
-        resourceDistrictBadges: mapResourcePresentation.districtBadges,
-      });
-
-      if (!showPostPilotMapChrome || gameDay <= 1) {
-        return items;
-      }
-
-      const selectedIntelligence = buildMapDistrictIntelligenceModel({
-        selectedDistrictId: focusDistrictId,
-        day: gameDay,
-        isPostPilot: showPostPilotMapChrome,
-        isPilotCompleted: pilotCompleted,
-        crisisState,
-        operationSignals,
-        resourceFatigue: operationalResources,
-        crisisOverlayVisible: mapCrisisPresentation.visible,
-        rankKey: authorityState?.formalRankId,
-        unlockedPermissionIds: authorityState?.unlockedPermissionIds,
-      });
-      const accentChip = selectedIntelligence.stripChips[0]?.label;
-
-      return items.map((item) => {
-        const accentLabel =
-          activeTaskRoutePreview?.visible && item.id === focusDistrictId
-            ? 'Rota aktif'
-            : accentChip;
-        return item.id === focusDistrictId && accentLabel
-          ? { ...item, intelligenceAccentLabel: accentLabel }
-          : item;
-      });
-    },
-    [
-      authorityState,
-      crisisState,
-      crisisState.accessMode,
-      focusDistrictId,
-      gameDay,
-      gameStateForMap.pilot.status,
-      mainOperationScopeBadges,
-      mapCrisisPresentation.districtBadges,
-      mapCrisisPresentation.visible,
-      mapResourcePresentation.districtBadges,
-      operationalResources,
-      operationSignals,
-      pilotCompleted,
-      postPilotOperation,
-      activeTaskRoutePreview?.visible,
-      selectedDistrictId,
-      showPostPilotMapChrome,
-    ],
-  );
-
   const mapDistrictIntelligence = useMemo(() => {
     const base = buildMapDistrictIntelligenceModel({
       selectedDistrictId: focusDistrictId,
@@ -524,16 +365,6 @@ export function MapScreen() {
           event.district?.toLocaleLowerCase('tr-TR').includes(focusDistrictId),
       ) ?? primaryMapEvent,
     [activeEvents, focusDistrictId, primaryMapEvent],
-  );
-
-  const newSystemsAnalyticsContext = useMemo(
-    () => ({
-      day: gameDay,
-      rankId: authorityState?.formalRankId,
-      isPostPilot: showPostPilotMapChrome,
-      source: 'map_operation_bottom_panel',
-    }),
-    [authorityState?.formalRankId, gameDay, showPostPilotMapChrome],
   );
 
   const mapBeforeAfterSummary = useMemo(() => {
@@ -865,83 +696,6 @@ export function MapScreen() {
     showPostPilotMapChrome,
   ]);
 
-  const { mapVehicleMaintenanceHint, mapTeamSpecializationHint } = useMemo(() => {
-    const baseExistingLines = [
-      ...(mapDistrictIntelligence?.visibleLines.map((line) => line.text) ?? []),
-      mapDistrictReportCard?.primaryLine ?? '',
-      mapDistrictReportCard?.recentEffectLine ?? '',
-      operationalResourcePresenceModel?.mapPresenceLine ?? '',
-      mainOperationScopeHintLine ?? '',
-      rewardComebackMapPresentation?.mapLine ?? '',
-      ...mapResourcePresentation.panelLines.map((line) => line.summary),
-    ].filter(Boolean);
-    const rawVehicleHint = selectVehicleMaintenanceSurfaceLines(vehicleMaintenance, {
-      day: gameDay,
-      existingHubLines: baseExistingLines,
-    }).mapHint;
-    const existingLines = [...baseExistingLines, rawVehicleHint ?? ''].filter(Boolean);
-    const surfaces = selectTeamSpecializationSurfaceLines(teamSpecialization, {
-      day: gameDay,
-      districtId: focusDistrictId,
-      existingMapHints: existingLines,
-      vehicleMaintenanceLine: rawVehicleHint ?? undefined,
-      vehicleMaintenanceStrainActive: Boolean(
-        rawVehicleHint &&
-          (rawVehicleHint.toLocaleLowerCase('tr-TR').includes('yorgunluk') ||
-            rawVehicleHint.toLocaleLowerCase('tr-TR').includes('bakım') ||
-            rawVehicleHint.toLocaleLowerCase('tr-TR').includes('baskı')),
-      ),
-    });
-    if (surfaces.suppressVehicleMaintenanceLine && surfaces.mergedStrainLine) {
-      return {
-        mapVehicleMaintenanceHint: undefined,
-        mapTeamSpecializationHint: surfaces.mergedStrainLine,
-      };
-    }
-    return {
-      mapVehicleMaintenanceHint: rawVehicleHint,
-      mapTeamSpecializationHint: surfaces.mapHint,
-    };
-  }, [
-    focusDistrictId,
-    gameDay,
-    mainOperationScopeHintLine,
-    mapDistrictIntelligence?.visibleLines,
-    mapDistrictReportCard?.primaryLine,
-    mapDistrictReportCard?.recentEffectLine,
-    mapResourcePresentation.panelLines,
-    operationalResourcePresenceModel?.mapPresenceLine,
-    rewardComebackMapPresentation?.mapLine,
-    teamSpecialization,
-    vehicleMaintenance,
-  ]);
-
-  const mapReactionPanel = useMemo(() => {
-    const guard = [
-      ...(mapDistrictIntelligence?.visibleLines.map((line) => line.text) ?? []),
-      mapDistrictReportCard?.primaryLine ?? '',
-      mapDistrictReportCard?.recentEffectLine ?? '',
-      operationalResourcePresenceModel?.mapPresenceLine ?? '',
-      mainOperationScopeHintLine ?? '',
-      rewardComebackMapPresentation?.mapLine ?? '',
-      mapVehicleMaintenanceHint ?? '',
-      mapTeamSpecializationHint ?? '',
-      ...mapResourcePresentation.panelLines.map((line) => line.summary),
-    ].filter(Boolean);
-    return buildMapReactionPanelPresentation(mapReactionLiteModel, guard);
-  }, [
-    mainOperationScopeHintLine,
-    mapDistrictIntelligence?.visibleLines,
-    mapDistrictReportCard?.primaryLine,
-    mapDistrictReportCard?.recentEffectLine,
-    mapReactionLiteModel,
-    mapResourcePresentation.panelLines,
-    mapTeamSpecializationHint,
-    mapVehicleMaintenanceHint,
-    operationalResourcePresenceModel?.mapPresenceLine,
-    rewardComebackMapPresentation?.mapLine,
-  ]);
-
   const reactionHighlightDistrictIds = useMemo(() => {
     if (!showPostPilotMapChrome || gameDay <= 1) return undefined;
     const crisisSet = new Set(crisisHighlightDistrictIds ?? []);
@@ -957,16 +711,6 @@ export function MapScreen() {
     resourceHighlightDistrictIds,
     showPostPilotMapChrome,
   ]);
-
-  const neighborhoodStripItemsWithReactions = useMemo(
-    () =>
-      applyMapReactionStripOverlay(
-        neighborhoodStripItems,
-        mapReactionLiteModel,
-        focusDistrictId,
-      ),
-    [focusDistrictId, mapReactionLiteModel, neighborhoodStripItems],
-  );
 
   const mapReactionMotionModel = useMemo(() => {
     if (!showPostPilotMapChrome || gameDay <= 1) return null;
@@ -1003,120 +747,18 @@ export function MapScreen() {
     showPostPilotMapChrome,
   ]);
 
-  const operationPanel = useMemo(() => {
-    const merged = mergeMapPanelCrisisAndResourceLines({
-      crisisLines: mapCrisisPresentation.visible
-        ? mapCrisisPresentation.panelLines
-        : undefined,
-      resourceLines: mapResourcePresentation.visible
-        ? mapResourcePresentation.panelLines
-        : undefined,
-      maxTotal: 2,
-    });
-    const panelSlotsUsed =
-      (merged.crisisLines?.length ?? 0) + (merged.resourceLines?.length ?? 0);
-    const presenceLines =
-      gameDay > 1 &&
-      mapPresenceViewModel.visible &&
-      panelSlotsUsed < 2
-        ? mapPresenceViewModel.panelLines.slice(0, 2 - panelSlotsUsed)
-        : undefined;
-    return buildMapOperationPanelModel({
-      viewMode: mapViewMode,
-      focusDistrictId,
-      pilotAreaId,
-      pilotDistrictId: selectedDistrictId,
-      gameDay,
-      activeEvents,
-      containerState,
-      vehicleState,
-      hideFleetSignals: hideMapFleetSignals,
-      dayEventTitle: dayEvent.mainEventTitle,
-      postPilotMapContextLine: postPilotMapContextLine ?? undefined,
-      mainOperationScopeHintLine: mainOperationScopeHintLine ?? undefined,
-      crisisLines: merged.crisisLines,
-      resourceLines: merged.resourceLines,
-      presenceLines,
-      mapReactionHintLine: mapReactionPanel.visible
-        ? mapReactionPanel.hintLine
-        : mapTeamSpecializationHint ?? mapVehicleMaintenanceHint ?? undefined,
-      mapReactionHintTone: mapReactionPanel.visible ? mapReactionPanel.hintTone : 'neutral',
-    });
-  }, [
-    activeEvents,
-    containerState,
-    dayEvent.mainEventTitle,
-    focusDistrictId,
-    gameDay,
-    hideMapFleetSignals,
-    mapCrisisPresentation.panelLines,
-    mapCrisisPresentation.visible,
-    mapPresenceViewModel.panelLines,
-    mapPresenceViewModel.visible,
-    mapReactionPanel.hintLine,
-    mapReactionPanel.hintTone,
-    mapReactionPanel.visible,
-    mapResourcePresentation.panelLines,
-    mapTeamSpecializationHint,
-    mapVehicleMaintenanceHint,
-    mapResourcePresentation.visible,
-    mapViewMode,
-    mainOperationScopeHintLine,
-    pilotAreaId,
-    postPilotMapContextLine,
-    selectedDistrictId,
-    vehicleState,
-  ]);
-
-  const operationSignalModel = useMemo(
-    () =>
-      buildMapOperationSignalModel({
-        operation: activeOperation,
-        pilotAreaId,
-        gameDay,
-        crewNames: crews.map((crew) => crew.name),
-      }),
-    [activeOperation, crews, gameDay, pilotAreaId],
-  );
-
-  const pilotStatusModel = useMemo(
-    () =>
-      buildMapPilotDistrictStatusModel({
-        pilotAreaId,
-        gameDay,
-        riskMetrics: operationPanel.riskMetrics,
-      }),
-    [gameDay, operationPanel.riskMetrics, pilotAreaId],
-  );
-
   const handleToggleLayer = useCallback((id: LayerId) => {
     setActiveLayers((prev) => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
-  const handleFilterChipSelect = useCallback((filterId: MapFilterId) => {
-    setSelectedFilter((current) => (current === filterId ? 'events' : filterId));
-  }, []);
-
   return (
     <GameScreenShell
+      scrollable={false}
       headerVariant="none"
       backgroundColor={colors.hubCream}
+      reserveTabBarInset={false}
       contentStyle={styles.content}>
       <View style={styles.stack}>
-        <MapScreenHeader model={headerModel} />
-
-        <MapScreenTitleRow onInfoPress={() => setGuideOpen(true)} />
-
-        <MapFilterChips chips={chipItems} onSelectFilter={handleFilterChipSelect} />
-
-        {showPostPilotMapChrome ? (
-          <MapNeighborhoodStrip
-            items={neighborhoodStripItemsWithReactions}
-            selectedId={focusDistrictId}
-            onSelect={handleDistrictSelect}
-          />
-        ) : null}
-
         <MapHeroPanel
           viewMode={mapViewMode}
           detailDistrictId={detailDistrictId}
@@ -1154,45 +796,6 @@ export function MapScreen() {
             setSelectedPinId((current) => (current === pinId ? null : pinId));
           }}
         />
-
-        <Animated.View entering={FadeIn.duration(220)} style={styles.lowerCards}>
-          {showPostPilotMapChrome ? (
-            <MapOperationBottomPanel
-              model={operationPanel}
-              districtIntelligence={mapDistrictIntelligence}
-              districtReportCard={mapDistrictReportCard}
-              activeTaskRoutePreview={activeTaskRoutePreview}
-              mapBeforeAfterImpact={
-                gameDay > 1 &&
-                !mapCrisisPresentation.visible &&
-                mapBeforeAfterSummary?.impact?.visible
-                  ? mapBeforeAfterSummary.impact
-                  : null
-              }
-              analyticsContext={newSystemsAnalyticsContext}
-              onPressCta={handleFocusDistrict}
-              onPressRecommended={handleFocusDistrict}
-            />
-          ) : null}
-
-          <MapOperationSignalCard
-            model={operationSignalModel}
-            onActionPress={handleFocusDistrict}
-            onTrack={handleFocusDistrict}
-          />
-
-          {!showPostPilotMapChrome && mapViewMode === 'detail' && mapDistrictReportCard ? (
-            <MapDistrictReportCard presentation={mapDistrictReportCard} />
-          ) : null}
-
-          {!showPostPilotMapChrome ? (
-            <MapPilotDistrictStatusCard
-              model={pilotStatusModel}
-              onSuggestionPress={handleFocusDistrict}
-              onMiniMapPress={handleFocusDistrict}
-            />
-          ) : null}
-        </Animated.View>
       </View>
 
       <LayerPanel
@@ -1209,16 +812,15 @@ export function MapScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+    flex: 1,
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    gap: 0,
   },
   stack: {
-    gap: 12,
-    minWidth: 0,
-  },
-  lowerCards: {
-    gap: 12,
+    flex: 1,
+    gap: 0,
     minWidth: 0,
   },
 });

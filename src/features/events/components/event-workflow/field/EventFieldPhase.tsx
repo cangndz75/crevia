@@ -1,24 +1,46 @@
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import type { EventCard, EventDecision } from '@/core/models/EventCard';
 import type { PersonnelImpactPreview } from '@/core/personnel/personnelPresentation';
 import type { VehicleImpactPreview } from '@/core/vehicles/vehiclePresentation';
-import { buildActiveTaskRouteForEvent } from '@/core/activeTaskRoutes/activeTaskRouteUiPresentation';
 import type { EventAssignmentState } from '@/core/assignments/assignmentTypes';
+import {
+  buildMicroDecisionCardModel,
+  buildMicroDecisionPresentationInput,
+} from '@/core/microDecisions';
+import { shouldHideAdvancedSystemForFirstTenMinutes } from '@/core/onboarding/firstTenMinutesPresentation';
+import { getActiveMicroDecisions } from '@/core/microDecisions/microDecisionState';
+import { operationMotionFieldCompleteHighlightMs, operationMotionFieldStepDurationMs } from '@/core/motion/operationMotionTokens';
 import { EventFieldAssignmentSummary } from '@/features/events/components/assignment/EventFieldAssignmentSummary';
 import { FieldNoteCard } from '@/features/events/components/FieldNoteCard';
 import { EventWorkflowStepper } from '@/features/events/components/event-workflow/EventWorkflowStepper';
 import { FieldImpactMetricsRow } from '@/features/events/components/event-workflow/field/FieldImpactMetricsRow';
 import { FieldWorkflowFooter } from '@/features/events/components/event-workflow/field/FieldWorkflowFooter';
 import { EventFieldMicroDecisionCard } from '@/features/events/components/event-workflow/field/EventFieldMicroDecisionCard';
-import { LiveOperationCard } from '@/features/events/components/event-workflow/field/LiveOperationCard';
+import {
+  FieldAdvisorCommentCard,
+  FieldAssignmentEffectStrip,
+  FieldPhaseHeader,
+  FieldPlanSummaryStrip,
+  FieldTimelineList,
+} from '@/features/events/components/event-workflow/field/FieldMotionSections';
 import { PlanEventSummaryCard } from '@/features/events/components/event-workflow/plan/PlanEventSummaryCard';
 import { OnboardingPhaseHint } from '@/features/onboarding/components/OnboardingPhaseHint';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
+import {
+  buildEventFieldPhasePresentation,
+  mapMicroDecisionCardToFieldPresentation,
+  type EventFieldInteractionState,
+} from '@/features/events/utils/eventFieldPhasePresentation';
+import type { EventPlanStrategyId } from '@/features/events/utils/eventPlanPhasePresentation';
 import { getInspectNeighborhoodHero } from '@/features/events/utils/eventWorkflowAssets';
 import { buildFieldScreenModel } from '@/features/events/utils/eventWorkflowDispatchFieldPresentation';
 import { resolveInspectDistrictId } from '@/features/events/utils/eventWorkflowPresentation';
+import { useGameStore } from '@/store/useGameStore';
+import { useCreviaReducedMotion } from '@/shared/motion';
+
+const TIMELINE_MAX_INDEX = 4;
 
 type Props = {
   event: EventCard;
@@ -33,9 +55,9 @@ type Props = {
   phaseHint?: string | null;
   gameDay?: number;
   assignment?: EventAssignmentState | null;
-  operationSignals?: unknown;
-  operationalResources?: unknown;
-  crisisState?: unknown;
+  selectedPlanStrategyId?: EventPlanStrategyId | null;
+  selectedPlanStrategyLabel?: string | null;
+  isDay1LearningEvent?: boolean;
 };
 
 export function EventFieldPhase({
@@ -51,33 +73,26 @@ export function EventFieldPhase({
   phaseHint = null,
   gameDay = 1,
   assignment = null,
-  operationSignals,
-  operationalResources,
-  crisisState,
+  selectedPlanStrategyId = null,
+  selectedPlanStrategyLabel = null,
+  isDay1LearningEvent = false,
 }: Props) {
-  const routePreview = useMemo(
-    () =>
-      buildActiveTaskRouteForEvent({
-        day: gameDay,
-        activeEvent: event,
-        assignment: assignment ?? undefined,
-        operationSignals: operationSignals as never,
-        operationalResources,
-        crisisState,
-        isFieldPhase: true,
-      }),
-    [assignment, crisisState, event, gameDay, operationSignals, operationalResources],
-  );
-  const routeAnalyticsContext = useMemo(
-    () => ({
-      day: gameDay,
-      isPostPilot: gameDay >= 8,
-      source: 'live_operation_route_phase',
-    }),
-    [gameDay],
-  );
+  const reducedMotion = useCreviaReducedMotion();
+  const gameState = useGameStore((s) => s.gameState);
+  const monetization = useGameStore((s) => s.monetization);
+  const operationSignals = useGameStore((s) => s.operationSignals);
+  const crisisState = useGameStore((s) => s.crisisState);
+  const dailyOperationsPlan = useGameStore((s) => s.dailyOperationsPlan);
+  const assignments = useGameStore((s) => s.assignments);
+  const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
+  const advisorState = useGameStore((s) => s.advisorState);
+  const microDecisionState = useGameStore((s) => s.microDecisionState);
 
-  const model = useMemo(
+  const [interactionState, setInteractionState] =
+    useState<EventFieldInteractionState>('running');
+  const [timelineStepIndex, setTimelineStepIndex] = useState(0);
+
+  const legacyModel = useMemo(
     () =>
       buildFieldScreenModel({
         event,
@@ -89,13 +104,148 @@ export function EventFieldPhase({
     [decision, event, fieldNote, personnelPreview, vehiclePreview],
   );
 
+  const microDecisionCardModel = useMemo(() => {
+    if (shouldHideAdvancedSystemForFirstTenMinutes(gameState, 'live_micro_decisions')) {
+      return null;
+    }
+    const input = buildMicroDecisionPresentationInput({
+      day: gameState.city.day,
+      gameState,
+      monetization,
+      operationSignals,
+      crisisState,
+      dailyOperationsPlan,
+      assignments,
+      mainOperationSeason,
+      advisorState,
+      microDecisionState,
+    });
+    const related = getActiveMicroDecisions(microDecisionState).find(
+      (d) => d.relatedEventId === event.id,
+    );
+    if (!related) return null;
+    return buildMicroDecisionCardModel(input, related, { compact: true });
+  }, [
+    advisorState,
+    assignments,
+    crisisState,
+    dailyOperationsPlan,
+    event.id,
+    gameState,
+    mainOperationSeason,
+    microDecisionState,
+    monetization,
+    operationSignals,
+  ]);
+
+  const microDecisionPresentation = useMemo(
+    () =>
+      microDecisionCardModel
+        ? mapMicroDecisionCardToFieldPresentation(microDecisionCardModel)
+        : null,
+    [microDecisionCardModel],
+  );
+
+  const hasPendingMicroDecision = Boolean(microDecisionPresentation);
+
+  const presentation = useMemo(
+    () =>
+      buildEventFieldPhasePresentation({
+        event,
+        assignment,
+        selectedPlanStrategyId,
+        selectedPlanStrategyLabel,
+        interactionState,
+        timelineStepIndex,
+        microDecision: microDecisionPresentation,
+        day: gameDay,
+        isDay1LearningEvent,
+        reducedMotion,
+      }),
+    [
+      assignment,
+      event,
+      gameDay,
+      interactionState,
+      isDay1LearningEvent,
+      microDecisionPresentation,
+      reducedMotion,
+      selectedPlanStrategyId,
+      selectedPlanStrategyLabel,
+      timelineStepIndex,
+    ],
+  );
+
+  useEffect(() => {
+    if (interactionState === 'completed') return;
+
+    if (hasPendingMicroDecision) {
+      setInteractionState('paused_for_decision');
+      return;
+    }
+
+    if (interactionState === 'paused_for_decision') {
+      setInteractionState('running');
+    }
+
+    if (reducedMotion) {
+      setTimelineStepIndex(TIMELINE_MAX_INDEX);
+      const timer = setTimeout(() => {
+        setInteractionState('completed');
+      }, operationMotionFieldCompleteHighlightMs(true));
+      return () => clearTimeout(timer);
+    }
+
+    if (timelineStepIndex >= TIMELINE_MAX_INDEX) {
+      const highlightMs = operationMotionFieldCompleteHighlightMs(reducedMotion);
+      const timer = setTimeout(() => {
+        setInteractionState('completed');
+      }, highlightMs);
+      return () => clearTimeout(timer);
+    }
+
+    const stepMs = operationMotionFieldStepDurationMs(reducedMotion);
+    const timer = setTimeout(() => {
+      setTimelineStepIndex((index) => Math.min(index + 1, TIMELINE_MAX_INDEX));
+    }, stepMs);
+
+    return () => clearTimeout(timer);
+  }, [
+    hasPendingMicroDecision,
+    interactionState,
+    reducedMotion,
+    timelineStepIndex,
+  ]);
+
   const thumbnail = useMemo(
     () => getInspectNeighborhoodHero(resolveInspectDistrictId(event)),
     [event],
   );
 
+  const handleComplete = useCallback(() => {
+    if (interactionState !== 'completed') return;
+    if (presentation.primaryCta.actionKey !== 'view_result') return;
+    onComplete();
+  }, [interactionState, onComplete, presentation.primaryCta.actionKey]);
+
+  const footerDisabled =
+    interactionState !== 'completed' || completeDisabled || applying;
+  const footerLoading = applying;
+
+  const footerSummary = useMemo(() => {
+    if (interactionState === 'completed') {
+      return `${presentation.selectedPlan.label} · operasyon tamamlandı`;
+    }
+    if (interactionState === 'paused_for_decision') {
+      return 'Mikro karar bekleniyor';
+    }
+    return `${presentation.selectedPlan.label} · ${presentation.timeline.helperText ?? 'Takip ediliyor'}`;
+  }, [interactionState, presentation.selectedPlan.label, presentation.timeline.helperText]);
+
   return (
-    <View style={styles.root}>
+    <View
+      style={styles.root}
+      accessibilityLabel={presentation.accessibilityLabel}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scroll, { paddingBottom: bottomPadding }]}>
@@ -103,7 +253,7 @@ export function EventFieldPhase({
           title={event.title}
           location={event.district}
           priorityLabel={`Sahada · ${event.district}`}
-          remainingLabel={model.progressLabel}
+          remainingLabel={legacyModel.progressLabel}
           thumbnail={thumbnail}
         />
 
@@ -113,26 +263,52 @@ export function EventFieldPhase({
           <EventWorkflowStepper activeStep="field" compact />
         </View>
 
-        <LiveOperationCard
-          model={model}
-          routePreview={routePreview}
-          analyticsContext={routeAnalyticsContext}
+        <FieldPhaseHeader
+          title={presentation.title}
+          subtitle={presentation.subtitle}
+          liveLabel="Ekip yönlendirildi"
         />
 
-        <EventFieldMicroDecisionCard event={event} />
+        <FieldPlanSummaryStrip
+          plan={presentation.selectedPlan}
+          reducedMotion={reducedMotion}
+        />
+
+        <FieldAssignmentEffectStrip
+          effect={presentation.assignmentEffect}
+          reducedMotion={reducedMotion}
+        />
+
+        <FieldTimelineList
+          timeline={presentation.timeline}
+          operationStatus={presentation.operationStatus}
+          reducedMotion={reducedMotion}
+        />
+
+        <EventFieldMicroDecisionCard
+          event={event}
+          microDecision={microDecisionPresentation}
+          cardModel={microDecisionCardModel}
+        />
 
         <EventFieldAssignmentSummary event={event} />
 
-        <FieldImpactMetricsRow metrics={model.impactMetrics} />
+        <FieldImpactMetricsRow metrics={legacyModel.impactMetrics} />
 
-        <FieldNoteCard body={model.fieldNote} compact />
+        <FieldAdvisorCommentCard
+          comment={presentation.advisorComment}
+          reducedMotion={reducedMotion}
+        />
+
+        <FieldNoteCard body={legacyModel.fieldNote} compact />
       </ScrollView>
 
       <FieldWorkflowFooter
-        summaryLine={model.footerSummaryLine}
-        onPress={onComplete}
-        disabled={completeDisabled}
-        loading={applying}
+        summaryLine={footerSummary}
+        onPress={handleComplete}
+        disabled={footerDisabled}
+        loading={footerLoading}
+        ctaLabel={presentation.primaryCta.label}
       />
     </View>
   );

@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -43,11 +43,21 @@ import { startScreenTiming } from '@/core/crashPerformance/performanceLite';
 import type { EventCard, SolvedEvent } from '@/core/models/EventCard';
 import type {
   DecisionMetricChange,
-  DecisionMetricKey,
   DecisionResultSnapshot,
 } from '@/features/events/types/decisionResultTypes';
 import { createEmptyDecisionResultFallback } from '@/features/events/utils/decisionResultModel';
 import { buildEventResultViewModel } from '@/features/events/utils/eventResultPresentation';
+import {
+  buildEventResultRevealPresentation,
+  type EventResultAction,
+} from '@/features/events/utils/eventResultRevealPresentation';
+import {
+  ResultAdvisorCommentCard,
+  ResultFinalActions,
+  ResultOutcomeHero,
+  ResultPlanContextStrip,
+  ResultRevealItemCard,
+} from '@/features/events/components/result/ResultRevealMotionSections';
 import {
   selectActiveTutorialStepForScreen,
 } from '@/features/tutorial/tutorialSelectors';
@@ -60,24 +70,14 @@ import { getTimeGreeting } from '@/core/utils/timeGreeting';
 import {
   CreviaAnimatedCard,
   CreviaAnimatedChip,
-  CreviaAnimatedPressable,
   useCreviaReducedMotion,
 } from '@/shared/motion';
 import { TutorialCoachOverlay } from '@/features/tutorial/TutorialCoachOverlay';
 import { OnboardingCoachBubble } from '@/features/onboarding/components/OnboardingCoachBubble';
 import { useOnboardingHint } from '@/features/onboarding/hooks/useOnboardingHint';
 import { creviaAssets } from '@/core/assets/creviaAssets';
-import { hubAssets } from '@/features/hub/utils/hubAssets';
 
-const eceImage = hubAssets.advisorPortrait;
 const municipalImage = creviaAssets.buildings.municipalHall3d;
-const planImage = require('../../../../assets/b4.png');
-const personnelImage = require('../../../../assets/b7.png');
-const reportImage = require('../../../../assets/b8.png');
-const vehicleImage = require('../../../../assets/b9.png');
-const cumhuriyetImage = require('../../../../assets/districts/cumhuriyet/district_cumhuriyet_overview_01.png');
-const sanayiImage = require('../../../../assets/districts/industrial_market/district_industrial_market_overview_01.png');
-const yesilvadiImage = require('../../../../assets/districts/status/district_safe_zone_01.png');
 
 const palette = {
   background: '#F7F1E6',
@@ -123,45 +123,6 @@ function resolveEventForResult(
     decisions: [],
     previewEffects: { publicSatisfaction: 0, risk: 0, xp: 0 },
   };
-}
-
-function findMetric(
-  metrics: DecisionMetricChange[],
-  key: DecisionMetricKey,
-): DecisionMetricChange | undefined {
-  return metrics.find((metric) => metric.key === key);
-}
-
-function signed(delta: number): string {
-  if (delta === 0) return '0';
-  return `${delta > 0 ? '+' : ''}${Math.round(delta)}`;
-}
-
-function metricValue(
-  result: DecisionResultSnapshot,
-  key: DecisionMetricKey,
-  fallbackBefore: number,
-  fallbackAfter: number,
-) {
-  const metric = findMetric(result.metricChanges, key);
-  const before = Math.round(metric?.before ?? fallbackBefore);
-  const after = Math.round(metric?.after ?? fallbackAfter);
-  const delta = Math.round(metric?.delta ?? after - before);
-  return { before, after, delta };
-}
-
-function trustValue(result: DecisionResultSnapshot) {
-  const risk = findMetric(result.metricChanges, 'operationRisk');
-  if (!risk) return { before: 67, after: 75, delta: 8 };
-  const before = Math.max(0, Math.min(100, 100 - Math.round(risk.before ?? 33)));
-  const after = Math.max(0, Math.min(100, 100 - Math.round(risk.after ?? 25)));
-  return { before, after, delta: after - before };
-}
-
-function sourceGain(result: DecisionResultSnapshot): number {
-  const budget = findMetric(result.metricChanges, 'budget');
-  const delta = budget?.delta ?? 120;
-  return Math.max(40, Math.abs(Math.round(delta / 10)));
 }
 
 function PremiumResultHeader() {
@@ -219,289 +180,12 @@ function PremiumResultHeader() {
   );
 }
 
-function PercentBar({ value, color }: { value: number; color: string }) {
-  const clamped = Math.max(0, Math.min(100, value));
-  return (
-    <View style={styles.percentTrack}>
-      <View style={[styles.percentFill, { width: `${clamped}%`, backgroundColor: color }]} />
-    </View>
-  );
-}
-
-function BeforeAfterPanel({ result }: { result: DecisionResultSnapshot }) {
-  const satisfaction = metricValue(result, 'publicSatisfaction', 63, 75);
-  const trust = trustValue(result);
-
-  return (
-    <View style={styles.impactPanel}>
-      <Text style={styles.sectionTitle} numberOfLines={1}>
-        Etki Özeti: {result.neighborhoodName ?? 'Merkez'}
-      </Text>
-      <View style={styles.beforeAfterRow}>
-        <View style={styles.beforeAfterBox}>
-          <Text style={styles.boxTitle} numberOfLines={1}>
-            Önce
-          </Text>
-          <MetricLine label="Memnuniyet" value={satisfaction.before} color={palette.tealDark} />
-          <MetricLine label="Güven" value={trust.before} color={palette.tealDark} />
-        </View>
-        <View style={styles.arrowCircle}>
-          <Ionicons name="arrow-forward" size={30} color="rgba(14,95,91,0.22)" />
-        </View>
-        <View style={styles.beforeAfterBox}>
-          <View style={styles.afterTitleRow}>
-            <Text style={styles.boxTitle} numberOfLines={1}>
-              Sonra
-            </Text>
-            <Ionicons name="happy-outline" size={13} color={palette.green} />
-          </View>
-          <MetricLine
-            label="Memnuniyet"
-            value={satisfaction.after}
-            delta={satisfaction.delta}
-            color={palette.green}
-          />
-          <MetricLine label="Güven" value={trust.after} delta={trust.delta} color={palette.green} />
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function MetricLine({
-  label,
-  value,
-  delta,
-  color,
-}: {
-  label: string;
-  value: number;
-  delta?: number;
-  color: string;
-}) {
-  return (
-    <View style={styles.metricLine}>
-      <View style={styles.metricLabelRow}>
-        <Text style={styles.metricLabel} numberOfLines={1}>
-          {label}
-        </Text>
-        <Text style={styles.metricPercent} numberOfLines={1}>
-          {value}%
-        </Text>
-        {delta != null && delta !== 0 ? (
-          <Text style={styles.metricDelta} numberOfLines={1}>
-            ▲ {signed(delta)}
-          </Text>
-        ) : null}
-      </View>
-      <PercentBar value={value} color={color} />
-    </View>
-  );
-}
-
-function RewardHero({ result }: { result: DecisionResultSnapshot }) {
-  const satisfaction = metricValue(result, 'publicSatisfaction', 63, 75);
-  const trust = trustValue(result);
-
-  return (
-    <View style={styles.rewardHero}>
-      <View style={styles.successMedal}>
-        <View style={styles.medalRing}>
-          <Ionicons name="checkmark" size={52} color={palette.white} />
-        </View>
-      </View>
-      <View style={styles.rewardCopy}>
-        <Text style={styles.rewardTitle} numberOfLines={2}>
-          Görev Başarıyla Tamamlandı!
-        </Text>
-        <Text style={styles.rewardText} numberOfLines={2}>
-          Planladığın operasyon hedefe ulaştı. Merkez’de olumlu etkiler hissediliyor.
-        </Text>
-        <View style={styles.rewardChips}>
-          <View style={styles.rewardChip}>
-            <Ionicons name="happy-outline" size={14} color={palette.green} />
-            <Text style={styles.rewardChipText} numberOfLines={1}>
-              {signed(satisfaction.delta)} Memnuniyet
-            </Text>
-          </View>
-          <View style={styles.rewardChip}>
-            <Ionicons name="shield-checkmark" size={14} color={palette.green} />
-            <Text style={styles.rewardChipText} numberOfLines={1}>
-              {signed(trust.delta)} Güven
-            </Text>
-          </View>
-        </View>
-      </View>
-      <Image source={municipalImage} style={styles.rewardBuilding} contentFit="contain" />
-    </View>
-  );
-}
-
-function ResultStatCards({ result }: { result: DecisionResultSnapshot }) {
-  const satisfaction = metricValue(result, 'publicSatisfaction', 63, 75);
-  const trust = trustValue(result);
-  const source = sourceGain(result);
-
-  return (
-    <View style={styles.statGrid}>
-      <StatCard
-        image={planImage}
-        title="Kaynak Etkisi"
-        value={`+${source}`}
-        label="Kaynak"
-        detailA="Taş"
-        detailB="Kereste"
-      />
-      <StatCard
-        image={personnelImage}
-        title="Sosyal Etki"
-        value={`+${Math.max(12, satisfaction.delta + 6)}`}
-        label="Memnuniyet"
-        body="Halk etkinlikleri ve hizmetler arttı."
-      />
-      <StatCard
-        image={vehicleImage}
-        title="Güven Etkisi"
-        value={signed(trust.delta)}
-        label="Güven"
-        body="Güven artışı, operasyonları güçlendirdi."
-      />
-      <StatCard
-        image={reportImage}
-        title="Devreden Etki"
-        value="+10%"
-        label="Etki Kalıcılığı"
-        body="Sonraki güne taşındı"
-      />
-    </View>
-  );
-}
-
-function StatCard({
-  image,
-  title,
-  value,
-  label,
-  body,
-  detailA,
-  detailB,
-}: {
-  image: number;
-  title: string;
-  value: string;
-  label: string;
-  body?: string;
-  detailA?: string;
-  detailB?: string;
-}) {
-  return (
-    <View style={styles.statCard}>
-      <View style={styles.statTitleRow}>
-        <Image source={image} style={styles.statIcon} contentFit="contain" />
-        <Text style={styles.statTitle} numberOfLines={1}>
-          {title}
-        </Text>
-      </View>
-      <Text style={styles.statValue} numberOfLines={1}>
-        {value}
-      </Text>
-      <Text style={styles.statLabel} numberOfLines={1}>
-        {label}
-      </Text>
-      {body ? (
-        <Text style={styles.statBody} numberOfLines={2}>
-          {body}
-        </Text>
-      ) : (
-        <View style={styles.resourceLines}>
-          <Text style={styles.resourceLine} numberOfLines={1}>
-            🪨 {detailA} +60
-          </Text>
-          <Text style={styles.resourceLine} numberOfLines={1}>
-            🪵 {detailB} +60
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
-function DistrictImpact({ result }: { result: DecisionResultSnapshot }) {
-  const satisfaction = metricValue(result, 'publicSatisfaction', 63, 75);
-  const districts = [
-    { name: 'Cumhuriyet', image: cumhuriyetImage, delta: 0 },
-    { name: 'Sanayi', image: sanayiImage, delta: 4 },
-    { name: 'Merkez', image: municipalImage, delta: Math.max(8, satisfaction.delta) },
-    { name: 'İstasyon', image: planImage, delta: 0 },
-    { name: 'Yeşilvadi', image: yesilvadiImage, delta: 3 },
-  ];
-
-  return (
-    <View style={styles.districtPanel}>
-      <View style={styles.sectionHeaderRow}>
-        <Ionicons name="map" size={17} color={palette.tealDark} />
-        <Text style={styles.sectionTitle} numberOfLines={1}>
-          Bölgesel Etki
-        </Text>
-      </View>
-      <View style={styles.districtRow}>
-        {districts.map((district, index) => (
-          <View
-            key={district.name}
-            style={[styles.districtItem, district.name === 'Merkez' && styles.districtItemActive]}>
-            {index > 0 ? <View style={styles.districtConnector} /> : null}
-            <Image source={district.image} style={styles.districtImage} contentFit="contain" />
-            <Text style={styles.districtName} numberOfLines={1}>
-              {district.name}
-            </Text>
-            <View style={styles.districtDeltaRow}>
-              <Ionicons
-                name={district.delta > 0 ? 'happy-outline' : 'remove-circle-outline'}
-                size={13}
-                color={district.delta > 0 ? palette.green : palette.gold}
-              />
-              <Text style={styles.districtDelta} numberOfLines={1}>
-                {district.delta > 0 ? `+${district.delta}` : '0'}
-              </Text>
-            </View>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-function EceComment({
-  fieldNote,
-  relationshipLine,
-}: {
-  fieldNote: string;
-  relationshipLine?: string;
-}) {
-  const body =
-    relationshipLine?.trim() ||
-    fieldNote ||
-    'Harika bir iş çıkardın Can! Halkın memnuniyeti ve güveni yükseldi. Bu istikrarı koruyalım.';
-  return (
-    <View style={styles.eceComment}>
-      <Image source={eceImage} style={styles.eceCommentImage} contentFit="contain" />
-      <View style={[styles.eceCommentCopy, { flexShrink: 1, minWidth: 0 }]}>
-        <Text style={styles.eceCommentTitle} numberOfLines={1}>
-          Ece’nin Yorumu
-        </Text>
-        <Text style={styles.eceCommentBody} numberOfLines={2} ellipsizeMode="tail">
-          {body}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
 export function DecisionResultScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useAppTabBarHeight();
   const snapshot = useGameStore(selectLastDecisionResult);
+  const lastOperationPlanStrategyId = useGameStore((s) => s.lastOperationPlanStrategyId);
   const gameState = useGameStore((s) => s.gameState);
   const monetization = useGameStore((s) => s.monetization);
   const activeEvents = gameState.events;
@@ -866,6 +550,74 @@ export function DecisionResultScreen() {
     [authorityState?.formalRankId, currentDay, result.day],
   );
 
+  const isDay1LearningEvent = (result.day ?? currentDay) <= 1;
+
+  const authorityProgressLine = useMemo(() => {
+    const highlight = result.highlightLines.find((line) =>
+      /yetki|rozet|seviye/i.test(line),
+    );
+    return highlight ?? null;
+  }, [result.highlightLines]);
+
+  const revealPresentation = useMemo(
+    () =>
+      buildEventResultRevealPresentation({
+        snapshot: result,
+        event: relatedEvent,
+        isFallback: isMissing,
+        isDay1LearningEvent,
+        day: result.day ?? currentDay,
+        selectedPlanStrategyId: lastOperationPlanStrategyId,
+        carryOverSummary: resultCarryOver?.summary ?? null,
+        authorityProgressLine,
+        showNextDayAction: viewModel.actions.showSecondary,
+        reducedMotion,
+      }),
+    [
+      authorityProgressLine,
+      currentDay,
+      isDay1LearningEvent,
+      isMissing,
+      lastOperationPlanStrategyId,
+      reducedMotion,
+      relatedEvent,
+      result,
+      resultCarryOver?.summary,
+      viewModel.actions.showSecondary,
+    ],
+  );
+
+  const [visibleRevealCount, setVisibleRevealCount] = useState(0);
+
+  useEffect(() => {
+    const itemCount = revealPresentation.revealItems.length;
+    if (reducedMotion) {
+      setVisibleRevealCount(itemCount);
+      return;
+    }
+
+    setVisibleRevealCount(0);
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const stagger = revealPresentation.revealStaggerMs;
+
+    for (let index = 0; index < itemCount; index += 1) {
+      const timer = setTimeout(() => {
+        setVisibleRevealCount(index + 1);
+      }, stagger * (index + 1));
+      timers.push(timer);
+    }
+
+    return () => {
+      for (const timer of timers) {
+        clearTimeout(timer);
+      }
+    };
+  }, [
+    reducedMotion,
+    revealPresentation.revealItems.length,
+    revealPresentation.revealStaggerMs,
+  ]);
+
   const goHub = useCallback(() => {
     playLightImpactHaptic();
     router.replace('/');
@@ -875,6 +627,26 @@ export function DecisionResultScreen() {
     playLightImpactHaptic();
     router.push('/reports' as Href);
   }, [router]);
+
+  const handleResultAction = useCallback(
+    (action: EventResultAction) => {
+      if (!action.enabled) return;
+      switch (action.id) {
+        case 'back_to_hub':
+          goHub();
+          break;
+        case 'open_report':
+          goReports();
+          break;
+        case 'view_authority':
+          router.push('/profile' as Href);
+          break;
+        default:
+          break;
+      }
+    },
+    [goHub, goReports, router],
+  );
 
   const legacyTutorialStep = useGameStore((s) =>
     selectActiveTutorialStepForScreen(s, 'decision_result'),
@@ -896,10 +668,10 @@ export function DecisionResultScreen() {
           <View style={styles.resultTop}>
             <View style={styles.resultTitleBlock}>
               <Text style={styles.pageTitle} numberOfLines={1}>
-                Operasyon Sonucu
+                {revealPresentation.title}
               </Text>
               <Text style={styles.taskLine} numberOfLines={1}>
-                Görev: {result.eventTitle || 'Merkez’e Kamu Memnuniyetini Artır'}
+                Görev: {revealPresentation.subtitle || result.eventTitle}
               </Text>
             </View>
             <Text style={styles.completedAt} numberOfLines={1}>
@@ -907,15 +679,48 @@ export function DecisionResultScreen() {
             </Text>
           </View>
 
-          <CreviaAnimatedCard
-            surface="decision_result"
-            index={0}
-            day={result.day ?? currentDay}
-            reducedMotion={reducedMotion}
-            motionKind="result_emphasis"
-            intensity="highlighted">
-            <RewardHero result={result} />
-          </CreviaAnimatedCard>
+          <View
+            style={styles.revealSection}
+            accessibilityLabel={revealPresentation.accessibilityLabel}>
+            <ResultOutcomeHero
+              outcome={revealPresentation.outcome}
+              reducedMotion={reducedMotion}
+            />
+
+            {revealPresentation.selectedPlanContext ? (
+              <ResultPlanContextStrip
+                context={revealPresentation.selectedPlanContext}
+                reducedMotion={reducedMotion}
+              />
+            ) : null}
+
+            <View style={styles.revealList}>
+              {revealPresentation.revealItems
+                .slice(0, visibleRevealCount)
+                .map((item, index) => (
+                  <ResultRevealItemCard
+                    key={item.id}
+                    item={item}
+                    index={index}
+                    reducedMotion={reducedMotion}
+                  />
+                ))}
+            </View>
+
+            {visibleRevealCount >= revealPresentation.revealItems.length ? (
+              <>
+                <ResultAdvisorCommentCard
+                  comment={revealPresentation.advisorComment}
+                  reducedMotion={reducedMotion}
+                />
+                <ResultFinalActions
+                  actions={revealPresentation.finalActions}
+                  onAction={handleResultAction}
+                  reducedMotion={reducedMotion}
+                />
+              </>
+            ) : null}
+          </View>
 
           <CreviaAnimatedCard
             surface="decision_result"
@@ -925,9 +730,6 @@ export function DecisionResultScreen() {
             motionKind="card_enter">
             <EventResultImpactExplanationCard explanation={impactExplanation} compact />
           </CreviaAnimatedCard>
-
-          <BeforeAfterPanel result={result} />
-          <ResultStatCards result={result} />
 
           {showDomainResult ? (
             <EventDomainFocusStrip
@@ -964,7 +766,6 @@ export function DecisionResultScreen() {
             />
           ) : null}
 
-          <DistrictImpact result={result} />
           {rewardComebackResult?.visible && rewardComebackResult.resultLine ? (
             <CreviaAnimatedChip
               surface="decision_result"
@@ -983,35 +784,6 @@ export function DecisionResultScreen() {
               </Text>
             </CreviaAnimatedChip>
           ) : null}
-          <EceComment
-            fieldNote={viewModel.fieldNote}
-            relationshipLine={advisorRelationshipResult?.resultLine}
-          />
-
-          <View style={styles.actionArea}>
-            <CreviaAnimatedPressable
-              onPress={goReports}
-              accessibilityRole="button"
-              accessibilityLabel="Gün sonu raporuna geç"
-              reducedMotion={reducedMotion}
-              style={styles.primaryCta}>
-              <Ionicons name="newspaper-outline" size={19} color={palette.white} />
-              <Text style={styles.primaryCtaText} numberOfLines={1}>
-                Gün Sonu Raporuna Geç
-              </Text>
-            </CreviaAnimatedPressable>
-            <CreviaAnimatedPressable
-              onPress={goHub}
-              accessibilityRole="button"
-              accessibilityLabel="Merkeze dön"
-              reducedMotion={reducedMotion}
-              style={styles.secondaryCta}>
-              <Ionicons name="business" size={16} color={palette.tealDark} />
-              <Text style={styles.secondaryCtaText} numberOfLines={1}>
-                Merkeze Dön
-              </Text>
-            </CreviaAnimatedPressable>
-          </View>
         </Animated.View>
       </ScrollView>
 
@@ -1175,286 +947,13 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
     flexShrink: 0,
   },
-  rewardHero: {
-    minHeight: 136,
-    borderRadius: 18,
-    backgroundColor: '#F5F0E1',
-    overflow: 'hidden',
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    gap: 10,
+  revealSection: {
+    gap: 12,
     minWidth: 0,
   },
-  successMedal: {
-    width: 106,
-    height: 106,
-    borderRadius: 18,
-    backgroundColor: '#F8F5E9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  medalRing: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
-    backgroundColor: palette.green,
-    borderWidth: 5,
-    borderColor: '#E8C869',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rewardCopy: {
-    flex: 1,
-    minWidth: 0,
-    gap: 6,
-    zIndex: 1,
-  },
-  rewardTitle: {
-    fontSize: 17,
-    lineHeight: 21,
-    fontWeight: '900',
-    color: palette.textDark,
-  },
-  rewardText: {
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: '700',
-    color: palette.textMuted,
-  },
-  rewardChips: {
-    flexDirection: 'row',
-    gap: 6,
-    flexWrap: 'wrap',
-  },
-  rewardChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderRadius: 999,
-    backgroundColor: 'rgba(189, 239, 231, 0.60)',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    maxWidth: 130,
-  },
-  rewardChipText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: palette.tealDark,
-  },
-  rewardBuilding: {
-    width: 136,
-    height: 120,
-    marginRight: -12,
-    flexShrink: 0,
-  },
-  impactPanel: {
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: palette.border,
-    padding: 12,
-    gap: 10,
-    backgroundColor: '#FFFCF5',
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: palette.textDark,
-  },
-  beforeAfterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  revealList: {
     gap: 8,
     minWidth: 0,
-  },
-  beforeAfterBox: {
-    flex: 1,
-    minHeight: 78,
-    borderRadius: 13,
-    padding: 10,
-    backgroundColor: '#F7F3EB',
-    borderWidth: 1,
-    borderColor: 'rgba(20,70,66,0.06)',
-    gap: 7,
-    minWidth: 0,
-  },
-  boxTitle: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: palette.textDark,
-  },
-  afterTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metricLine: {
-    gap: 3,
-  },
-  metricLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    minWidth: 0,
-  },
-  metricLabel: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 9,
-    fontWeight: '800',
-    color: palette.textMuted,
-  },
-  metricPercent: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: palette.textDark,
-  },
-  metricDelta: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: palette.green,
-  },
-  percentTrack: {
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: 'rgba(20,70,66,0.12)',
-    overflow: 'hidden',
-  },
-  percentFill: {
-    height: '100%',
-    borderRadius: 999,
-  },
-  arrowCircle: {
-    width: 40,
-    alignItems: 'center',
-    flexShrink: 0,
-  },
-  statGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  statCard: {
-    width: '23.5%',
-    minWidth: 78,
-    flexGrow: 1,
-    minHeight: 116,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: '#FFFCF5',
-    padding: 8,
-    alignItems: 'center',
-    gap: 4,
-  },
-  statTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    alignSelf: 'stretch',
-    minWidth: 0,
-  },
-  statIcon: {
-    width: 20,
-    height: 20,
-    flexShrink: 0,
-  },
-  statTitle: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 9,
-    fontWeight: '900',
-    color: palette.textDark,
-  },
-  statValue: {
-    marginTop: 3,
-    fontSize: 21,
-    fontWeight: '900',
-    color: palette.tealDark,
-  },
-  statLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: palette.textDark,
-    textAlign: 'center',
-  },
-  statBody: {
-    marginTop: 4,
-    fontSize: 8,
-    lineHeight: 11,
-    fontWeight: '700',
-    color: palette.textMuted,
-    textAlign: 'center',
-  },
-  resourceLines: {
-    marginTop: 4,
-    gap: 2,
-    alignSelf: 'stretch',
-  },
-  resourceLine: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: palette.textMuted,
-  },
-  districtPanel: {
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: palette.border,
-    padding: 10,
-    backgroundColor: '#FFFCF5',
-    gap: 10,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  districtRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    minWidth: 0,
-  },
-  districtItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 3,
-    minWidth: 0,
-    position: 'relative',
-    paddingVertical: 4,
-  },
-  districtItemActive: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: palette.tealSoft,
-    backgroundColor: 'rgba(189,239,231,0.25)',
-  },
-  districtConnector: {
-    position: 'absolute',
-    left: '-50%',
-    right: '50%',
-    top: 32,
-    height: 2,
-    backgroundColor: palette.tealSoft,
-  },
-  districtImage: {
-    width: 46,
-    height: 38,
-  },
-  districtName: {
-    fontSize: 8,
-    fontWeight: '900',
-    color: palette.textDark,
-  },
-  districtDeltaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  districtDelta: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: palette.tealDark,
   },
   rewardComebackChip: {
     borderRadius: 12,
@@ -1479,78 +978,8 @@ const styles = StyleSheet.create({
     color: '#2A5C56',
     flexShrink: 1,
   },
-  eceComment: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 98,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: '#FFFCF5',
-    padding: 10,
-    gap: 10,
-    overflow: 'hidden',
-  },
-  eceCommentImage: {
-    width: 78,
-    height: 94,
-    marginBottom: -14,
-    flexShrink: 0,
-  },
-  eceCommentCopy: {
-    flex: 1,
-    minWidth: 0,
-    gap: 5,
-  },
-  eceCommentTitle: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: palette.textDark,
-  },
-  eceCommentBody: {
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '700',
-    color: palette.textMuted,
-  },
-  actionArea: {
-    gap: 8,
-  },
   fatigueChipRow: {
     minWidth: 0,
     flexShrink: 1,
-  },
-  primaryCta: {
-    minHeight: 46,
-    borderRadius: 14,
-    backgroundColor: palette.tealDark,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  primaryCtaText: {
-    fontSize: 15,
-    fontWeight: '900',
-    color: palette.white,
-  },
-  secondaryCta: {
-    minHeight: 38,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(20,70,66,0.20)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    backgroundColor: 'rgba(255,255,255,0.60)',
-  },
-  secondaryCtaText: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: palette.tealDark,
-  },
-  pressed: {
-    opacity: 0.86,
   },
 });

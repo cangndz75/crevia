@@ -99,6 +99,9 @@ export function verifyMotionFoundationScenario(): VerifyMotionFoundationOutcome 
   const motionTokens = readRepo('src/core/motion/motionTokens.ts');
   const motionPresets = readRepo('src/core/motion/motionPresets.ts');
   const result = readRepo('src/features/events/screens/DecisionResultScreen.tsx');
+  const resultReveal = readRepo(
+    'src/features/events/components/result/ResultRevealMotionSections.tsx',
+  );
   const report = readRepo('src/features/reports/components/end-of-day/EndOfDayReportView.tsx');
   const onboarding = readRepo('src/features/onboarding/screens/CreviaOnboardingScreen.tsx');
   const social = readRepo('src/features/social/components/mentions/MentionFeedCard.tsx');
@@ -110,8 +113,15 @@ export function verifyMotionFoundationScenario(): VerifyMotionFoundationOutcome 
   record(motionTokens.includes('MOTION_TOKEN_DURATION'), 'Center motion tokens present');
   record(motionPresets.includes('centerCtaPulseConfig'), 'Center motion presets present');
   record(result.includes('surface="decision_result"'), 'DecisionResult integration present');
-  record(result.includes('motionKind="result_emphasis"'), 'Result emphasis motion present');
-  record(result.includes('CreviaAnimatedPressable'), 'DecisionResult CTA press motion present');
+  record(
+    result.includes('motionKind="result_emphasis"') ||
+      resultReveal.includes('motionKind="result_emphasis"'),
+    'Result emphasis motion present',
+  );
+  record(
+    result.includes('CreviaAnimatedPressable') || resultReveal.includes('CreviaAnimatedPressable'),
+    'DecisionResult CTA press motion present',
+  );
   record(report.includes('surface="report"'), 'Report integration present');
   record(report.includes('index={2}'), 'Report max 3 source cap visible');
   record(onboarding.includes('surface="onboarding"'), 'Onboarding integration present');

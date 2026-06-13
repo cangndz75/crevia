@@ -49,6 +49,12 @@ import { EventFieldPhase } from '@/features/events/components/event-workflow/fie
 import { EventWorkflowStepper } from '@/features/events/components/event-workflow/EventWorkflowStepper';
 import { StickyActionButton } from '@/features/events/components/StickyActionButton';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
+import {
+  getPlanStrategyLabel,
+  resolveRecommendedPlanStrategyId,
+  type EventPlanStrategyId,
+} from '@/features/events/utils/eventPlanPhasePresentation';
+import { suggestDecisionIdForPlanStrategy } from '@/features/events/utils/eventDispatchPhasePresentation';
 import { PLAN_WORKFLOW_FOOTER_EXTRA } from '@/features/events/utils/eventWorkflowPlanPresentation';
 import {
   DISPATCH_WORKFLOW_FOOTER_EXTRA,
@@ -126,6 +132,8 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [operationStep, setOperationStep] = useState<OperationWorkflowStepId>('inspect');
+  const [selectedPlanStrategyId, setSelectedPlanStrategyId] =
+    useState<EventPlanStrategyId | null>(null);
 
   const event = useGameStore((s) =>
     resolveEventCardById(eventId, s.gameState.events, s.eventPool),
@@ -309,6 +317,35 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
   const showFieldPhase = useOperationWorkflow && operationStep === 'field';
 
   const isDay1LearningEvent = event ? isDay1LearningEventId(event.id) : false;
+
+  const recommendedPlanStrategyId = useMemo(() => {
+    if (!event) return 'balanced_plan' as EventPlanStrategyId;
+    return resolveRecommendedPlanStrategyId(event, {
+      day: currentDay,
+      isDay1LearningEvent,
+    });
+  }, [currentDay, event, isDay1LearningEvent]);
+
+  useEffect(() => {
+    if (!event) return;
+    setSelectedPlanStrategyId(
+      resolveRecommendedPlanStrategyId(event, {
+        day: currentDay,
+        isDay1LearningEvent,
+      }),
+    );
+  }, [currentDay, event, isDay1LearningEvent]);
+
+  const effectivePlanStrategyId =
+    selectedPlanStrategyId ?? recommendedPlanStrategyId;
+
+  useEffect(() => {
+    if (!event || operationStep !== 'assign') return;
+    const suggested = suggestDecisionIdForPlanStrategy(event, effectivePlanStrategyId);
+    if (suggested) {
+      setSelectedDecisionId(suggested);
+    }
+  }, [effectivePlanStrategyId, event, operationStep]);
 
   const firstEventGuidance = useMemo(
     () =>
@@ -514,6 +551,7 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
 
     setApplying(true);
     try {
+      useGameStore.getState().setLastOperationPlanStrategyId(effectivePlanStrategyId);
       const xpResult = applyDecisionAction(eventId, effectiveSelectedId);
       if (xpResult.success === false) {
         if (xpResult.reason === 'insufficient_source') {
@@ -747,6 +785,8 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           bottomPadding={bottomPadding}
           onOpenPlanning={() => setOperationStep('plan')}
           phaseHint={inspectPhaseHint}
+          gameDay={currentDay}
+          isDay1LearningEvent={isDay1LearningEvent}
         />
         <TutorialCoachOverlay
           screen="event_detail"
@@ -766,8 +806,12 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
         <EventPlanPhase
           event={event}
           bottomPadding={bottomPadding}
+          selectedStrategyId={effectivePlanStrategyId}
+          onSelectStrategy={setSelectedPlanStrategyId}
           onConfirmPlan={() => setOperationStep('assign')}
           phaseHint={workflowPhaseHint}
+          gameDay={currentDay}
+          isDay1LearningEvent={isDay1LearningEvent}
         />
         <TutorialCoachOverlay
           screen="event_detail"
@@ -804,9 +848,9 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           phaseHint={workflowPhaseHint}
           gameDay={currentDay}
           assignment={eventAssignment ?? null}
-          operationSignals={operationSignals}
-          operationalResources={operationalResources}
-          crisisState={crisisState}
+          selectedPlanStrategyId={effectivePlanStrategyId}
+          selectedPlanStrategyLabel={getPlanStrategyLabel(effectivePlanStrategyId)}
+          isDay1LearningEvent={isDay1LearningEvent}
         />
         <TutorialCoachOverlay
           screen="event_detail"
@@ -837,9 +881,9 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           phaseHint={workflowPhaseHint}
           gameDay={currentDay}
           assignment={eventAssignment ?? null}
-          operationSignals={operationSignals}
-          operationalResources={operationalResources}
-          crisisState={crisisState}
+          selectedPlanStrategyId={effectivePlanStrategyId}
+          selectedPlanStrategyLabel={getPlanStrategyLabel(effectivePlanStrategyId)}
+          isDay1LearningEvent={isDay1LearningEvent}
         />
         <TutorialCoachOverlay
           screen="event_detail"

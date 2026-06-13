@@ -1,5 +1,11 @@
 import { buildMotionAccessibilityModel } from './motionAccessibility';
 import {
+  OPERATION_MOTION_FINDING_REVEAL_MS,
+  OPERATION_MOTION_FINDING_STAGGER_MS,
+  OPERATION_MOTION_SCAN_MS,
+} from './operationMotionTokens';
+import {
+  MOTION_TOKEN_DELAY,
   MOTION_TOKEN_DURATION,
   MOTION_TOKEN_OPACITY,
   MOTION_TOKEN_PULSE,
@@ -123,4 +129,32 @@ export function centerRevealLevelIntensity(level: CenterRevealLevel): number {
 /** CTA pulse sonsuz loop değil; sınırlı tekrar. */
 export function centerCtaPulseIsBounded(): boolean {
   return MOTION_TOKEN_PULSE.softRepeatCount > 0 && MOTION_TOKEN_PULSE.softRepeatCount < 10;
+}
+
+/** Operasyon İncele fazı scan süresi: 600–900ms bandı (token scan = 700ms). */
+export function operationInspectScanConfig(reducedMotion: boolean) {
+  if (reducedMotion) {
+    return {
+      enabled: false,
+      durationMs: 0,
+      revealLevel: 'none' as CenterRevealLevel,
+    };
+  }
+  return {
+    enabled: true,
+    durationMs: OPERATION_MOTION_SCAN_MS,
+    revealLevel: 'soft' as CenterRevealLevel,
+  };
+}
+
+/** Bulgu kartı reveal: 160ms, stagger 45ms. */
+export function operationFindingRevealConfig(reducedMotion: boolean, index: number) {
+  if (reducedMotion) {
+    return { enabled: false, durationMs: 0, delayMs: 0 };
+  }
+  return {
+    enabled: true,
+    durationMs: OPERATION_MOTION_FINDING_REVEAL_MS,
+    delayMs: index * OPERATION_MOTION_FINDING_STAGGER_MS,
+  };
 }
