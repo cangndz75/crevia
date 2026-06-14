@@ -1,25 +1,24 @@
 import {
   BottomTabBarHeightCallbackContext,
   type BottomTabBarProps,
-} from '@react-navigation/bottom-tabs';
-import { memo, useContext, useEffect, useMemo } from 'react';
+} from "@react-navigation/bottom-tabs";
+import { memo, useContext, useEffect, useMemo } from "react";
+import { Image, type ImageSource } from "expo-image";
 import {
-  Image,
-  ImageSourcePropType,
   Pressable,
   StyleSheet,
   useWindowDimensions,
   View,
-} from 'react-native';
+} from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-} from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const NAVBAR_BG = require('@/assets/bt1.png');
-const MEDALLION = require('@/assets/bt2.png');
+const NAVBAR_BG = require("@/assets/bt1.png");
+const MEDALLION = require("@/assets/bt2.png");
 
 /** bt1.png canvas: 2172×724 — pill sits between these rows. */
 const NAVBAR_WIDTH = 2172;
@@ -32,29 +31,36 @@ const BOTTOM_MARGIN = NAVBAR_HEIGHT - PILL_BOTTOM - 1;
 type NavItem = {
   routeName: string;
   label: string;
-  icon: ImageSourcePropType;
+  icon: ImageSource;
   featured?: boolean;
 };
 
 const NAV_ITEMS: readonly NavItem[] = [
-  { routeName: 'index', label: 'Merkez', icon: require('@/assets/bt8.png') },
-  { routeName: 'events', label: 'Operasyon', icon: require('@/assets/bt6.png') },
+  { routeName: "index", label: "Merkez", icon: require("@/assets/bt8.png") },
   {
-    routeName: 'risks',
-    label: 'Harita',
-    icon: require('@/assets/bt5.png'),
+    routeName: "events",
+    label: "Operasyon",
+    icon: require("@/assets/bt6.png"),
+  },
+  {
+    routeName: "risks",
+    label: "Harita",
+    icon: require("@/assets/bt5.png"),
     featured: true,
   },
   {
-    routeName: 'progression',
-    label: 'Başarılar',
-    icon: require('@/assets/bt4.png'),
+    routeName: "progression",
+    label: "Başarılar",
+    icon: require("@/assets/bt4.png"),
   },
-  { routeName: 'reports', label: 'Raporlar', icon: require('@/assets/bt7.png') },
+  {
+    routeName: "reports",
+    label: "Raporlar",
+    icon: require("@/assets/bt7.png"),
+  },
 ] as const;
 
-const LABEL_ACTIVE = '#F6D36D';
-const LABEL_INACTIVE = '#B8A06A';
+import { gameUi } from '@/ui/theme/gameUiTokens';
 
 const TAB_ANIMATION_MS = 150;
 const MIN_HIT_SIZE = 44;
@@ -68,7 +74,9 @@ export function computeCreviaTabBarHeight(
   screenWidth: number,
   bottomInset: number,
 ): number {
-  return computeCreviaTabBarContentHeight(screenWidth) + Math.max(bottomInset, 8);
+  return (
+    computeCreviaTabBarContentHeight(screenWidth) + Math.max(bottomInset, 8)
+  );
 }
 
 /** Fallback when screen width is not yet available. */
@@ -81,22 +89,22 @@ export function useAppTabBarHeight() {
   return computeCreviaTabBarHeight(screenWidth, insets.bottom);
 }
 
-function shouldHideTabBar(state: BottomTabBarProps['state']) {
+function shouldHideTabBar(state: BottomTabBarProps["state"]) {
   const activeRoute = state.routes[state.index];
   if (
-    activeRoute.name === 'profile' ||
-    activeRoute.name === 'leaderboard' ||
-    activeRoute.name === 'social'
+    activeRoute.name === "profile" ||
+    activeRoute.name === "leaderboard" ||
+    activeRoute.name === "social"
   ) {
     return true;
   }
-  if (activeRoute.name !== 'events' || !activeRoute.state) {
+  if (activeRoute.name !== "events" || !activeRoute.state) {
     return false;
   }
   const nestedIndex = activeRoute.state.index ?? 0;
   const nestedRoute = activeRoute.state.routes[nestedIndex];
-  return nestedRoute?.name === '[id]';
-};
+  return nestedRoute?.name === "[id]";
+}
 
 type BarMetrics = {
   screenWidth: number;
@@ -151,7 +159,9 @@ const TabBarItem = memo(function TabBarItem({
   const iconOpacity = useSharedValue(focused ? 1 : 0.72);
 
   useEffect(() => {
-    scale.value = withTiming(focused ? 1.05 : 1, { duration: TAB_ANIMATION_MS });
+    scale.value = withTiming(focused ? 1.05 : 1, {
+      duration: TAB_ANIMATION_MS,
+    });
     iconOpacity.value = withTiming(focused ? 1 : 0.72, {
       duration: TAB_ANIMATION_MS,
     });
@@ -175,12 +185,14 @@ const TabBarItem = memo(function TabBarItem({
       hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
       accessibilityRole="tab"
       accessibilityState={{ selected: focused }}
-      accessibilityLabel={`${label} sekmesi`}>
+      accessibilityLabel={`${label} sekmesi`}
+    >
       <View
         style={[
           styles.tabHitArea,
           { minWidth: MIN_HIT_SIZE, minHeight: MIN_HIT_SIZE },
-        ]}>
+        ]}
+      >
         <Animated.View
           style={[
             styles.iconSlot,
@@ -191,7 +203,8 @@ const TabBarItem = memo(function TabBarItem({
                 }
               : { width: ICON_SLOT_HEIGHT + 8, height: ICON_SLOT_HEIGHT },
             animatedIconStyle,
-          ]}>
+          ]}
+        >
           {showMedallion ? (
             <Image
               source={MEDALLION}
@@ -202,14 +215,16 @@ const TabBarItem = memo(function TabBarItem({
                   height: metrics.featuredMedalSize,
                 },
               ]}
-              resizeMode="contain"
+              contentFit="contain"
+              transition={0}
             />
           ) : null}
 
           <Image
             source={icon}
             style={{ width: iconSize, height: iconSize }}
-            resizeMode="contain"
+            contentFit="contain"
+            transition={0}
           />
         </Animated.View>
 
@@ -218,11 +233,12 @@ const TabBarItem = memo(function TabBarItem({
             styles.label,
             {
               fontSize: metrics.labelFontSize,
-              fontWeight: focused ? '800' : '600',
-              color: focused ? LABEL_ACTIVE : LABEL_INACTIVE,
+              fontWeight: focused ? "800" : "600",
+              color: focused ? gameUi.colors.navActive : gameUi.colors.navInactive,
             },
           ]}
-          numberOfLines={1}>
+          numberOfLines={1}
+        >
           {label}
         </Animated.Text>
       </View>
@@ -258,7 +274,8 @@ export function CreviaBottomTabBar({
       style={[styles.root, { height: totalHeight }]}
       onLayout={(event) => {
         onHeightChange?.(event.nativeEvent.layout.height);
-      }}>
+      }}
+    >
       <View style={[styles.pillClip, { height: metrics.pillHeight }]}>
         <Image
           source={NAVBAR_BG}
@@ -270,7 +287,8 @@ export function CreviaBottomTabBar({
               bottom: -metrics.bottomCrop,
             },
           ]}
-          resizeMode="stretch"
+          contentFit="fill"
+          transition={0}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         />
@@ -283,37 +301,38 @@ export function CreviaBottomTabBar({
             height: totalHeight,
             paddingBottom: bottomInset + 6,
           },
-        ]}>
-          {NAV_ITEMS.map((item) => {
-            const routeIndex = routeIndexByName.get(item.routeName);
-            if (routeIndex === undefined) {
-              return null;
+        ]}
+      >
+        {NAV_ITEMS.map((item) => {
+          const routeIndex = routeIndexByName.get(item.routeName);
+          if (routeIndex === undefined) {
+            return null;
+          }
+
+          const route = state.routes[routeIndex];
+          const focused = state.index === routeIndex;
+
+          const onPress = () => {
+            const event = navigation.emit({
+              type: "tabPress",
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!focused && !event.defaultPrevented) {
+              navigation.navigate(route.name, route.params);
             }
+          };
 
-            const route = state.routes[routeIndex];
-            const focused = state.index === routeIndex;
-
-            const onPress = () => {
-              const event = navigation.emit({
-                type: 'tabPress',
-                target: route.key,
-                canPreventDefault: true,
-              });
-              if (!focused && !event.defaultPrevented) {
-                navigation.navigate(route.name, route.params);
-              }
-            };
-
-            return (
-              <TabBarItem
-                key={item.routeName}
-                item={item}
-                focused={focused}
-                metrics={metrics}
-                onPress={onPress}
-              />
-            );
-          })}
+          return (
+            <TabBarItem
+              key={item.routeName}
+              item={item}
+              focused={focused}
+              metrics={metrics}
+              onPress={onPress}
+            />
+          );
+        })}
       </View>
     </View>
   );
@@ -321,54 +340,54 @@ export function CreviaBottomTabBar({
 
 const styles = StyleSheet.create({
   root: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    width: '100%',
-    overflow: 'visible',
-    backgroundColor: 'transparent',
+    width: "100%",
+    overflow: "visible",
+    backgroundColor: "transparent",
   },
   pillClip: {
-    width: '100%',
-    overflow: 'hidden',
+    width: "100%",
+    overflow: "hidden",
   },
   barImage: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     bottom: 0,
   },
   tabsRow: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
     paddingHorizontal: 14,
     zIndex: 2,
   },
   tab: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+    alignItems: "center",
+    justifyContent: "flex-end",
     zIndex: 2,
   },
   tabHitArea: {
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+    alignItems: "center",
+    justifyContent: "flex-end",
   },
   iconSlot: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   layerImage: {
-    position: 'absolute',
+    position: "absolute",
   },
   label: {
     marginTop: 2,
-    textAlign: 'center',
+    textAlign: "center",
     letterSpacing: 0.2,
     maxWidth: 68,
   },

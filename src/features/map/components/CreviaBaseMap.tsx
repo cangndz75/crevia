@@ -32,6 +32,8 @@ import type {
 } from '../types/creviaMapTypes';
 import { MapDistrictLabel } from './MapDistrictLabel';
 import { MapOperationMarker } from './MapOperationMarker';
+import type { MapMarkerMotionModel } from '../utils/mapMotionPresentation';
+import { pickDistrictMotionModel } from '../utils/mapMarkerMotionHelper';
 
 export type CreviaBaseMapControls = {
   zoomIn: () => void;
@@ -48,6 +50,8 @@ type Props = {
   asset?: CreviaMapImageAsset;
   districts?: readonly CreviaMapDistrictLayout[];
   operationMarkers?: readonly CreviaMapOperationMarker[];
+  districtMotionMarkers?: readonly MapMarkerMotionModel[];
+  reducedMotionMode?: boolean;
   showControls?: boolean;
   style?: ViewStyle;
   onDistrictPress?: (districtId: CreviaMapDistrictId) => void;
@@ -167,6 +171,8 @@ export const CreviaBaseMap = forwardRef<CreviaBaseMapControls, Props>(
       asset = creviaBaseMapV1,
       districts = creviaDistrictLayout,
       operationMarkers = creviaBaseOperationMarkers,
+      districtMotionMarkers = [],
+      reducedMotionMode = false,
       showControls = false,
       style,
       onDistrictPress,
@@ -477,6 +483,26 @@ export const CreviaBaseMap = forwardRef<CreviaBaseMapControls, Props>(
       [operationMarkers, zoomLevel],
     );
 
+    const markerMotionById = useMemo(() => {
+      const map = new Map<string, MapMarkerMotionModel>();
+      for (const motion of districtMotionMarkers) {
+        if (motion.markerId) {
+          map.set(motion.markerId, motion);
+        }
+      }
+      const activeOperation = districtMotionMarkers.find(
+        (motion) => motion.kind === 'active_operation',
+      );
+      if (activeOperation && !activeOperation.markerId) {
+        for (const marker of visibleMarkers) {
+          if (marker.kind === 'main' || marker.kind === 'pulse') {
+            map.set(marker.id, activeOperation);
+          }
+        }
+      }
+      return map;
+    }, [districtMotionMarkers, visibleMarkers]);
+
     const ready = imageSize.width > 0 && imageSize.height > 0;
 
     return (
@@ -511,11 +537,21 @@ export const CreviaBaseMap = forwardRef<CreviaBaseMapControls, Props>(
                       <MapDistrictLabel
                         key={district.id}
                         district={district}
+                        motionModel={pickDistrictMotionModel(
+                          districtMotionMarkers,
+                          district.id as CreviaMapDistrictId,
+                        )}
+                        reducedMotionMode={reducedMotionMode}
                         onPress={onDistrictPress}
                       />
                     ))}
                     {visibleMarkers.map((marker) => (
-                      <MapOperationMarker key={marker.id} marker={marker} />
+                      <MapOperationMarker
+                        key={marker.id}
+                        marker={marker}
+                        motionModel={markerMotionById.get(marker.id) ?? null}
+                        reducedMotionMode={reducedMotionMode}
+                      />
                     ))}
                   </View>
                 </Animated.View>

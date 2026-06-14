@@ -239,6 +239,9 @@ function buildAdvisorSuggestion(
   visibility: HubCardVisibilityModel,
   eceStrategyLines?: MemoryFollowUpPresentationContext['eceStrategyLines'],
   followUpActions?: MemoryFollowUpPresentationContext['followUpActions'],
+  districtNeglectRecovery?: MemoryFollowUpPresentationContext['districtNeglectRecovery'],
+  day8StrategicContent?: MemoryFollowUpPresentationContext['day8StrategicContent'],
+  cityRhythmDirector?: MemoryFollowUpPresentationContext['cityRhythmDirector'],
 ): CenterAdvisorSuggestion {
   return buildCenterAdvisorSuggestion({
     gameState: input.gameState,
@@ -256,6 +259,9 @@ function buildAdvisorSuggestion(
     recommendedPlanBody,
     eceStrategyLines,
     followUpActions,
+    districtNeglectRecovery,
+    day8StrategicContent,
+    cityRhythmDirector,
   });
 }
 
@@ -400,6 +406,9 @@ function buildContinuationCardsSection(
     eceStrategyLines: context.memoryFollowUp?.eceStrategyLines,
     cityMemoryVisibility: context.memoryFollowUp?.cityMemoryVisibility,
     followUpActions: context.memoryFollowUp?.followUpActions,
+    districtNeglectRecovery: context.memoryFollowUp?.districtNeglectRecovery,
+    day8StrategicContent: context.memoryFollowUp?.day8StrategicContent,
+    cityRhythmDirector: context.memoryFollowUp?.cityRhythmDirector,
   });
 }
 
@@ -501,6 +510,9 @@ export function buildCenterHomePresentation(
     visibility,
     memoryFollowUpContext.eceStrategyLines,
     memoryFollowUpContext.followUpActions,
+    memoryFollowUpContext.districtNeglectRecovery,
+    memoryFollowUpContext.day8StrategicContent,
+    memoryFollowUpContext.cityRhythmDirector,
   );
 
   const operationSignals = buildOperationSignalsSection(

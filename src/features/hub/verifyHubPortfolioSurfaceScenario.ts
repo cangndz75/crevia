@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { createDay1Seed } from '@/core/content/day1Seed';
-import { verifyDailyCapacityPortfolioScenario } from '@/core/dailyCapacityPortfolio';
+import { verifyDailyCapacityPortfolioScenario } from '@/core/dailyCapacityPortfolio/verifyDailyCapacityPortfolioScenario';
 import { createInitialHubQuickActionState } from '@/core/hubQuickActions/hubQuickActionSeed';
 import { createInitialSocialPulseState } from '@/core/social/socialSeed';
 import { SAVE_VERSION } from '@/store/gamePersist';

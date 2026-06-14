@@ -2,17 +2,22 @@ import { Image } from 'expo-image';
 import { memo, useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
+  cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
 
+import type { MapMarkerMotionModel } from '../utils/mapMotionPresentation';
+import { resolveMapMotionAccentColor } from '../utils/mapMarkerMotionHelper';
 import type { CreviaMapOperationMarker } from '../types/creviaMapTypes';
 import { mapPointToAbsoluteOverlayStyle } from '../utils/mapCoordinates';
 
 type Props = {
   marker: CreviaMapOperationMarker;
+  motionModel?: MapMarkerMotionModel | null;
+  reducedMotionMode?: boolean;
 };
 
 const MARKER_SIZE_BY_KIND: Record<NonNullable<CreviaMapOperationMarker['kind']>, number> = {
@@ -33,17 +38,39 @@ const MARKER_ASSET_BY_KIND: Record<NonNullable<CreviaMapOperationMarker['kind']>
   completed: require('@/assets/maps/markers/map_marker_completed.png'),
 };
 
-export const MapOperationMarker = memo(function MapOperationMarker({ marker }: Props) {
+export const MapOperationMarker = memo(function MapOperationMarker({
+  marker,
+  motionModel = null,
+  reducedMotionMode = false,
+}: Props) {
   const pulse = useSharedValue(0);
   const kind = marker.kind ?? 'main';
-  const color = marker.color ?? '#0F8F86';
+  const color =
+    motionModel != null
+      ? resolveMapMotionAccentColor(motionModel.kind)
+      : (marker.color ?? '#0F8F86');
   const markerSize = MARKER_SIZE_BY_KIND[kind];
   const markerAsset = MARKER_ASSET_BY_KIND[kind];
-  const isProminent = kind === 'main' || marker.priority === 'critical';
+  const isProminent =
+    kind === 'main' ||
+    marker.priority === 'critical' ||
+    motionModel?.kind === 'active_operation';
+  const shouldPulse =
+    motionModel != null
+      ? motionModel.pulse && !reducedMotionMode && !motionModel.reducedMotionFallback
+      : isProminent && !reducedMotionMode;
 
   useEffect(() => {
+    if (!shouldPulse) {
+      cancelAnimation(pulse);
+      pulse.value = 0;
+      return;
+    }
     pulse.value = withRepeat(withTiming(1, { duration: 1300 }), -1, false);
-  }, [pulse]);
+    return () => {
+      cancelAnimation(pulse);
+    };
+  }, [pulse, shouldPulse]);
 
   const pulseStyle = useAnimatedStyle(() => ({
     opacity: (isProminent ? 0.24 : 0.16) * (1 - pulse.value),
@@ -65,16 +92,29 @@ export const MapOperationMarker = memo(function MapOperationMarker({ marker }: P
           ],
         },
       ]}>
-      <Animated.View
-        style={[
-          styles.pulse,
-          pulseStyle,
-          {
-            backgroundColor: color,
-            borderRadius: markerSize,
-          },
-        ]}
-      />
+      {shouldPulse ? (
+        <Animated.View
+          style={[
+            styles.pulse,
+            pulseStyle,
+            {
+              backgroundColor: color,
+              borderRadius: markerSize,
+            },
+          ]}
+        />
+      ) : motionModel?.reducedMotionFallback || (motionModel && reducedMotionMode) ? (
+        <View
+          style={[
+            styles.pulse,
+            styles.staticPulse,
+            {
+              borderColor: color,
+              borderRadius: markerSize,
+            },
+          ]}
+        />
+      ) : null}
       <Image
         source={markerAsset}
         style={{
@@ -100,5 +140,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: '100%',
+  },
+  staticPulse: {
+    opacity: 0.28,
+    borderWidth: 2,
+    backgroundColor: 'transparent',
   },
 });

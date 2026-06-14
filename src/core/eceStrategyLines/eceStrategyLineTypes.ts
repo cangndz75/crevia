@@ -109,6 +109,9 @@ export type EceStrategyLineInput = {
   advisorSeniorityState?: unknown;
   advisorRelationshipState?: unknown;
   playerStyleInsight?: unknown;
+  districtNeglectRecoveryResult?: unknown;
+  day8StrategicContentResult?: unknown;
+  cityRhythmDirectorResult?: unknown;
   recentLineIds?: string[];
   recentLineTexts?: string[];
 };

@@ -10,8 +10,15 @@ import {
   type DailyCapacityPortfolioInput,
   type DailyCapacityPortfolioResult,
 } from '@/core/dailyCapacityPortfolio';
-import { buildEceStrategyLineResult } from '@/core/eceStrategyLines';
+import { buildDistrictPersonalityProfile } from '@/core/districtPersonality';
+import { buildDistrictNeglectRecovery, collectDistrictNeglectRecoveryLines } from '@/core/districtNeglectRecovery';
+import type { DistrictNeglectRecoveryResult } from '@/core/districtNeglectRecovery';
+import { buildDay8StrategicContent, collectDay8StrategicContentLines } from '@/core/day8StrategicContent';
+import type { Day8StrategicContentResult } from '@/core/day8StrategicContent';
+import { buildCityRhythmDirector, collectCityRhythmDirectorLines } from '@/core/cityRhythmDirector';
+import type { CityRhythmDirectorResult } from '@/core/cityRhythmDirector';
 import type { EceStrategyLineResult } from '@/core/eceStrategyLines';
+import { buildEceStrategyLineResult } from '@/core/eceStrategyLines';
 import { buildFollowUpActions } from '@/core/followUpActions';
 import type { FollowUpActionResult } from '@/core/followUpActions';
 import type { CityJournalHubPresentation } from '@/core/cityJournal';
@@ -19,6 +26,8 @@ import type { GameState } from '@/core/models/GameState';
 import type { DailyReport } from '@/core/models/DailyReport';
 import { buildOneMoreDayRetention } from '@/core/oneMoreDayRetention';
 import type { OneMoreDayRetentionResult } from '@/core/oneMoreDayRetention';
+import { buildPositiveComeback, collectPositiveComebackLines } from '@/core/positiveComeback';
+import type { PositiveComebackResult } from '@/core/positiveComeback';
 import type { OperationSignalsState } from '@/core/operations/operationSignalTypes';
 import { buildPortfolioDeferRiskBindings } from '@/core/portfolioDeferRisk';
 import type { PortfolioDeferRiskResult } from '@/core/portfolioDeferRisk';
@@ -52,6 +61,10 @@ export type MemoryFollowUpPresentationContext = {
   oneMoreDayRetention: OneMoreDayRetentionResult;
   cityMemoryVisibility: CityMemoryVisibilityResult;
   followUpActions: FollowUpActionResult;
+  positiveComeback: PositiveComebackResult;
+  districtNeglectRecovery: DistrictNeglectRecoveryResult;
+  day8StrategicContent: Day8StrategicContentResult;
+  cityRhythmDirector: CityRhythmDirectorResult;
   eceStrategyLines: EceStrategyLineResult;
   suppressSourceIds: string[];
   dedupeLines: string[];
@@ -218,6 +231,93 @@ function buildCityArchiveSignals(snapshot: MemoryFollowUpPresentationSnapshot) {
   }));
 }
 
+function buildDistrictPersonalityProfilesForNeglect(
+  snapshot: MemoryFollowUpPresentationSnapshot,
+): unknown[] | undefined {
+  const priorityDistrictId = snapshot.operationSignals?.priorityDistrictId;
+  if (!priorityDistrictId || typeof priorityDistrictId !== 'string') return undefined;
+  return [
+    buildDistrictPersonalityProfile({
+      day: snapshot.day,
+      districtId: priorityDistrictId,
+      districtMemorySignals: buildDistrictMemorySignals(snapshot),
+      socialSignals: buildSocialPulseSignal(snapshot.socialPulseState),
+    }),
+  ];
+}
+
+function collectDistrictNeglectSuppressLines(context: {
+  oneMoreDayRetention: OneMoreDayRetentionResult;
+  positiveComeback: PositiveComebackResult;
+}): string[] {
+  const lines: string[] = [];
+  const retention = context.oneMoreDayRetention;
+  if (retention.primaryHook?.line) lines.push(retention.primaryHook.line);
+  if (retention.primaryHook?.tomorrowLine) lines.push(retention.primaryHook.tomorrowLine);
+  if (retention.summaryLine) lines.push(retention.summaryLine);
+  lines.push(...collectPositiveComebackLines(context.positiveComeback));
+  return lines.filter(Boolean);
+}
+
+function collectDistrictNeglectSuppressSourceIds(context: {
+  oneMoreDayRetention: OneMoreDayRetentionResult;
+  positiveComeback: PositiveComebackResult;
+}): string[] {
+  const ids = new Set<string>();
+  for (const id of context.oneMoreDayRetention.sourceIds ?? []) ids.add(id);
+  for (const id of context.oneMoreDayRetention.primaryHook?.sourceIds ?? []) ids.add(id);
+  for (const id of context.positiveComeback.sourceIds ?? []) ids.add(id);
+  for (const candidate of context.positiveComeback.candidates ?? []) {
+    for (const id of candidate.sourceIds ?? []) ids.add(id);
+  }
+  return [...ids];
+}
+
+function collectDay8StrategicSuppressLines(context: {
+  oneMoreDayRetention: OneMoreDayRetentionResult;
+  positiveComeback: PositiveComebackResult;
+  districtNeglectRecovery: DistrictNeglectRecoveryResult;
+}): string[] {
+  return [
+    ...collectDistrictNeglectSuppressLines({
+      oneMoreDayRetention: context.oneMoreDayRetention,
+      positiveComeback: context.positiveComeback,
+    }),
+    ...collectDistrictNeglectRecoveryLines(context.districtNeglectRecovery),
+    ...collectPositiveComebackLines(context.positiveComeback),
+  ].filter(Boolean);
+}
+
+function collectDay8StrategicSuppressSourceIds(context: {
+  oneMoreDayRetention: OneMoreDayRetentionResult;
+  positiveComeback: PositiveComebackResult;
+  districtNeglectRecovery: DistrictNeglectRecoveryResult;
+}): string[] {
+  return [
+    ...collectDistrictNeglectSuppressSourceIds({
+      oneMoreDayRetention: context.oneMoreDayRetention,
+      positiveComeback: context.positiveComeback,
+    }),
+    ...context.districtNeglectRecovery.sourceIds,
+  ];
+}
+
+function collectCityRhythmSuppressLines(context: {
+  oneMoreDayRetention: OneMoreDayRetentionResult;
+  positiveComeback: PositiveComebackResult;
+  districtNeglectRecovery: DistrictNeglectRecoveryResult;
+  day8StrategicContent: Day8StrategicContentResult;
+}): string[] {
+  return [
+    ...collectDay8StrategicSuppressLines({
+      oneMoreDayRetention: context.oneMoreDayRetention,
+      positiveComeback: context.positiveComeback,
+      districtNeglectRecovery: context.districtNeglectRecovery,
+    }),
+    ...collectDay8StrategicContentLines(context.day8StrategicContent),
+  ].filter(Boolean);
+}
+
 function collectDedupeLines(context: {
   oneMoreDayRetention: OneMoreDayRetentionResult;
   eceStrategyLines: EceStrategyLineResult;
@@ -343,6 +443,112 @@ export function buildMemoryFollowUpPresentationContext(
     recentActionIds: snapshot.recentActionIds,
   });
 
+  const positiveComeback = buildPositiveComeback({
+    day,
+    rewardComebackSignals: undefined,
+    dailyCapacityPortfolioResult: dailyCapacityPortfolio,
+    followUpActionResult: followUpActions,
+    oneMoreDayRetentionResult: oneMoreDayRetention,
+    portfolioDeferRiskResult: portfolioDeferRisk,
+    cityMemoryVisibilityResult: cityMemoryVisibility,
+    decisionConsequenceThreads: decisionThreads,
+    carryOverSignals,
+    butterflySignals,
+    districtMemorySignals,
+    cityArchiveSignals,
+    storyChainSignals,
+    socialPulseSignals: buildSocialPulseSignal(snapshot.socialPulseState),
+    authorityExpansionSummary,
+    authorityPermissionIds: snapshot.authorityPermissionIds,
+    recentCandidateIds: snapshot.recentTraceIds,
+  });
+
+  const districtNeglectRecovery = buildDistrictNeglectRecovery({
+    day,
+    dailyCapacityPortfolioResult: dailyCapacityPortfolio,
+    portfolioDeferRiskResult: portfolioDeferRisk,
+    oneMoreDayRetentionResult: oneMoreDayRetention,
+    followUpActionResult: followUpActions,
+    positiveComebackResult: positiveComeback,
+    cityMemoryVisibilityResult: cityMemoryVisibility,
+    decisionConsequenceThreads: decisionThreads,
+    carryOverSignals,
+    butterflySignals,
+    districtMemorySignals,
+    storyChainSignals,
+    cityArchiveSignals,
+    socialPulseSignals: buildSocialPulseSignal(snapshot.socialPulseState),
+    authorityExpansionSummary,
+    districtPersonalityProfiles: buildDistrictPersonalityProfilesForNeglect(snapshot),
+    suppressLines: collectDistrictNeglectSuppressLines({ oneMoreDayRetention, positiveComeback }),
+    suppressSourceIds: collectDistrictNeglectSuppressSourceIds({
+      oneMoreDayRetention,
+      positiveComeback,
+    }),
+    recentSignalIds: snapshot.recentTraceIds,
+  });
+
+  const day8StrategicContent = buildDay8StrategicContent({
+    day,
+    authorityPermissionIds: snapshot.authorityPermissionIds,
+    dailyCapacityPortfolioResult: dailyCapacityPortfolio,
+    portfolioDeferRiskResult: portfolioDeferRisk,
+    oneMoreDayRetentionResult: oneMoreDayRetention,
+    followUpActionResult: followUpActions,
+    positiveComebackResult: positiveComeback,
+    districtNeglectRecoveryResult: districtNeglectRecovery,
+    cityMemoryVisibilityResult: cityMemoryVisibility,
+    authorityExpansionSummary,
+    decisionConsequenceThreads: decisionThreads,
+    carryOverSignals,
+    butterflySignals,
+    districtMemorySignals,
+    storyChainSignals,
+    cityArchiveSignals,
+    socialPulseSignals: buildSocialPulseSignal(snapshot.socialPulseState),
+    suppressLines: collectDay8StrategicSuppressLines({
+      oneMoreDayRetention,
+      positiveComeback,
+      districtNeglectRecovery,
+    }),
+    suppressSourceIds: collectDay8StrategicSuppressSourceIds({
+      oneMoreDayRetention,
+      positiveComeback,
+      districtNeglectRecovery,
+    }),
+    recentCandidateIds: snapshot.recentTraceIds,
+  });
+
+  const cityRhythmDirector = buildCityRhythmDirector({
+    day,
+    day8StrategicContentResult: day8StrategicContent,
+    districtNeglectRecoveryResult: districtNeglectRecovery,
+    positiveComebackResult: positiveComeback,
+    followUpActionResult: followUpActions,
+    cityMemoryVisibilityResult: cityMemoryVisibility,
+    oneMoreDayRetentionResult: oneMoreDayRetention,
+    portfolioDeferRiskResult: portfolioDeferRisk,
+    dailyCapacityPortfolioResult: dailyCapacityPortfolio,
+    authorityExpansionSummary,
+    decisionConsequenceThreads: decisionThreads,
+    carryOverSignals,
+    butterflySignals,
+    suppressLines: collectCityRhythmSuppressLines({
+      oneMoreDayRetention,
+      positiveComeback,
+      districtNeglectRecovery,
+      day8StrategicContent,
+    }),
+    suppressSourceIds: [
+      ...collectDay8StrategicSuppressSourceIds({
+        oneMoreDayRetention,
+        positiveComeback,
+        districtNeglectRecovery,
+      }),
+      ...(oneMoreDayRetention.sourceIds ?? []),
+    ],
+  });
+
   const eceStrategyLines = buildEceStrategyLineResult({
     day,
     portfolioDeferRiskResult: portfolioDeferRisk,
@@ -356,7 +562,16 @@ export function buildMemoryFollowUpPresentationContext(
     districtMemorySignals,
     cityArchiveSignals,
     storyChainSignals,
-    recentLineTexts: [...(snapshot.recentTraceTexts ?? []), ...cityMemoryVisibility.traces.map((trace) => trace.line)],
+    districtNeglectRecoveryResult: districtNeglectRecovery,
+    day8StrategicContentResult: day8StrategicContent,
+    cityRhythmDirectorResult: cityRhythmDirector,
+    recentLineTexts: [
+      ...(snapshot.recentTraceTexts ?? []),
+      ...cityMemoryVisibility.traces.map((trace) => trace.line),
+      ...collectDistrictNeglectRecoveryLines(districtNeglectRecovery),
+      ...collectDay8StrategicContentLines(day8StrategicContent),
+      ...collectCityRhythmDirectorLines(cityRhythmDirector),
+    ],
   });
 
   const dedupeLines = collectDedupeLines({ oneMoreDayRetention, eceStrategyLines });
@@ -368,6 +583,10 @@ export function buildMemoryFollowUpPresentationContext(
     oneMoreDayRetention,
     cityMemoryVisibility,
     followUpActions,
+    positiveComeback,
+    districtNeglectRecovery,
+    day8StrategicContent,
+    cityRhythmDirector,
     eceStrategyLines,
     suppressSourceIds: collectSuppressSourceIds({ oneMoreDayRetention, eceStrategyLines }),
     dedupeLines,

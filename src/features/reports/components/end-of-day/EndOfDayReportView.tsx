@@ -1,3 +1,4 @@
+import { CompactInsightRow } from '@/components/game/CompactInsightRow';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { StyleSheet, Text, View } from 'react-native';
 import { useEffect, useMemo } from 'react';
@@ -1463,6 +1464,92 @@ export function EndOfDayReportView({
         </CreviaAnimatedChip>
       ) : null}
 
+      {model.oneMoreDayCard?.line ? (
+        <CreviaAnimatedLine
+          surface="report"
+          index={0}
+          day={report.day}
+          reducedMotion={reducedMotion}
+          containerStyle={styles.districtReportCardRow}>
+          <Text style={styles.districtReportCardLabel} numberOfLines={1}>
+            {model.oneMoreDayCard.title ?? 'Yarın için not'}
+          </Text>
+          <Text style={styles.districtReportCardText} numberOfLines={reportSecondaryMaxLines}>
+            {model.oneMoreDayCard.line}
+          </Text>
+          {model.oneMoreDayCard.tomorrowLine ? (
+            <Text style={styles.districtReportCardSubtext} numberOfLines={2}>
+              {model.oneMoreDayCard.tomorrowLine}
+            </Text>
+          ) : null}
+        </CreviaAnimatedLine>
+      ) : null}
+
+      {model.eceStrategyLine?.text ? (
+        <View style={styles.districtReportCardRow}>
+          <Text style={styles.districtReportCardLabel} numberOfLines={1}>
+            Ece strateji notu
+          </Text>
+          <Text style={styles.districtReportCardText} numberOfLines={reportSecondaryMaxLines}>
+            {model.eceStrategyLine.text}
+          </Text>
+        </View>
+      ) : null}
+
+      {model.cityMemoryNote?.line ? (
+        <CompactInsightRow
+          label={model.cityMemoryNote.title ?? 'Şehir hafızası'}
+          line={model.cityMemoryNote.line}
+          tone="teal"
+          icon="book-outline"
+        />
+      ) : null}
+
+      {model.followUpActionHint?.line ? (
+        <CompactInsightRow
+          label={model.followUpActionHint.title ?? 'Takip önerisi'}
+          line={model.followUpActionHint.line}
+          tone="warning"
+          icon="arrow-forward-circle-outline"
+        />
+      ) : null}
+
+      {model.positiveComebackNote ? (
+        <CompactInsightRow
+          label="Toparlanma fırsatı"
+          line={model.positiveComebackNote}
+          tone="positive"
+          icon="sparkles-outline"
+        />
+      ) : null}
+
+      {model.districtNeglectRecoveryNote ? (
+        <CompactInsightRow
+          label="Mahalle dengesi"
+          line={model.districtNeglectRecoveryNote}
+          tone="warning"
+          icon="pulse-outline"
+        />
+      ) : null}
+
+      {model.day8StrategicContentNote ? (
+        <CompactInsightRow
+          label="Stratejik odak"
+          line={model.day8StrategicContentNote}
+          tone="teal"
+          icon="compass-outline"
+        />
+      ) : null}
+
+      {model.cityRhythmNote ? (
+        <CompactInsightRow
+          label="Günün ritmi"
+          line={model.cityRhythmNote}
+          tone="neutral"
+          icon="time-outline"
+        />
+      ) : null}
+
       {tomorrowPreviewBundle.showPreview && tomorrowPreviewBundle.summary.preview ? (
         <ReportTomorrowPreviewCard
           preview={tomorrowPreviewBundle.summary.preview}
@@ -1725,6 +1812,13 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: '600',
     color: '#173D3A',
+    flexShrink: 1,
+  },
+  districtReportCardSubtext: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+    color: '#68746E',
     flexShrink: 1,
   },
   resourcePresenceReportRow: {

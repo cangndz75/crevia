@@ -9,6 +9,7 @@ import {
   isOnboardingStarterDecisionId,
   type OnboardingStarterDecisionId,
 } from '@/core/onboarding/onboardingStarterDecision';
+import { preloadStartupImages } from '@/core/assets/preloadStartupImages';
 import { breadcrumbOfflineResumeWarning } from '@/core/crashPerformance/crashBreadcrumbs';
 import { checkConnectivity, subscribeConnectivity } from '@/core/onboarding/connectivity';
 import {
@@ -37,7 +38,10 @@ export function useAppBootstrap() {
     setPhase('loading');
 
     const startedAt = Date.now();
-    const online = await checkConnectivity();
+    const [online] = await Promise.all([
+      checkConnectivity(),
+      preloadStartupImages().catch(() => undefined),
+    ]);
 
     if (!online) {
       const elapsed = Date.now() - startedAt;

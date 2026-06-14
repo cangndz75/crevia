@@ -215,12 +215,16 @@ function pushDecisionCandidates(input: CityMemoryVisibilityInput, seeds: Candida
       readString(raw, ['causalLine', 'summary', 'line', 'eceLine']) ??
       readString(raw, ['nextActionHint']);
     if (!text) continue;
+    const shortText =
+      readString(raw, ['summary', 'line']) ??
+      readString(raw, ['title']);
     const districtId = readString(raw, ['districtId', 'neighborhoodId']);
     seeds.push({
       id: `memory-decision-${sourceIds[0]}`,
       kind: 'decision_trace',
       title: readString(raw, ['title']) ?? 'Karar izi',
       line: text,
+      shortLine: shortText && normalizeText(shortText) !== normalizeText(text) ? shortText : undefined,
       districtId: districtId ?? undefined,
       districtName: readString(raw, ['districtName', 'district']) ?? undefined,
       tone: readString(raw, ['tone']) === 'warning' ? 'cautious' : 'strategic',

@@ -81,9 +81,11 @@ export function buildHubCityMemoryHint(
 ): CityMemoryTraceCardModel | null {
   const trace = result?.hubTrace ?? result?.primaryTrace;
   if (!trace || trace.isFallback) return null;
+  const hubLine = trace.shortLine?.trim() || trace.line;
   const card = toCard({
     ...trace,
     kind: trace.kind === 'hub_continuation_hint' ? trace.kind : 'hub_continuation_hint',
+    line: hubLine,
   });
   if (isDuplicate(card.line, avoidTexts)) return null;
   return card;

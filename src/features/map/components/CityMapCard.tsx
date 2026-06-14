@@ -11,6 +11,7 @@ import type { MapBubbleMotionCue, MapDistrictMotionCue, MapJournalMotionCue } fr
 import { getNeighborhoodMapCharacterLine } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import type { MapActiveOperationOverlayModel } from '@/features/map/utils/mapUiPresentation';
+import type { MapMotionPresentationResult } from '@/features/map/utils/mapMotionPresentation';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
 import { mapUi } from '@/features/map/utils/mapUiTokens';
 import { colors } from '@/ui/theme/colors';
@@ -48,6 +49,7 @@ type Props = {
   mapPresenceViewModel?: MapPresenceViewModel | null;
   activeOperationOverlay?: MapActiveOperationOverlayModel | null;
   activeOperationCard?: ActiveOperationMapCardModel | null;
+  mapMotionPresentation?: MapMotionPresentationResult | null;
   onLayersPress: () => void;
   onDistrictSelect: (districtId: MapDistrictId) => void;
   onBackToOverview: () => void;
@@ -63,6 +65,7 @@ export function CityMapCard({
   reducedMotionMode = false,
   activeOperationOverlay = null,
   activeOperationCard = null,
+  mapMotionPresentation = null,
   onLayersPress,
   onDistrictSelect,
   onBackToOverview,
@@ -124,6 +127,8 @@ export function CityMapCard({
           ref={mapControlsRef}
           mode="fullscreen"
           contentFit="cover"
+          districtMotionMarkers={mapMotionPresentation?.markers}
+          reducedMotionMode={reducedMotionMode}
           onDistrictPress={handleDistrictPress}
         />
 

@@ -58,7 +58,9 @@ import { buildEventDomainFocusModel } from '@/core/events/eventDomainPresentatio
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 import { buildPostPilotMapContextLineForGameState } from '@/core/postPilot/postPilotOperationUxPresentation';
 import { buildReportTomorrowPreview } from '@/core/reports/reportTomorrowPreviewPresentation';
+import { buildMemoryFollowUpPresentationContext } from '@/features/shared/utils/memoryFollowUpPresentationContext';
 import { buildMapCrisisPresentationBundle } from '@/features/map/utils/mapCrisisPresentation';
+import { buildMapMotionPresentation } from '@/features/map/utils/mapMotionPresentation';
 import {
   buildMapResourcePresentationBundle,
   buildMapResourceEngineInputFromStore,
@@ -312,7 +314,7 @@ export function MapScreen() {
     showPostPilotMapChrome,
   ]);
 
-  const activeOperationMapCard = useMemo(() => {
+  const activeOperationMapContext = useMemo(() => {
     if (mapViewMode !== 'overview') return null;
     const assignment = primaryMapEvent
       ? getEventAssignment(assignments, primaryMapEvent.id)
@@ -332,17 +334,18 @@ export function MapScreen() {
           isDay1LearningEvent: gameDay <= 1,
         })
       : null;
+    const mapGameplayBindings = buildMapGameplayBindings({
+      day: gameDay,
+      authorityRankId: authorityState?.formalRankId,
+      unlockedPermissionIds: authorityState?.unlockedPermissionIds,
+      activeEventIds: primaryMapEvent ? [primaryMapEvent.id] : [],
+      activeOperationContext: primaryMapEvent,
+      operationSignals,
+      resourceSignals: operationalResources,
+      activeTaskRouteSignals: activeTaskRoutePreview,
+    });
     const trackerBinding =
-      buildMapGameplayBindings({
-        day: gameDay,
-        authorityRankId: authorityState?.formalRankId,
-        unlockedPermissionIds: authorityState?.unlockedPermissionIds,
-        activeEventIds: primaryMapEvent ? [primaryMapEvent.id] : [],
-        activeOperationContext: primaryMapEvent,
-        operationSignals,
-        resourceSignals: operationalResources,
-        activeTaskRouteSignals: activeTaskRoutePreview,
-      }).find((binding) => binding.role === 'operation_tracker') ?? null;
+      mapGameplayBindings.find((binding) => binding.role === 'operation_tracker') ?? null;
 
     const activeOperationBinding = buildActiveOperationMapBinding({
       day: gameDay,
@@ -358,7 +361,11 @@ export function MapScreen() {
       eventDetailRoute: primaryMapEvent ? `/events/${primaryMapEvent.id}` : undefined,
     });
 
-    return buildActiveOperationMapCardModel(activeOperationBinding, { day: gameDay });
+    return {
+      binding: activeOperationBinding,
+      card: buildActiveOperationMapCardModel(activeOperationBinding, { day: gameDay }),
+      mapGameplayBindings,
+    };
   }, [
     activeTaskRoutePreview,
     assignments,
@@ -370,6 +377,8 @@ export function MapScreen() {
     operationSignals,
     primaryMapEvent,
   ]);
+
+  const activeOperationMapCard = activeOperationMapContext?.card ?? null;
 
   const mapDistrictIntelligence = useMemo(() => {
     const base = buildMapDistrictIntelligenceModel({
@@ -532,6 +541,41 @@ export function MapScreen() {
     operationSignals,
     postPilotOperation,
     primaryMapEvent,
+  ]);
+
+  const mapMotionPresentation = useMemo(() => {
+    const memoryFollowUpContext =
+      showPostPilotMapChrome && gameDay >= 8
+        ? buildMemoryFollowUpPresentationContext({
+            day: gameDay,
+            gameState: gameStateForMap,
+            operationSignals,
+          })
+        : null;
+
+    return buildMapMotionPresentation({
+      day: gameDay,
+      reducedMotion: reducedMotionMode,
+      focusDistrictId,
+      activeOperationBinding: activeOperationMapContext?.binding,
+      mapGameplayBindings: activeOperationMapContext?.mapGameplayBindings,
+      day8StrategicContent: memoryFollowUpContext?.day8StrategicContent,
+      districtNeglectRecovery: memoryFollowUpContext?.districtNeglectRecovery,
+      positiveComeback: memoryFollowUpContext?.positiveComeback,
+      cityMemoryVisibility: memoryFollowUpContext?.cityMemoryVisibility,
+      activeTaskRoute: activeTaskRoutePreview,
+      mapPresenceViewModel,
+    });
+  }, [
+    activeOperationMapContext,
+    activeTaskRoutePreview,
+    focusDistrictId,
+    gameDay,
+    gameStateForMap,
+    mapPresenceViewModel,
+    operationSignals,
+    reducedMotionMode,
+    showPostPilotMapChrome,
   ]);
 
   const postPilotMapContextLine = useMemo(() => {
@@ -856,6 +900,7 @@ export function MapScreen() {
           mapPresenceViewModel={mapPresenceViewModel}
           activeOperationOverlay={activeOperationOverlay}
           activeOperationCard={activeOperationMapCard}
+          mapMotionPresentation={mapMotionPresentation}
           onLayersPress={() => setLayerPanelOpen(true)}
           onDistrictSelect={handleDistrictSelect}
           onBackToOverview={handleBackToOverview}

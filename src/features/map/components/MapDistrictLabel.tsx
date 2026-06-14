@@ -2,11 +2,15 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import type { MapMarkerMotionModel } from '../utils/mapMotionPresentation';
+import { MapDistrictMotionOverlay } from '../utils/mapMarkerMotionHelper';
 import { mapPointToAbsoluteOverlayStyle } from '../utils/mapCoordinates';
 import type { CreviaMapDistrictLayout } from '../types/creviaMapTypes';
 
 type Props = {
   district: CreviaMapDistrictLayout;
+  motionModel?: MapMarkerMotionModel | null;
+  reducedMotionMode?: boolean;
   onPress?: (districtId: CreviaMapDistrictLayout['id']) => void;
 };
 
@@ -18,8 +22,16 @@ const DISTRICT_ICON: Record<CreviaMapDistrictLayout['id'], keyof typeof Ionicons
   yesilvadi: 'leaf-outline',
 };
 
-export const MapDistrictLabel = memo(function MapDistrictLabel({ district, onPress }: Props) {
+export const MapDistrictLabel = memo(function MapDistrictLabel({
+  district,
+  motionModel = null,
+  reducedMotionMode = false,
+  onPress,
+}: Props) {
   const LabelContainer = onPress ? Pressable : View;
+  const accessibilityLabel =
+    motionModel?.accessibilityLabel ??
+    (onPress ? `${district.label} mahallesini ac` : undefined);
 
   return (
     <View
@@ -28,10 +40,14 @@ export const MapDistrictLabel = memo(function MapDistrictLabel({ district, onPre
         styles.anchor,
         mapPointToAbsoluteOverlayStyle(district.center),
       ]}>
+      <MapDistrictMotionOverlay
+        motionModel={motionModel}
+        reducedMotionMode={reducedMotionMode}
+      />
       <LabelContainer
         onPress={onPress ? () => onPress(district.id) : undefined}
         accessibilityRole={onPress ? 'button' : undefined}
-        accessibilityLabel={onPress ? `${district.label} mahallesini ac` : undefined}
+        accessibilityLabel={accessibilityLabel}
         style={[styles.label, { borderColor: district.color }]}>
         <Ionicons name={DISTRICT_ICON[district.id]} size={15} color={district.color} />
         <Text

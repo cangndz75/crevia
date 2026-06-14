@@ -10,6 +10,7 @@ import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 
 import { type MapDistrictId } from '../data/mapAssets';
 import type { MapPresenceViewModel } from '@/core/mapPresence/mapPresenceTypes';
+import type { MapMotionPresentationResult } from '@/features/map/utils/mapMotionPresentation';
 
 import type { ActiveLayers, MapFilterId, MapViewMode, PilotAreaId } from '../types/map';
 
@@ -38,6 +39,7 @@ type Props = {
   mapPresenceViewModel?: MapPresenceViewModel | null;
   activeOperationOverlay?: MapActiveOperationOverlayModel | null;
   activeOperationCard?: ActiveOperationMapCardModel | null;
+  mapMotionPresentation?: MapMotionPresentationResult | null;
   onLayersPress: () => void;
   onDistrictSelect: (districtId: MapDistrictId) => void;
   onBackToOverview: () => void;

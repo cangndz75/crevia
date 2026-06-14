@@ -76,6 +76,7 @@ import {
 } from '@/store/useGameStore';
 import { useGameStatus } from '@/store/gameSelectors';
 import { GameScreenShell } from '@/ui/components/GameScreenShell';
+import { gameUi } from '@/ui/theme/gameUiTokens';
 
 /**
  * Merkez ekranı — referans görseldeki premium mobil home kompozisyonu.
@@ -711,7 +712,7 @@ export function HubScreen() {
       scrollable={false}
       reserveTabBarInset={false}
       headerVariant="none"
-      backgroundColor="#F8F1E4"
+      backgroundColor={gameUi.colors.backgroundCream}
       contentStyle={{ flex: 1, paddingHorizontal: 0, paddingTop: 0, gap: 0 }}>
       <HubReferenceHome
         presentation={centerHomePresentation}

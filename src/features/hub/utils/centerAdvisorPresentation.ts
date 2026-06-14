@@ -11,6 +11,9 @@ import {
   buildEceFollowUpActionLine,
   type FollowUpActionResult,
 } from '@/core/followUpActions';
+import { buildEceCityRhythmLine } from '@/core/cityRhythmDirector';
+import { buildEceDay8StrategicContentLine } from '@/core/day8StrategicContent';
+import { buildEceDistrictNeglectRecoveryLine } from '@/core/districtNeglectRecovery';
 import type { MainOperationFeelHubPresentation } from '@/core/mainOperationFeel/mainOperationFeelTypes';
 import type { GameState } from '@/core/models/GameState';
 import type {
@@ -94,6 +97,9 @@ export type BuildCenterAdvisorSuggestionInput = {
   mainOperationFeelPresentation?: MainOperationFeelHubPresentation | null;
   eceStrategyLines?: EceStrategyLineResult | null;
   followUpActions?: FollowUpActionResult | null;
+  districtNeglectRecovery?: import('@/core/districtNeglectRecovery').DistrictNeglectRecoveryResult | null;
+  day8StrategicContent?: import('@/core/day8StrategicContent').Day8StrategicContentResult | null;
+  cityRhythmDirector?: import('@/core/cityRhythmDirector').CityRhythmDirectorResult | null;
   socialPulseState?: SocialPulseState | null;
   cardVisibility?: HubCardVisibilityModel;
   recommendedPlanBody?: string | null;
@@ -380,6 +386,21 @@ function buildFromActiveTarget(
   ];
   const consequenceLine = buildAdvisorConsequenceLine(input);
   const strategyLine = buildEceHubAdvisorLine(input.eceStrategyLines, avoid);
+  const rhythmLine = buildEceCityRhythmLine(input.cityRhythmDirector, [
+    ...avoid,
+    strategyLine,
+  ].filter((line): line is string => Boolean(line)));
+  const strategicContentLine = buildEceDay8StrategicContentLine(input.day8StrategicContent, [
+    ...avoid,
+    strategyLine,
+    rhythmLine,
+  ].filter((line): line is string => Boolean(line)));
+  const districtNeglectLine = buildEceDistrictNeglectRecoveryLine(input.districtNeglectRecovery, [
+    ...avoid,
+    strategyLine,
+    rhythmLine,
+    strategicContentLine,
+  ].filter((line): line is string => Boolean(line)));
   const followUpLine = buildEceFollowUpActionLine(input.followUpActions);
 
   if (target.status === 'empty') {
@@ -431,6 +452,9 @@ function buildFromActiveTarget(
         dedupeAgainst(
           consequenceLine ??
             strategyLine ??
+            rhythmLine ??
+            strategicContentLine ??
+            districtNeglectLine ??
             followUpLine ??
             input.hubTomorrowRisk?.mainLine ??
             'Bu karar yarınki risk ve mahalle güvenine yansıyabilir.',
@@ -473,6 +497,9 @@ function buildFromActiveTarget(
       dedupeAgainst(
         consequenceLine ??
           strategyLine ??
+          rhythmLine ??
+          strategicContentLine ??
+          districtNeglectLine ??
           followUpLine ??
           input.hubImpactExplanationLine ??
           'Yanlış ekip seçimi yarın riski büyütebilir.',
@@ -556,6 +583,9 @@ function buildFromActiveTarget(
   let reason = dedupeAgainst(
     consequenceLine ??
       strategyLine ??
+      rhythmLine ??
+      strategicContentLine ??
+      districtNeglectLine ??
       followUpLine ??
       input.hubImpactExplanationLine ??
       target.impactPreview[0]?.valueText ??

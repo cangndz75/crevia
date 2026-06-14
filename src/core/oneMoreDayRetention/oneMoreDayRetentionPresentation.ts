@@ -58,9 +58,26 @@ export function buildOneMoreDayContinuationLine(
   existingLines: readonly string[] = [],
 ): string | undefined {
   const hook = result?.primaryHook;
-  if (!hook || hook.isFallback || duplicates(hook.line, existingLines)) return undefined;
+  if (!hook || hook.isFallback) return undefined;
   if (TECHNICAL_ENUM_PATTERN.test(hook.line)) return undefined;
-  return clampLine(hook.tomorrowLine ?? hook.line, ONE_MORE_DAY_LINE_MAX);
+
+  const hubCandidates = [
+    result?.summaryLine?.trim(),
+    hook.tomorrowLine?.trim(),
+    hook.title?.trim() ? `Yarın: ${hook.title.trim()}` : undefined,
+  ].filter((line): line is string => Boolean(line));
+
+  const reportLines = [hook.line, hook.tomorrowLine]
+    .filter((line): line is string => Boolean(line?.trim()))
+    .map((line) => normalizeLine(line));
+
+  const hubLine = hubCandidates.find(
+    (candidate) =>
+      !duplicates(candidate, existingLines) && !reportLines.includes(normalizeLine(candidate)),
+  );
+
+  if (!hubLine) return undefined;
+  return clampLine(hubLine, ONE_MORE_DAY_LINE_MAX);
 }
 
 export function collectOneMoreDayRetentionLines(

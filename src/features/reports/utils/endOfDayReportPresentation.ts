@@ -28,7 +28,13 @@ import {
   type CityMemoryTraceCardModel,
   type CityMemoryVisibilityResult,
 } from '@/core/cityMemoryVisibility';
+import { buildReportCityRhythmNote } from '@/core/cityRhythmDirector';
+import { buildReportDay8StrategicContentNote } from '@/core/day8StrategicContent';
+import { buildReportDistrictNeglectRecoveryNote } from '@/core/districtNeglectRecovery';
+import type { DistrictNeglectRecoveryResult } from '@/core/districtNeglectRecovery';
 import type { MemoryFollowUpPresentationContext } from '@/features/shared/utils/memoryFollowUpPresentationContext';
+import { buildReportPositiveComebackNote } from '@/core/positiveComeback';
+import type { PositiveComebackResult } from '@/core/positiveComeback';
 import { buildPostPilotReportCopy } from '@/core/postPilot/postPilotOperationUxPresentation';
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 import type { DailyReport } from '@/core/models/DailyReport';
@@ -94,6 +100,10 @@ export type EndOfDayReportViewModel = {
   eceStrategyLine?: EceStrategyLineCardModel | null;
   cityMemoryNote?: CityMemoryTraceCardModel | null;
   followUpActionHint?: FollowUpActionCardModel | null;
+  positiveComebackNote?: string | null;
+  districtNeglectRecoveryNote?: string | null;
+  day8StrategicContentNote?: string | null;
+  cityRhythmNote?: string | null;
   showXpCard: boolean;
   showSystemSummaries: boolean;
   showTomorrowNotes: boolean;
@@ -498,6 +508,7 @@ export function buildEndOfDayReportViewModel(params: {
   eceStrategyLines?: EceStrategyLineResult | null;
   cityMemoryVisibility?: CityMemoryVisibilityResult | null;
   followUpActions?: FollowUpActionResult | null;
+  positiveComeback?: PositiveComebackResult | null;
   memoryFollowUpContext?: MemoryFollowUpPresentationContext | null;
 }): EndOfDayReportViewModel {
   const {
@@ -512,6 +523,7 @@ export function buildEndOfDayReportViewModel(params: {
     eceStrategyLines,
     cityMemoryVisibility,
     followUpActions,
+    positiveComeback,
     memoryFollowUpContext,
   } = params;
 
@@ -525,6 +537,14 @@ export function buildEndOfDayReportViewModel(params: {
     memoryFollowUpContext?.cityMemoryVisibility ?? cityMemoryVisibility ?? null;
   const resolvedFollowUp =
     memoryFollowUpContext?.followUpActions ?? followUpActions ?? null;
+  const resolvedPositiveComeback =
+    memoryFollowUpContext?.positiveComeback ?? positiveComeback ?? null;
+  const resolvedDistrictNeglectRecovery =
+    memoryFollowUpContext?.districtNeglectRecovery ?? null;
+  const resolvedDay8StrategicContent =
+    memoryFollowUpContext?.day8StrategicContent ?? null;
+  const resolvedCityRhythmDirector =
+    memoryFollowUpContext?.cityRhythmDirector ?? null;
   const isDay1 = report.day === 1;
   const isDay7 = report.day === 7;
   const successScore = computeEndOfDaySuccessScore(report, metrics);
@@ -587,6 +607,58 @@ export function buildEndOfDayReportViewModel(params: {
         ? null
         : followUpActionHint;
 
+  const positiveComebackNote = isDay1
+    ? null
+    : buildReportPositiveComebackNote(resolvedPositiveComeback, [
+        oneMoreDayCard?.line,
+        oneMoreDayCard?.tomorrowLine,
+        eceStrategyLine?.text,
+        cityMemoryNote?.line,
+        followUpHintDeduped?.line,
+        ...tomorrowNotes,
+      ].filter((line): line is string => Boolean(line)));
+
+  const districtNeglectRecoveryNote = isDay1
+    ? null
+    : buildReportDistrictNeglectRecoveryNote(resolvedDistrictNeglectRecovery, [
+        oneMoreDayCard?.line,
+        oneMoreDayCard?.tomorrowLine,
+        eceStrategyLine?.text,
+        cityMemoryNote?.line,
+        followUpHintDeduped?.line,
+        positiveComebackNote,
+        ...tomorrowNotes,
+      ].filter((line): line is string => Boolean(line)));
+
+  const day8StrategicContentNote =
+    isDay1 || report.day < 8
+      ? null
+      : buildReportDay8StrategicContentNote(resolvedDay8StrategicContent, [
+          oneMoreDayCard?.line,
+          oneMoreDayCard?.tomorrowLine,
+          eceStrategyLine?.text,
+          cityMemoryNote?.line,
+          followUpHintDeduped?.line,
+          positiveComebackNote,
+          districtNeglectRecoveryNote,
+          ...tomorrowNotes,
+        ].filter((line): line is string => Boolean(line)));
+
+  const cityRhythmNote =
+    isDay1 || report.day < 8
+      ? null
+      : buildReportCityRhythmNote(resolvedCityRhythmDirector, [
+          oneMoreDayCard?.line,
+          oneMoreDayCard?.tomorrowLine,
+          eceStrategyLine?.text,
+          cityMemoryNote?.line,
+          followUpHintDeduped?.line,
+          positiveComebackNote,
+          districtNeglectRecoveryNote,
+          day8StrategicContentNote,
+          ...tomorrowNotes,
+        ].filter((line): line is string => Boolean(line)));
+
   return {
     day: report.day,
     isDay1,
@@ -609,6 +681,10 @@ export function buildEndOfDayReportViewModel(params: {
     eceStrategyLine,
     cityMemoryNote,
     followUpActionHint: followUpHintDeduped,
+    positiveComebackNote,
+    districtNeglectRecoveryNote,
+    day8StrategicContentNote,
+    cityRhythmNote,
     tomorrowNotes,
     showXpCard: !isDay1 && dailyXpReport.totalXp > 0,
     showSystemSummaries: !isDay1,

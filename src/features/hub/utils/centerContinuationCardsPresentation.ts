@@ -13,6 +13,15 @@ import {
   type FollowUpActionResult,
 } from '@/core/followUpActions';
 import {
+  buildPrimaryCityRhythmCard,
+  type CityRhythmDirectorResult,
+} from '@/core/cityRhythmDirector';
+import {
+  buildPrimaryDay8StrategicContentCard,
+  type Day8StrategicContentResult,
+} from '@/core/day8StrategicContent';
+import { buildPrimaryDistrictNeglectRecoveryCard } from '@/core/districtNeglectRecovery';
+import {
   buildEceContinuationLine,
   type EceStrategyLineResult,
 } from '@/core/eceStrategyLines';
@@ -124,6 +133,9 @@ export type BuildCenterContinuationCardsInput = {
   eceStrategyLines?: EceStrategyLineResult | null;
   cityMemoryVisibility?: CityMemoryVisibilityResult | null;
   followUpActions?: FollowUpActionResult | null;
+  districtNeglectRecovery?: import('@/core/districtNeglectRecovery').DistrictNeglectRecoveryResult | null;
+  day8StrategicContent?: Day8StrategicContentResult | null;
+  cityRhythmDirector?: CityRhythmDirectorResult | null;
 };
 
 const ALLOWED_KINDS: CenterContinuationCardKind[] = [
@@ -558,6 +570,132 @@ function collectCandidates(input: BuildCenterContinuationCardsInput): Candidate[
     }
   }
 
+  const districtNeglectCard = buildPrimaryDistrictNeglectRecoveryCard(input.districtNeglectRecovery, [
+    ...dedupeLines,
+    retentionLine,
+    eceContinuationLine,
+  ].filter((line): line is string => Boolean(line)));
+  if (districtNeglectCard && input.day >= 8) {
+    const body = dedupeBody(
+      dedupeLines,
+      districtNeglectCard.line,
+      'Mahalle sinyali bugun izlenmeye deger.',
+    );
+    if (
+      body &&
+      !isBlockedByRecommendedPlan(input.recommendedPlan, 'report_preview', body)
+    ) {
+      candidates.push(
+        buildCardBase({
+          id: 'district-neglect-recovery',
+          kind: 'report_preview',
+          title: districtNeglectCard.title,
+          body,
+          label: districtNeglectCard.badgeLabel,
+          tone:
+            districtNeglectCard.tone === 'positive'
+              ? 'positive'
+              : districtNeglectCard.tone === 'cautious'
+                ? 'warning'
+                : 'calm',
+          priority: districtNeglectCard.tone === 'strategic' ? 'high' : 'normal',
+          iconKey: 'map-outline',
+          route: '/map',
+          actionKey: 'view_report',
+          enabled: true,
+          sourceLabel: 'Mahalle durumu',
+          sourceIds: ['district-neglect-recovery', districtNeglectCard.id],
+          sortRank: 13.5,
+        }),
+      );
+    }
+  }
+
+  const strategicContentCard = buildPrimaryDay8StrategicContentCard(input.day8StrategicContent, [
+    ...dedupeLines,
+    retentionLine,
+    eceContinuationLine,
+    districtNeglectCard?.line,
+  ].filter((line): line is string => Boolean(line)));
+  if (strategicContentCard && input.day >= 8) {
+    const body = dedupeBody(
+      dedupeLines,
+      strategicContentCard.line,
+      'Bugunun stratejik odağı netleşiyor.',
+    );
+    if (
+      body &&
+      !isBlockedByRecommendedPlan(input.recommendedPlan, 'report_preview', body)
+    ) {
+      candidates.push(
+        buildCardBase({
+          id: 'day8-strategic-content',
+          kind: 'report_preview',
+          title: strategicContentCard.title,
+          body,
+          label: strategicContentCard.badgeLabel,
+          tone:
+            strategicContentCard.tone === 'positive'
+              ? 'positive'
+              : strategicContentCard.tone === 'cautious'
+                ? 'warning'
+                : 'calm',
+          priority: strategicContentCard.tone === 'strategic' ? 'high' : 'normal',
+          iconKey: 'compass-outline',
+          route: '/',
+          actionKey: 'view_report',
+          enabled: true,
+          sourceLabel: 'Stratejik odak',
+          sourceIds: ['day8-strategic-content', strategicContentCard.id],
+          sortRank: 12.5,
+        }),
+      );
+    }
+  }
+
+  const rhythmCard = buildPrimaryCityRhythmCard(input.cityRhythmDirector, [
+    ...dedupeLines,
+    retentionLine,
+    eceContinuationLine,
+    strategicContentCard?.line,
+    districtNeglectCard?.line,
+  ].filter((line): line is string => Boolean(line)));
+  if (rhythmCard && input.day >= 8) {
+    const body = dedupeBody(
+      dedupeLines,
+      rhythmCard.line,
+      'Bugunun sehir ritmi sakin ama dikkat istiyor.',
+    );
+    if (
+      body &&
+      !isBlockedByRecommendedPlan(input.recommendedPlan, 'report_preview', body)
+    ) {
+      candidates.push(
+        buildCardBase({
+          id: 'city-rhythm-director',
+          kind: 'report_preview',
+          title: rhythmCard.title,
+          body,
+          label: rhythmCard.badgeLabel,
+          tone:
+            rhythmCard.tone === 'positive'
+              ? 'positive'
+              : rhythmCard.tone === 'cautious'
+                ? 'warning'
+                : 'calm',
+          priority: rhythmCard.tone === 'strategic' || rhythmCard.tone === 'balanced' ? 'high' : 'normal',
+          iconKey: 'pulse-outline',
+          route: '/',
+          actionKey: 'view_report',
+          enabled: true,
+          sourceLabel: 'Gün ritmi',
+          sourceIds: ['city-rhythm-director', rhythmCard.id],
+          sortRank: 12,
+        }),
+      );
+    }
+  }
+
   const cityMemoryHint = buildHubCityMemoryHint(input.cityMemoryVisibility, [
     ...dedupeLines,
     retentionLine,
@@ -596,9 +734,14 @@ function collectCandidates(input: BuildCenterContinuationCardsInput): Candidate[
 
   const followUpCard = buildPrimaryFollowUpActionCard(input.followUpActions);
   if (followUpCard && input.day > 1) {
+    const followUpHubLine =
+      followUpCard.benefitLine?.trim() &&
+      !linesAreDuplicate(followUpCard.benefitLine, followUpCard.line)
+        ? followUpCard.benefitLine
+        : followUpCard.title;
     const body = dedupeBody(
       dedupeLines,
-      followUpCard.line,
+      followUpHubLine,
       'Küçük bir takip adımı öneriliyor.',
     );
     if (
