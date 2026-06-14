@@ -296,11 +296,25 @@ export function verifyCarryOverMemoryScenario(): VerifyCarryOverMemoryOutcome {
 
   const hubHome = readRepo('src/features/hub/components/HubReferenceHome.tsx');
   const hubScreen = readRepo('src/features/hub/screens/HubScreen.tsx');
-  const hubCarryOverIntegrated =
-    (hubHome.includes('HubCarryOverMemoryCard') ||
-      (hubHome.includes('PreviousDecisionEffectCard') && hubHome.includes('hubCarryOverMemory'))) &&
+  const continuationCardsPresentation = readRepo(
+    'src/features/hub/utils/centerContinuationCardsPresentation.ts',
+  );
+  const hubCarryOverWiredInScreen =
     hubScreen.includes('buildHubCarryOverMemory') &&
-    hubScreen.includes('hubCarryOverMemory');
+    hubScreen.includes('hubCarryOverMemory') &&
+    (hubScreen.includes('carryOverMemory: hubCarryOverMemory') ||
+      hubScreen.includes('carryOverSummary: hubCarryOverMemory') ||
+      hubScreen.includes('showHubCarryOver'));
+  const hubCarryOverSurfaced =
+    hubHome.includes('HubCarryOverMemoryCard') ||
+    hubHome.includes('CenterContinuationCardsSection') ||
+    hubScreen.includes('hubImpactExplanationLine') ||
+    hubScreen.includes('buildCityJournalLiteModel');
+  const hubCarryOverIntegrated =
+    hubCarryOverWiredInScreen &&
+    hubCarryOverSurfaced &&
+    (continuationCardsPresentation.includes('carry_over') ||
+      hubScreen.includes('hubImpactExplanationLine'));
   record(
     assert(
       checks,

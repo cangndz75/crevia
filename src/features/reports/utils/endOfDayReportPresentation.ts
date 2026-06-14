@@ -1,4 +1,34 @@
 import { formatSourceWithLabel } from '@/core/economy/economyFormatter';
+import {
+  buildDecisionConsequenceThreadsFromReport,
+  buildPrimaryTomorrowActionFromThreads,
+} from '@/core/decisionConsequence';
+import {
+  buildPortfolioDeferReportLine,
+  buildPortfolioDeferTomorrowActionLine,
+  type PortfolioDeferRiskResult,
+} from '@/core/portfolioDeferRisk';
+import {
+  buildReportOneMoreDayCardModel,
+  type OneMoreDayRetentionResult,
+  type ReportOneMoreDayCardModel,
+} from '@/core/oneMoreDayRetention';
+import {
+  buildPrimaryFollowUpActionCard,
+  type FollowUpActionCardModel,
+  type FollowUpActionResult,
+} from '@/core/followUpActions';
+import {
+  buildEceStrategyLineCardModel,
+  type EceStrategyLineCardModel,
+  type EceStrategyLineResult,
+} from '@/core/eceStrategyLines';
+import {
+  buildReportCityMemoryNote,
+  type CityMemoryTraceCardModel,
+  type CityMemoryVisibilityResult,
+} from '@/core/cityMemoryVisibility';
+import type { MemoryFollowUpPresentationContext } from '@/features/shared/utils/memoryFollowUpPresentationContext';
 import { buildPostPilotReportCopy } from '@/core/postPilot/postPilotOperationUxPresentation';
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 import type { DailyReport } from '@/core/models/DailyReport';
@@ -60,6 +90,10 @@ export type EndOfDayReportViewModel = {
   metricCards: EndOfDayMetricCardModel[];
   systemSections: EndOfDaySystemSummarySection[];
   tomorrowNotes: string[];
+  oneMoreDayCard?: ReportOneMoreDayCardModel | null;
+  eceStrategyLine?: EceStrategyLineCardModel | null;
+  cityMemoryNote?: CityMemoryTraceCardModel | null;
+  followUpActionHint?: FollowUpActionCardModel | null;
   showXpCard: boolean;
   showSystemSummaries: boolean;
   showTomorrowNotes: boolean;
@@ -349,8 +383,29 @@ function buildRisksCard(warnings: string[]): EndOfDayMetricCardModel {
 export function buildEndOfDayTomorrowNotes(
   report: DailyReport,
   maxNotes = 3,
+  portfolioDeferRisk?: PortfolioDeferRiskResult | null,
 ): string[] {
+  const consequenceThreads = buildDecisionConsequenceThreadsFromReport(report);
+  const primaryTomorrowAction =
+    report.day > 1
+      ? buildPrimaryTomorrowActionFromThreads(
+          consequenceThreads,
+          'Yarin aktif hedefle devam et.',
+        )
+      : null;
+  const portfolioTomorrowAction = buildPortfolioDeferTomorrowActionLine(portfolioDeferRisk, [
+    primaryTomorrowAction ?? '',
+    ...(report.summaryLines ?? []),
+  ]);
+  const portfolioReportLine = buildPortfolioDeferReportLine(portfolioDeferRisk, [
+    primaryTomorrowAction ?? '',
+    portfolioTomorrowAction ?? '',
+    ...(report.summaryLines ?? []),
+  ]);
   const candidates: string[] = [
+    ...(primaryTomorrowAction ? [primaryTomorrowAction] : []),
+    ...(portfolioTomorrowAction ? [portfolioTomorrowAction] : []),
+    ...(portfolioReportLine ? [portfolioReportLine] : []),
     ...(report.carryOverSummaryLines ?? []),
     ...(report.butterflySummaryLines ?? []),
     ...(report.quickActionSummaryLines ?? []),
@@ -362,10 +417,16 @@ export function buildEndOfDayTomorrowNotes(
   ];
 
   const unique: string[] = [];
+  let usedPrimaryTomorrowAction = false;
   for (const line of candidates) {
     const trimmed = line.trim();
     if (!trimmed || unique.includes(trimmed)) continue;
+    const looksLikeTomorrowAction = /yarin|yarÄ±n|yarın/i.test(trimmed);
+    if (primaryTomorrowAction && usedPrimaryTomorrowAction && looksLikeTomorrowAction) {
+      continue;
+    }
     unique.push(trimmed);
+    if (looksLikeTomorrowAction) usedPrimaryTomorrowAction = true;
     if (unique.length >= maxNotes) break;
   }
 
@@ -403,12 +464,15 @@ export function collectReportPresentationStrings(
     model.statusTitle,
     model.heroSubtitle,
     model.xpSubtitle,
+    model.eceStrategyLine?.text,
+    model.cityMemoryNote?.line,
+    model.followUpActionHint?.line,
     ...model.impactMetrics.map((metric) => `${metric.label} ${metric.value}`),
     ...(report.authoritySummaryLines ?? []),
     ...(report.badgeSummaryLines ?? []),
     ...model.tomorrowNotes,
     ...model.systemSections.flatMap((section) => section.lines),
-  ].filter(Boolean);
+  ].filter((line): line is string => Boolean(line));
 }
 
 export function reportPresentationContainsBannedWords(text: string): string[] {
@@ -429,6 +493,12 @@ export function buildEndOfDayReportViewModel(params: {
   day1GoalsLine?: string | null;
   /** Post-pilot hafif operasyon günü raporu başlık tonu */
   postPilotLightDay?: boolean;
+  portfolioDeferRisk?: PortfolioDeferRiskResult | null;
+  oneMoreDayRetention?: OneMoreDayRetentionResult | null;
+  eceStrategyLines?: EceStrategyLineResult | null;
+  cityMemoryVisibility?: CityMemoryVisibilityResult | null;
+  followUpActions?: FollowUpActionResult | null;
+  memoryFollowUpContext?: MemoryFollowUpPresentationContext | null;
 }): EndOfDayReportViewModel {
   const {
     report,
@@ -437,7 +507,24 @@ export function buildEndOfDayReportViewModel(params: {
     day1PriorityLine,
     day1GoalsLine,
     postPilotLightDay,
+    portfolioDeferRisk,
+    oneMoreDayRetention,
+    eceStrategyLines,
+    cityMemoryVisibility,
+    followUpActions,
+    memoryFollowUpContext,
   } = params;
+
+  const resolvedPortfolioDefer =
+    memoryFollowUpContext?.portfolioDeferRisk ?? portfolioDeferRisk ?? null;
+  const resolvedOneMoreDay =
+    memoryFollowUpContext?.oneMoreDayRetention ?? oneMoreDayRetention ?? null;
+  const resolvedEce =
+    memoryFollowUpContext?.eceStrategyLines ?? eceStrategyLines ?? null;
+  const resolvedCityMemory =
+    memoryFollowUpContext?.cityMemoryVisibility ?? cityMemoryVisibility ?? null;
+  const resolvedFollowUp =
+    memoryFollowUpContext?.followUpActions ?? followUpActions ?? null;
   const isDay1 = report.day === 1;
   const isDay7 = report.day === 7;
   const successScore = computeEndOfDaySuccessScore(report, metrics);
@@ -457,6 +544,48 @@ export function buildEndOfDayReportViewModel(params: {
 
   metricCards.push(buildPersonnelCard(metrics, personnelLines));
   metricCards.push(buildRisksCard(warnings));
+  const tomorrowNotes = buildEndOfDayTomorrowNotes(
+    report,
+    isDay7 ? 2 : isDay1 ? 1 : 3,
+    resolvedPortfolioDefer,
+  );
+  const oneMoreDayCard = buildReportOneMoreDayCardModel(resolvedOneMoreDay, [
+    ...(report.summaryLines ?? []),
+    ...(report.highlights ?? []),
+    ...(report.carryOverSummaryLines ?? []),
+  ]);
+  const eceStrategyLine = buildEceStrategyLineCardModel(resolvedEce, 'report', [
+    oneMoreDayCard?.line,
+    oneMoreDayCard?.tomorrowLine,
+    ...tomorrowNotes,
+    ...(report.summaryLines ?? []),
+    ...(report.highlights ?? []),
+  ]);
+  const cityMemoryNote = isDay1
+    ? null
+    : buildReportCityMemoryNote(resolvedCityMemory, [
+    oneMoreDayCard?.line,
+    oneMoreDayCard?.tomorrowLine,
+    eceStrategyLine?.text,
+    ...tomorrowNotes,
+    ...(report.summaryLines ?? []),
+    ...(report.highlights ?? []),
+    ...(report.carryOverSummaryLines ?? []),
+  ].filter((line): line is string => Boolean(line)));
+  const followUpActionHint = isDay1
+    ? null
+    : buildPrimaryFollowUpActionCard(resolvedFollowUp);
+  const followUpHintDeduped =
+    followUpActionHint &&
+    ![oneMoreDayCard?.line, oneMoreDayCard?.tomorrowLine, eceStrategyLine?.text, cityMemoryNote?.line]
+      .filter(Boolean)
+      .some((line) => line && followUpActionHint.line.toLowerCase().includes(line.toLowerCase()))
+      ? followUpActionHint
+      : followUpActionHint &&
+          cityMemoryNote?.line &&
+          followUpActionHint.line.toLowerCase() === cityMemoryNote.line.toLowerCase()
+        ? null
+        : followUpActionHint;
 
   return {
     day: report.day,
@@ -476,10 +605,11 @@ export function buildEndOfDayReportViewModel(params: {
     impactMetrics: buildEndOfDayImpactMetrics(metrics),
     metricCards,
     systemSections: buildEndOfDaySystemSummarySections(report, 2),
-    tomorrowNotes: buildEndOfDayTomorrowNotes(
-      report,
-      isDay7 ? 2 : isDay1 ? 1 : 3,
-    ),
+    oneMoreDayCard,
+    eceStrategyLine,
+    cityMemoryNote,
+    followUpActionHint: followUpHintDeduped,
+    tomorrowNotes,
     showXpCard: !isDay1 && dailyXpReport.totalXp > 0,
     showSystemSummaries: !isDay1,
     showTomorrowNotes: !isDay1 || (day1GoalsLine?.length ?? 0) > 0,

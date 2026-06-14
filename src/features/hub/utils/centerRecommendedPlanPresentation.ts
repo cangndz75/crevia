@@ -1,4 +1,8 @@
 import type { CityJournalHubPresentation } from '@/core/cityJournal';
+import {
+  buildDecisionConsequenceHubLine,
+  buildDecisionConsequenceThreadsFromHub,
+} from '@/core/decisionConsequence';
 import type { HubCardVisibilityModel } from '@/core/onboarding/firstTenMinutesTypes';
 import type { GameState } from '@/core/models/GameState';
 import type { TomorrowRiskModel } from '@/core/tomorrowRisk/tomorrowRiskTypes';
@@ -253,6 +257,23 @@ function isMeaningfulTomorrowRisk(risk: TomorrowRiskModel | null | undefined): b
   return true;
 }
 
+function buildHubConsequenceLine(
+  input: BuildCenterRecommendedPlanInput,
+  avoidLines: Array<string | null | undefined> = [],
+): string | null {
+  return buildDecisionConsequenceHubLine(
+    buildDecisionConsequenceThreadsFromHub({
+      day: input.day,
+      impactLine: input.hubImpactExplanationLine,
+      tomorrowRisk: input.hubTomorrowRisk,
+      districtLine: input.hubDistrictReportLine,
+      storyLine: input.hubStoryChainLine,
+      cityJournalLine: input.hubCityJournal?.primaryLine ?? input.hubCityJournal?.secondaryLine,
+    }),
+    avoidLines,
+  );
+}
+
 function buildOperationFlowSteps(
   activeTarget: CenterActiveTarget,
 ): CenterRecommendedPlanStep[] {
@@ -335,9 +356,10 @@ function pickSourceCandidate(
       : null;
 
   if (journalLine && journal) {
+    const consequenceLine = buildHubConsequenceLine(input, dedupeLines);
     const body = dedupeAgainst(
       dedupeLines,
-      journal.secondaryLine?.trim() || journalLine,
+      consequenceLine || journal.secondaryLine?.trim() || journalLine,
       'Merkezdeki kararların sosyal nabız ve mahalle güveni üzerindeki etkisi izleniyor.',
     );
     return {
@@ -362,6 +384,7 @@ function pickSourceCandidate(
 
   const districtLine = input.hubDistrictReportLine?.trim();
   if (districtLine) {
+    const consequenceLine = buildHubConsequenceLine(input, dedupeLines);
     return {
       planType: 'district_report',
       sourceLabel: 'Mahalle raporu',
@@ -370,7 +393,7 @@ function pickSourceCandidate(
       subtitle: 'Mahalle etkisi',
       body: dedupeAgainst(
         dedupeLines,
-        districtLine,
+        consequenceLine || districtLine,
         'Mahalle raporu bugünkü operasyon önceliğini şekillendiriyor.',
       ),
       tone: 'neutral',
@@ -388,6 +411,7 @@ function pickSourceCandidate(
 
   const storyLine = input.hubStoryChainLine?.trim();
   if (storyLine) {
+    const consequenceLine = buildHubConsequenceLine(input, dedupeLines);
     return {
       planType: 'story_chain',
       sourceLabel: 'Hikâye zinciri',
@@ -396,7 +420,7 @@ function pickSourceCandidate(
       subtitle: 'Devam eden hikâye',
       body: dedupeAgainst(
         dedupeLines,
-        storyLine,
+        consequenceLine || storyLine,
         'Devam eden hikâye bugünkü karar akışını etkileyebilir.',
       ),
       tone: 'neutral',
@@ -415,6 +439,7 @@ function pickSourceCandidate(
 
   const carryLine = input.hubImpactExplanationLine?.trim();
   if (carryLine) {
+    const consequenceLine = buildHubConsequenceLine(input, dedupeLines);
     return {
       planType: 'carry_over',
       sourceLabel: 'Karar hafızası',
@@ -423,7 +448,7 @@ function pickSourceCandidate(
       subtitle: 'Karar hafızası',
       body: dedupeAgainst(
         dedupeLines,
-        carryLine,
+        consequenceLine || carryLine,
         'Önceki tercih, bugün kaynak baskısını biraz artırabilir. Dengeli plan daha güvenli olur.',
       ),
       tone: 'warning',
@@ -434,9 +459,10 @@ function pickSourceCandidate(
 
   const tomorrow = input.hubTomorrowRisk;
   if (isMeaningfulTomorrowRisk(tomorrow)) {
+    const consequenceLine = buildHubConsequenceLine(input, dedupeLines);
     const body = dedupeAgainst(
       dedupeLines,
-      tomorrow!.supportLine?.trim() || tomorrow!.mainLine.trim(),
+      consequenceLine || tomorrow!.supportLine?.trim() || tomorrow!.mainLine.trim(),
       'Bugünkü seçim yarınki operasyon yükünü etkileyebilir. Hızlı çözüm yerine kalıcı plan avantajlı olabilir.',
     );
     return {

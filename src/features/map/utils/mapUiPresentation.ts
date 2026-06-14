@@ -652,6 +652,8 @@ export function collectMapUiPresentationStrings(
 export const MAP_UI_LAYOUT_GUARDS = {
   markerLabelNumberOfLines: 1,
   bottomPanelNumberOfLines: 2,
+  activeOperationCardNumberOfLines: 2,
+  activeOperationSheetNumberOfLines: 2,
   stripLabelNumberOfLines: 1,
   usesFlexShrink: true,
   usesMinWidthZero: true,

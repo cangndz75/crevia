@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { buildAuthorityGameplayPresentationContext } from '@/core/authority/authorityGameplayUnlockModel';
 import type { EventCard, EventDecision } from '@/core/models/EventCard';
 import type { PersonnelImpactPreview } from '@/core/personnel/personnelPresentation';
 import type { VehicleImpactPreview } from '@/core/vehicles/vehiclePresentation';
@@ -148,6 +149,16 @@ export function EventFieldPhase({
 
   const hasPendingMicroDecision = Boolean(microDecisionPresentation);
 
+  const authorityGameplayContext = useMemo(
+    () =>
+      buildAuthorityGameplayPresentationContext({
+        authorityState: gameState.pilot.authorityState,
+        day: gameDay,
+        isDay1LearningEvent,
+      }),
+    [gameDay, gameState.pilot.authorityState, isDay1LearningEvent],
+  );
+
   const presentation = useMemo(
     () =>
       buildEventFieldPhasePresentation({
@@ -161,9 +172,11 @@ export function EventFieldPhase({
         day: gameDay,
         isDay1LearningEvent,
         reducedMotion,
+        authorityGameplayContext,
       }),
     [
       assignment,
+      authorityGameplayContext,
       event,
       gameDay,
       interactionState,

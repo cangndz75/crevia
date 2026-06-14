@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ContainerState } from '@/core/containers/containerTypes';
 import type { EventCard } from '@/core/models/EventCard';
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
+import type { ActiveOperationMapCardModel } from '@/core/activeOperationMapBinding';
 import type { MapBubbleMotionCue, MapDistrictMotionCue, MapJournalMotionCue } from '@/core/mapReactionsMotion/mapReactionMotionTypes';
 import { getNeighborhoodMapCharacterLine } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
@@ -46,6 +47,7 @@ type Props = {
   reducedMotionMode?: boolean;
   mapPresenceViewModel?: MapPresenceViewModel | null;
   activeOperationOverlay?: MapActiveOperationOverlayModel | null;
+  activeOperationCard?: ActiveOperationMapCardModel | null;
   onLayersPress: () => void;
   onDistrictSelect: (districtId: MapDistrictId) => void;
   onBackToOverview: () => void;
@@ -60,6 +62,7 @@ export function CityMapCard({
   bubbleMotionCue,
   reducedMotionMode = false,
   activeOperationOverlay = null,
+  activeOperationCard = null,
   onLayersPress,
   onDistrictSelect,
   onBackToOverview,
@@ -74,6 +77,19 @@ export function CityMapCard({
   const detailCharacterLine = getNeighborhoodMapCharacterLine(detailDistrictId);
   const headerTop = Math.max(12, insets.top + 4);
   const floatingTop = headerTop + 80;
+  const operationTitle =
+    activeOperationCard?.title ?? activeOperationOverlay?.eventName ?? 'Aktif operasyon';
+  const operationPhaseLabel =
+    activeOperationCard?.phaseLabel ?? activeOperationOverlay?.title ?? 'Canli Operasyon';
+  const operationMapLine =
+    activeOperationCard?.mapLine ?? activeOperationOverlay?.timeLabel ?? 'Harita uzerinde izleniyor';
+  const operationDecisionLine =
+    activeOperationCard?.decisionLine ?? 'Operasyon detayini acarak sonraki adimi kontrol et.';
+  const operationSupportLine =
+    activeOperationCard?.routeLine ??
+    activeOperationCard?.districtLine ??
+    activeOperationCard?.pressureLine;
+  const operationCtaLabel = activeOperationCard?.ctaLabel ?? 'Takip Et';
 
   const handleDistrictPress = useCallback(
     (districtId: MapDistrictId) => {
@@ -140,7 +156,7 @@ export function CityMapCard({
           <Pressable
             style={[styles.liveOperationCard, { top: floatingTop }]}
             onPress={() => setBottomSheetVisible(true)}
-            accessibilityLabel="Canli operasyon detayini ac">
+            accessibilityLabel={activeOperationCard?.accessibilityLabel ?? 'Canli operasyon detayini ac'}>
             <View style={styles.liveIconWrap}>
               <Ionicons name="radio-outline" size={34} color={mapUi.teal} />
             </View>
@@ -148,20 +164,16 @@ export function CityMapCard({
               <View style={styles.liveEyebrowRow}>
                 <View style={styles.liveDot} />
                 <Text style={styles.liveEyebrow} numberOfLines={1}>
-                  Canli Operasyon
+                  {operationPhaseLabel}
                 </Text>
               </View>
               <Text style={styles.liveTitle} numberOfLines={1}>
-                {activeOperationOverlay?.eventName ?? 'Konteyner Tasmasi'}
+                {operationTitle}
               </Text>
               <View style={styles.liveMetaRow}>
-                <Ionicons name="time-outline" size={15} color={mapUi.textDark} />
-                <Text style={styles.liveMetaText} numberOfLines={1}>
-                  {activeOperationOverlay?.timeLabel ?? '18:30'}
-                </Text>
-                <Ionicons name="people-outline" size={16} color={mapUi.textDark} />
-                <Text style={styles.liveMetaText} numberOfLines={1}>
-                  Ekip: 2
+                <Ionicons name="map-outline" size={15} color={mapUi.textDark} />
+                <Text style={styles.liveMetaText} numberOfLines={2}>
+                  {operationMapLine}
                 </Text>
               </View>
             </View>
@@ -214,24 +226,25 @@ export function CityMapCard({
 
               <View style={styles.sheetMain}>
                 <Text style={styles.sheetTitle} numberOfLines={1}>
-                  Meydan Temizlik Kontrolu
+                  {operationTitle}
                 </Text>
                 <View style={styles.sheetMetaRow}>
-                  <Ionicons name="time-outline" size={14} color={mapUi.textSecondary} />
+                  <Ionicons name="pulse-outline" size={14} color={mapUi.textSecondary} />
                   <Text style={styles.sheetMetaText} numberOfLines={1}>
-                    18:30
-                  </Text>
-                  <Text style={styles.sheetDotSep}>-</Text>
-                  <Ionicons name="people-outline" size={15} color={mapUi.textSecondary} />
-                  <Text style={styles.sheetMetaText} numberOfLines={1}>
-                    Ekip: 2
-                  </Text>
-                  <Text style={styles.sheetDotSep}>-</Text>
-                  <Ionicons name="car-outline" size={15} color={mapUi.textSecondary} />
-                  <Text style={styles.sheetMetaText} numberOfLines={1}>
-                    Arac: 2
+                    {operationPhaseLabel}
                   </Text>
                 </View>
+                <Text style={styles.sheetLineText} numberOfLines={2}>
+                  {operationMapLine}
+                </Text>
+                <Text style={styles.sheetLineText} numberOfLines={2}>
+                  {operationDecisionLine}
+                </Text>
+                {operationSupportLine ? (
+                  <Text style={styles.sheetSupportText} numberOfLines={2}>
+                    {operationSupportLine}
+                  </Text>
+                ) : null}
                 <View style={styles.sheetActionRow}>
                   <View style={styles.xpChip}>
                     <Text style={styles.xpText} numberOfLines={1}>
@@ -244,7 +257,7 @@ export function CityMapCard({
                     onPress={handleFollowOperation}
                     accessibilityLabel="Operasyonu takip et">
                     <Text style={styles.followText} numberOfLines={1}>
-                      Takip Et
+                      {operationCtaLabel}
                     </Text>
                     <Ionicons name="chevron-forward" size={17} color="#FFFFFF" />
                   </Pressable>
@@ -412,7 +425,10 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   liveMetaText: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 14,
+    lineHeight: 18,
     fontWeight: '700',
     color: mapUi.textDark,
   },
@@ -517,7 +533,21 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   sheetMetaText: {
+    flexShrink: 1,
+    minWidth: 0,
     fontSize: 12,
+    fontWeight: '700',
+    color: mapUi.textSecondary,
+  },
+  sheetLineText: {
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: '700',
+    color: mapUi.textDark,
+  },
+  sheetSupportText: {
+    fontSize: 12,
+    lineHeight: 16,
     fontWeight: '700',
     color: mapUi.textSecondary,
   },

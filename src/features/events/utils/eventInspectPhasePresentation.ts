@@ -1,6 +1,13 @@
 import { inferEventDomainUiFocus } from '@/core/events/eventDomainPresentation';
 import type { EventDomainUiFocus } from '@/core/events/eventDomainPresentationTypes';
 import {
+  enrichInspectFindingsWithVariety,
+  getEventGameplayVarietyProfile,
+  varietyInspectFindingScoreBoost,
+} from '@/core/eventVariety/eventGameplayVarietyPresentation';
+import { applyAuthorityToInspectFindings } from '@/core/authority/authorityGameplayUnlockPresentation';
+import type { AuthorityGameplayPresentationContext } from '@/core/authority/authorityGameplayUnlockTypes';
+import {
   operationMotionFindingRevealTiming,
   operationMotionScanDurationMs,
 } from '@/core/motion/operationMotionTokens';
@@ -81,6 +88,9 @@ export type BuildEventInspectPhasePresentationInput = {
   reducedMotion?: boolean;
   day?: number;
   isDay1LearningEvent?: boolean;
+  /** Gameplay variety repetition hint — persist edilmez. */
+  recentVarietyProfiles?: import('@/core/eventVariety/eventGameplayVarietyTypes').BuildEventGameplayVarietyProfileInput['recentProfiles'];
+  authorityGameplayContext?: AuthorityGameplayPresentationContext;
 };
 
 const ALLOWED_FINDING_KINDS: EventInspectFindingKind[] = [
@@ -332,8 +342,19 @@ function buildFallbackFindings(event: EventCard): EventInspectFinding[] {
   ];
 }
 
-export function buildEventInspectFindings(event: EventCard): EventInspectFinding[] {
+export function buildEventInspectFindings(
+  event: EventCard,
+  varietyInput?: Pick<
+    BuildEventInspectPhasePresentationInput,
+    'day' | 'isDay1LearningEvent' | 'recentVarietyProfiles' | 'authorityGameplayContext'
+  >,
+): EventInspectFinding[] {
   const focus = inferEventDomainUiFocus(event);
+  const varietyProfile = getEventGameplayVarietyProfile(event, {
+    day: varietyInput?.day,
+    isDay1LearningEvent: varietyInput?.isDay1LearningEvent,
+    recentProfiles: varietyInput?.recentVarietyProfiles,
+  });
   const candidates: FindingCandidate[] = [];
 
   const risk = buildRiskFinding(event);
@@ -357,7 +378,14 @@ export function buildEventInspectFindings(event: EventCard): EventInspectFinding
   const usedSourceKeys = new Set<string>();
   const selected: EventInspectFinding[] = [];
 
-  const sorted = [...candidates].sort((a, b) => b.score - a.score);
+  const sorted = [...candidates]
+    .map((candidate) => ({
+      ...candidate,
+      score:
+        candidate.score +
+        varietyInspectFindingScoreBoost(candidate.finding, varietyProfile),
+    }))
+    .sort((a, b) => b.score - a.score);
 
   for (const candidate of sorted) {
     if (selected.length >= 3) break;
@@ -379,7 +407,18 @@ export function buildEventInspectFindings(event: EventCard): EventInspectFinding
     }
   }
 
-  return selected.slice(0, 3);
+  const enriched = enrichInspectFindingsWithVariety(selected.slice(0, 3), event, {
+    day: varietyInput?.day,
+    isDay1LearningEvent: varietyInput?.isDay1LearningEvent,
+    recentProfiles: varietyInput?.recentVarietyProfiles,
+  });
+
+  return applyAuthorityToInspectFindings(
+    enriched,
+    event,
+    varietyInput?.authorityGameplayContext,
+    varietyProfile,
+  );
 }
 
 export function buildEventInspectAdvisorComment(
@@ -474,7 +513,12 @@ export function buildEventInspectPhasePresentation(
   input: BuildEventInspectPhasePresentationInput,
 ): EventInspectPhasePresentation {
   const { event, interactionState, reducedMotion = false } = input;
-  const findings = buildEventInspectFindings(event);
+  const findings = buildEventInspectFindings(event, {
+    day: input.day,
+    isDay1LearningEvent: input.isDay1LearningEvent,
+    recentVarietyProfiles: input.recentVarietyProfiles,
+    authorityGameplayContext: input.authorityGameplayContext,
+  });
   const scanDurationMs = operationMotionScanDurationMs(reducedMotion);
   const focus = inferEventDomainUiFocus(event);
   const domainLabel = DOMAIN_SHORT_LABELS[focus];

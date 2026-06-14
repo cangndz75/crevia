@@ -1,5 +1,10 @@
 import type { EventCard } from '@/core/models/EventCard';
 import {
+  getEventGameplayVarietyProfile,
+  planStrategyVarietyNote,
+} from '@/core/eventVariety/eventGameplayVarietyPresentation';
+import { applyAuthorityToPlanStrategies } from '@/core/authority/authorityGameplayUnlockPresentation';
+import {
   buildEventInspectFindings,
   type EventInspectFindingKind,
   type EventInspectFindingTone,
@@ -99,6 +104,8 @@ export type BuildEventPlanPhasePresentationInput = {
   selectedStrategyId?: EventPlanStrategyId | null;
   day?: number;
   isDay1LearningEvent?: boolean;
+  recentVarietyProfiles?: import('@/core/eventVariety/eventGameplayVarietyTypes').BuildEventGameplayVarietyProfileInput['recentProfiles'];
+  authorityGameplayContext?: import('@/core/authority/authorityGameplayUnlockTypes').AuthorityGameplayPresentationContext;
 };
 
 const STRATEGY_ORDER: EventPlanStrategyId[] = [
@@ -199,8 +206,11 @@ export function resolveRecommendedPlanStrategyId(
   return 'balanced_plan';
 }
 
-export function buildEventPlanInspectSummary(event: EventCard): EventPlanInspectSummaryItem[] {
-  const findings = buildEventInspectFindings(event);
+export function buildEventPlanInspectSummary(
+  event: EventCard,
+  varietyInput?: Pick<BuildEventPlanPhasePresentationInput, 'day' | 'isDay1LearningEvent' | 'recentVarietyProfiles'>,
+): EventPlanInspectSummaryItem[] {
+  const findings = buildEventInspectFindings(event, varietyInput);
   const items: EventPlanInspectSummaryItem[] = [];
 
   for (const finding of findings) {
@@ -250,9 +260,70 @@ type StrategyTemplate = Omit<
   'isRecommended' | 'isSelected'
 >;
 
-function buildStrategyTemplates(event: EventCard): Record<EventPlanStrategyId, StrategyTemplate> {
-  const eventId = event.id;
+function applyVarietyToStrategyTemplate(
+  template: StrategyTemplate,
+  event: EventCard,
+  input: Pick<BuildEventPlanPhasePresentationInput, 'day' | 'isDay1LearningEvent' | 'recentVarietyProfiles'>,
+): StrategyTemplate {
+  const profile = getEventGameplayVarietyProfile(event, {
+    day: input.day,
+    isDay1LearningEvent: input.isDay1LearningEvent,
+    recentProfiles: input.recentVarietyProfiles,
+  });
+
+  if (profile.primaryPressure === 'calm_standard') {
+    return template;
+  }
+
+  const varietyNote = planStrategyVarietyNote(template.id, profile);
+  if (!varietyNote) {
+    return template;
+  }
+
+  const adjustedImpacts = template.expectedImpact.map((impact) => {
+    if (template.id === 'rapid_response' && impact.id === 'resource_cost' && profile.domain === 'transport') {
+      return { ...impact, band: 'high' as const, tone: 'warning' as const };
+    }
+    if (
+      template.id === 'long_term_fix' &&
+      impact.id === 'tomorrow_risk' &&
+      (profile.domain === 'environment' || profile.domain === 'container')
+    ) {
+      return { ...impact, band: 'low' as const, tone: 'positive' as const };
+    }
+    if (
+      template.id === 'rapid_response' &&
+      impact.id === 'tomorrow_risk' &&
+      profile.domain === 'maintenance'
+    ) {
+      return { ...impact, band: 'medium' as const, tone: 'warning' as const };
+    }
+    if (
+      template.id === 'balanced_plan' &&
+      impact.id === 'district_trust' &&
+      profile.domain === 'social'
+    ) {
+      return { ...impact, band: 'medium' as const, tone: 'positive' as const };
+    }
+    return impact;
+  });
+
   return {
+    ...template,
+    description: varietyNote,
+    expectedImpact: adjustedImpacts,
+    sourceIds: [...template.sourceIds, `variety:${profile.primaryPressure}`].filter(
+      (id, idx, arr) => arr.indexOf(id) === idx,
+    ),
+  };
+}
+
+function buildStrategyTemplates(
+  event: EventCard,
+  input: Pick<BuildEventPlanPhasePresentationInput, 'day' | 'isDay1LearningEvent' | 'recentVarietyProfiles'>,
+): Record<EventPlanStrategyId, StrategyTemplate> {
+  const eventId = event.id;
+  const base: Record<EventPlanStrategyId, StrategyTemplate> = {
     rapid_response: {
       id: 'rapid_response',
       title: 'Hızlı Müdahale',
@@ -389,6 +460,12 @@ function buildStrategyTemplates(event: EventCard): Record<EventPlanStrategyId, S
       sourceIds: [eventId, 'strategy:long_term_fix'],
     },
   };
+
+  return {
+    rapid_response: applyVarietyToStrategyTemplate(base.rapid_response, event, input),
+    balanced_plan: applyVarietyToStrategyTemplate(base.balanced_plan, event, input),
+    long_term_fix: applyVarietyToStrategyTemplate(base.long_term_fix, event, input),
+  };
 }
 
 function buildImpactPreview(strategy: EventPlanStrategyCard): EventPlanImpactPreview {
@@ -415,13 +492,27 @@ function buildImpactPreview(strategy: EventPlanStrategyCard): EventPlanImpactPre
 
 export function buildEventPlanAdvisorComment(
   strategy: EventPlanStrategyCard,
-  input: Pick<BuildEventPlanPhasePresentationInput, 'isDay1LearningEvent' | 'day'>,
+  input: Pick<BuildEventPlanPhasePresentationInput, 'event' | 'isDay1LearningEvent' | 'day' | 'recentVarietyProfiles'>,
 ): EventPlanAdvisorComment {
   if (input.isDay1LearningEvent || input.day === 1) {
     return {
       title: 'Ece',
       text: 'Dengeli çözüm, kaynak baskısını büyütmeden sosyal tepkiyi kontrol etmeye yardımcı olur.',
       tone: 'teaching',
+    };
+  }
+
+  const profile = getEventGameplayVarietyProfile(input.event, {
+    day: input.day,
+    isDay1LearningEvent: input.isDay1LearningEvent,
+    recentProfiles: input.recentVarietyProfiles,
+  });
+  const varietyNote = planStrategyVarietyNote(strategy.id, profile);
+  if (varietyNote && profile.planHintLine) {
+    return {
+      title: 'Ece',
+      text: varietyNote,
+      tone: strategy.id === 'rapid_response' && profile.domain === 'maintenance' ? 'warning' : 'calm',
     };
   }
 
@@ -451,8 +542,9 @@ function buildStrategies(
   event: EventCard,
   selectedStrategyId: EventPlanStrategyId,
   recommendedStrategyId: EventPlanStrategyId,
+  input: Pick<BuildEventPlanPhasePresentationInput, 'day' | 'isDay1LearningEvent' | 'recentVarietyProfiles'>,
 ): EventPlanStrategyCard[] {
-  const templates = buildStrategyTemplates(event);
+  const templates = buildStrategyTemplates(event, input);
   return STRATEGY_ORDER.map((id) => {
     const template = templates[id];
     return {
@@ -485,12 +577,35 @@ export function buildEventPlanPhasePresentation(
   const { event } = input;
   const recommendedStrategyId = resolveRecommendedPlanStrategyId(event, input);
   const selectedStrategyId = input.selectedStrategyId ?? recommendedStrategyId;
-  const inspectSummary = buildEventPlanInspectSummary(event);
-  const strategies = buildStrategies(event, selectedStrategyId, recommendedStrategyId);
+  const inspectSummary = buildEventPlanInspectSummary(event, {
+    day: input.day,
+    isDay1LearningEvent: input.isDay1LearningEvent,
+    recentVarietyProfiles: input.recentVarietyProfiles,
+  });
+  const strategiesRaw = buildStrategies(event, selectedStrategyId, recommendedStrategyId, {
+    day: input.day,
+    isDay1LearningEvent: input.isDay1LearningEvent,
+    recentVarietyProfiles: input.recentVarietyProfiles,
+  });
+  const varietyProfile = getEventGameplayVarietyProfile(event, {
+    day: input.day,
+    isDay1LearningEvent: input.isDay1LearningEvent,
+    recentProfiles: input.recentVarietyProfiles,
+  });
+  const strategies = applyAuthorityToPlanStrategies(
+    strategiesRaw,
+    input.authorityGameplayContext,
+    varietyProfile,
+  );
   const selectedStrategy =
     strategies.find((strategy) => strategy.id === selectedStrategyId) ?? strategies[1]!;
   const impactPreview = buildImpactPreview(selectedStrategy);
-  const advisorComment = buildEventPlanAdvisorComment(selectedStrategy, input);
+  const advisorComment = buildEventPlanAdvisorComment(selectedStrategy, {
+    event,
+    day: input.day,
+    isDay1LearningEvent: input.isDay1LearningEvent,
+    recentVarietyProfiles: input.recentVarietyProfiles,
+  });
 
   return {
     title: 'Planla',

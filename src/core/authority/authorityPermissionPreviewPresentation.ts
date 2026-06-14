@@ -1,5 +1,14 @@
 import type { RankPermissionCategory, RankPermissionId } from '@/core/rankPermissions/rankPermissionTypes';
 import { getRankPermissionDefinition, getRankPermissionRankDefinition } from '@/core/rankPermissions/rankPermissionMatrix';
+import {
+  buildAuthorityGameplayShowcaseCopy,
+  getAuthorityGameplayUnlockById,
+} from '@/core/authority/authorityGameplayUnlockPresentation';
+import {
+  buildAuthorityGameplayPresentationContext,
+  mapRankPermissionToGameplayUnlockId,
+} from '@/core/authority/authorityGameplayUnlockModel';
+import type { AuthorityState } from '@/core/authority/authorityTypes';
 
 import type {
   AuthorityPermissionCategory,
@@ -253,8 +262,24 @@ export function buildAuthorityPermissionDetailBody(
   description: string,
   playerBenefit: string,
   unlockRankTitle?: string,
+  permissionId?: RankPermissionId,
+  day = 1,
+  authorityState?: AuthorityState,
 ): string {
   const parts = [description, playerBenefit];
+  if (permissionId) {
+    const gameplayId = mapRankPermissionToGameplayUnlockId(permissionId);
+    if (gameplayId) {
+      const profile = getAuthorityGameplayUnlockById(
+        buildAuthorityGameplayPresentationContext({ day, authorityState }).profiles,
+        gameplayId,
+      );
+      if (profile) {
+        const showcase = buildAuthorityGameplayShowcaseCopy(profile);
+        parts.push(showcase.canSee, showcase.betterDecision, showcase.affectedPhase);
+      }
+    }
+  }
   if (state !== 'active' && unlockRankTitle) {
     parts.push(`${unlockRankTitle} seviyesinde görünür olur.`);
   }

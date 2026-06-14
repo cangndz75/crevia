@@ -12,6 +12,7 @@ import {
 import { PlanEventSummaryCard } from '@/features/events/components/event-workflow/plan/PlanEventSummaryCard';
 import { PlanWorkflowFooter } from '@/features/events/components/event-workflow/plan/PlanWorkflowFooter';
 import { OnboardingPhaseHint } from '@/features/onboarding/components/OnboardingPhaseHint';
+import { buildAuthorityGameplayPresentationContext } from '@/core/authority/authorityGameplayUnlockModel';
 import type { EventCard } from '@/core/models/EventCard';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import {
@@ -23,6 +24,7 @@ import {
   buildInspectHeroChips,
   resolveInspectDistrictId,
 } from '@/features/events/utils/eventWorkflowPresentation';
+import { useGameStore } from '@/store/useGameStore';
 import { useCreviaReducedMotion } from '@/shared/motion';
 
 type EventPlanPhaseProps = {
@@ -48,6 +50,17 @@ export function EventPlanPhase({
 }: EventPlanPhaseProps) {
   const insets = useSafeAreaInsets();
   const reducedMotion = useCreviaReducedMotion();
+  const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
+
+  const authorityGameplayContext = useMemo(
+    () =>
+      buildAuthorityGameplayPresentationContext({
+        authorityState,
+        day: gameDay,
+        isDay1LearningEvent,
+      }),
+    [authorityState, gameDay, isDay1LearningEvent],
+  );
 
   const presentation = useMemo(
     () =>
@@ -56,8 +69,15 @@ export function EventPlanPhase({
         selectedStrategyId,
         day: gameDay,
         isDay1LearningEvent,
+        authorityGameplayContext,
       }),
-    [event, gameDay, isDay1LearningEvent, selectedStrategyId],
+    [
+      authorityGameplayContext,
+      event,
+      gameDay,
+      isDay1LearningEvent,
+      selectedStrategyId,
+    ],
   );
 
   const heroChips = useMemo(() => buildInspectHeroChips(event), [event]);

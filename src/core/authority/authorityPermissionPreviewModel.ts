@@ -1,4 +1,12 @@
 import { calculateAuthorityProgress } from './authorityEngine';
+import {
+  buildAuthorityGameplayPresentationContext,
+  mapRankPermissionToGameplayUnlockId,
+} from '@/core/authority/authorityGameplayUnlockModel';
+import {
+  buildGameplayFocusedHubUnlockLine,
+  getAuthorityGameplayUnlockById,
+} from '@/core/authority/authorityGameplayUnlockPresentation';
 import { createInitialAuthorityState, normalizeAuthorityState } from './authoritySeed';
 import type { AuthorityState } from './authorityTypes';
 import {
@@ -51,7 +59,11 @@ function mapRankStatusToPreviewState(status: RankPermissionStatus): AuthorityPer
   return 'locked';
 }
 
-function buildPreviewItemFromUiItem(item: RankPermissionUiItem): AuthorityPermissionPreviewItem {
+function buildPreviewItemFromUiItem(
+  item: RankPermissionUiItem,
+  day = DEFAULT_DAY,
+  authorityState?: AuthorityState,
+): AuthorityPermissionPreviewItem {
   const definition = getRankPermissionDefinition(item.id);
   const state = mapRankStatusToPreviewState(item.status);
   const category = mapRankPermissionToShowcaseCategory(
@@ -81,6 +93,9 @@ function buildPreviewItemFromUiItem(item: RankPermissionUiItem): AuthorityPermis
       description,
       playerBenefit,
       unlockRankTitle,
+      item.id,
+      day,
+      authorityState,
     ),
     ctaLabel: state === 'next' ? 'Terfiye odaklan' : undefined,
     statePillLabel: buildAuthorityPermissionStatePill(state),
@@ -162,7 +177,9 @@ export function buildAuthorityPermissionPreviewSummary(
     ...bundle.nextPermissions,
     ...bundle.futurePermissions,
   ];
-  const allItems = allUiItems.map(buildPreviewItemFromUiItem);
+  const allItems = allUiItems.map((item) =>
+    buildPreviewItemFromUiItem(item, day, authorityState),
+  );
 
   const currentUnlocks = allItems
     .filter((item) => item.state === 'active')
@@ -218,19 +235,31 @@ export function buildAuthorityPermissionPreviewCompactSummary(
   const day = Math.max(1, typeof input.day === 'number' ? input.day : DEFAULT_DAY);
   const summary = buildAuthorityPermissionPreviewSummary({ ...input, day });
   const nextItem = summary.nextUnlocks[0];
+  const gameplayContext = buildAuthorityGameplayPresentationContext({
+    authorityState: normalizeAuthorityState(input.authorityState ?? createInitialAuthorityState(day), day),
+    day,
+  });
+  const gameplayUnlockId = nextItem ? mapRankPermissionToGameplayUnlockId(nextItem.id) : undefined;
+  const gameplayProfile = gameplayUnlockId
+    ? getAuthorityGameplayUnlockById(gameplayContext.profiles, gameplayUnlockId)
+    : undefined;
 
   const visible =
     day > 1 &&
     nextItem != null &&
     (summary.currentUnlocks.length > 0 || summary.nextUnlocks.length > 0);
 
+  const nextPermissionLine = gameplayProfile
+    ? buildGameplayFocusedHubUnlockLine(gameplayProfile)
+    : nextItem
+      ? `${AUTHORITY_PERMISSION_PREVIEW_HUB_LINE_PREFIX} ${nextItem.title}`
+      : undefined;
+
   return {
     visible,
     activeCountLabel: summary.activeCountLabel,
     nextPermissionTitle: nextItem?.title,
-    nextPermissionLine: nextItem
-      ? `${AUTHORITY_PERMISSION_PREVIEW_HUB_LINE_PREFIX} ${nextItem.title}`
-      : undefined,
+    nextPermissionLine,
     ctaLabel: AUTHORITY_PERMISSION_PREVIEW_PROFILE_CTA,
     headline: summary.headline,
   };

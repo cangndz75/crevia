@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { buildAuthorityGameplayPresentationContext } from '@/core/authority/authorityGameplayUnlockModel';
 import { calculateAssignmentCompatibility } from '@/core/assignments/assignmentEngine';
 import {
   buildAssignmentEngineInputFromGameStore,
@@ -94,6 +95,7 @@ export function EventDispatchPhase({
   isDay1LearningEvent = false,
 }: Props) {
   const reducedMotion = useCreviaReducedMotion();
+  const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
   const [dispatchInteractionState, setDispatchInteractionState] =
     useState<EventDispatchInteractionState>('idle');
 
@@ -114,6 +116,16 @@ export function EventDispatchPhase({
     assignment?.status === 'confirmed' ||
     assignment?.status === 'dispatched';
 
+  const authorityGameplayContext = useMemo(
+    () =>
+      buildAuthorityGameplayPresentationContext({
+        authorityState,
+        day: gameDay,
+        isDay1LearningEvent,
+      }),
+    [authorityState, gameDay, isDay1LearningEvent],
+  );
+
   const presentation = useMemo(
     () =>
       buildEventDispatchPhasePresentation({
@@ -128,11 +140,13 @@ export function EventDispatchPhase({
         day: gameDay,
         isDay1LearningEvent,
         reducedMotion,
+        authorityGameplayContext,
       }),
     [
       assignment,
       assignmentCompatibility,
       assignmentReady,
+      authorityGameplayContext,
       dispatchInteractionState,
       event,
       gameDay,

@@ -20,6 +20,13 @@ import {
   shouldSuppressMapOperationHintForActiveRoute,
 } from '@/core/activeTaskRoutes/activeTaskRouteUiPresentation';
 import type { CreviaActiveTaskRouteUiModel } from '@/core/activeTaskRoutes/activeTaskRouteUiTypes';
+import {
+  buildActiveOperationMapBinding,
+  buildActiveOperationMapCardModel,
+} from '@/core/activeOperationMapBinding';
+import { buildDistrictPersonalityProfile } from '@/core/districtPersonality';
+import { buildEventGameplayVarietyProfile } from '@/core/eventVariety/eventGameplayVarietyModel';
+import { buildMapGameplayBindings } from '@/core/mapGameplayBinding/mapGameplayBindingModel';
 import { buildMapDistrictIntelligenceModel } from '@/core/map/mapDistrictIntelligencePresentation';
 import {
   buildDistrictReportCardFullModel,
@@ -303,6 +310,65 @@ export function MapScreen() {
     operationSignals,
     primaryMapEvent,
     showPostPilotMapChrome,
+  ]);
+
+  const activeOperationMapCard = useMemo(() => {
+    if (mapViewMode !== 'overview') return null;
+    const assignment = primaryMapEvent
+      ? getEventAssignment(assignments, primaryMapEvent.id)
+      : undefined;
+    const districtProfile = buildDistrictPersonalityProfile({
+      districtId: primaryMapEvent?.neighborhoodId ?? focusDistrictId,
+      districtName: primaryMapEvent?.district,
+      day: gameDay,
+      unlockedPermissionIds: authorityState?.unlockedPermissionIds,
+      operationSignals,
+      resourceSignals: operationalResources,
+      activeTaskRouteSignals: activeTaskRoutePreview,
+    });
+    const eventGameplayProfile = primaryMapEvent
+      ? buildEventGameplayVarietyProfile(primaryMapEvent, {
+          day: gameDay,
+          isDay1LearningEvent: gameDay <= 1,
+        })
+      : null;
+    const trackerBinding =
+      buildMapGameplayBindings({
+        day: gameDay,
+        authorityRankId: authorityState?.formalRankId,
+        unlockedPermissionIds: authorityState?.unlockedPermissionIds,
+        activeEventIds: primaryMapEvent ? [primaryMapEvent.id] : [],
+        activeOperationContext: primaryMapEvent,
+        operationSignals,
+        resourceSignals: operationalResources,
+        activeTaskRouteSignals: activeTaskRoutePreview,
+      }).find((binding) => binding.role === 'operation_tracker') ?? null;
+
+    const activeOperationBinding = buildActiveOperationMapBinding({
+      day: gameDay,
+      activeEvent: primaryMapEvent,
+      assignment,
+      activeTaskRoute: activeTaskRoutePreview,
+      districtPersonality: districtProfile,
+      eventGameplayProfile,
+      mapGameplayBinding: trackerBinding,
+      operationSignals,
+      resourceSignals: operationalResources,
+      unlockedPermissionIds: authorityState?.unlockedPermissionIds,
+      eventDetailRoute: primaryMapEvent ? `/events/${primaryMapEvent.id}` : undefined,
+    });
+
+    return buildActiveOperationMapCardModel(activeOperationBinding, { day: gameDay });
+  }, [
+    activeTaskRoutePreview,
+    assignments,
+    authorityState,
+    focusDistrictId,
+    gameDay,
+    mapViewMode,
+    operationalResources,
+    operationSignals,
+    primaryMapEvent,
   ]);
 
   const mapDistrictIntelligence = useMemo(() => {
@@ -789,6 +855,7 @@ export function MapScreen() {
           reducedMotionMode={reducedMotionMode}
           mapPresenceViewModel={mapPresenceViewModel}
           activeOperationOverlay={activeOperationOverlay}
+          activeOperationCard={activeOperationMapCard}
           onLayersPress={() => setLayerPanelOpen(true)}
           onDistrictSelect={handleDistrictSelect}
           onBackToOverview={handleBackToOverview}

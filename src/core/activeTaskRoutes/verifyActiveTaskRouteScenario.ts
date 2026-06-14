@@ -280,12 +280,20 @@ export function verifyActiveTaskRouteScenario(): VerifyActiveTaskRouteOutcome {
   }
 
   const dispatchSrc = readRepo('src/features/events/components/event-workflow/dispatch/EventDispatchPhase.tsx');
+  const dispatchMotionSrc = readRepo(
+    'src/features/events/components/event-workflow/dispatch/DispatchMotionSections.tsx',
+  );
   const fieldSrc = readRepo('src/features/events/components/event-workflow/field/LiveOperationCard.tsx');
+  const routePreviewStripSrc = readRepo('src/features/events/components/ActiveTaskRoutePreviewStrip.tsx');
   const mapSrc = readRepo('src/features/map/screens/MapScreen.tsx');
+  const dispatchRouteBound =
+    (dispatchSrc.includes('ActiveTaskRoutePreviewStrip') ||
+      (dispatchSrc.includes('DispatchRouteStepStrip') && dispatchSrc.includes('routePreview'))) &&
+    fieldSrc.includes('routePreview');
   record(
     assert(
       results,
-      dispatchSrc.includes('ActiveTaskRoutePreviewStrip') && fieldSrc.includes('routePreview'),
+      dispatchRouteBound,
       'dispatch/field UI binding',
       'dispatch/field binding missing',
     ),
@@ -298,12 +306,14 @@ export function verifyActiveTaskRouteScenario(): VerifyActiveTaskRouteOutcome {
       'map binding missing',
     ),
   );
+  const routeOverflowGuardPresent =
+    fieldSrc.includes('numberOfLines') ||
+    routePreviewStripSrc.includes('numberOfLines') ||
+    dispatchMotionSrc.includes('numberOfLines');
   record(
     assert(
       results,
-      dispatchSrc.includes('ActiveTaskRoutePreviewStrip') &&
-        (fieldSrc.includes('numberOfLines') ||
-          readRepo('src/features/events/components/ActiveTaskRoutePreviewStrip.tsx').includes('numberOfLines')),
+      dispatchRouteBound && routeOverflowGuardPresent,
       'UI overflow guard',
       'overflow guard missing',
     ),

@@ -3,6 +3,11 @@ import type {
   CompatibilityLabel,
   EventAssignmentState,
 } from '@/core/assignments/assignmentTypes';
+import {
+  dispatchVarietyHintLine,
+  getEventGameplayVarietyProfile,
+} from '@/core/eventVariety/eventGameplayVarietyPresentation';
+import { applyAuthorityToDispatchReasons } from '@/core/authority/authorityGameplayUnlockPresentation';
 import type { EventCard, EventDecision } from '@/core/models/EventCard';
 import {
   operationMotionDispatchDurationMs,
@@ -118,6 +123,8 @@ export type BuildEventDispatchPhasePresentationInput = {
   day?: number;
   isDay1LearningEvent?: boolean;
   reducedMotion?: boolean;
+  recentVarietyProfiles?: import('@/core/eventVariety/eventGameplayVarietyTypes').BuildEventGameplayVarietyProfileInput['recentProfiles'];
+  authorityGameplayContext?: import('@/core/authority/authorityGameplayUnlockTypes').AuthorityGameplayPresentationContext;
 };
 
 const PLAN_DISPATCH_SUMMARY: Record<EventPlanStrategyId, string> = {
@@ -166,8 +173,37 @@ function mapCompatibilityLabelToUi(label: CompatibilityLabel | undefined): {
 function buildCompatibilityReasons(
   compat: AssignmentCompatibilityResult | null | undefined,
   assignment: EventAssignmentState | null | undefined,
+  event?: EventCard,
+  varietyInput?: Pick<
+    BuildEventDispatchPhasePresentationInput,
+    'day' | 'isDay1LearningEvent' | 'recentVarietyProfiles' | 'authorityGameplayContext'
+  >,
 ): EventDispatchCompatibilityReason[] {
   const reasons: EventDispatchCompatibilityReason[] = [];
+
+  if (event) {
+    const profile = getEventGameplayVarietyProfile(event, {
+      day: varietyInput?.day,
+      isDay1LearningEvent: varietyInput?.isDay1LearningEvent,
+      recentProfiles: varietyInput?.recentVarietyProfiles,
+    });
+    const hint = dispatchVarietyHintLine(profile);
+    if (hint && profile.primaryPressure === 'team_fatigue_pressure') {
+      reasons.push({
+        id: 'variety-fatigue',
+        label: 'Ekip yorgunluğu etkili',
+        tone: 'warning',
+        iconKey: 'people-outline',
+      });
+    } else if (hint) {
+      reasons.push({
+        id: 'variety-pressure',
+        label: hint.length > 40 ? `${hint.slice(0, 38)}…` : hint,
+        tone: 'neutral',
+        iconKey: 'information-circle-outline',
+      });
+    }
+  }
 
   for (const strength of compat?.strengths ?? []) {
     if (reasons.length >= 3) break;
@@ -207,7 +243,12 @@ function buildCompatibilityReasons(
     });
   }
 
-  return reasons.slice(0, 3);
+  return applyAuthorityToDispatchReasons(
+    reasons.slice(0, 3),
+    varietyInput?.authorityGameplayContext,
+    compat?.warnings,
+    compat?.strengths,
+  );
 }
 
 function buildSelectedPlanSummary(
@@ -271,6 +312,8 @@ function buildRoutePreview(
   assignmentReady: boolean,
   dispatchState: EventDispatchInteractionState,
   planStrategyId: EventPlanStrategyId,
+  event?: EventCard,
+  varietyInput?: Pick<BuildEventDispatchPhasePresentationInput, 'day' | 'isDay1LearningEvent' | 'recentVarietyProfiles'>,
 ): EventDispatchRoutePreview {
   const teamState: EventDispatchRouteStepState =
     dispatchState === 'sent'
@@ -300,12 +343,23 @@ function buildRoutePreview(
   const fieldState: EventDispatchRouteStepState =
     dispatchState === 'sent' ? 'current' : dispatchState === 'dispatching' ? 'ready' : 'locked';
 
-  const estimatedLabel =
+  let estimatedLabel =
     planStrategyId === 'rapid_response'
       ? 'Rota süresi kritik'
       : planStrategyId === 'long_term_fix'
         ? 'Planlı çıkış'
         : 'Rota dengeli';
+
+  if (event) {
+    const profile = getEventGameplayVarietyProfile(event, {
+      day: varietyInput?.day,
+      isDay1LearningEvent: varietyInput?.isDay1LearningEvent,
+      recentProfiles: varietyInput?.recentVarietyProfiles,
+    });
+    if (profile.primaryPressure === 'route_pressure' && profile.dispatchHintLine) {
+      estimatedLabel = profile.dispatchHintLine;
+    }
+  }
 
   return {
     title: 'Yönlendirme hattı',
@@ -441,13 +495,29 @@ export function buildEventDispatchPhasePresentation(
     label: compatUi.label,
     scoreBand,
     tone: compatUi.tone,
-    reasons: buildCompatibilityReasons(input.compatibility, input.assignment),
+    reasons: buildCompatibilityReasons(
+      input.compatibility,
+      input.assignment,
+      input.event,
+      {
+        day: input.day,
+        isDay1LearningEvent: input.isDay1LearningEvent,
+        recentVarietyProfiles: input.recentVarietyProfiles,
+        authorityGameplayContext: input.authorityGameplayContext,
+      },
+    ),
   };
   const routePreview = buildRoutePreview(
     input.assignment,
     input.assignmentReady,
     dispatchState,
     selectedPlan.strategyId ?? 'balanced_plan',
+    input.event,
+    {
+      day: input.day,
+      isDay1LearningEvent: input.isDay1LearningEvent,
+      recentVarietyProfiles: input.recentVarietyProfiles,
+    },
   );
   const advisorComment = buildEventDispatchAdvisorComment(
     input,

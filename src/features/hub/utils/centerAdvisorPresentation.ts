@@ -1,4 +1,16 @@
 import type { HubCardVisibilityModel } from '@/core/onboarding/firstTenMinutesTypes';
+import {
+  buildDecisionConsequenceEceLine,
+  buildDecisionConsequenceThreadsFromHub,
+} from '@/core/decisionConsequence';
+import {
+  buildEceHubAdvisorLine,
+  type EceStrategyLineResult,
+} from '@/core/eceStrategyLines';
+import {
+  buildEceFollowUpActionLine,
+  type FollowUpActionResult,
+} from '@/core/followUpActions';
 import type { MainOperationFeelHubPresentation } from '@/core/mainOperationFeel/mainOperationFeelTypes';
 import type { GameState } from '@/core/models/GameState';
 import type {
@@ -80,6 +92,8 @@ export type BuildCenterAdvisorSuggestionInput = {
   hubEceContextLine?: string | null;
   hubImpactExplanationLine?: string | null;
   mainOperationFeelPresentation?: MainOperationFeelHubPresentation | null;
+  eceStrategyLines?: EceStrategyLineResult | null;
+  followUpActions?: FollowUpActionResult | null;
   socialPulseState?: SocialPulseState | null;
   cardVisibility?: HubCardVisibilityModel;
   recommendedPlanBody?: string | null;
@@ -267,6 +281,16 @@ function buildCityWarningContext(
   return null;
 }
 
+function buildAdvisorConsequenceLine(input: BuildCenterAdvisorSuggestionInput): string | null {
+  return buildDecisionConsequenceEceLine(
+    buildDecisionConsequenceThreadsFromHub({
+      day: input.day,
+      impactLine: input.hubImpactExplanationLine,
+      tomorrowRisk: input.hubTomorrowRisk,
+    }),
+  );
+}
+
 function buildConfidence(
   sourceIds: string[],
   hasTarget: boolean,
@@ -354,6 +378,9 @@ function buildFromActiveTarget(
     input.recommendedPlanBody,
     input.hubEceContextLine,
   ];
+  const consequenceLine = buildAdvisorConsequenceLine(input);
+  const strategyLine = buildEceHubAdvisorLine(input.eceStrategyLines, avoid);
+  const followUpLine = buildEceFollowUpActionLine(input.followUpActions);
 
   if (target.status === 'empty') {
     const advisor: CenterAdvisorSuggestion = {
@@ -402,7 +429,10 @@ function buildFromActiveTarget(
       ),
       reason: clampText(
         dedupeAgainst(
-          input.hubTomorrowRisk?.mainLine ??
+          consequenceLine ??
+            strategyLine ??
+            followUpLine ??
+            input.hubTomorrowRisk?.mainLine ??
             'Bu karar yarınki risk ve mahalle güvenine yansıyabilir.',
           avoid,
           'Bu karar yarınki risk ve mahalle güvenine yansıyabilir.',
@@ -441,7 +471,10 @@ function buildFromActiveTarget(
     priority = urgentSignal.status === 'critical' ? 'urgent' : 'high';
     caution = clampText(
       dedupeAgainst(
-        input.hubImpactExplanationLine ??
+        consequenceLine ??
+          strategyLine ??
+          followUpLine ??
+          input.hubImpactExplanationLine ??
           'Yanlış ekip seçimi yarın riski büyütebilir.',
         avoid,
         'Yanlış ekip seçimi yarın riski büyütebilir.',
@@ -521,7 +554,10 @@ function buildFromActiveTarget(
   }
 
   let reason = dedupeAgainst(
-    input.hubImpactExplanationLine ??
+    consequenceLine ??
+      strategyLine ??
+      followUpLine ??
+      input.hubImpactExplanationLine ??
       target.impactPreview[0]?.valueText ??
       cityWarning ??
       input.mainOperationFeelPresentation?.model.eceLine ??

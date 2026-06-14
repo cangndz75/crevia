@@ -1,5 +1,9 @@
 import type { EventCard } from '@/core/models/EventCard';
 import {
+  buildDecisionConsequenceThreadsFromResult,
+  mapDecisionConsequenceToneToSurface,
+} from '@/core/decisionConsequence';
+import {
   operationMotionResultRevealStaggerMs,
   OPERATION_MOTION_RESULT_REDUCED_MS,
   OPERATION_MOTION_RESULT_TOTAL_MS,
@@ -482,6 +486,32 @@ function buildMemoryItem(
   return null;
 }
 
+function buildDecisionConsequenceItem(
+  snapshot: DecisionResultSnapshot,
+  input: BuildEventResultRevealPresentationInput,
+): EventResultRevealItem | null {
+  const thread = buildDecisionConsequenceThreadsFromResult({
+    snapshot,
+    carryOverSummary: input.carryOverSummary,
+    authorityProgressLine: input.authorityProgressLine,
+  }).find((item) => item.visibleIn.includes('result') && item.consequenceType !== 'neutral_record');
+
+  if (!thread) return null;
+
+  return {
+    id: `reveal-consequence-${thread.id}`,
+    kind: 'city_memory',
+    title: thread.title || 'Karar izi',
+    body: thread.causalLine,
+    tone: mapDecisionConsequenceToneToSurface(thread.tone),
+    priority: thread.strength === 'high' ? 'high' : 'normal',
+    iconKey: 'trail-sign-outline',
+    sourceLabel: thread.sourceLabel,
+    sourceIds: [`decision-consequence-${thread.id}`],
+    revealOrder: 8,
+  };
+}
+
 function buildRevealItems(
   snapshot: DecisionResultSnapshot,
   input: BuildEventResultRevealPresentationInput,
@@ -499,6 +529,9 @@ function buildRevealItems(
 
   const memory = buildMemoryItem(snapshot, input.carryOverSummary);
   if (memory) candidates.push(memory);
+
+  const consequence = buildDecisionConsequenceItem(snapshot, input);
+  if (consequence) candidates.push(consequence);
 
   const byKind = new Map<EventResultRevealItemKind, EventResultRevealItem>();
   for (const item of candidates) {

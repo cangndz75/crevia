@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { CityMapCard } from '@/features/map/components/CityMapCard';
+import type { ActiveOperationMapCardModel } from '@/core/activeOperationMapBinding';
 import type { MapActiveOperationOverlayModel } from '@/features/map/utils/mapUiPresentation';
 import type { ContainerState } from '@/core/containers/containerTypes';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
@@ -36,6 +37,7 @@ type Props = {
   reducedMotionMode?: boolean;
   mapPresenceViewModel?: MapPresenceViewModel | null;
   activeOperationOverlay?: MapActiveOperationOverlayModel | null;
+  activeOperationCard?: ActiveOperationMapCardModel | null;
   onLayersPress: () => void;
   onDistrictSelect: (districtId: MapDistrictId) => void;
   onBackToOverview: () => void;

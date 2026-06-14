@@ -4,7 +4,7 @@ import { Image, type ImageSource } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { type ReactNode, useMemo } from 'react';
+import { type ReactNode } from 'react';
 import {
   Platform,
   Pressable,
@@ -17,239 +17,520 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { creviaAssets } from '@/core/assets/creviaAssets';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
-import { hubAssets } from '@/features/hub/utils/hubAssets';
-import type { CenterHomePresentation, CenterHomeVisibilityState } from '@/features/hub/utils/centerHomePresentation';
-import { resolveCenterSectionGap } from '@/features/hub/utils/centerLayoutTokens';
-import { isCenterModuleRenderable } from '@/features/hub/utils/centerStatePolicy';
-import { CenterCitySummaryCard } from '@/features/hub/components/CenterCitySummaryCard';
-import { CenterAdvisorCard } from '@/features/hub/components/CenterAdvisorCard';
-import { CenterDailyRewardRoute } from '@/features/hub/components/CenterDailyRewardRoute';
-import { CenterHomeHeader } from '@/features/hub/components/CenterHomeHeader';
-import {
-  HubActiveTaskCardStack,
-} from '@/features/hub/components/HubActiveTaskCardStack';
-import { HubAuthorityPermissionPreviewChip } from '@/features/hub/components/HubAuthorityPermissionPreviewChip';
-import { HubBadgeShowcaseChip } from '@/features/hub/components/HubBadgeShowcaseChip';
-import { HubDistrictExpansionChip } from '@/features/hub/components/HubDistrictExpansionChip';
-import { buildAuthorityPermissionPreviewCompactSummary } from '@/core/authority/authorityPermissionPreviewModel';
-import { buildDistrictOperationUnlockBindingCompactSummary } from '@/core/progression/districtOperationUnlockBindingModel';
-import { buildHubBadgeShowcaseSummary } from '@/features/hub/utils/hubBadgeShowcaseModel';
-import { resolveMotionDensity } from '@/core/motion';
-import { CenterMotionEnter } from '@/features/hub/components/CenterMotionEnter';
-import { CenterOperationFocusSection } from '@/features/hub/components/CenterOperationFocusSection';
-import { CenterOperationSignalsSection } from '@/features/hub/components/CenterOperationSignalsSection';
-import { CenterQuickActionsSection } from '@/features/hub/components/CenterQuickActionsSection';
-import { CenterRecommendedPlanCard } from '@/features/hub/components/CenterRecommendedPlanCard';
-import { CenterContinuationCardsSection } from '@/features/hub/components/CenterContinuationCardsSection';
-import { useCreviaReducedMotion } from '@/shared/motion';
+import type { CenterHomePresentation } from '@/features/hub/utils/centerHomePresentation';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
-import { useGameStore } from '@/store/useGameStore';
+import { CenterPortfolioSurface } from './CenterPortfolioSurface';
 
-const compactBreakpoint = 370;
+const avatarImage = require('@/assets/characters/char_chief_operations_01.png');
+const cityHeroImage = require('@/assets/districts/central/district_central_overview_01.png');
+const routeImage = require('@/assets/districts/route/district_route_network_01.png');
+const parkImage = require('@/assets/events/opportunity/ev_park_renewal_01.png');
+const rewardChestImage = require('@/assets/crevia/icons/premium/premium_diamond_gold.png');
+const dailyBadgeImage = require('@/assets/badges/badge_daily_goal_02.png');
 
 const palette = {
   background: '#F8F1E4',
-  card: '#FFFCF5',
-  cardWarm: '#FDF5E6',
+  surface: '#FFFCF5',
+  surfaceWarm: '#FFF6E6',
+  surfaceMint: '#EAF5EE',
   teal: '#07564F',
   tealMid: '#0D7168',
   tealDark: '#043A36',
-  tealSoft: '#E8F4EF',
+  tealSoft: '#DFF1EB',
   gold: '#D8A72E',
+  goldLight: '#FFE5A2',
   goldDark: '#9B741D',
-  goldSoft: '#F5E3AF',
   green: '#3E9E6A',
-  amber: '#C78925',
   red: '#C85A4B',
   text: '#173D3A',
-  muted: '#6D736C',
-  border: 'rgba(7, 86, 79, 0.08)',
+  muted: '#68746E',
+  border: 'rgba(7, 86, 79, 0.10)',
   white: '#FFFFFF',
 } as const;
 
-const routeHeroImage = require('@/assets/districts/route/district_route_network_01.png');
-const greenHeroImage = require('@/assets/districts/status/district_safe_zone_01.png');
-
 type IconName = keyof typeof Ionicons.glyphMap;
+
+type Resource = {
+  id: string;
+  icon: IconName;
+  value: string;
+  tone: 'gold' | 'gem';
+  badge?: string;
+};
+
+type Shortcut = {
+  id: string;
+  label: string;
+  icon: IconName;
+  route: Href;
+  badge?: string;
+};
+
+type FlowStep = {
+  id: string;
+  label: string;
+  icon: IconName;
+  state: 'done' | 'active' | 'locked';
+};
 
 type HubReferenceHomeProps = {
   presentation: CenterHomePresentation;
   scrollFooter?: ReactNode;
 };
 
-function useHubLayoutMetrics() {
+const resources: Resource[] = [
+  { id: 'coin', icon: 'cash', value: '1.250', tone: 'gold', badge: '2' },
+  { id: 'gem', icon: 'diamond', value: '48', tone: 'gem' },
+];
+
+const shortcuts: Shortcut[] = [
+  { id: 'start', label: 'Başlangıç', icon: 'flag', route: '/events' },
+  { id: 'daily', label: 'Günlük', icon: 'calendar', route: '/events' },
+  { id: 'goals', label: 'Hedefler', icon: 'navigate-circle', route: '/events' },
+  { id: 'rewards', label: 'Ödüller', icon: 'file-tray-full', route: '/progression', badge: '3' },
+  { id: 'strategy', label: 'Strateji', icon: 'bulb', route: '/reports' },
+];
+
+const flowSteps: FlowStep[] = [
+  { id: 'flag', label: '1', icon: 'flag', state: 'done' },
+  { id: 'center', label: '2', icon: 'business', state: 'done' },
+  { id: 'active', label: '3', icon: 'star', state: 'active' },
+  { id: 'shield', label: '4', icon: 'shield-checkmark', state: 'locked' },
+  { id: 'gift', label: '5', icon: 'gift', state: 'locked' },
+];
+
+function useLayoutMetrics() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useAppTabBarHeight();
-  const isCompact = width <= compactBreakpoint;
   const topInset =
     Platform.OS === 'android'
       ? Math.max(insets.top, RNStatusBar.currentHeight ?? 24)
       : insets.top;
 
   return {
-    width,
-    isCompact,
+    compact: width < 370,
     topInset,
-    scrollBottomPadding: tabBarHeight + 32,
+    bottomPadding: tabBarHeight + 28,
   };
 }
 
-function pressedScale(pressed: boolean) {
+function pressStyle(pressed: boolean) {
   return {
     opacity: pressed ? 0.9 : 1,
     transform: [{ scale: pressed ? 0.98 : 1 }],
   };
 }
 
-function AssetImage({
-  source,
-  contentFit = 'cover',
-}: {
-  source: ImageSource;
-  contentFit?: 'cover' | 'contain';
-}) {
-  return <Image source={source} style={styles.assetImage} contentFit={contentFit} transition={180} />;
-}
-
-function MiniIcon({ icon, tone = 'teal' }: { icon: IconName; tone?: 'teal' | 'gold' | 'green' }) {
-  const color = tone === 'gold' ? palette.goldDark : tone === 'green' ? palette.green : palette.teal;
-  const backgroundColor =
-    tone === 'gold' ? palette.goldSoft : tone === 'green' ? '#E8F5EA' : palette.tealSoft;
-
+function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <View style={[styles.miniIcon, { backgroundColor }]}>
-      <Ionicons name={icon} size={18} color={color} />
-    </View>
-  );
-}
-
-function GameStatusBar({ progress = 0.62 }: { progress?: number; variant?: 'primary' | 'secondary' }) {
-  const ratio = Math.max(0, Math.min(1, progress));
-  return (
-    <View style={styles.gameStatusBar}>
-      <View style={[styles.gameStatusBarFill, { width: `${ratio * 100}%` }]} />
-    </View>
-  );
-}
-
-function EceInsightCard({
-  advisor,
-  reducedMotion = false,
-}: {
-  advisor: CenterHomePresentation['advisorSuggestion'];
-  reducedMotion?: boolean;
-}) {
-  return <CenterAdvisorCard advisor={advisor} reducedMotion={reducedMotion} />;
-}
-
-function SectionTitle({ title, action }: { title: string; action?: string }) {
-  return (
-    <View style={styles.sectionTitleRow}>
+    <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle} numberOfLines={1}>
         {title}
       </Text>
-      <View style={styles.sectionDivider} />
-      {action ? (
-        <Text style={styles.sectionAction} numberOfLines={1}>
-          {action}
+      {subtitle ? (
+        <Text style={styles.sectionSubtitle} numberOfLines={1}>
+          {subtitle}
         </Text>
       ) : null}
     </View>
   );
 }
 
-function ModernSectionHeader({
-  title,
-  action,
-  onActionPress,
+function AssetImage({ source, style }: { source: ImageSource; style?: object }) {
+  return <Image source={source} style={[styles.assetImage, style]} contentFit="cover" transition={160} />;
+}
+
+function HeaderSection({
+  presentation,
+  topInset,
+  compact,
 }: {
-  title: string;
-  action?: string;
-  onActionPress?: () => void;
+  presentation: CenterHomePresentation;
+  topInset: number;
+  compact: boolean;
 }) {
+  const router = useRouter();
+  const level = presentation.headerSummary.levelLabel?.replace('Sv. ', '') || '12';
+
   return (
-    <View style={styles.modernSectionHeader}>
-      <View style={styles.modernSectionTitleMark} />
-      <Text style={styles.modernSectionTitle} numberOfLines={1}>
-        {title}
-      </Text>
-      {action ? (
-        <Pressable
-          onPress={onActionPress}
-          disabled={!onActionPress}
-          accessibilityRole="button"
-          accessibilityLabel={action}
-          style={({ pressed }) => [
-            styles.modernSectionAction,
-            pressed && onActionPress ? styles.modernSectionActionPressed : undefined,
-          ]}>
-          <Text style={styles.modernSectionActionText} numberOfLines={1}>
-            {action}
+    <View style={[styles.header, { paddingTop: topInset + 12 }]}>
+      <Image
+        source={cityHeroImage}
+        style={styles.headerBackdrop}
+        contentFit="cover"
+        transition={160}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      />
+      <LinearGradient
+        colors={['rgba(248,241,228,0.15)', 'rgba(248,241,228,0.94)']}
+        style={styles.headerBackdropFade}
+      />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Profil"
+        onPress={() => {
+          playLightImpactHaptic();
+          router.push('/profile' as Href);
+        }}
+        style={({ pressed }) => [styles.identityArea, pressStyle(pressed)]}>
+        <View style={styles.avatarFrame}>
+          <Image source={avatarImage} style={styles.avatar} contentFit="cover" />
+          <View style={styles.levelBadge}>
+            <Text style={styles.levelBadgeText} numberOfLines={1}>
+              {level}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.headerCopy}>
+          <Text style={styles.brandTitle} numberOfLines={1}>
+            Crevia
           </Text>
-          <Ionicons name="chevron-forward" size={12} color={palette.tealMid} />
+          <View style={styles.locationRow}>
+            <Text style={styles.locationText} numberOfLines={1}>
+              Merkez
+            </Text>
+            <Ionicons name="location" size={12} color={palette.tealMid} />
+          </View>
+          <Text style={styles.roleText} numberOfLines={1}>
+            <Ionicons name="ribbon" size={10} color={palette.goldDark} /> Merkez Yöneticisi
+          </Text>
+        </View>
+      </Pressable>
+
+      <View style={[styles.resourceRow, compact ? styles.resourceRowCompact : undefined]}>
+        {resources.map((resource) => (
+          <View
+            key={resource.id}
+            style={[
+              styles.resourcePill,
+              resource.tone === 'gem' ? styles.resourcePillGem : undefined,
+            ]}>
+            <View
+              style={[
+                styles.resourceIcon,
+                resource.tone === 'gem' ? styles.resourceIconGem : undefined,
+              ]}>
+              <Ionicons
+                name={resource.icon}
+                size={14}
+                color={resource.tone === 'gem' ? '#00A97F' : palette.goldDark}
+              />
+            </View>
+            <Text style={styles.resourceValue} numberOfLines={1}>
+              {resource.value}
+            </Text>
+            <View style={styles.resourcePlus}>
+              <Ionicons name="add" size={10} color={palette.white} />
+            </View>
+            {resource.badge ? (
+              <View style={styles.resourceBadge}>
+                <Text style={styles.resourceBadgeText}>{resource.badge}</Text>
+              </View>
+            ) : null}
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function ShortcutRow() {
+  const router = useRouter();
+
+  return (
+    <View style={styles.shortcutRow}>
+      {shortcuts.map((item) => (
+        <Pressable
+          key={item.id}
+          accessibilityRole="button"
+          accessibilityLabel={item.label}
+          onPress={() => {
+            playLightImpactHaptic();
+            router.push(item.route);
+          }}
+          style={({ pressed }) => [styles.shortcutCard, pressStyle(pressed)]}>
+          <View style={styles.shortcutIconWrap}>
+            <Ionicons name={item.icon} size={25} color={palette.tealMid} />
+          </View>
+          <Text style={styles.shortcutLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>
+            {item.label}
+          </Text>
+          {item.badge ? (
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>{item.badge}</Text>
+            </View>
+          ) : null}
         </Pressable>
+      ))}
+    </View>
+  );
+}
+
+function MainQuestCard() {
+  const router = useRouter();
+
+  return (
+    <LinearGradient
+      colors={[palette.tealDark, palette.teal, '#096D62']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.mainQuestCard}>
+      <View style={styles.questSparkOne} />
+      <View style={styles.questSparkTwo} />
+      <View style={styles.questContent}>
+        <View style={styles.questIllustration}>
+          <AssetImage source={routeImage} />
+          <View style={styles.flagPole} />
+          <View style={styles.flagShape} />
+        </View>
+        <View style={styles.questCopy}>
+          <View style={styles.questTag}>
+            <Ionicons name="star" size={10} color={palette.goldLight} />
+            <Text style={styles.questTagText}>ANA GÖREV</Text>
+          </View>
+          <Text style={styles.questTitle} numberOfLines={2}>
+            İlk hedefe başla!
+          </Text>
+          <Text style={styles.questDescription} numberOfLines={2}>
+            Merkez akışını aç ve ilk adımını at.
+          </Text>
+        </View>
+        <View style={styles.xpBadge}>
+          <Ionicons name="star" size={24} color={palette.goldDark} />
+          <Text style={styles.xpBadgeText}>+50 XP</Text>
+        </View>
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Göreve Başla"
+        onPress={() => {
+          playLightImpactHaptic();
+          router.push('/events' as Href);
+        }}
+        style={({ pressed }) => [styles.questCtaShadow, pressStyle(pressed)]}>
+        <LinearGradient
+          colors={['#FFE38D', '#E9AF34']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.questCta}>
+          <Text style={styles.questCtaText}>Göreve Başla</Text>
+          <Ionicons name="chevron-forward" size={22} color={palette.teal} />
+        </LinearGradient>
+      </Pressable>
+    </LinearGradient>
+  );
+}
+
+function ProgressBar({ value, label }: { value: number; label?: string }) {
+  const ratio = Math.max(0, Math.min(1, value));
+  return (
+    <View style={styles.progressTrack}>
+      <View style={[styles.progressFill, { width: `${ratio * 100}%` }]} />
+      {label ? (
+        <Text style={styles.progressLabel} numberOfLines={1}>
+          {label}
+        </Text>
       ) : null}
     </View>
   );
 }
 
-function shouldRenderActiveTarget(
-  target: CenterHomePresentation['activeTarget'],
-): boolean {
-  return target.visibility !== 'hidden';
+function TodayStatusCard() {
+  return (
+    <View style={styles.statusCard}>
+      <SectionHeader title="BUGÜNKÜ DURUM" />
+      <View style={styles.statusRow}>
+        <View style={styles.statusCrest}>
+          <Image source={dailyBadgeImage} style={styles.statusCrestImage} contentFit="contain" />
+          <Ionicons name="happy" size={24} color={palette.goldLight} />
+        </View>
+        <View style={styles.statusCopy}>
+          <View style={styles.statusTitleRow}>
+            <Ionicons name="ribbon" size={15} color={palette.goldDark} />
+            <Text style={styles.statusTitle} numberOfLines={1}>
+              Merkez Seviye 12
+            </Text>
+          </View>
+          <ProgressBar value={0.69} label="1.250 / 1.800 XP" />
+          <Text style={styles.statusHelper} numberOfLines={2}>
+            Bir sonraki seviye için 550 XP kaldı.
+          </Text>
+        </View>
+        <View style={styles.statusChest}>
+          <Image source={rewardChestImage} style={styles.chestImage} contentFit="contain" />
+        </View>
+      </View>
+    </View>
+  );
 }
 
-export function HubReferenceHome({
-  presentation,
-  scrollFooter,
-}: HubReferenceHomeProps) {
-  const { scrollBottomPadding, isCompact } = useHubLayoutMetrics();
-  const pilotDay = useGameStore((s) => s.gameState.pilot.currentPilotDay);
-  const badgeState = useGameStore((s) => s.gameState.pilot.badgeState);
-  const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
-  const hubBadgeShowcase = useMemo(
-    () => buildHubBadgeShowcaseSummary(badgeState, pilotDay),
-    [badgeState, pilotDay],
+function ProgressFlowCard() {
+  return (
+    <View style={styles.flowCard}>
+      <View style={styles.flowHeader}>
+        <View>
+          <SectionHeader title="MERKEZ AKIŞI" />
+          <Text style={styles.flowSubText}>2 / 5 adım tamamlandı</Text>
+        </View>
+        <View style={styles.nextRewardBox}>
+          <Text style={styles.nextRewardLabel}>Sonraki Ödül</Text>
+          <Image source={rewardChestImage} style={styles.nextRewardImage} contentFit="contain" />
+          <Text style={styles.nextRewardValue}>+100 XP</Text>
+        </View>
+      </View>
+      <View style={styles.flowSteps}>
+        {flowSteps.map((step, index) => (
+          <View key={step.id} style={styles.flowStepWrap}>
+            {index > 0 ? (
+              <View
+                style={[
+                  styles.flowConnector,
+                  flowSteps[index - 1]?.state === 'done' ? styles.flowConnectorDone : undefined,
+                ]}
+              />
+            ) : null}
+            <View
+              style={[
+                styles.flowStep,
+                step.state === 'done' ? styles.flowStepDone : undefined,
+                step.state === 'active' ? styles.flowStepActive : undefined,
+              ]}>
+              {step.state === 'active' ? (
+                <Text style={styles.flowStepActiveText}>{step.label}</Text>
+              ) : (
+                <Ionicons
+                  name={step.state === 'locked' ? 'lock-closed' : step.icon}
+                  size={17}
+                  color={step.state === 'done' ? palette.white : palette.muted}
+                />
+              )}
+            </View>
+            {step.state === 'done' ? (
+              <View style={styles.flowCheck}>
+                <Ionicons name="checkmark" size={9} color={palette.white} />
+              </View>
+            ) : null}
+          </View>
+        ))}
+      </View>
+    </View>
   );
-  const gameDay = useGameStore((s) => s.gameState.city.day);
-  const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
-  const hubAuthorityPermissionPreview = useMemo(
-    () =>
-      buildAuthorityPermissionPreviewCompactSummary({
-        authorityState,
-        day: pilotDay,
-      }),
-    [authorityState, pilotDay],
-  );
-  const hubDistrictExpansion = useMemo(
-    () =>
-      buildDistrictOperationUnlockBindingCompactSummary({
-        currentDay: gameDay,
-        pilotDay,
-        authorityState,
-        mainOperationSeason,
-      }),
-    [authorityState, gameDay, mainOperationSeason, pilotDay],
-  );
-  const showHubDistrictExpansion = hubDistrictExpansion.visible;
-  const showHubAuthorityPreview =
-    !showHubDistrictExpansion &&
-    hubAuthorityPermissionPreview.visible &&
-    Boolean(hubAuthorityPermissionPreview.nextPermissionLine);
-  const showHubBadgeShowcase =
-    hubBadgeShowcase.visible &&
-    Number(showHubDistrictExpansion) + Number(showHubAuthorityPreview) < 2;
+}
 
-  const activeTarget = presentation.activeTarget;
-  const reducedMotion = useCreviaReducedMotion();
-  const hubMotionEnabled = useMemo(() => {
-    if (reducedMotion) return false;
-    return resolveMotionDensity({ day: pilotDay }) !== 'day1_minimal';
-  }, [pilotDay, reducedMotion]);
-  const sectionGap = resolveCenterSectionGap(isCompact);
+function RewardsSection() {
+  const router = useRouter();
+
+  return (
+    <View style={styles.section}>
+      <SectionHeader title="KAZANIMLAR" subtitle="Başarıların ve ödüllerin" />
+      <View style={styles.rewardGrid}>
+        <LinearGradient
+          colors={[palette.tealDark, palette.tealMid]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.rewardCard, styles.dailyRewardCard]}>
+          <View style={styles.rewardMedal}>
+            <Ionicons name="shield-checkmark" size={28} color={palette.goldLight} />
+          </View>
+          <Text style={styles.rewardDarkTitle}>GÜNLÜK ÖDÜL</Text>
+          <Text style={styles.rewardDarkBody}>Bugün giriş yaptın!</Text>
+          <View style={styles.rewardStatsRow}>
+            <Text style={styles.rewardDarkStat}>+25.000</Text>
+            <Text style={styles.rewardDarkStat}>+100 XP</Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Ödül Al"
+            onPress={() => playLightImpactHaptic()}
+            style={({ pressed }) => [styles.rewardDarkCta, pressStyle(pressed)]}>
+            <Text style={styles.rewardDarkCtaText}>ÖDÜL AL</Text>
+          </Pressable>
+        </LinearGradient>
+
+        <View style={[styles.rewardCard, styles.stageRewardCard]}>
+          <View style={styles.stageRewardCopy}>
+            <Text style={styles.rewardLightTitle}>AŞAMA ÖDÜLÜ</Text>
+            <Text style={styles.rewardLightBody} numberOfLines={2}>
+              Büyüyen Kasaba 4. kilometre taşı
+            </Text>
+            <ProgressBar value={0.6} />
+            <Text style={styles.stageProgressText}>3/5</Text>
+          </View>
+          <Image source={rewardChestImage} style={styles.stageChestImage} contentFit="contain" />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="İlerlemeni Gör"
+            onPress={() => {
+              playLightImpactHaptic();
+              router.push('/progression' as Href);
+            }}
+            style={({ pressed }) => [styles.rewardLightCta, pressStyle(pressed)]}>
+            <Text style={styles.rewardLightCtaText}>İLERLEMENİ GÖR</Text>
+            <Ionicons name="chevron-forward" size={15} color={palette.tealMid} />
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function NextMissionCard() {
+  const router = useRouter();
+
+  return (
+    <View style={styles.section}>
+      <SectionHeader title="SONRAKİ GÖREV" subtitle="Şehrini bir adım daha ileri taşı" />
+      <View style={styles.nextMissionCard}>
+        <View style={styles.missionImageWrap}>
+          <AssetImage source={parkImage} />
+        </View>
+        <View style={styles.missionCopy}>
+          <Text style={styles.missionTitle} numberOfLines={1}>
+            Şehir Parkı İnşa Et
+          </Text>
+          <Text style={styles.missionBody} numberOfLines={2}>
+            Vatandaşların mutluluğunu artırmak için 3. seviyeli bir park aç.
+          </Text>
+          <View style={styles.missionMetaRow}>
+            <View style={styles.missionMetaPill}>
+              <Ionicons name="cash" size={12} color={palette.goldDark} />
+              <Text style={styles.missionMetaText}>25.000</Text>
+            </View>
+            <View style={styles.missionMetaPill}>
+              <Ionicons name="cube" size={12} color={palette.tealMid} />
+              <Text style={styles.missionMetaText}>150</Text>
+            </View>
+            <View style={styles.missionMetaPill}>
+              <Ionicons name="flash" size={12} color={palette.green} />
+              <Text style={styles.missionMetaText}>10</Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.missionSide}>
+          <View style={styles.progressCircle}>
+            <Text style={styles.progressCircleText}>2/3</Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Devam Et"
+            onPress={() => {
+              playLightImpactHaptic();
+              router.push('/events' as Href);
+            }}
+            style={({ pressed }) => [styles.missionCta, pressStyle(pressed)]}>
+            <Text style={styles.missionCtaText}>DEVAM ET</Text>
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+export function HubReferenceHome({ presentation, scrollFooter }: HubReferenceHomeProps) {
+  const { compact, topInset, bottomPadding } = useLayoutMetrics();
 
   return (
     <View style={styles.root}>
@@ -259,81 +540,18 @@ export function HubReferenceHome({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ paddingBottom: scrollBottomPadding }}>
-        <CenterMotionEnter
-          index={0}
-          reducedMotion={reducedMotion}
-          day={pilotDay}
-          hubMotionEnabled={hubMotionEnabled}>
-          <CenterHomeHeader header={presentation.headerSummary} />
-        </CenterMotionEnter>
-        <View style={[styles.body, { gap: sectionGap }]}>
-          <CenterMotionEnter
-            index={1}
-            reducedMotion={reducedMotion}
-            day={pilotDay}
-            hubMotionEnabled={hubMotionEnabled}>
-            <CenterCitySummaryCard summary={presentation.citySummary} />
-          </CenterMotionEnter>
-          <CenterMotionEnter
-            index={2}
-            reducedMotion={reducedMotion}
-            day={pilotDay}
-            hubMotionEnabled={hubMotionEnabled}>
-            <CenterDailyRewardRoute reward={presentation.dailyReward} reducedMotion={reducedMotion} />
-          </CenterMotionEnter>
-          {shouldRenderActiveTarget(activeTarget) ? (
-            <CenterMotionEnter
-              index={3}
-              reducedMotion={reducedMotion}
-              day={pilotDay}
-              disabled={!hubMotionEnabled}
-              hubMotionEnabled={hubMotionEnabled}>
-              <HubActiveTaskCardStack activeTarget={activeTarget} reducedMotion={reducedMotion} />
-            </CenterMotionEnter>
-          ) : null}
-          {isCenterModuleRenderable(presentation.advisorSuggestion.visibility) ? (
-            <CenterMotionEnter
-              index={4}
-              reducedMotion={reducedMotion}
-              day={pilotDay}
-              disabled={!hubMotionEnabled}
-              hubMotionEnabled={hubMotionEnabled}>
-              <EceInsightCard
-                advisor={presentation.advisorSuggestion}
-                reducedMotion={reducedMotion}
-              />
-            </CenterMotionEnter>
-          ) : null}
-          <CenterOperationFocusSection
-            focus={presentation.operationFocus}
-            reducedMotion={reducedMotion}
-          />
-          <CenterOperationSignalsSection
-            signalsSection={presentation.operationSignals}
-            reducedMotion={reducedMotion}
-          />
-          <CenterQuickActionsSection
-            quickActions={presentation.quickActions}
-            reducedMotion={reducedMotion}
-          />
-          <CenterRecommendedPlanCard
-            plan={presentation.recommendedPlan}
-            reducedMotion={reducedMotion}
-          />
-          <CenterContinuationCardsSection
-            continuation={presentation.continuationCards}
-            reducedMotion={reducedMotion}
-          />
-          {showHubAuthorityPreview ? (
-            <HubAuthorityPermissionPreviewChip summary={hubAuthorityPermissionPreview} />
-          ) : null}
-          {showHubDistrictExpansion ? (
-            <HubDistrictExpansionChip summary={hubDistrictExpansion} />
-          ) : null}
-          {showHubBadgeShowcase ? <HubBadgeShowcaseChip summary={hubBadgeShowcase} /> : null}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPadding }]}>
+        <HeaderSection presentation={presentation} topInset={topInset} compact={compact} />
+        <View style={styles.body}>
+          <ShortcutRow />
+          <MainQuestCard />
+          <TodayStatusCard />
+          <ProgressFlowCard />
+          <CenterPortfolioSurface portfolio={presentation.portfolioSurface} />
+          <RewardsSection />
+          <NextMissionCard />
+          {scrollFooter ? <View style={styles.scrollFooter}>{scrollFooter}</View> : null}
         </View>
-        {scrollFooter ? <View style={styles.scrollFooter}>{scrollFooter}</View> : null}
       </ScrollView>
     </View>
   );
@@ -341,8 +559,8 @@ export function HubReferenceHome({
 
 const cardShadow = {
   shadowColor: palette.tealDark,
-  shadowOpacity: 0.06,
-  shadowRadius: 24,
+  shadowOpacity: 0.08,
+  shadowRadius: 18,
   shadowOffset: { width: 0, height: 8 },
   elevation: 3,
 } as const;
@@ -355,964 +573,790 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
   },
-  scrollFooter: {
+  scrollContent: {
+    gap: 12,
+  },
+  body: {
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
+    gap: 14,
+  },
+  scrollFooter: {
+    paddingTop: 4,
   },
   assetImage: {
     width: '100%',
     height: '100%',
   },
   header: {
+    minHeight: 132,
     paddingHorizontal: 16,
-    paddingBottom: 12,
-    overflow: 'hidden',
-  },
-  skylineOne: {
-    position: 'absolute',
-    right: 32,
-    top: 78,
-    width: 54,
-    height: 86,
-    backgroundColor: 'rgba(7,86,79,0.07)',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  skylineTwo: {
-    position: 'absolute',
-    right: 88,
-    top: 108,
-    width: 42,
-    height: 56,
-    backgroundColor: 'rgba(216,167,46,0.10)',
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-  },
-  skylineThree: {
-    position: 'absolute',
-    right: 142,
-    top: 120,
-    width: 70,
-    height: 42,
-    backgroundColor: 'rgba(7,86,79,0.05)',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
-  headerTop: {
-    minWidth: 0,
+    paddingBottom: 8,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 10,
+    overflow: 'hidden',
   },
-  avatarButton: {
-    flexShrink: 0,
-    position: 'relative',
-    alignItems: 'center',
-  },
-  profilePortrait: {
-    flexShrink: 0,
-  },
-  profileLevelBadge: {
+  headerBackdrop: {
     position: 'absolute',
+    right: 0,
+    top: 0,
+    width: '74%',
+    height: 164,
+    opacity: 0.22,
+  },
+  headerBackdropFade: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  identityArea: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+  },
+  avatarFrame: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    padding: 3,
+    backgroundColor: palette.goldLight,
+    borderWidth: 1,
+    borderColor: 'rgba(155,116,29,0.24)',
+    ...cardShadow,
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 34,
+    backgroundColor: palette.surface,
+  },
+  levelBadge: {
+    position: 'absolute',
+    right: -2,
     bottom: -2,
-    left: '50%',
-    marginLeft: -11,
-    minWidth: 22,
-    height: 20,
-    borderRadius: 10,
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 5,
-    backgroundColor: palette.goldDark,
-    borderWidth: 1.5,
-    borderColor: palette.goldSoft,
+    backgroundColor: palette.gold,
+    borderWidth: 2,
+    borderColor: palette.surface,
   },
-  profileLevelText: {
-    fontSize: 9,
+  levelBadgeText: {
+    fontSize: 10,
     fontWeight: '900',
-    color: palette.white,
+    color: palette.tealDark,
+    fontVariant: ['tabular-nums'],
   },
-  headerIdentity: {
+  headerCopy: {
     flex: 1,
     minWidth: 0,
     gap: 4,
-    paddingTop: 10,
-    justifyContent: 'center',
   },
-  headerName: {
-    fontSize: 20,
-    lineHeight: 24,
+  brandTitle: {
+    fontSize: 24,
+    lineHeight: 28,
     fontWeight: '900',
-    color: palette.text,
+    color: palette.teal,
   },
   locationRow: {
-    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
+    minWidth: 0,
   },
   locationText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: palette.tealMid,
+  },
+  roleText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: palette.muted,
+  },
+  resourceRow: {
+    flexShrink: 0,
+    flexDirection: 'row',
+    gap: 7,
+    paddingTop: 4,
+  },
+  resourceRowCompact: {
+    flexDirection: 'column',
+  },
+  resourcePill: {
+    minWidth: 84,
+    height: 36,
+    borderRadius: 18,
+    paddingLeft: 6,
+    paddingRight: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(216,167,46,0.22)',
+    position: 'relative',
+    ...cardShadow,
+  },
+  resourcePillGem: {
+    borderColor: 'rgba(13,113,104,0.14)',
+  },
+  resourceIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.goldLight,
+  },
+  resourceIconGem: {
+    backgroundColor: '#DDF7EE',
+  },
+  resourceValue: {
     flex: 1,
     minWidth: 0,
     fontSize: 12,
-    fontWeight: '600',
-    color: palette.tealMid,
-  },
-  headerAlertLine: {
-    marginTop: 4,
-    fontSize: 11,
-    fontWeight: '600',
-    color: palette.amber,
-  },
-  reputationBadge: {
-    width: 84,
-    height: 84,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 12,
-    flexShrink: 0,
-    marginTop: -2,
-  },
-  reputationBadgeImage: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-  },
-  reputationLabel: {
-    fontSize: 7,
-    fontWeight: '900',
-    color: palette.goldSoft,
-    textAlign: 'center',
-  },
-  reputationValue: {
-    fontSize: 19,
-    lineHeight: 22,
-    fontWeight: '900',
-    color: palette.goldSoft,
-    fontVariant: ['tabular-nums'],
-  },
-  resourceRow: {
-    flexDirection: 'row',
-    gap: 7,
-    marginTop: 12,
-    minWidth: 0,
-  },
-  resourceChip: {
-    flex: 1,
-    minWidth: 0,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    backgroundColor: palette.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-    ...cardShadow,
-  },
-  resourceValue: {
-    flexShrink: 1,
-    minWidth: 0,
-    fontSize: 10,
     fontWeight: '900',
     color: palette.text,
     fontVariant: ['tabular-nums'],
   },
   resourcePlus: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 17,
+    height: 17,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: palette.tealMid,
-    flexShrink: 0,
-    marginLeft: 1,
   },
-  gameStatusBar: {
-    height: 11,
-    borderRadius: 999,
+  resourceBadge: {
+    position: 'absolute',
+    top: -8,
+    right: 8,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.red,
     borderWidth: 1.5,
-    borderColor: '#C9A227',
-    backgroundColor: '#DDE8E4',
-    paddingHorizontal: 3,
-    justifyContent: 'center',
-    overflow: 'hidden',
+    borderColor: palette.surface,
   },
-  gameStatusBarFill: {
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: palette.tealMid,
+  resourceBadgeText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: palette.white,
   },
-  body: {
-    paddingHorizontal: 16,
-  },
-  eceCard: {
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+  shortcutRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
-    backgroundColor: palette.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-    ...cardShadow,
+    gap: 8,
   },
-  eceAvatarWrap: {
-    width: 58,
-    height: 68,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: palette.goldSoft,
-    flexShrink: 0,
-  },
-  eceAvatar: {
-    width: '100%',
-    height: '100%',
-  },
-  eceTextBlock: {
+  shortcutCard: {
     flex: 1,
     minWidth: 0,
-    gap: 4,
+    minHeight: 94,
+    borderRadius: 18,
+    paddingHorizontal: 6,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
+    position: 'relative',
+    ...cardShadow,
   },
-  eceName: {
-    fontSize: 12,
+  shortcutIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.surfaceWarm,
+    borderWidth: 1,
+    borderColor: 'rgba(216,167,46,0.16)',
+  },
+  shortcutLabel: {
+    width: '100%',
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '900',
+    color: palette.teal,
+    textAlign: 'center',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -5,
+    right: 10,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.red,
+    borderWidth: 1.5,
+    borderColor: palette.surface,
+  },
+  notificationBadgeText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: palette.white,
+  },
+  mainQuestCard: {
+    borderRadius: 24,
+    padding: 14,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,229,162,0.36)',
+    overflow: 'hidden',
+    ...cardShadow,
+  },
+  questSparkOne: {
+    position: 'absolute',
+    left: 26,
+    top: 22,
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    backgroundColor: 'rgba(255,229,162,0.10)',
+  },
+  questSparkTwo: {
+    position: 'absolute',
+    right: 28,
+    top: 34,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: 'rgba(255,229,162,0.12)',
+  },
+  questContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minWidth: 0,
+  },
+  questIllustration: {
+    width: 104,
+    height: 96,
+    borderRadius: 22,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    flexShrink: 0,
+  },
+  flagPole: {
+    position: 'absolute',
+    left: 38,
+    top: 16,
+    width: 4,
+    height: 45,
+    borderRadius: 2,
+    backgroundColor: palette.goldLight,
+  },
+  flagShape: {
+    position: 'absolute',
+    left: 42,
+    top: 17,
+    width: 34,
+    height: 22,
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+    backgroundColor: palette.gold,
+  },
+  questCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 5,
+  },
+  questTag: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(216,167,46,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,229,162,0.20)',
+  },
+  questTagText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: palette.goldLight,
+  },
+  questTitle: {
+    fontSize: 21,
+    lineHeight: 25,
+    fontWeight: '900',
+    color: palette.surfaceWarm,
+  },
+  questDescription: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '700',
+    color: 'rgba(255,252,245,0.76)',
+  },
+  xpBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.goldLight,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.55)',
+    flexShrink: 0,
+  },
+  xpBadgeText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: palette.goldDark,
+  },
+  questCtaShadow: {
+    alignSelf: 'flex-end',
+    minWidth: 204,
+    borderRadius: 999,
+    shadowColor: '#000',
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 4,
+  },
+  questCta: {
+    minHeight: 48,
+    borderRadius: 999,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  questCtaText: {
+    fontSize: 16,
     fontWeight: '900',
     color: palette.teal,
   },
-  eceText: {
+  sectionHeader: {
+    gap: 2,
+  },
+  sectionTitle: {
     fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '600',
-    color: palette.text,
+    fontWeight: '900',
+    letterSpacing: 0.7,
+    color: palette.teal,
   },
-  eceActionLine: {
-    marginTop: 2,
-    fontSize: 10,
+  sectionSubtitle: {
+    fontSize: 11,
     fontWeight: '700',
-    color: palette.tealMid,
+    color: palette.muted,
   },
-  miniIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 14,
+  statusCard: {
+    borderRadius: 22,
+    padding: 14,
+    gap: 10,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
+    ...cardShadow,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minWidth: 0,
+  },
+  statusCrest: {
+    width: 72,
+    height: 72,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+  },
+  statusCrestImage: {
+    position: 'absolute',
+    width: 72,
+    height: 72,
+  },
+  statusCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
+  },
+  statusTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  statusTitle: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 14,
+    fontWeight: '900',
+    color: palette.text,
+  },
+  progressTrack: {
+    height: 18,
+    borderRadius: 999,
+    padding: 3,
+    justifyContent: 'center',
+    overflow: 'hidden',
+    backgroundColor: '#E6E1D4',
+    borderWidth: 1,
+    borderColor: 'rgba(155,116,29,0.20)',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: palette.tealMid,
+  },
+  progressLabel: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    fontSize: 9,
+    fontWeight: '900',
+    color: palette.surface,
+    fontVariant: ['tabular-nums'],
+  },
+  statusHelper: {
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '700',
+    color: palette.muted,
+  },
+  statusChest: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.surfaceWarm,
+    borderWidth: 1,
+    borderColor: 'rgba(216,167,46,0.24)',
+    flexShrink: 0,
+  },
+  chestImage: {
+    width: 48,
+    height: 48,
+  },
+  flowCard: {
+    borderRadius: 22,
+    padding: 14,
+    gap: 12,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
+    ...cardShadow,
+  },
+  flowHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    minWidth: 0,
+  },
+  flowSubText: {
+    marginTop: 4,
+    fontSize: 15,
+    fontWeight: '900',
+    color: palette.teal,
+  },
+  nextRewardBox: {
+    width: 88,
+    borderRadius: 16,
+    padding: 8,
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: palette.surfaceWarm,
+    flexShrink: 0,
+  },
+  nextRewardLabel: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: palette.muted,
+  },
+  nextRewardImage: {
+    width: 38,
+    height: 38,
+  },
+  nextRewardValue: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: palette.teal,
+  },
+  flowSteps: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  flowStepWrap: {
+    flex: 1,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  flowConnector: {
+    position: 'absolute',
+    left: '-50%',
+    right: '50%',
+    top: 23,
+    height: 4,
+    backgroundColor: '#DED9CC',
+  },
+  flowConnectorDone: {
+    backgroundColor: '#7CCFA2',
+  },
+  flowStep: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0ECE1',
+    borderWidth: 2,
+    borderColor: '#DED8C9',
+    zIndex: 2,
+  },
+  flowStepDone: {
+    backgroundColor: palette.green,
+    borderColor: '#9DE0BA',
+  },
+  flowStepActive: {
+    backgroundColor: palette.goldLight,
+    borderColor: palette.gold,
+    shadowColor: palette.gold,
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  flowStepActiveText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: palette.goldDark,
+  },
+  flowCheck: {
+    position: 'absolute',
+    bottom: -2,
+    width: 17,
+    height: 17,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.green,
+    borderWidth: 1.5,
+    borderColor: palette.surface,
+    zIndex: 3,
   },
   section: {
     gap: 10,
-    minWidth: 0,
   },
-  sectionTitleRow: {
+  rewardGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    minWidth: 0,
-  },
-  sectionTitle: {
-    flexShrink: 0,
-    fontSize: 13,
-    fontWeight: '900',
-    color: palette.text,
-  },
-  sectionDivider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(155,116,29,0.22)',
-  },
-  sectionAction: {
-    flexShrink: 0,
-    fontSize: 10,
-    fontWeight: '900',
-    color: palette.goldDark,
-  },
-  focusScroll: {
-    gap: 10,
-    paddingRight: 12,
-  },
-  focusCard: {
-    width: 124,
-    borderRadius: 20,
-    padding: 9,
-    gap: 5,
-    backgroundColor: palette.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-    ...cardShadow,
-  },
-  focusImage: {
-    height: 84,
-    borderRadius: 14,
-    overflow: 'hidden',
-    backgroundColor: palette.tealSoft,
-  },
-  focusIconFloat: {
-    position: 'absolute',
-    left: 6,
-    top: 6,
-  },
-  focusTitle: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: palette.text,
-  },
-  focusLevel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: palette.muted,
-  },
-  focusProgressTrack: {
-    height: 6,
-    borderRadius: 999,
-    overflow: 'hidden',
-    backgroundColor: '#E6DDC7',
-  },
-  focusProgressFill: {
-    width: '62%',
-    height: '100%',
-    backgroundColor: palette.tealMid,
-  },
-  focusValue: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: palette.goldDark,
-    fontVariant: ['tabular-nums'],
-  },
-  cityDevCard: {
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    flexDirection: 'column',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: palette.gold,
-    minHeight: 86,
-    overflow: 'hidden',
-  },
-  citySummaryMetrics: {
-    flexDirection: 'row',
-    gap: 8,
-    minWidth: 0,
-  },
-  citySummaryMetric: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  cityDevBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(216,167,46,0.35)',
-    flexShrink: 0,
-  },
-  cityDevCenter: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  cityDevLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.72)',
-  },
-  cityDevValue: {
-    fontSize: 20,
-    lineHeight: 22,
-    fontWeight: '900',
-    color: palette.gold,
-    fontVariant: ['tabular-nums'],
-  },
-  cityDevNext: {
-    fontSize: 8,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.65)',
-  },
-  cityDevProgressTrack: {
-    height: 6,
-    borderRadius: 999,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(0,0,0,0.28)',
-    marginTop: 2,
-  },
-  cityDevProgressFill: {
-    height: '100%',
-    borderRadius: 999,
-    backgroundColor: palette.gold,
-  },
-  cityDevProgressText: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: palette.goldSoft,
-    fontVariant: ['tabular-nums'],
-  },
-  cityCrestWrap: {
-    flexShrink: 0,
-    width: 52,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cityCrestDiamond: {
-    width: 46,
-    height: 46,
-    borderRadius: 12,
-    transform: [{ rotate: '45deg' }],
-    overflow: 'hidden',
-    backgroundColor: palette.tealDark,
-    borderWidth: 1.5,
-    borderColor: palette.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cityCrestSky: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '45%',
-    backgroundColor: 'rgba(13,113,104,0.55)',
-  },
-  cityCrestBuildingLeft: {
-    position: 'absolute',
-    bottom: 6,
-    left: 8,
-    width: 8,
-    height: 14,
-    backgroundColor: 'rgba(245,227,175,0.55)',
-    transform: [{ rotate: '-45deg' }],
-  },
-  cityCrestBuildingCenter: {
-    position: 'absolute',
-    bottom: 6,
-    width: 10,
-    height: 18,
-    backgroundColor: palette.goldSoft,
-    transform: [{ rotate: '-45deg' }],
-  },
-  cityCrestBuildingRight: {
-    position: 'absolute',
-    bottom: 6,
-    right: 8,
-    width: 7,
-    height: 12,
-    backgroundColor: 'rgba(245,227,175,0.45)',
-    transform: [{ rotate: '-45deg' }],
-  },
-  cityCrestSpire: {
-    position: 'absolute',
-    top: 10,
-    width: 4,
-    height: 8,
-    backgroundColor: palette.gold,
-    transform: [{ rotate: '-45deg' }],
-  },
-  cityCrestGoldAccent: {
-    position: 'absolute',
-    bottom: 4,
-    width: 20,
-    height: 2,
-    backgroundColor: palette.gold,
-    transform: [{ rotate: '-45deg' }],
-  },
-  modernSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    minWidth: 0,
-    marginBottom: 2,
-  },
-  modernSectionTitleMark: {
-    width: 3,
-    height: 14,
-    borderRadius: 999,
-    backgroundColor: palette.gold,
-    flexShrink: 0,
-  },
-  modernSectionTitle: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 12,
-    fontWeight: '900',
-    color: palette.text,
-    letterSpacing: 0.6,
-  },
-  modernSectionAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    flexShrink: 0,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: 'rgba(7,86,79,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(7,86,79,0.08)',
-  },
-  modernSectionActionPressed: {
-    opacity: 0.82,
-  },
-  modernSectionActionText: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: palette.tealMid,
-    letterSpacing: 0.2,
-  },
-  signalList: {
     gap: 10,
   },
-  signalEmptyCard: {
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: palette.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  signalEmptyText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: palette.muted,
-  },
-  signalRow: {
-    borderRadius: 20,
-    paddingRight: 10,
-    paddingVertical: 11,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: palette.card,
-    borderWidth: 1,
-    borderColor: 'rgba(7,86,79,0.07)',
+  rewardCard: {
+    flex: 1,
     minWidth: 0,
+    minHeight: 162,
+    borderRadius: 20,
+    padding: 12,
     overflow: 'hidden',
     ...cardShadow,
   },
-  signalAccentBar: {
-    width: 4,
-    alignSelf: 'stretch',
-    borderTopRightRadius: 4,
-    borderBottomRightRadius: 4,
-    flexShrink: 0,
+  dailyRewardCard: {
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,229,162,0.30)',
   },
-  signalIconRing: {
+  rewardMedal: {
     width: 44,
     height: 44,
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
+    backgroundColor: 'rgba(255,229,162,0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.85)',
+    borderColor: 'rgba(255,229,162,0.28)',
   },
-  signalIconCore: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: palette.white,
-  },
-  signalCopy: {
-    flex: 1,
-    minWidth: 0,
-    gap: 4,
-    paddingRight: 2,
-  },
-  signalTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    minWidth: 0,
-  },
-  signalLiveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    flexShrink: 0,
-  },
-  signalTitle: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 13,
+  rewardDarkTitle: {
+    fontSize: 11,
     fontWeight: '900',
-    color: palette.text,
-    letterSpacing: -0.1,
+    color: palette.goldLight,
   },
-  signalBody: {
+  rewardDarkBody: {
     fontSize: 10,
     lineHeight: 14,
-    fontWeight: '600',
-    color: palette.muted,
+    fontWeight: '700',
+    color: 'rgba(255,252,245,0.78)',
   },
-  signalTrailing: {
-    alignItems: 'flex-end',
-    gap: 4,
-    flexShrink: 0,
-    minWidth: 52,
-  },
-  signalImpactLabel: {
-    fontSize: 7,
-    fontWeight: '900',
-    color: palette.muted,
-    letterSpacing: 0.4,
-  },
-  signalImpactPill: {
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-    minWidth: 50,
-    alignItems: 'center',
-  },
-  signalImpactValue: {
-    fontSize: 8,
-    fontWeight: '900',
-    letterSpacing: 0.3,
-  },
-  signalChevronBtn: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(7,86,79,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(7,86,79,0.08)',
-  },
-  quickGrid: {
+  rewardStatsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 9,
-    minWidth: 0,
+    gap: 8,
   },
-  quickGridCell: {
-    minWidth: 0,
+  rewardDarkStat: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: palette.goldLight,
   },
-  quickGridCellWide: {
-    flexBasis: '31%',
-    flexGrow: 1,
-    maxWidth: '33%',
-  },
-  quickGridCellCompact: {
-    flexBasis: '47%',
-    flexGrow: 1,
-    maxWidth: '48.5%',
-  },
-  quickActionTileOuter: {
-    minWidth: 0,
-    borderRadius: 18,
-    ...cardShadow,
-  },
-  quickActionTileLocked: {
-    opacity: 0.55,
-  },
-  quickLockedBanner: {
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: palette.tealSoft,
-    marginBottom: 4,
-  },
-  quickLockedText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: palette.tealMid,
-  },
-  quickActionTile: {
-    borderRadius: 18,
-    paddingHorizontal: 10,
-    paddingTop: 10,
-    paddingBottom: 11,
-    gap: 5,
-    minWidth: 0,
-    minHeight: 96,
-    borderWidth: 1,
-    borderColor: 'rgba(7,86,79,0.07)',
-    justifyContent: 'space-between',
-  },
-  quickActionTopRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    minWidth: 0,
-  },
-  quickActionIconRing: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  rewardDarkCta: {
+    marginTop: 'auto',
+    minHeight: 34,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
-  },
-  quickActionIconCore: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: palette.white,
+    backgroundColor: 'rgba(255,229,162,0.18)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
+    borderColor: 'rgba(255,229,162,0.34)',
   },
-  quickActionArrowChip: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.72)',
-    borderWidth: 1,
-    borderColor: 'rgba(7,86,79,0.08)',
-    flexShrink: 0,
-  },
-  quickTitle: {
+  rewardDarkCtaText: {
     fontSize: 11,
     fontWeight: '900',
-    color: palette.text,
-    letterSpacing: -0.1,
+    color: palette.goldLight,
   },
-  quickCaption: {
-    fontSize: 9,
-    lineHeight: 12,
-    fontWeight: '600',
+  stageRewardCard: {
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(216,167,46,0.22)',
+  },
+  stageRewardCopy: {
+    maxWidth: '72%',
+    gap: 6,
+  },
+  rewardLightTitle: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: palette.teal,
+  },
+  rewardLightBody: {
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '700',
     color: palette.muted,
   },
-  planCard: {
+  stageProgressText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: palette.goldDark,
+  },
+  stageChestImage: {
+    position: 'absolute',
+    right: 8,
+    top: 28,
+    width: 62,
+    height: 62,
+  },
+  rewardLightCta: {
+    marginTop: 'auto',
+    minHeight: 34,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: palette.surfaceWarm,
+    borderWidth: 1,
+    borderColor: 'rgba(216,167,46,0.20)',
+  },
+  rewardLightCtaText: {
+    flexShrink: 1,
+    fontSize: 9,
+    fontWeight: '900',
+    color: palette.teal,
+  },
+  nextMissionCard: {
+    minHeight: 126,
     borderRadius: 22,
     padding: 10,
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
-    backgroundColor: palette.card,
+    backgroundColor: palette.surface,
     borderWidth: 1,
     borderColor: palette.border,
-    overflow: 'hidden',
     ...cardShadow,
   },
-  planLockedCard: {
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: palette.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  planLockedText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: palette.muted,
-  },
-  continuationList: {
-    gap: 8,
-  },
-  continuationCard: {
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: palette.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-    gap: 4,
-  },
-  continuationTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: palette.teal,
-  },
-  continuationBody: {
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: '600',
-    color: palette.muted,
-  },
-  planIllustration: {
-    width: 138,
-    height: 112,
-    borderRadius: 16,
-    overflow: 'hidden',
-    flexShrink: 0,
-    backgroundColor: palette.tealSoft,
-    position: 'relative',
-  },
-  planIllustrationSky: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  planIllustrationWater: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 28,
-    backgroundColor: '#5BA4C9',
-  },
-  planIllustrationPark: {
-    position: 'absolute',
-    left: 12,
-    bottom: 18,
-    width: 72,
-    height: 36,
+  missionImageWrap: {
+    width: 92,
+    height: 92,
     borderRadius: 18,
-    backgroundColor: '#5CB85C',
+    overflow: 'hidden',
+    backgroundColor: palette.tealSoft,
+    flexShrink: 0,
   },
-  planIllustrationPath: {
-    position: 'absolute',
-    left: 20,
-    bottom: 30,
-    width: 50,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#D4C4A8',
-    transform: [{ rotate: '-8deg' }],
-  },
-  planIllustrationBuildingLeft: {
-    position: 'absolute',
-    right: 28,
-    bottom: 32,
-    width: 14,
-    height: 28,
-    backgroundColor: 'rgba(23,61,58,0.65)',
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-  },
-  planIllustrationBuildingRight: {
-    position: 'absolute',
-    right: 10,
-    bottom: 32,
-    width: 12,
-    height: 22,
-    backgroundColor: 'rgba(23,61,58,0.50)',
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-  },
-  planIllustrationMosque: {
-    position: 'absolute',
-    right: 18,
-    bottom: 38,
-    width: 10,
-    height: 16,
-    backgroundColor: palette.tealDark,
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-  },
-  planIllustrationTreeOne: {
-    position: 'absolute',
-    left: 22,
-    bottom: 42,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#3E9E6A',
-  },
-  planIllustrationTreeTwo: {
-    position: 'absolute',
-    left: 48,
-    bottom: 44,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#4CAF6E',
-  },
-  planCopy: {
+  missionCopy: {
     flex: 1,
     minWidth: 0,
-    gap: 7,
-    paddingRight: 2,
+    gap: 6,
   },
-  planTitle: {
-    fontSize: 15,
-    lineHeight: 19,
+  missionTitle: {
+    fontSize: 14,
     fontWeight: '900',
     color: palette.text,
   },
-  planBody: {
-    fontSize: 11,
-    lineHeight: 16,
-    fontWeight: '600',
+  missionBody: {
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '700',
     color: palette.muted,
   },
-  planMetaRow: {
-    marginTop: 'auto',
+  missionMetaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-    minWidth: 0,
+    gap: 5,
   },
-  planMetaItem: {
+  missionMetaPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
     borderRadius: 999,
     paddingHorizontal: 6,
-    paddingVertical: 3,
-    backgroundColor: palette.cardWarm,
-    minWidth: 0,
-    flexShrink: 1,
+    paddingVertical: 4,
+    backgroundColor: palette.surfaceWarm,
   },
-  planMetaLabel: {
-    fontSize: 7,
-    fontWeight: '900',
-    color: palette.muted,
-  },
-  planMetaValue: {
+  missionMetaText: {
     fontSize: 9,
     fontWeight: '900',
     color: palette.text,
-    fontVariant: ['tabular-nums'],
   },
-  bookmark: {
-    position: 'absolute',
-    right: 10,
-    top: 10,
-    width: 26,
-    height: 32,
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
+  missionSide: {
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: palette.tealDark,
-    borderWidth: 1,
-    borderColor: palette.gold,
-  },
-  approveButtonWrap: {
-    marginTop: 2,
-    ...cardShadow,
-  },
-  approveButton: {
-    minHeight: 56,
-    borderRadius: 999,
-    paddingHorizontal: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: palette.gold,
-    position: 'relative',
-  },
-  approveText: {
-    flexShrink: 1,
-    minWidth: 0,
-    fontSize: 15,
-    fontWeight: '900',
-    color: palette.goldSoft,
-    textAlign: 'center',
-  },
-  ctaArrow: {
-    position: 'absolute',
-    right: 10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: palette.goldSoft,
+    gap: 9,
     flexShrink: 0,
+  },
+  progressCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 4,
+    borderColor: palette.tealSoft,
+    borderTopColor: palette.tealMid,
+    borderRightColor: palette.tealMid,
+    backgroundColor: palette.surface,
+  },
+  progressCircleText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: palette.teal,
+  },
+  missionCta: {
+    minHeight: 34,
+    borderRadius: 11,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.teal,
+  },
+  missionCtaText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: palette.goldLight,
   },
 });

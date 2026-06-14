@@ -110,6 +110,7 @@ import {
 } from '@/features/reports/presentation/reportScreenPresentation';
 import type { PilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
 import { buildEndOfDayReportViewModel } from '@/features/reports/utils/endOfDayReportPresentation';
+import { buildMemoryFollowUpPresentationContext } from '@/features/shared/utils/memoryFollowUpPresentationContext';
 import type { useReportPilotCompletionSummary } from '@/features/pilot/hooks/usePilotCompletionSummary';
 import {
   buildFirstTenMinutesReportGuard,
@@ -232,7 +233,7 @@ export function EndOfDayReportView({
 
   const gameStatus = useGameStatus();
 
-  const model = useMemo(
+  const baseReportModel = useMemo(
     () =>
       buildEndOfDayReportViewModel({
         report,
@@ -256,8 +257,8 @@ export function EndOfDayReportView({
   const reportSecondaryMaxLines = reportSecondaryLineMaxLines(reportSecondaryCompactMode);
 
   const tomorrowNotesKey = useMemo(
-    () => (model.tomorrowNotes ?? []).join('\u0001'),
-    [model.tomorrowNotes],
+    () => (baseReportModel.tomorrowNotes ?? []).join('\u0001'),
+    [baseReportModel.tomorrowNotes],
   );
 
   const headerModel = buildReportHeaderModel(gameStatus, report.day);
@@ -412,7 +413,7 @@ export function EndOfDayReportView({
 
   const tomorrowPreviewBundle = useMemo(() => {
     const existingLines = [
-      ...(model.tomorrowNotes ?? []),
+      ...(baseReportModel.tomorrowNotes ?? []),
       reportCarryOverMemory?.summary ?? '',
       socialEchoForReport?.mention ?? '',
       eventDomainFocus?.reportEchoLine ?? '',
@@ -449,7 +450,7 @@ export function EndOfDayReportView({
     districtOperationActionReportLine,
     decisionImpactReportEcho,
     lastDecisionForDay,
-    model.tomorrowNotes,
+    baseReportModel.tomorrowNotes,
     operationSignals,
     report,
     reportCarryOverMemory,
@@ -458,8 +459,8 @@ export function EndOfDayReportView({
   ]);
 
   const tomorrowNotesModel = useMemo(
-    () => buildReportTomorrowNotesModel(model.tomorrowNotes),
-    [model.tomorrowNotes],
+    () => buildReportTomorrowNotesModel(baseReportModel.tomorrowNotes),
+    [baseReportModel.tomorrowNotes],
   );
 
   const reportFatigueState = useMemo(() => {
@@ -517,7 +518,7 @@ export function EndOfDayReportView({
         contentPackMeta: reportPackWiringContext.contentPackMeta,
         event: reportPackWiringContext.event,
         existingLines: [
-          ...(model.tomorrowNotes ?? []),
+          ...(baseReportModel.tomorrowNotes ?? []),
           ...(report.summaryLines ?? []),
           ...(report.carryOverSummaryLines ?? []),
           reportCarryOverMemory?.summary ?? '',
@@ -530,7 +531,7 @@ export function EndOfDayReportView({
     [
       districtOperationActionReportLine,
       eventDomainFocus?.reportEchoLine,
-      model.tomorrowNotes,
+      baseReportModel.tomorrowNotes,
       operationSignals,
       operationalResources,
       postPilotOperation,
@@ -587,7 +588,7 @@ export function EndOfDayReportView({
         },
         postPilotPhase: postPilotOperation?.phase,
         existingLines: [
-          ...(model.tomorrowNotes ?? []),
+          ...(baseReportModel.tomorrowNotes ?? []),
           reportCarryOverMemory?.summary ?? '',
           socialEchoForReport?.mention ?? '',
           eventDomainFocus?.reportEchoLine ?? '',
@@ -601,7 +602,7 @@ export function EndOfDayReportView({
     decisionImpactReportEcho,
     eventDomainFocus?.reportEchoLine,
     lastDecisionForDay,
-    model.tomorrowNotes,
+    baseReportModel.tomorrowNotes,
     operationSignals,
     operationalResources,
     postPilotOperation?.phase,
@@ -985,9 +986,69 @@ export function EndOfDayReportView({
     tomorrowRiskPresentation.report?.mainLine,
   ]);
 
+  const memoryFollowUpContext = useMemo(
+    () =>
+      buildMemoryFollowUpPresentationContext({
+        day: report.day,
+        gameState,
+        operationSignals,
+        socialPulseState,
+        hubTomorrowRisk: tomorrowRiskPresentation.hub ?? undefined,
+        hubImpactExplanationLine: decisionImpactReportEcho,
+        hubCityJournal: cityJournalReportLine
+          ? {
+              title: 'Şehir Günlüğü',
+              primaryLine: cityJournalReportLine,
+              secondaryLine: null,
+              visible: true,
+            }
+          : null,
+        hubDistrictReportLine: districtReportCardLine,
+        hubStoryChainLine: storyChainReportLine,
+        hubVehicleMaintenanceLine: resolvedVehicleMaintenanceReportLine ?? undefined,
+        hubTeamSpecializationLine: teamSpecializationReportLine ?? undefined,
+        report,
+      }),
+    [
+      cityJournalReportLine,
+      decisionImpactReportEcho,
+      districtReportCardLine,
+      gameState,
+      operationSignals,
+      report,
+      resolvedVehicleMaintenanceReportLine,
+      socialPulseState,
+      storyChainReportLine,
+      teamSpecializationReportLine,
+      tomorrowRiskPresentation.hub,
+    ],
+  );
+
+  const model = useMemo(
+    () =>
+      buildEndOfDayReportViewModel({
+        report,
+        metrics,
+        dailyXpReport,
+        day1PriorityLine,
+        day1GoalsLine,
+        postPilotLightDay,
+        memoryFollowUpContext,
+      }),
+    [
+      report,
+      metrics,
+      dailyXpReport,
+      day1PriorityLine,
+      day1GoalsLine,
+      postPilotLightDay,
+      memoryFollowUpContext,
+    ],
+  );
+
   const reportSystemsIntegration = useMemo(() => {
     const existingEchoLines: string[] = [
-      ...(model.tomorrowNotes ?? []),
+      ...(baseReportModel.tomorrowNotes ?? []),
       ...(report.summaryLines ?? []),
       ...(report.carryOverSummaryLines ?? []),
       reportCarryOverMemory?.summary ?? '',
@@ -1113,7 +1174,7 @@ export function EndOfDayReportView({
     eventDomainFocus?.reportEchoLine,
     eventDomainFocus?.summary,
     lastDecisionForDay,
-    model.tomorrowNotes,
+    baseReportModel.tomorrowNotes,
     operationalResources,
     operationSignals,
     pilotStatus,

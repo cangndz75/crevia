@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { buildAuthorityGameplayPresentationContext } from '@/core/authority/authorityGameplayUnlockModel';
 import { operationInspectScanConfig } from '@/core/motion/motionPresets';
 import type { EventCard } from '@/core/models/EventCard';
 import {
@@ -27,6 +28,7 @@ import {
   buildSignalSummary,
   resolveInspectDistrictId,
 } from '@/features/events/utils/eventWorkflowPresentation';
+import { useGameStore } from '@/store/useGameStore';
 import { useCreviaReducedMotion } from '@/shared/motion';
 
 type EventInspectPhaseProps = {
@@ -47,6 +49,7 @@ export function EventInspectPhase({
   isDay1LearningEvent = false,
 }: EventInspectPhaseProps) {
   const reducedMotion = useCreviaReducedMotion();
+  const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
   const hasRevealedRef = useRef(false);
   const [interactionState, setInteractionState] = useState<EventInspectInteractionState>(() =>
     hasRevealedRef.current ? 'revealed' : 'idle',
@@ -63,6 +66,16 @@ export function EventInspectPhase({
     [event],
   );
 
+  const authorityGameplayContext = useMemo(
+    () =>
+      buildAuthorityGameplayPresentationContext({
+        authorityState,
+        day: gameDay,
+        isDay1LearningEvent,
+      }),
+    [authorityState, gameDay, isDay1LearningEvent],
+  );
+
   const presentation = useMemo(
     () =>
       buildEventInspectPhasePresentation({
@@ -71,8 +84,16 @@ export function EventInspectPhase({
         reducedMotion,
         day: gameDay,
         isDay1LearningEvent,
+        authorityGameplayContext,
       }),
-    [event, gameDay, interactionState, isDay1LearningEvent, reducedMotion],
+    [
+      authorityGameplayContext,
+      event,
+      gameDay,
+      interactionState,
+      isDay1LearningEvent,
+      reducedMotion,
+    ],
   );
 
   const scanConfig = useMemo(

@@ -11,6 +11,7 @@ import { normalizeContainerNeighborhoodId } from '@/core/containers/containerNei
 import { createInitialContainerState } from '@/core/containers/containerSeed';
 import { createInitialVehicleState } from '@/core/vehicles/vehicleSeed';
 import { generateDailyEventSet } from '@/core/game/generateDailyEventSet';
+import { buildProfilesForEventIds } from '@/core/eventVariety/eventGameplayVarietyModel';
 import { buildEventCardPriorityChip } from '@/core/events/eventContentPresentation';
 import {
   appendPilotEventContentMemory,
@@ -392,3 +393,56 @@ if (warned.length > 0) {
 
 // eslint-disable-next-line no-console
 console.log('\nEvent variety analysis passed.');
+
+const gameplayProbeEvents: EventCard[] = [];
+for (const config of SCENARIOS) {
+  const bundle = createDay1Seed();
+  let gameState: GameState = bundle.gameState;
+  let eventPool: EventCard[] = [];
+
+  for (let day = 1; day <= 7; day += 1) {
+    const catalog = cloneEvents(mergeEventCatalogs(pilotEvents, eventPool));
+    const dailySet = generateDailyEventSet({
+      gameState: {
+        ...gameState,
+        pilot: {
+          ...gameState.pilot,
+          currentPilotDay: day,
+          selectedDistrictId: getRhythmPilotDistrictForDay(day),
+        },
+      },
+      day,
+      districtId: getRhythmPilotDistrictForDay(day),
+      events: catalog,
+      containerState: createInitialContainerState(day),
+      vehicleState: createInitialVehicleState(day),
+      dailyPriorityKey: config.priorityForDay(day),
+    });
+    eventPool = catalog;
+    gameState = {
+      ...gameState,
+      pilot: appendPilotEventContentMemory(
+        { ...gameState.pilot, currentPilotDay: day, dailyEventSet: dailySet },
+        catalog,
+        dailySet,
+      ),
+    };
+    for (const id of dailySet.allEventIds) {
+      const card = catalog.find((e) => e.id === id);
+      if (card) gameplayProbeEvents.push(card);
+    }
+  }
+}
+
+const probeProfiles = buildProfilesForEventIds(gameplayProbeEvents.slice(0, 40), { day: 4 });
+const shapeSet = new Set(probeProfiles.map((p) => p.decisionShape));
+const pressureSet = new Set(probeProfiles.map((p) => p.primaryPressure));
+
+// eslint-disable-next-line no-console
+console.log(
+  `\nGameplay pressure probe (sample): decisionShapes=${shapeSet.size} primaryPressures=${pressureSet.size}`,
+);
+// eslint-disable-next-line no-console
+console.log(
+  `  shapes: ${[...shapeSet].join(', ')} | pressures: ${[...pressureSet].join(', ')}`,
+);

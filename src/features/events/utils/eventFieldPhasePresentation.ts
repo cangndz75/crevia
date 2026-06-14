@@ -1,6 +1,11 @@
 import type { CompatibilityLabel } from '@/core/assignments/assignmentTypes';
 import type { EventAssignmentState } from '@/core/assignments/assignmentTypes';
 import type { EventCard } from '@/core/models/EventCard';
+import {
+  fieldVarietyHintLine,
+  getEventGameplayVarietyProfile,
+} from '@/core/eventVariety/eventGameplayVarietyPresentation';
+import { applyAuthorityToFieldAssignmentEffect } from '@/core/authority/authorityGameplayUnlockPresentation';
 import type { MicroDecisionCardModel } from '@/core/microDecisions/microDecisionTypes';
 import {
   operationMotionFieldAutoCompleteDurationMs,
@@ -128,6 +133,8 @@ export type BuildEventFieldPhasePresentationInput = {
   day?: number;
   isDay1LearningEvent?: boolean;
   reducedMotion?: boolean;
+  recentVarietyProfiles?: import('@/core/eventVariety/eventGameplayVarietyTypes').BuildEventGameplayVarietyProfileInput['recentProfiles'];
+  authorityGameplayContext?: import('@/core/authority/authorityGameplayUnlockTypes').AuthorityGameplayPresentationContext;
 };
 
 const TIMELINE_STEP_DEFS: Array<{
@@ -252,6 +259,8 @@ function buildTimeline(
   interactionState: EventFieldInteractionState,
   timelineStepIndex: number,
   assignmentEffect: EventFieldAssignmentEffect,
+  event?: EventCard,
+  varietyInput?: Pick<BuildEventFieldPhasePresentationInput, 'day' | 'isDay1LearningEvent' | 'recentVarietyProfiles'>,
 ): EventFieldTimeline {
   const maxIndex = TIMELINE_STEP_DEFS.length - 1;
   const currentIndex =
@@ -283,6 +292,23 @@ function buildTimeline(
     helperText = 'Rota ve kaynak kullanımı izleniyor';
   } else if (currentStepId === 'intervention') {
     helperText = 'Saha müdahalesi devam ediyor';
+  }
+
+  if (event) {
+    const profile = getEventGameplayVarietyProfile(event, {
+      day: varietyInput?.day,
+      isDay1LearningEvent: varietyInput?.isDay1LearningEvent,
+      recentProfiles: varietyInput?.recentVarietyProfiles,
+    });
+    const fieldHint = fieldVarietyHintLine(profile);
+    if (
+      fieldHint &&
+      interactionState === 'running' &&
+      (profile.primaryPressure === 'social_sensitivity' ||
+        profile.primaryPressure === 'container_network_pressure')
+    ) {
+      helperText = fieldHint;
+    }
   }
 
   return {
@@ -317,6 +343,19 @@ export function buildEventFieldAdvisorComment(
       title: 'Ece',
       text: 'Şimdi operasyonu takip ediyoruz. Tamamlandığında kararın şehir etkisini göreceksin.',
       tone: 'teaching',
+    };
+  }
+
+  const profile = getEventGameplayVarietyProfile(input.event, {
+    day: input.day,
+    isDay1LearningEvent: input.isDay1LearningEvent,
+    recentProfiles: input.recentVarietyProfiles,
+  });
+  if (profile.primaryPressure === 'social_sensitivity' && profile.fieldHintLine) {
+    return {
+      title: 'Ece',
+      text: profile.fieldHintLine,
+      tone: 'calm',
     };
   }
 
@@ -417,8 +456,15 @@ export function buildEventFieldPhasePresentation(
   const hasMicroDecision = Boolean(input.microDecision);
 
   const selectedPlan = buildSelectedPlanSummary(input);
-  const assignmentEffect = buildAssignmentEffect(input.assignment);
-  const timeline = buildTimeline(interactionState, timelineStepIndex, assignmentEffect);
+  const assignmentEffect = applyAuthorityToFieldAssignmentEffect(
+    buildAssignmentEffect(input.assignment),
+    input.authorityGameplayContext,
+  );
+  const timeline = buildTimeline(interactionState, timelineStepIndex, assignmentEffect, input.event, {
+    day: input.day,
+    isDay1LearningEvent: input.isDay1LearningEvent,
+    recentVarietyProfiles: input.recentVarietyProfiles,
+  });
   const advisorComment = buildEventFieldAdvisorComment(
     input,
     assignmentEffect,

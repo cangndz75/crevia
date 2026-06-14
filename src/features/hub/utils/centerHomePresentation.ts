@@ -51,8 +51,16 @@ import {
   type CenterContinuationCards,
 } from './centerContinuationCardsPresentation';
 import {
+  buildCenterPortfolioSurface,
+  type CenterPortfolioSurfaceModel,
+} from './centerDailyCapacityPortfolioPresentation';
+import {
   applyCenterVisibilityPolicy,
 } from './centerStatePolicy';
+import {
+  buildMemoryFollowUpPresentationContext,
+  type MemoryFollowUpPresentationContext,
+} from '@/features/shared/utils/memoryFollowUpPresentationContext';
 
 export { isCenterModuleRenderable } from './centerStatePolicy';
 
@@ -106,6 +114,7 @@ export type { CenterRecommendedPlan as CenterHomeRecommendedPlan } from './cente
 
 export type { CenterContinuationCards as CenterHomeContinuationCards } from './centerContinuationCardsPresentation';
 export type { CenterContinuationCard as CenterHomeContinuationCard } from './centerContinuationCardsPresentation';
+export type { CenterPortfolioSurfaceModel as CenterHomePortfolioSurface } from './centerDailyCapacityPortfolioPresentation';
 
 export type CenterHomeVisibilityFlags = Record<
   CenterHomeModuleKey,
@@ -121,6 +130,7 @@ export type CenterHomePresentation = {
   activeTarget: CenterActiveTarget;
   advisorSuggestion: CenterAdvisorSuggestion;
   operationFocus: CenterOperationFocus;
+  portfolioSurface: CenterPortfolioSurfaceModel;
   operationSignals: CenterOperationSignals;
   quickActions: CenterQuickActions;
   recommendedPlan: CenterRecommendedPlan;
@@ -227,6 +237,8 @@ function buildAdvisorSuggestion(
   citySummary: CenterCitySummary,
   recommendedPlanBody: string,
   visibility: HubCardVisibilityModel,
+  eceStrategyLines?: MemoryFollowUpPresentationContext['eceStrategyLines'],
+  followUpActions?: MemoryFollowUpPresentationContext['followUpActions'],
 ): CenterAdvisorSuggestion {
   return buildCenterAdvisorSuggestion({
     gameState: input.gameState,
@@ -242,6 +254,8 @@ function buildAdvisorSuggestion(
     socialPulseState: input.socialPulseState,
     cardVisibility: visibility,
     recommendedPlanBody,
+    eceStrategyLines,
+    followUpActions,
   });
 }
 
@@ -362,6 +376,7 @@ function buildContinuationCardsSection(
     citySummary: CenterCitySummary;
     dailyReward: CenterDailyReward;
     headerSummary: CenterHeaderSummary;
+    memoryFollowUp?: MemoryFollowUpPresentationContext;
   },
 ): CenterContinuationCards {
   return buildCenterContinuationCards({
@@ -381,6 +396,33 @@ function buildContinuationCardsSection(
     hubImpactExplanationLine: input.hubImpactExplanationLine,
     hubVehicleMaintenanceLine: input.hubVehicleMaintenanceLine,
     hubTeamSpecializationLine: input.hubTeamSpecializationLine,
+    oneMoreDayRetention: context.memoryFollowUp?.oneMoreDayRetention,
+    eceStrategyLines: context.memoryFollowUp?.eceStrategyLines,
+    cityMemoryVisibility: context.memoryFollowUp?.cityMemoryVisibility,
+    followUpActions: context.memoryFollowUp?.followUpActions,
+  });
+}
+
+function buildPortfolioSurfaceSection(
+  input: BuildCenterHomePresentationInput,
+  day: number,
+  context: {
+    operationFocus: CenterOperationFocus;
+    operationSignals: CenterOperationSignals;
+    recommendedPlanBody: string;
+  },
+): CenterPortfolioSurfaceModel {
+  return buildCenterPortfolioSurface({
+    gameState: input.gameState,
+    day,
+    operationSignals: input.operationSignals,
+    socialPulseState: input.socialPulseState,
+    hubTomorrowRisk: input.hubTomorrowRisk,
+    hubVehicleMaintenanceLine: input.hubVehicleMaintenanceLine,
+    hubTeamSpecializationLine: input.hubTeamSpecializationLine,
+    operationFocus: context.operationFocus,
+    operationSignalsSection: context.operationSignals,
+    recommendedPlanBody: context.recommendedPlanBody,
   });
 }
 
@@ -434,6 +476,21 @@ export function buildCenterHomePresentation(
     visibility,
     { dailyReward, headerSummary },
   );
+
+  const memoryFollowUpContext = buildMemoryFollowUpPresentationContext({
+    day,
+    gameState: input.gameState,
+    operationSignals: input.operationSignals,
+    socialPulseState: input.socialPulseState,
+    hubTomorrowRisk: input.hubTomorrowRisk,
+    hubImpactExplanationLine: input.hubImpactExplanationLine,
+    hubCityJournal: input.hubCityJournal,
+    hubDistrictReportLine: input.hubDistrictReportLine,
+    hubStoryChainLine: input.hubStoryChainLine,
+    hubVehicleMaintenanceLine: input.hubVehicleMaintenanceLine,
+    hubTeamSpecializationLine: input.hubTeamSpecializationLine,
+  });
+
   const advisorSuggestion = buildAdvisorSuggestion(
     input,
     day,
@@ -442,6 +499,8 @@ export function buildCenterHomePresentation(
     citySummaryForAdvisor,
     recommendedPlanDraft.body,
     visibility,
+    memoryFollowUpContext.eceStrategyLines,
+    memoryFollowUpContext.followUpActions,
   );
 
   const operationSignals = buildOperationSignalsSection(
@@ -489,6 +548,11 @@ export function buildCenterHomePresentation(
       headerSummary,
     },
   );
+  const portfolioSurface = buildPortfolioSurfaceSection(input, day, {
+    operationFocus,
+    operationSignals,
+    recommendedPlanBody: recommendedPlanFinal.body,
+  });
 
   const quickActions = buildQuickActionsSection(
     input,
@@ -507,6 +571,7 @@ export function buildCenterHomePresentation(
     activeTarget,
     advisorSuggestion,
     operationFocus,
+    portfolioSurface,
     operationSignals,
     quickActions,
     recommendedPlan: recommendedPlanFinal,
@@ -519,6 +584,7 @@ export function buildCenterHomePresentation(
       citySummary,
       dailyReward,
       headerSummary,
+      memoryFollowUp: memoryFollowUpContext,
     }),
   };
 

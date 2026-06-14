@@ -1,5 +1,25 @@
 import { buildAuthorityPermissionPreviewCompactSummary } from '@/core/authority/authorityPermissionPreviewModel';
 import type { CityJournalHubPresentation } from '@/core/cityJournal';
+import {
+  buildDecisionConsequenceHubLine,
+  buildDecisionConsequenceThreadsFromHub,
+} from '@/core/decisionConsequence';
+import {
+  buildHubCityMemoryHint,
+  type CityMemoryVisibilityResult,
+} from '@/core/cityMemoryVisibility';
+import {
+  buildPrimaryFollowUpActionCard,
+  type FollowUpActionResult,
+} from '@/core/followUpActions';
+import {
+  buildEceContinuationLine,
+  type EceStrategyLineResult,
+} from '@/core/eceStrategyLines';
+import {
+  buildOneMoreDayContinuationLine,
+  type OneMoreDayRetentionResult,
+} from '@/core/oneMoreDayRetention';
 import type { GameState } from '@/core/models/GameState';
 
 import { buildHubBadgeShowcaseSummary } from './hubBadgeShowcaseModel';
@@ -100,6 +120,10 @@ export type BuildCenterContinuationCardsInput = {
   hubImpactExplanationLine?: string | null;
   hubVehicleMaintenanceLine?: string | null;
   hubTeamSpecializationLine?: string | null;
+  oneMoreDayRetention?: OneMoreDayRetentionResult | null;
+  eceStrategyLines?: EceStrategyLineResult | null;
+  cityMemoryVisibility?: CityMemoryVisibilityResult | null;
+  followUpActions?: FollowUpActionResult | null;
 };
 
 const ALLOWED_KINDS: CenterContinuationCardKind[] = [
@@ -274,6 +298,22 @@ function operationSignalsCoverTopic(
   return false;
 }
 
+function buildContinuationConsequenceLine(
+  input: BuildCenterContinuationCardsInput,
+  avoidLines: Array<string | null | undefined>,
+): string | null {
+  return buildDecisionConsequenceHubLine(
+    buildDecisionConsequenceThreadsFromHub({
+      day: input.day,
+      impactLine: input.hubImpactExplanationLine,
+      districtLine: input.hubDistrictReportLine,
+      storyLine: input.hubStoryChainLine,
+      cityJournalLine: input.hubCityJournal?.primaryLine ?? input.hubCityJournal?.secondaryLine,
+    }),
+    avoidLines,
+  );
+}
+
 function collectCandidates(input: BuildCenterContinuationCardsInput): Candidate[] {
   const dedupeLines = collectDedupeLines(input);
   const candidates: Candidate[] = [];
@@ -427,9 +467,10 @@ function collectCandidates(input: BuildCenterContinuationCardsInput): Candidate[
 
   const carryLine = input.hubImpactExplanationLine?.trim();
   if (carryLine && input.day > 1) {
+    const consequenceLine = buildContinuationConsequenceLine(input, dedupeLines);
     const body = dedupeBody(
       dedupeLines,
-      carryLine,
+      consequenceLine || carryLine,
       'Önceki karar bugünkü operasyon akışını etkiliyor.',
     );
     if (!isBlockedByRecommendedPlan(input.recommendedPlan, 'carry_over', body)) {
@@ -448,6 +489,138 @@ function collectCandidates(input: BuildCenterContinuationCardsInput): Candidate[
           sourceLabel: 'Karar hafızası',
           sourceIds: ['carry-over'],
           sortRank: 40,
+        }),
+      );
+    }
+  }
+
+  const retentionLine = buildOneMoreDayContinuationLine(input.oneMoreDayRetention, dedupeLines);
+  if (retentionLine && input.day > 1) {
+    const body = dedupeBody(
+      dedupeLines,
+      retentionLine,
+      'Yarin icin kisa devam odagi hazir.',
+    );
+    if (!isBlockedByRecommendedPlan(input.recommendedPlan, 'report_preview', body)) {
+      candidates.push(
+        buildCardBase({
+          id: 'one-more-day-retention',
+          kind: 'report_preview',
+          title: 'Devam Odagi',
+          body,
+          label: 'Yarin',
+          tone: input.oneMoreDayRetention?.primaryHook?.tone === 'warning' ? 'warning' : 'calm',
+          priority: input.day >= 8 ? 'high' : 'normal',
+          iconKey: 'arrow-forward-circle-outline',
+          route: input.oneMoreDayRetention?.ctaRoute,
+          actionKey: 'view_operations',
+          enabled: true,
+          sourceLabel: 'Bir sonraki gun',
+          sourceIds: [
+            'one-more-day-retention',
+            ...(input.oneMoreDayRetention?.sourceIds ?? []),
+          ],
+          sortRank: input.day >= 8 ? 12 : 32,
+        }),
+      );
+    }
+  }
+
+  const eceContinuationLine = buildEceContinuationLine(input.eceStrategyLines, [
+    ...dedupeLines,
+    retentionLine,
+  ]);
+  if (eceContinuationLine && input.day > 1) {
+    const body = dedupeBody(
+      dedupeLines,
+      eceContinuationLine,
+      'Ece sonraki adim icin kisa bir takip notu hazirladi.',
+    );
+    if (!isBlockedByRecommendedPlan(input.recommendedPlan, 'report_preview', body)) {
+      candidates.push(
+        buildCardBase({
+          id: 'ece-strategy-continuation',
+          kind: 'report_preview',
+          title: 'Ece Notu',
+          body,
+          label: 'Ece',
+          tone: 'calm',
+          priority: input.eceStrategyLines?.primaryLine?.confidence === 'high' ? 'high' : 'normal',
+          iconKey: 'chatbubble-ellipses-outline',
+          route: '/reports',
+          actionKey: 'view_report',
+          enabled: true,
+          sourceLabel: 'Ece strateji notu',
+          sourceIds: ['ece-strategy-line', ...(input.eceStrategyLines?.sourceIds ?? [])],
+          sortRank: input.day >= 8 ? 13 : 33,
+        }),
+      );
+    }
+  }
+
+  const cityMemoryHint = buildHubCityMemoryHint(input.cityMemoryVisibility, [
+    ...dedupeLines,
+    retentionLine,
+    eceContinuationLine,
+  ].filter((line): line is string => Boolean(line)));
+  if (cityMemoryHint && input.day > 1) {
+    const body = dedupeBody(
+      dedupeLines,
+      cityMemoryHint.line,
+      'Sehir hafizasindaki iz bugun takip edilmeye deger.',
+    );
+    if (
+      body &&
+      !isBlockedByRecommendedPlan(input.recommendedPlan, 'city_journal', body)
+    ) {
+      candidates.push(
+        buildCardBase({
+          id: 'city-memory-continuation',
+          kind: 'city_journal',
+          title: cityMemoryHint.title,
+          body,
+          label: cityMemoryHint.badgeLabel,
+          tone: cityMemoryHint.tone === 'cautious' ? 'warning' : 'calm',
+          priority: input.day >= 8 ? 'high' : 'normal',
+          iconKey: 'book-outline',
+          route: '/reports',
+          actionKey: 'view_journal',
+          enabled: true,
+          sourceLabel: 'Sehir hafizasi',
+          sourceIds: ['city-memory-visibility', ...(input.cityMemoryVisibility?.sourceIds ?? [])],
+          sortRank: input.day >= 8 ? 14 : 34,
+        }),
+      );
+    }
+  }
+
+  const followUpCard = buildPrimaryFollowUpActionCard(input.followUpActions);
+  if (followUpCard && input.day > 1) {
+    const body = dedupeBody(
+      dedupeLines,
+      followUpCard.line,
+      'Küçük bir takip adımı öneriliyor.',
+    );
+    if (
+      body &&
+      !isBlockedByRecommendedPlan(input.recommendedPlan, 'report_preview', body)
+    ) {
+      candidates.push(
+        buildCardBase({
+          id: 'follow-up-action-continuation',
+          kind: 'report_preview',
+          title: 'Takip Önerisi',
+          body,
+          label: followUpCard.badgeLabel ?? 'Takip',
+          tone: followUpCard.tone === 'cautious' ? 'warning' : 'calm',
+          priority: input.day >= 8 ? 'high' : 'normal',
+          iconKey: 'eye-outline',
+          route: '/reports',
+          actionKey: 'view_report',
+          enabled: true,
+          sourceLabel: 'Takip önerisi',
+          sourceIds: ['follow-up-actions', ...(input.followUpActions?.sourceIds ?? [])],
+          sortRank: input.day >= 8 ? 15 : 35,
         }),
       );
     }
