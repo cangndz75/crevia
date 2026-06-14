@@ -1,4 +1,6 @@
 import type { MainOperationFeelHubPresentation } from '@/core/mainOperationFeel/mainOperationFeelTypes';
+import type { Day8OperationFeedBindingResult } from '@/core/day8OperationFeedBinding';
+import { buildOperationFocusBindingSubtitle } from '@/core/day8OperationFeedBinding';
 import type { GameState } from '@/core/models/GameState';
 import type {
   OperationDomainSignal,
@@ -105,6 +107,7 @@ export type BuildCenterOperationFocusInput = {
   mainOperationFeelPresentation?: MainOperationFeelHubPresentation | null;
   operationSignalLabels?: string[];
   hubVehicleMaintenanceLine?: string | null;
+  day8OperationFeedBinding?: Day8OperationFeedBindingResult | null;
 };
 
 type DomainCatalogEntry = {
@@ -422,6 +425,14 @@ function collectDedupeLines(input: BuildCenterOperationFocusInput): string[] {
   for (const label of input.operationSignalLabels ?? []) {
     if (label.trim()) lines.push(label);
   }
+  const bindingSubtitle = buildOperationFocusBindingSubtitle(input.day8OperationFeedBinding ?? {
+    day: input.day,
+    isActive: false,
+    biases: [],
+    feedBindings: [],
+    sourceIds: [],
+  });
+  if (bindingSubtitle) lines.push(bindingSubtitle);
   return lines;
 }
 
@@ -664,7 +675,22 @@ export function buildCenterOperationFocus(
   }
 
   sortedDrafts = sortedDrafts.slice(0, CENTER_OPERATION_FOCUS_MAX_ITEMS);
-  const items = sortedDrafts.map((draft) => draftToItem(draft, dedupeLines, day));
+  let items = sortedDrafts.map((draft) => draftToItem(draft, dedupeLines, day));
+
+  if (day >= 8 && input.day8OperationFeedBinding?.isActive) {
+    const bindingSubtitle = buildOperationFocusBindingSubtitle(input.day8OperationFeedBinding);
+    if (bindingSubtitle && items[0] && subtitleIsSafe(bindingSubtitle, dedupeLines)) {
+      items = [
+        {
+          ...items[0],
+          subtitle: shortenSubtitle(bindingSubtitle),
+          sourceLabel: input.day8OperationFeedBinding.primaryFeedBinding?.badgeLabel ?? items[0].sourceLabel,
+        },
+        ...items.slice(1),
+      ];
+    }
+  }
+
   const selectedDomain =
     items.find((item) => item.isActiveTargetDomain)?.domain ?? items[0]?.domain;
 

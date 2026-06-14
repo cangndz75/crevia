@@ -12,6 +12,7 @@ import type { TomorrowRiskModel } from '@/core/tomorrowRisk/tomorrowRiskTypes';
 
 import type { CenterOperationFocus } from './centerOperationFocusPresentation';
 import type { CenterOperationSignals } from './centerOperationSignalsPresentation';
+import type { ResourcePressureDifferentiationResult } from '@/core/resourcePressureDifferentiation';
 
 export const CENTER_PORTFOLIO_SURFACE_MAX_ITEMS = 3;
 
@@ -58,6 +59,7 @@ export type BuildCenterPortfolioSurfaceInput = {
   operationFocus?: CenterOperationFocus | null;
   operationSignalsSection?: CenterOperationSignals | null;
   recommendedPlanBody?: string | null;
+  resourcePressureDifferentiation?: ResourcePressureDifferentiationResult | null;
 };
 
 const TEXT_LIMITS = {
@@ -311,7 +313,9 @@ export function buildCenterPortfolioSurface(
   const result = buildDailyCapacityPortfolio(portfolioInput);
   const summary = buildDailyCapacityPortfolioSummaryCard(result);
   const cardLimit = input.day <= 1 ? 1 : CENTER_PORTFOLIO_SURFACE_MAX_ITEMS;
-  const visibleCards = buildOperationPortfolioCardModels(result).slice(0, cardLimit);
+  const visibleCards = buildOperationPortfolioCardModels(result, {
+    resourcePressureDifferentiation: input.resourcePressureDifferentiation,
+  }).slice(0, cardLimit);
   const visibleSignalCount = result.items.filter((item) => item.visibilityLevel !== 'hidden').length;
   const selectedCount = result.selectedItems.filter((item) => item.visibilityLevel !== 'hidden').length;
   const deferredCount = result.deferredItems.filter((item) => item.visibilityLevel !== 'hidden').length;

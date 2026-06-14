@@ -1,3 +1,4 @@
+import { pickSurfaceCopy } from '@/core/contentVarietyQuality';
 import {
   DAY8_STRATEGIC_CONTENT_COPY,
   DAY8_STRATEGIC_CONTENT_FAKE_CLAIM_PATTERNS,
@@ -80,9 +81,9 @@ function containsFakeClaim(text: string): boolean {
   return DAY8_STRATEGIC_CONTENT_FAKE_CLAIM_PATTERNS.some((pattern) => pattern.test(text));
 }
 
-function pickCopy(kind: Day8StrategicContentKind, seed = 0): string {
+function pickCopy(kind: Day8StrategicContentKind, seed = 0, previousLines?: readonly string[]): string {
   const lines = DAY8_STRATEGIC_CONTENT_COPY[kind];
-  return lines[Math.abs(seed) % lines.length] ?? lines[0];
+  return pickSurfaceCopy(kind, 'ece', lines, { seed, previousLines });
 }
 
 function hasPermission(input: Day8StrategicContentInput, permissionId: string): boolean {

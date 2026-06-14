@@ -1,3 +1,6 @@
+import { mergeCopyPools } from '@/core/contentVarietyQuality';
+
+import { DISTRICT_NEGLECT_RECOVERY_COPY_EXPANSION } from './districtNeglectRecoveryCopyExpansion';
 import type {
   DistrictNeglectBand,
   DistrictNeglectRecoveryDayPolicy,
@@ -81,7 +84,7 @@ export const DISTRICT_NEGLECT_RECOVERY_RECOVERY_LABELS: Record<DistrictRecoveryB
     strong: 'Güçlü iz',
   };
 
-export const DISTRICT_NEGLECT_RECOVERY_COPY: Record<DistrictNeglectRecoveryKind, string[]> = {
+const DISTRICT_NEGLECT_RECOVERY_COPY_BASE: Record<DistrictNeglectRecoveryKind, string[]> = {
   neglect_watch: [
     'Bu mahalle kısa bir takip kontrolü isteyebilir.',
     'Bölge sinyali sakin ama izlemeye değer.',
@@ -138,6 +141,11 @@ export const DISTRICT_NEGLECT_RECOVERY_COPY: Record<DistrictNeglectRecoveryKind,
     'Bölge takibi için yeni kaynak bekleniyor.',
   ],
 };
+
+export const DISTRICT_NEGLECT_RECOVERY_COPY = mergeCopyPools(
+  DISTRICT_NEGLECT_RECOVERY_COPY_BASE,
+  DISTRICT_NEGLECT_RECOVERY_COPY_EXPANSION,
+);
 
 export const DISTRICT_NEGLECT_RECOVERY_CONFLICT_COPY: string[] = [
   'Bu mahallede hem baskı hem toparlanma fırsatı birlikte okunmalı.',

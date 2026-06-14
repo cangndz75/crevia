@@ -1,3 +1,6 @@
+import { mergeCopyPools } from '@/core/contentVarietyQuality';
+
+import { CITY_RHYTHM_COPY_EXPANSION } from './cityRhythmDirectorCopyExpansion';
 import type {
   CityRhythmIntensity,
   CityRhythmKind,
@@ -89,7 +92,7 @@ export const CITY_RHYTHM_FAKE_CLAIM_PATTERNS = [
   /tamamen\s+(ihmal|çöktü)/i,
 ];
 
-export const CITY_RHYTHM_COPY: Record<CityRhythmKind, string[]> = {
+const CITY_RHYTHM_COPY_BASE: Record<CityRhythmKind, string[]> = {
   calm_watch_day: [
     'Bugün şehir daha sakin; en net sinyali izlemek yeterli olabilir.',
     'Her sinyal operasyon istemiyor; bugün doğru izleme de strateji.',
@@ -141,3 +144,8 @@ export const CITY_RHYTHM_COPY: Record<CityRhythmKind, string[]> = {
     'Bugünün ritmi düşük veriyle güvenli şekilde kuruluyor.',
   ],
 };
+
+export const CITY_RHYTHM_COPY = mergeCopyPools(
+  CITY_RHYTHM_COPY_BASE,
+  CITY_RHYTHM_COPY_EXPANSION,
+);

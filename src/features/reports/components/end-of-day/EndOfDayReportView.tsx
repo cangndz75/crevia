@@ -1514,12 +1514,30 @@ export function EndOfDayReportView({
         />
       ) : null}
 
+      {model.followUpExecutionNote ? (
+        <CompactInsightRow
+          label="Takip tamamlandi"
+          line={model.followUpExecutionNote}
+          tone="positive"
+          icon="checkmark-done-outline"
+        />
+      ) : null}
+
       {model.positiveComebackNote ? (
         <CompactInsightRow
           label="Toparlanma fırsatı"
           line={model.positiveComebackNote}
           tone="positive"
           icon="sparkles-outline"
+        />
+      ) : null}
+
+      {model.dominantStrategyNote ? (
+        <CompactInsightRow
+          label="Strateji notu"
+          line={model.dominantStrategyNote}
+          tone="teal"
+          icon="analytics-outline"
         />
       ) : null}
 

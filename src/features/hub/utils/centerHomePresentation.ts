@@ -242,6 +242,8 @@ function buildAdvisorSuggestion(
   districtNeglectRecovery?: MemoryFollowUpPresentationContext['districtNeglectRecovery'],
   day8StrategicContent?: MemoryFollowUpPresentationContext['day8StrategicContent'],
   cityRhythmDirector?: MemoryFollowUpPresentationContext['cityRhythmDirector'],
+  followUpExecution?: MemoryFollowUpPresentationContext['followUpExecution'],
+  dominantStrategyDetector?: MemoryFollowUpPresentationContext['dominantStrategyDetector'],
 ): CenterAdvisorSuggestion {
   return buildCenterAdvisorSuggestion({
     gameState: input.gameState,
@@ -262,6 +264,8 @@ function buildAdvisorSuggestion(
     districtNeglectRecovery,
     day8StrategicContent,
     cityRhythmDirector,
+    followUpExecution,
+    dominantStrategyDetector,
   });
 }
 
@@ -272,6 +276,7 @@ function buildOperationFocus(
   advisorSuggestion: CenterAdvisorSuggestion,
   citySummary: CenterCitySummary,
   operationSignalLabels: string[],
+  day8OperationFeedBinding?: MemoryFollowUpPresentationContext['day8OperationFeedBinding'],
 ): CenterOperationFocus {
   return buildCenterOperationFocus({
     gameState: input.gameState,
@@ -284,6 +289,7 @@ function buildOperationFocus(
     mainOperationFeelPresentation: input.mainOperationFeelPresentation,
     operationSignalLabels,
     hubVehicleMaintenanceLine: input.hubVehicleMaintenanceLine,
+    day8OperationFeedBinding,
   });
 }
 
@@ -296,6 +302,8 @@ function buildOperationSignalsSection(
   dailyReward: CenterDailyReward,
   headerSummary: CenterHeaderSummary,
   visibility: HubCardVisibilityModel,
+  day8OperationFeedBinding?: MemoryFollowUpPresentationContext['day8OperationFeedBinding'],
+  operationFocus?: CenterOperationFocus,
 ): CenterOperationSignals {
   return buildCenterOperationSignals({
     gameState: input.gameState,
@@ -311,6 +319,11 @@ function buildOperationSignalsSection(
     hubImpactExplanationLine: input.hubImpactExplanationLine,
     hubVehicleMaintenanceLine: input.hubVehicleMaintenanceLine,
     hubTeamSpecializationLine: input.hubTeamSpecializationLine,
+    operationFocusTitles: operationFocus?.items.map((item) => item.title) ?? [],
+    operationFocusSubtitles: operationFocus?.items
+      .map((item) => item.subtitle)
+      .filter((subtitle): subtitle is string => Boolean(subtitle?.trim())),
+    day8OperationFeedBinding,
     cardVisibility: visibility,
   });
 }
@@ -406,6 +419,8 @@ function buildContinuationCardsSection(
     eceStrategyLines: context.memoryFollowUp?.eceStrategyLines,
     cityMemoryVisibility: context.memoryFollowUp?.cityMemoryVisibility,
     followUpActions: context.memoryFollowUp?.followUpActions,
+    followUpExecution: context.memoryFollowUp?.followUpExecution,
+    dominantStrategyDetector: context.memoryFollowUp?.dominantStrategyDetector,
     districtNeglectRecovery: context.memoryFollowUp?.districtNeglectRecovery,
     day8StrategicContent: context.memoryFollowUp?.day8StrategicContent,
     cityRhythmDirector: context.memoryFollowUp?.cityRhythmDirector,
@@ -419,6 +434,7 @@ function buildPortfolioSurfaceSection(
     operationFocus: CenterOperationFocus;
     operationSignals: CenterOperationSignals;
     recommendedPlanBody: string;
+    memoryFollowUp?: MemoryFollowUpPresentationContext;
   },
 ): CenterPortfolioSurfaceModel {
   return buildCenterPortfolioSurface({
@@ -432,6 +448,7 @@ function buildPortfolioSurfaceSection(
     operationFocus: context.operationFocus,
     operationSignalsSection: context.operationSignals,
     recommendedPlanBody: context.recommendedPlanBody,
+    resourcePressureDifferentiation: context.memoryFollowUp?.resourcePressureDifferentiation,
   });
 }
 
@@ -513,6 +530,18 @@ export function buildCenterHomePresentation(
     memoryFollowUpContext.districtNeglectRecovery,
     memoryFollowUpContext.day8StrategicContent,
     memoryFollowUpContext.cityRhythmDirector,
+    memoryFollowUpContext.followUpExecution,
+    memoryFollowUpContext.dominantStrategyDetector,
+  );
+
+  const operationFocus = buildOperationFocus(
+    input,
+    day,
+    activeTarget,
+    advisorSuggestion,
+    citySummaryForAdvisor,
+    [],
+    memoryFollowUpContext.day8OperationFeedBinding,
   );
 
   const operationSignals = buildOperationSignalsSection(
@@ -524,8 +553,9 @@ export function buildCenterHomePresentation(
     dailyReward,
     headerSummary,
     visibility,
+    memoryFollowUpContext.day8OperationFeedBinding,
+    operationFocus,
   );
-  const operationSignalLabels = operationSignals.signals.map((signal) => signal.title);
 
   const citySummary = buildCenterCitySummary({
     gameState: input.gameState,
@@ -538,14 +568,6 @@ export function buildCenterHomePresentation(
     advisorCommentary: centerAdvisorDedupeText(advisorSuggestion),
     headerSummary,
   });
-  const operationFocus = buildOperationFocus(
-    input,
-    day,
-    activeTarget,
-    advisorSuggestion,
-    citySummaryForAdvisor,
-    operationSignalLabels,
-  );
   const recommendedPlanFinal = buildRecommendedPlanSection(
     input,
     day,
@@ -564,6 +586,7 @@ export function buildCenterHomePresentation(
     operationFocus,
     operationSignals,
     recommendedPlanBody: recommendedPlanFinal.body,
+    memoryFollowUp: memoryFollowUpContext,
   });
 
   const quickActions = buildQuickActionsSection(

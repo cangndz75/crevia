@@ -22,7 +22,7 @@ import {
 type Check = { name: string; ok: boolean; detail: string };
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 26;
+const EXPECTED_SAVE_VERSION = 27;
 const ALLOWED_ROUTES = new Set(['/', '/reports', '/events', '/map']);
 
 function readRepo(rel: string): string {
@@ -102,6 +102,7 @@ function contextBuildOrderSafe(context: MemoryFollowUpPresentationContext): bool
     context.oneMoreDayRetention != null &&
     context.cityMemoryVisibility != null &&
     context.followUpActions != null &&
+    context.followUpExecution != null &&
     context.eceStrategyLines != null
   );
 }
@@ -143,6 +144,12 @@ export function verifyMemoryFollowUpWiringScenario(): {
       day1Context.followUpActions.primaryAction.isFallback === true,
     'Day 1 follow-up low-noise',
   );
+  assert(
+    checks,
+    !day1Context.followUpExecution.isActive &&
+      day1Context.followUpExecution.availableCandidates.length === 0,
+    'Day 1 follow-up execution hidden',
+  );
 
   const day3Context = buildMemoryFollowUpPresentationContext({
     day: 3,
@@ -180,6 +187,11 @@ export function verifyMemoryFollowUpWiringScenario(): {
       day8Context.followUpActions.actions.length > 0,
     'Day 8+ visibility candidate',
     `traces=${day8Context.cityMemoryVisibility.traces.length} actions=${day8Context.followUpActions.actions.length}`,
+  );
+  assert(
+    checks,
+    day8Context.followUpExecution.availableCandidates.length <= 3,
+    'Day 8 follow-up execution capped',
   );
 
   const day1Hub = buildHubPresentation(1);
@@ -232,11 +244,17 @@ export function verifyMemoryFollowUpWiringScenario(): {
   );
   assert(
     checks,
+    (day8Report.followUpExecutionNote ? 1 : 0) <= 1,
+    'Report max 1 follow-up execution note',
+  );
+  assert(
+    checks,
     linesUnique([
       day8Report.oneMoreDayCard?.line,
       day8Report.eceStrategyLine?.text,
       day8Report.cityMemoryNote?.line,
       day8Report.followUpActionHint?.line,
+      day8Report.followUpExecutionNote,
     ]),
     'Report duplicate exact line guard',
   );
@@ -254,8 +272,8 @@ export function verifyMemoryFollowUpWiringScenario(): {
   );
   assert(
     checks,
-    !continuationBodies.some((body) => /tamamla|gönder|execute/i.test(body)),
-    'Follow-up execution copy absent',
+    continuationBodies.filter((body) => /takip|uygulama|kontrol|izle/i.test(body)).length <= 2,
+    'Follow-up execution copy bounded',
   );
 
   const missingSourceContext = buildMemoryFollowUpPresentationContext({
@@ -267,6 +285,7 @@ export function verifyMemoryFollowUpWiringScenario(): {
   const contextFile = readRepo('src/features/shared/utils/memoryFollowUpPresentationContext.ts');
   assert(checks, contextFile.includes('buildCityMemoryVisibility'), 'CityMemory production caller');
   assert(checks, contextFile.includes('buildFollowUpActions'), 'FollowUpActions production caller');
+  assert(checks, contextFile.includes('buildFollowUpExecution'), 'FollowUpExecution production caller');
   assert(checks, !contextFile.includes('useGameStore'), 'Context adapter no store write');
 
   const homeFile = readRepo('src/features/hub/utils/centerHomePresentation.ts');
@@ -277,8 +296,9 @@ export function verifyMemoryFollowUpWiringScenario(): {
 
   const persist = readRepo('src/store/gamePersist.ts');
   const applyDecision = readRepo('src/core/game/applyDecision.ts');
-  assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION, 'SAVE_VERSION unchanged', `v${SAVE_VERSION}`);
+  assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION, 'SAVE_VERSION 27', `v${SAVE_VERSION}`);
   assert(checks, !persist.includes('memoryFollowUp'), 'gamePersist shape unchanged');
+  assert(checks, persist.includes('strategyHistory'), 'strategyHistory persisted');
   assert(checks, !applyDecision.includes('memoryFollowUp'), 'applyDecision unchanged');
   assert(checks, !contextFile.includes('ensureDailyEventsForDay'), 'day pipeline unchanged');
 

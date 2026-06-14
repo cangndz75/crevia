@@ -40,6 +40,3 @@ export {
   buildReportCityRhythmNote,
   collectCityRhythmDirectorPresentationLines,
 } from './cityRhythmDirectorPresentation';
-
-export { verifyCityRhythmDirectorScenario } from './verifyCityRhythmDirectorScenario';
-export type { VerifyCityRhythmDirectorOutcome } from './verifyCityRhythmDirectorScenario';

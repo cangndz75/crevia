@@ -20,7 +20,11 @@ import {
   EVENT_SELECTION_TUTORIAL_MAX_DAY,
   EVENT_SELECTION_WEIGHTS,
 } from './eventSelectionConstants';
-import { buildEventSelectionSignalSnapshot } from './eventSelectionSignals';
+import { buildEventSelectionContextFromGameState, buildEventSelectionSignalSnapshot } from './eventSelectionSignals';
+import {
+  applyStrategicBiasToRankedEventSelection,
+  type Day8OperationFeedBindingResult,
+} from '@/core/day8OperationFeedBinding';
 import {
   buildEventSelectionDebugReport,
   buildEventSelectionSummaryLine,
@@ -36,7 +40,6 @@ import type {
   CreviaEventSelectionResult,
   CreviaEventSelectionWeightBreakdown,
 } from './eventSelectionTypes';
-import { buildEventSelectionContextFromGameState } from './eventSelectionSignals';
 
 function clampScore(score: number): number {
   return Math.min(
@@ -331,7 +334,11 @@ function deterministicSortKey(
 export function rankEventSelectionCandidates(
   candidates: readonly CreviaEventSelectionCandidate[],
   context: CreviaEventSelectionContext,
+  strategicBias?: Day8OperationFeedBindingResult | null,
 ): CreviaEventSelectionCandidate[] {
+  if (strategicBias?.isActive && strategicBias.biases.length > 0) {
+    return applyStrategicBiasToRankedEventSelection(candidates, strategicBias.biases);
+  }
   return [...candidates].sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
     return deterministicSortKey(a, context) - deterministicSortKey(b, context);
@@ -365,9 +372,10 @@ function resolveHealthStatus(
 export function buildEventSelectionResult(
   context: CreviaEventSelectionContext,
   pack: CreviaContentPackDefinition = CONTENT_PRODUCTION_VERIFY_PACK,
+  strategicBias?: Day8OperationFeedBindingResult | null,
 ): CreviaEventSelectionResult {
   const candidates = buildEventSelectionCandidates(context, pack);
-  const rankedCandidates = rankEventSelectionCandidates(candidates, context);
+  const rankedCandidates = rankEventSelectionCandidates(candidates, context, strategicBias);
   const primaryCandidates = rankedCandidates.filter((c) => c.kind === 'event_family');
   const operationEraHints = rankedCandidates.filter((c) => c.kind === 'operation_era_context');
   const districtOperationHints = rankedCandidates.filter((c) => c.kind === 'district_operation_hint');

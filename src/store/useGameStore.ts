@@ -425,6 +425,14 @@ import {
 } from '@/core/teamSpecialization/teamSpecializationWiring';
 import type { TeamSpecializationStateV1 } from '@/core/teamSpecialization/teamSpecializationRuntimeTypes';
 import {
+  appendStrategyDecisionRecord,
+  createEmptyStrategyHistoryState,
+} from '@/core/strategyHistory/strategyHistoryModel';
+import {
+  buildStrategyDecisionRecordFromDecisionRecord,
+} from '@/core/strategyHistory/strategyHistoryAdapters';
+import type { StrategyHistoryStateV1 } from '@/core/strategyHistory/strategyHistoryTypes';
+import {
   appendVehicleMaintenanceDayCloseArchive,
   buildVehicleMaintenanceDayCloseBundle,
 } from '@/core/vehicleMaintenance/vehicleMaintenanceWiring';
@@ -491,6 +499,7 @@ type GameStoreState = {
   cityArchive: CityArchiveV1State;
   vehicleMaintenance: VehicleMaintenanceStateV1;
   teamSpecialization: TeamSpecializationStateV1;
+  strategyHistory: StrategyHistoryStateV1;
   /** Oturum içi mahalle hamlesi seçimi — persist edilmez. */
   districtOperationActionState: CreviaDistrictOperationActionState;
   tutorialState: TutorialState;
@@ -852,6 +861,7 @@ function applySeedBundle(
   | 'cityArchive'
   | 'vehicleMaintenance'
   | 'teamSpecialization'
+  | 'strategyHistory'
   | 'districtOperationActionState'
   | 'tutorialState'
   | 'bestPilotScores'
@@ -920,6 +930,7 @@ function applySeedBundle(
     cityArchive: createInitialCityArchiveState(bundle.gameState.city.day),
     vehicleMaintenance: createInitialVehicleMaintenanceState(bundle.gameState.city.day),
     teamSpecialization: createInitialTeamSpecializationState(bundle.gameState.city.day),
+    strategyHistory: createEmptyStrategyHistoryState(),
     districtOperationActionState: createInitialDistrictOperationActionState(),
     tutorialState: { ...INITIAL_TUTORIAL_STATE },
     bestPilotScores: [],
@@ -1788,6 +1799,16 @@ export const useGameStore = create<GameStore>()(
             ...current.decisionHistory,
             result.decisionRecord,
           ],
+          strategyHistory: appendStrategyDecisionRecord(
+            current.strategyHistory,
+            buildStrategyDecisionRecordFromDecisionRecord(result.decisionRecord, {
+              domainTags: event
+                ? [event.category, event.eventType, ...(event.filterTags ?? [])].filter(
+                    (value): value is string => typeof value === 'string' && value.length > 0,
+                  )
+                : [],
+            }),
+          ),
           snapshots: limitSnapshots([
             ...current.snapshots,
             result.beforeSnapshot,
@@ -4367,6 +4388,8 @@ export const useGameStore = create<GameStore>()(
             createInitialTeamSpecializationState(
               withSyncedPulse(pilotRefresh.gameState).city.day,
             ),
+          strategyHistory:
+            saved.strategyHistory ?? createEmptyStrategyHistoryState(),
           districtOperationActionState: createInitialDistrictOperationActionState(),
           tutorialState: saved.tutorialState ?? { ...INITIAL_TUTORIAL_STATE },
           bestPilotScores: saved.bestPilotScores ?? [],

@@ -35,7 +35,7 @@ import {
 } from './dailyCapacityPortfolioConstants';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 26;
+const EXPECTED_SAVE_VERSION = 27;
 
 export type VerifyDailyCapacityPortfolioOutcome = {
   ok: boolean;
@@ -240,7 +240,7 @@ export function verifyDailyCapacityPortfolioScenario(): VerifyDailyCapacityPortf
     if (!pass) warnState = true;
   };
 
-  record(assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION, 'SAVE_VERSION unchanged', `SAVE_VERSION ${SAVE_VERSION}`));
+  record(assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION, 'SAVE_VERSION 27', `SAVE_VERSION ${SAVE_VERSION}`));
 
   const gameStore = readRepo('src/store/useGameStore.ts');
   record(assert(checks, !gameStore.includes('dailyCapacityPortfolio'), 'useGameStore not wired', 'useGameStore wired early'));

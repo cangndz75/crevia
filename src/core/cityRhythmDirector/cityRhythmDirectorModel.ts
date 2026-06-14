@@ -1,3 +1,4 @@
+import { pickSurfaceCopy } from '@/core/contentVarietyQuality';
 import {
   CITY_RHYTHM_COPY,
   CITY_RHYTHM_DIRECTOR_LINE_MAX,
@@ -79,9 +80,9 @@ function containsFakeClaim(text: string): boolean {
   return CITY_RHYTHM_FAKE_CLAIM_PATTERNS.some((pattern) => pattern.test(text));
 }
 
-function pickCopy(kind: CityRhythmKind, seed = 0): string {
+function pickCopy(kind: CityRhythmKind, seed = 0, previousLines?: readonly string[]): string {
   const lines = CITY_RHYTHM_COPY[kind];
-  return lines[Math.abs(seed) % lines.length] ?? lines[0];
+  return pickSurfaceCopy(kind, 'city_rhythm', lines, { seed, previousLines });
 }
 
 const STRATEGIC_CONTENT_RHYTHM_MAP: Record<string, CityRhythmKind> = {

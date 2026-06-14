@@ -1,4 +1,6 @@
 import type { HubCardVisibilityModel } from '@/core/onboarding/firstTenMinutesTypes';
+import type { Day8OperationFeedBindingResult } from '@/core/day8OperationFeedBinding';
+import { buildCenterOperationFeedBindingSignal } from '@/core/day8OperationFeedBinding';
 import type { GameState } from '@/core/models/GameState';
 import type {
   OperationDomainSignal,
@@ -123,6 +125,8 @@ export type BuildCenterOperationSignalsInput = {
   hubVehicleMaintenanceLine?: string | null;
   hubTeamSpecializationLine?: string | null;
   operationFocusTitles?: string[];
+  operationFocusSubtitles?: string[];
+  day8OperationFeedBinding?: Day8OperationFeedBindingResult | null;
   cardVisibility?: HubCardVisibilityModel;
 };
 
@@ -337,6 +341,10 @@ function collectDedupeLines(input: BuildCenterOperationSignalsInput): string[] {
   if (notification?.label) lines.push(notification.label);
   lines.push(...FOCUS_DOMAIN_TITLES);
   lines.push(...(input.operationFocusTitles ?? []));
+  lines.push(...(input.operationFocusSubtitles ?? []).filter(Boolean));
+  const bindingSignal = buildCenterOperationFeedBindingSignal(input.day8OperationFeedBinding ?? undefined);
+  if (bindingSignal?.description) lines.push(bindingSignal.description);
+  if (bindingSignal?.title) lines.push(bindingSignal.title);
   return lines;
 }
 
@@ -687,6 +695,34 @@ export function buildCenterOperationSignals(
       actionKey: 'view_operations',
       sortScore: 480,
     });
+  }
+
+  if (day >= 8) {
+    const bindingSignal = buildCenterOperationFeedBindingSignal(input.day8OperationFeedBinding ?? undefined);
+    if (bindingSignal && textIsSafe(bindingSignal.description, dedupeLines)) {
+      const hasBindingSignal = drafts.some((draft) =>
+        draft.sourceIds.some((id) => bindingSignal.sourceIds.includes(id)),
+      );
+      if (!hasBindingSignal) {
+        mergeDrafts(drafts, {
+          id: bindingSignal.id,
+          title: bindingSignal.title,
+          description: shorten(bindingSignal.description),
+          domain: 'general',
+          signalType: 'opportunity',
+          severity: 'medium',
+          tone: 'stable',
+          priority: 'normal',
+          iconKey: 'compass-outline',
+          sourceLabel: bindingSignal.sourceLabel,
+          sourceIds: bindingSignal.sourceIds,
+          helperText: 'Öneri; zorunlu seçim değil.',
+          route: '/events',
+          actionKey: 'view_operations',
+          sortScore: bindingSignal.sortScore,
+        });
+      }
+    }
   }
 
   const impact = input.hubImpactExplanationLine?.trim();

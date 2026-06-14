@@ -19,6 +19,12 @@ import { buildCityRhythmDirector, collectCityRhythmDirectorLines } from '@/core/
 import type { CityRhythmDirectorResult } from '@/core/cityRhythmDirector';
 import type { EceStrategyLineResult } from '@/core/eceStrategyLines';
 import { buildEceStrategyLineResult } from '@/core/eceStrategyLines';
+import { buildDay8OperationFeedBinding, collectDay8OperationFeedBindingLines, buildExistingEventCandidatesFromActiveEvents } from '@/core/day8OperationFeedBinding';
+import type { Day8OperationFeedBindingResult } from '@/core/day8OperationFeedBinding';
+import { buildFollowUpExecution, collectFollowUpExecutionLines } from '@/core/followUpExecution';
+import type { FollowUpExecutionResult } from '@/core/followUpExecution';
+import { buildDominantStrategyDetector, collectDominantStrategyLines } from '@/core/dominantStrategyDetector';
+import type { DominantStrategyDetectorResult } from '@/core/dominantStrategyDetector';
 import { buildFollowUpActions } from '@/core/followUpActions';
 import type { FollowUpActionResult } from '@/core/followUpActions';
 import type { CityJournalHubPresentation } from '@/core/cityJournal';
@@ -31,6 +37,11 @@ import type { PositiveComebackResult } from '@/core/positiveComeback';
 import type { OperationSignalsState } from '@/core/operations/operationSignalTypes';
 import { buildPortfolioDeferRiskBindings } from '@/core/portfolioDeferRisk';
 import type { PortfolioDeferRiskResult } from '@/core/portfolioDeferRisk';
+import {
+  buildResourcePressureDifferentiation,
+  collectResourcePressureDifferentiationLines,
+} from '@/core/resourcePressureDifferentiation';
+import type { ResourcePressureDifferentiationResult } from '@/core/resourcePressureDifferentiation';
 import type { SocialPulseState } from '@/core/social/socialTypes';
 import type { TomorrowRiskModel } from '@/core/tomorrowRisk/tomorrowRiskTypes';
 
@@ -65,6 +76,10 @@ export type MemoryFollowUpPresentationContext = {
   districtNeglectRecovery: DistrictNeglectRecoveryResult;
   day8StrategicContent: Day8StrategicContentResult;
   cityRhythmDirector: CityRhythmDirectorResult;
+  day8OperationFeedBinding: Day8OperationFeedBindingResult;
+  followUpExecution: FollowUpExecutionResult;
+  dominantStrategyDetector: DominantStrategyDetectorResult;
+  resourcePressureDifferentiation: ResourcePressureDifferentiationResult;
   eceStrategyLines: EceStrategyLineResult;
   suppressSourceIds: string[];
   dedupeLines: string[];
@@ -347,6 +362,25 @@ function collectSuppressSourceIds(context: {
   return [...ids];
 }
 
+function collectRecentDistrictIdsFromState(snapshot: MemoryFollowUpPresentationSnapshot): string[] {
+  const ids = new Set<string>();
+  const rawState = snapshot.gameState as unknown as Record<string, unknown>;
+  for (const event of asArray(rawState.events)) {
+    if (!isRecord(event)) continue;
+    const id = asString(event.neighborhoodId) ?? asString(event.districtId) ?? asString(event.regionId);
+    if (id) ids.add(id);
+  }
+  const priorityDistrict = snapshot.operationSignals?.priorityDistrictId;
+  if (priorityDistrict) ids.add(priorityDistrict);
+  return [...ids];
+}
+
+function collectRecentDomainTagsFromPortfolio(portfolio: DailyCapacityPortfolioResult): string[] {
+  return portfolio.items
+    .flatMap((item) => [item.kind, ...item.sourceKinds])
+    .filter((tag) => Boolean(String(tag).trim()));
+}
+
 export function buildMemoryFollowUpPresentationContext(
   snapshot: MemoryFollowUpPresentationSnapshot,
 ): MemoryFollowUpPresentationContext {
@@ -549,6 +583,88 @@ export function buildMemoryFollowUpPresentationContext(
     ],
   });
 
+  const liveEventCandidates = buildExistingEventCandidatesFromActiveEvents(
+    asArray((snapshot.gameState as unknown as Record<string, unknown>).events),
+    day,
+  );
+
+  const day8OperationFeedBinding = buildDay8OperationFeedBinding({
+    day,
+    authorityPermissionIds: snapshot.authorityPermissionIds,
+    dailyCapacityPortfolioResult: dailyCapacityPortfolio,
+    portfolioDeferRiskResult: portfolioDeferRisk,
+    oneMoreDayRetentionResult: oneMoreDayRetention,
+    cityMemoryVisibilityResult: cityMemoryVisibility,
+    followUpActionResult: followUpActions,
+    positiveComebackResult: positiveComeback,
+    districtNeglectRecoveryResult: districtNeglectRecovery,
+    day8StrategicContentResult: day8StrategicContent,
+    cityRhythmDirectorResult: cityRhythmDirector,
+    authorityExpansionSummary,
+    existingEventCandidates: liveEventCandidates.length > 0 ? liveEventCandidates : undefined,
+    existingOperationFeedItems: dailyCapacityPortfolio.items.map((item) => ({
+      id: item.id,
+      title: item.title,
+      districtId: item.districtId,
+      districtName: item.districtName,
+      kind: item.kind,
+      tags: item.sourceKinds,
+    })),
+    suppressLines: collectCityRhythmSuppressLines({
+      oneMoreDayRetention,
+      positiveComeback,
+      districtNeglectRecovery,
+      day8StrategicContent,
+    }),
+  });
+
+  const followUpExecution = buildFollowUpExecution({
+    day,
+    followUpActionResult: followUpActions,
+    day8OperationFeedBindingResult: day8OperationFeedBinding,
+    positiveComebackResult: positiveComeback,
+    cityMemoryVisibilityResult: cityMemoryVisibility,
+    districtNeglectRecoveryResult: districtNeglectRecovery,
+    dailyCapacityPortfolioResult: dailyCapacityPortfolio,
+    portfolioDeferRiskResult: portfolioDeferRisk,
+    oneMoreDayRetentionResult: oneMoreDayRetention,
+    cityRhythmDirectorResult: cityRhythmDirector,
+    suppressSourceIds: snapshot.recentActionIds,
+  });
+
+  const dominantStrategyDetector = buildDominantStrategyDetector({
+    day,
+    decisionRecords: asArray((snapshot.gameState as unknown as Record<string, unknown>).decisionHistory),
+    portfolioHistory: dailyCapacityPortfolio.items,
+    operationFeedChoiceHistory: day8OperationFeedBinding.feedBindings,
+    followUpExecutionHistory: [
+      ...followUpExecution.executedCandidates,
+      ...followUpExecution.availableCandidates,
+    ],
+    deferRiskHistory: portfolioDeferRisk.bindings,
+    districtFocusHistory: districtNeglectRecovery.signals,
+    cityRhythmHistory: cityRhythmDirector.slots,
+    day8StrategicContentHistory: day8StrategicContent.candidates,
+    reportOutcomeHistory: decisionThreads,
+    recentDistrictIds: collectRecentDistrictIdsFromState(snapshot),
+    recentDomainTags: collectRecentDomainTagsFromPortfolio(dailyCapacityPortfolio),
+    authorityExpansionSummary,
+  });
+
+  const resourcePressureDifferentiation = buildResourcePressureDifferentiation({
+    day,
+    dailyCapacityPortfolioResult: dailyCapacityPortfolio,
+    portfolioDeferRiskResult: portfolioDeferRisk,
+    day8OperationFeedBindingResult: day8OperationFeedBinding,
+    followUpExecutionResult: followUpExecution,
+    day8StrategicContentResult: day8StrategicContent,
+    cityRhythmDirectorResult: cityRhythmDirector,
+    districtNeglectRecoveryResult: districtNeglectRecovery,
+    positiveComebackResult: positiveComeback,
+    socialPulseState: snapshot.socialPulseState ?? undefined,
+    authorityExpansionSummary,
+  });
+
   const eceStrategyLines = buildEceStrategyLineResult({
     day,
     portfolioDeferRiskResult: portfolioDeferRisk,
@@ -565,12 +681,17 @@ export function buildMemoryFollowUpPresentationContext(
     districtNeglectRecoveryResult: districtNeglectRecovery,
     day8StrategicContentResult: day8StrategicContent,
     cityRhythmDirectorResult: cityRhythmDirector,
+    day8OperationFeedBindingResult: day8OperationFeedBinding,
     recentLineTexts: [
       ...(snapshot.recentTraceTexts ?? []),
       ...cityMemoryVisibility.traces.map((trace) => trace.line),
       ...collectDistrictNeglectRecoveryLines(districtNeglectRecovery),
       ...collectDay8StrategicContentLines(day8StrategicContent),
       ...collectCityRhythmDirectorLines(cityRhythmDirector),
+      ...collectDay8OperationFeedBindingLines(day8OperationFeedBinding),
+      ...collectFollowUpExecutionLines(followUpExecution),
+      ...collectDominantStrategyLines(dominantStrategyDetector),
+      ...collectResourcePressureDifferentiationLines(resourcePressureDifferentiation),
     ],
   });
 
@@ -587,6 +708,10 @@ export function buildMemoryFollowUpPresentationContext(
     districtNeglectRecovery,
     day8StrategicContent,
     cityRhythmDirector,
+    day8OperationFeedBinding,
+    followUpExecution,
+    dominantStrategyDetector,
+    resourcePressureDifferentiation,
     eceStrategyLines,
     suppressSourceIds: collectSuppressSourceIds({ oneMoreDayRetention, eceStrategyLines }),
     dedupeLines,

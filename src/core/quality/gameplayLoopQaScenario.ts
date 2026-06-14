@@ -6,7 +6,7 @@ import { buildDailyReport } from '@/core/game/buildDailyReport';
 import { createInitialHubQuickActionState } from '@/core/hubQuickActions/hubQuickActionSeed';
 import { createInitialOperationSignalsState } from '@/core/operations/operationSignalState';
 import { createInitialSocialPulseState } from '@/core/social/socialSeed';
-import { SAVE_VERSION } from '@/store/gamePersist';
+import { normalizePersistedSave, SAVE_VERSION } from '@/store/gamePersist';
 import { buildCenterHomePresentation } from '@/features/hub/utils/centerHomePresentation';
 import {
   centerContinuationCardsRouteSafety,
@@ -32,7 +32,7 @@ import type {
 } from './gameplayLoopQaTypes';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 26;
+const EXPECTED_SAVE_VERSION = 27;
 
 function readRepo(rel: string): string {
   const path = join(REPO_ROOT, rel);
@@ -235,7 +235,7 @@ export function verifyGameplayLoopQaScenario(): GameplayLoopQaOutcome {
     if (!pass) ok = false;
   };
 
-  record(assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION, 'SAVE_VERSION unchanged'));
+  record(assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION, 'SAVE_VERSION 27'));
   record(assert(checks, !readRepo('src/store/gamePersist.ts').includes('gameplayLoopQa'), 'persist shape unchanged'));
   record(assert(checks, !readRepo('src/core/game/applyDecision.ts').includes('gameplayLoopQa'), 'applyDecision unchanged'));
   record(
@@ -243,6 +243,21 @@ export function verifyGameplayLoopQaScenario(): GameplayLoopQaOutcome {
       checks,
       !readRepo('src/core/dayPipeline/dayPipelineOrchestrator.ts').includes('gameplayLoopQa'),
       'day pipeline unchanged',
+    ),
+  );
+
+  const migratedV26 = normalizePersistedSave({
+    ...createDay1Seed(),
+    saveVersion: 26,
+    updatedAt: '2026-06-15T00:00:00.000Z',
+  });
+  record(
+    assert(
+      checks,
+      migratedV26?.saveVersion === SAVE_VERSION &&
+        migratedV26.strategyHistory.decisionHistory.length === 0,
+      'v26 save migration includes strategyHistory',
+      'v26 strategyHistory migration failed',
     ),
   );
 

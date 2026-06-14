@@ -1,3 +1,5 @@
+import { buildEceOperationFeedBindingLine } from '@/core/day8OperationFeedBinding';
+import { pickSurfaceCopy } from '@/core/contentVarietyQuality';
 import {
   ECE_STRATEGY_LINE_CONTENT_PACK,
   type EceStrategyContentLine,
@@ -117,8 +119,9 @@ function contentLine(kind: EceStrategyLineKind, seed: string): EceStrategyConten
       text: 'Bugun sakin ilerleyelim; en net sinyali birlikte okuyacagiz.',
     };
   }
-  const index = Math.abs([...seed].reduce((sum, char) => sum + char.charCodeAt(0), 0)) % lines.length;
-  return lines[index]!;
+  const texts = lines.map((line) => line.text);
+  const text = pickSurfaceCopy(kind, 'ece', texts, { duplicateKey: seed });
+  return lines.find((line) => line.text === text) ?? lines[0]!;
 }
 
 function makeLine(seed: CandidateSeed): EceStrategyLine {
@@ -202,6 +205,26 @@ function buildOneMoreDayCandidate(input: EceStrategyLineInput): EceStrategyLine 
       isActionable: true,
       ctaHint: readString(result, ['ctaLabel']) ?? 'Devam et',
       phases: ['hub', 'report', 'continuation'],
+    }),
+  );
+}
+
+function buildOperationFeedBindingCandidate(input: EceStrategyLineInput): EceStrategyLine | null {
+  const raw = input.day8OperationFeedBindingResult;
+  if (!isRecord(raw) || raw.isActive !== true) return null;
+  const text = buildEceOperationFeedBindingLine(raw as never);
+  if (!text) return null;
+  const sourceIds = readSourceIds(raw, 'operation-feed-binding');
+  return makeLine(
+    seedFromContent('hub_strategy_hint', 'daily_capacity_portfolio', sourceIds.join('-'), {
+      id: `ece-operation-feed-${sourceIds[0] ?? 'binding'}`,
+      text,
+      sourceIds,
+      confidence: 'medium',
+      priority: 78,
+      minDay: 8,
+      isActionable: true,
+      phases: ['hub', 'operation'],
     }),
   );
 }
@@ -351,6 +374,7 @@ function collectCandidates(input: EceStrategyLineInput): EceStrategyLine[] {
     buildOneMoreDayCandidate(input),
     buildPortfolioDeferCandidate(input),
     buildDailyCapacityCandidate(input),
+    buildOperationFeedBindingCandidate(input),
     buildAuthorityCandidate(input),
     buildGenericCandidate(
       input,

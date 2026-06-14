@@ -11,6 +11,14 @@ import {
   buildEceFollowUpActionLine,
   type FollowUpActionResult,
 } from '@/core/followUpActions';
+import {
+  buildEceFollowUpExecutionLine,
+  type FollowUpExecutionResult,
+} from '@/core/followUpExecution';
+import {
+  buildEceDominantStrategyLine,
+  type DominantStrategyDetectorResult,
+} from '@/core/dominantStrategyDetector';
 import { buildEceCityRhythmLine } from '@/core/cityRhythmDirector';
 import { buildEceDay8StrategicContentLine } from '@/core/day8StrategicContent';
 import { buildEceDistrictNeglectRecoveryLine } from '@/core/districtNeglectRecovery';
@@ -100,6 +108,8 @@ export type BuildCenterAdvisorSuggestionInput = {
   districtNeglectRecovery?: import('@/core/districtNeglectRecovery').DistrictNeglectRecoveryResult | null;
   day8StrategicContent?: import('@/core/day8StrategicContent').Day8StrategicContentResult | null;
   cityRhythmDirector?: import('@/core/cityRhythmDirector').CityRhythmDirectorResult | null;
+  followUpExecution?: FollowUpExecutionResult | null;
+  dominantStrategyDetector?: DominantStrategyDetectorResult | null;
   socialPulseState?: SocialPulseState | null;
   cardVisibility?: HubCardVisibilityModel;
   recommendedPlanBody?: string | null;
@@ -401,6 +411,15 @@ function buildFromActiveTarget(
     rhythmLine,
     strategicContentLine,
   ].filter((line): line is string => Boolean(line)));
+  const followUpExecutionLine = buildEceFollowUpExecutionLine(input.followUpExecution);
+  const dominantStrategyLine = buildEceDominantStrategyLine(input.dominantStrategyDetector, [
+    ...avoid,
+    strategyLine,
+    rhythmLine,
+    strategicContentLine,
+    districtNeglectLine,
+    followUpExecutionLine,
+  ].filter((line): line is string => Boolean(line)));
   const followUpLine = buildEceFollowUpActionLine(input.followUpActions);
 
   if (target.status === 'empty') {
@@ -455,6 +474,8 @@ function buildFromActiveTarget(
             rhythmLine ??
             strategicContentLine ??
             districtNeglectLine ??
+            followUpExecutionLine ??
+            dominantStrategyLine ??
             followUpLine ??
             input.hubTomorrowRisk?.mainLine ??
             'Bu karar yarınki risk ve mahalle güvenine yansıyabilir.',
@@ -500,6 +521,8 @@ function buildFromActiveTarget(
           rhythmLine ??
           strategicContentLine ??
           districtNeglectLine ??
+          followUpExecutionLine ??
+          dominantStrategyLine ??
           followUpLine ??
           input.hubImpactExplanationLine ??
           'Yanlış ekip seçimi yarın riski büyütebilir.',
@@ -586,6 +609,8 @@ function buildFromActiveTarget(
       rhythmLine ??
       strategicContentLine ??
       districtNeglectLine ??
+      followUpExecutionLine ??
+      dominantStrategyLine ??
       followUpLine ??
       input.hubImpactExplanationLine ??
       target.impactPreview[0]?.valueText ??

@@ -101,6 +101,11 @@ import { resolveTeamSpecializationOnPersistLoad } from '@/core/teamSpecializatio
 import type { TeamSpecializationStateV1 } from '@/core/teamSpecialization/teamSpecializationRuntimeTypes';
 import { resolveVehicleMaintenanceOnPersistLoad } from '@/core/vehicleMaintenance/vehicleMaintenanceMigration';
 import type { VehicleMaintenanceStateV1 } from '@/core/vehicleMaintenance/vehicleMaintenanceRuntimeTypes';
+import {
+  createEmptyStrategyHistoryState,
+  migrateStrategyHistoryState,
+} from '@/core/strategyHistory/strategyHistoryModel';
+import type { StrategyHistoryStateV1 } from '@/core/strategyHistory/strategyHistoryTypes';
 
 import type { GameStore } from './useGameStore';
 
@@ -108,7 +113,8 @@ import type { GameStore } from './useGameStore';
 // Save version & storage key
 // ---------------------------------------------------------------------------
 
-export const SAVE_VERSION = 26;
+export const SAVE_VERSION: number = 27;
+const SAVE_VERSION_26 = 26;
 const SAVE_VERSION_25 = 25;
 const SAVE_VERSION_24 = 24;
 const SAVE_VERSION_23 = 23;
@@ -177,6 +183,7 @@ export type PersistedGameState = Pick<
   | 'cityArchive'
   | 'vehicleMaintenance'
   | 'teamSpecialization'
+  | 'strategyHistory'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -226,6 +233,7 @@ export function partialiseGameState(
     cityArchive: state.cityArchive,
     vehicleMaintenance: state.vehicleMaintenance,
     teamSpecialization: state.teamSpecialization,
+    strategyHistory: state.strategyHistory,
     tutorialState: state.tutorialState,
     bestPilotScores: state.bestPilotScores,
     lastPilotScore: state.lastPilotScore,
@@ -497,6 +505,7 @@ export function normalizePersistedSave(
     version !== SAVE_VERSION_23 &&
     version !== SAVE_VERSION_24 &&
     version !== SAVE_VERSION_25 &&
+    version !== SAVE_VERSION_26 &&
     version !== SAVE_VERSION
   ) {
     return null;
@@ -838,6 +847,12 @@ export function normalizePersistedSave(
               })
             : undefined,
       });
+    })(),
+    strategyHistory: ((): StrategyHistoryStateV1 => {
+      if (raw.strategyHistory != null) {
+        return migrateStrategyHistoryState(raw.strategyHistory, currentDay);
+      }
+      return createEmptyStrategyHistoryState();
     })(),
     tutorialState: isValidTutorialState(raw.tutorialState)
       ? raw.tutorialState

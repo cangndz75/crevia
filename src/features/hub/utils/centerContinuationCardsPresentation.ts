@@ -13,6 +13,14 @@ import {
   type FollowUpActionResult,
 } from '@/core/followUpActions';
 import {
+  buildPrimaryFollowUpExecutionCard,
+  type FollowUpExecutionResult,
+} from '@/core/followUpExecution';
+import {
+  buildPrimaryDominantStrategyCard,
+  type DominantStrategyDetectorResult,
+} from '@/core/dominantStrategyDetector';
+import {
   buildPrimaryCityRhythmCard,
   type CityRhythmDirectorResult,
 } from '@/core/cityRhythmDirector';
@@ -133,6 +141,8 @@ export type BuildCenterContinuationCardsInput = {
   eceStrategyLines?: EceStrategyLineResult | null;
   cityMemoryVisibility?: CityMemoryVisibilityResult | null;
   followUpActions?: FollowUpActionResult | null;
+  followUpExecution?: FollowUpExecutionResult | null;
+  dominantStrategyDetector?: DominantStrategyDetectorResult | null;
   districtNeglectRecovery?: import('@/core/districtNeglectRecovery').DistrictNeglectRecoveryResult | null;
   day8StrategicContent?: Day8StrategicContentResult | null;
   cityRhythmDirector?: CityRhythmDirectorResult | null;
@@ -733,6 +743,80 @@ function collectCandidates(input: BuildCenterContinuationCardsInput): Candidate[
   }
 
   const followUpCard = buildPrimaryFollowUpActionCard(input.followUpActions);
+  const executionCard = buildPrimaryFollowUpExecutionCard(input.followUpExecution);
+  if (executionCard && input.day >= 8 && executionCard.status !== 'blocked') {
+    const body = dedupeBody(
+      dedupeLines,
+      executionCard.resultLine ?? executionCard.line,
+      'Dunku takip icin kisa bir uygulama notu hazir.',
+    );
+    if (
+      body &&
+      !isBlockedByRecommendedPlan(input.recommendedPlan, 'report_preview', body)
+    ) {
+      candidates.push(
+        buildCardBase({
+          id: 'follow-up-execution-continuation',
+          kind: 'report_preview',
+          title: executionCard.status === 'executed' ? 'Takip Tamamlandi' : 'Takip Uygulama',
+          body,
+          label: executionCard.status === 'executed' ? 'Tamam' : executionCard.badgeLabel,
+          tone:
+            executionCard.tone === 'positive'
+              ? 'positive'
+              : executionCard.tone === 'cautious'
+                ? 'warning'
+                : 'calm',
+          priority: executionCard.status === 'executed' ? 'high' : 'normal',
+          iconKey: executionCard.status === 'executed' ? 'checkmark-done-outline' : 'play-circle-outline',
+          route: '/reports',
+          actionKey: 'view_report',
+          enabled: true,
+          sourceLabel: 'Takip uygulama',
+          sourceIds: ['follow-up-execution', ...(input.followUpExecution?.sourceIds ?? [])],
+          sortRank: executionCard.status === 'executed' ? 12.2 : 14.8,
+        }),
+      );
+    }
+  }
+
+  const dominantStrategyCard = buildPrimaryDominantStrategyCard(input.dominantStrategyDetector);
+  if (dominantStrategyCard && input.day >= 8) {
+    const body = dedupeBody(
+      dedupeLines,
+      dominantStrategyCard.counterSignalLine ?? dominantStrategyCard.line,
+      'Ece karar tarzina dair kisa bir denge notu hazirladi.',
+    );
+    if (
+      body &&
+      !isBlockedByRecommendedPlan(input.recommendedPlan, 'report_preview', body)
+    ) {
+      candidates.push(
+        buildCardBase({
+          id: 'dominant-strategy-continuation',
+          kind: 'report_preview',
+          title: 'Strateji Notu',
+          body,
+          label: dominantStrategyCard.badgeLabel,
+          tone:
+            dominantStrategyCard.tone === 'encouraging'
+              ? 'positive'
+              : dominantStrategyCard.tone === 'cautious'
+                ? 'warning'
+                : 'calm',
+          priority: dominantStrategyCard.visibilityLevel === 'detailed' ? 'high' : 'normal',
+          iconKey: 'analytics-outline',
+          route: '/reports',
+          actionKey: 'view_report',
+          enabled: true,
+          sourceLabel: 'Strateji farkindaligi',
+          sourceIds: ['dominant-strategy-detector', ...(input.dominantStrategyDetector?.sourceIds ?? [])],
+          sortRank: 14.9,
+        }),
+      );
+    }
+  }
+
   if (followUpCard && input.day > 1) {
     const followUpHubLine =
       followUpCard.benefitLine?.trim() &&

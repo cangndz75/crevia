@@ -2,6 +2,8 @@ import type {
   PositiveComebackKind,
   PositiveComebackSourceKind,
 } from './positiveComebackTypes';
+import { mergeCopyPools } from '@/core/contentVarietyQuality';
+import { POSITIVE_COMEBACK_COPY_EXPANSION } from './positiveComebackCopyExpansion';
 
 export const POSITIVE_COMEBACK_MAX_CANDIDATES = 3;
 export const POSITIVE_COMEBACK_LINE_MAX = 100;
@@ -131,7 +133,7 @@ export const POSITIVE_COMEBACK_BENEFIT_LINES: Record<PositiveComebackKind, strin
   ],
 };
 
-export const POSITIVE_COMEBACK_COPY: Record<PositiveComebackKind, string[]> = {
+const POSITIVE_COMEBACK_COPY_BASE: Record<PositiveComebackKind, string[]> = {
   trust_recovery: [
     'Bu bölgede güveni yeniden güçlendirmek için küçük bir pencere var.',
     'Doğru takip hamlesi güven etkisini yumuşatabilir.',
@@ -198,6 +200,11 @@ export const POSITIVE_COMEBACK_COPY: Record<PositiveComebackKind, string[]> = {
     'Her gün kriz değildir; bugün denge kurmak da başarı.',
   ],
 };
+
+export const POSITIVE_COMEBACK_COPY = mergeCopyPools(
+  POSITIVE_COMEBACK_COPY_BASE,
+  POSITIVE_COMEBACK_COPY_EXPANSION,
+);
 
 export const POSITIVE_COMEBACK_FAKE_RECOVERY_PATTERNS = [
   /\btoparland[ıi]\b/i,

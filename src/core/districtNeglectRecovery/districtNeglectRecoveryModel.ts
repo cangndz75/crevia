@@ -1,3 +1,4 @@
+import { pickSurfaceCopy } from '@/core/contentVarietyQuality';
 import {
   DISTRICT_NEGLECT_RECOVERY_CONFLICT_COPY,
   DISTRICT_NEGLECT_RECOVERY_COPY,
@@ -85,9 +86,9 @@ function containsFakeRecovery(text: string): boolean {
   return DISTRICT_NEGLECT_RECOVERY_FAKE_RECOVERY_PATTERNS.some((pattern) => pattern.test(text));
 }
 
-function pickCopy(kind: DistrictNeglectRecoveryKind, seed = 0): string {
+function pickCopy(kind: DistrictNeglectRecoveryKind, seed = 0, previousLines?: readonly string[]): string {
   const lines = DISTRICT_NEGLECT_RECOVERY_COPY[kind];
-  return lines[Math.abs(seed) % lines.length] ?? lines[0];
+  return pickSurfaceCopy(kind, 'report', lines, { seed, previousLines });
 }
 
 function criterionBand(profile: Record<string, unknown>, criterionId: string): string | undefined {

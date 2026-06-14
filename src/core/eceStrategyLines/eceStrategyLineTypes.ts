@@ -112,6 +112,7 @@ export type EceStrategyLineInput = {
   districtNeglectRecoveryResult?: unknown;
   day8StrategicContentResult?: unknown;
   cityRhythmDirectorResult?: unknown;
+  day8OperationFeedBindingResult?: unknown;
   recentLineIds?: string[];
   recentLineTexts?: string[];
 };

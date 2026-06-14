@@ -1,4 +1,5 @@
 import type { EceStrategyLineKind, EceStrategyTone } from './eceStrategyLineTypes';
+import { ECE_STRATEGY_LINE_CONTENT_PACK_EXPANSION } from './eceStrategyLineContentPackExpansion';
 
 export type EceStrategyContentLine = {
   id: string;
@@ -7,7 +8,7 @@ export type EceStrategyContentLine = {
   text: string;
 };
 
-export const ECE_STRATEGY_LINE_CONTENT_PACK: EceStrategyContentLine[] = [
+const ECE_STRATEGY_LINE_CONTENT_PACK_BASE: EceStrategyContentLine[] = [
   {
     id: 'strategy-hub-1',
     kind: 'hub_strategy_hint',
@@ -248,4 +249,9 @@ export const ECE_STRATEGY_LINE_CONTENT_PACK: EceStrategyContentLine[] = [
     tone: 'calm',
     text: 'Bu sakin karar ritmini korursan merkez daha okunabilir hale gelir.',
   },
+];
+
+export const ECE_STRATEGY_LINE_CONTENT_PACK: EceStrategyContentLine[] = [
+  ...ECE_STRATEGY_LINE_CONTENT_PACK_BASE,
+  ...ECE_STRATEGY_LINE_CONTENT_PACK_EXPANSION,
 ];

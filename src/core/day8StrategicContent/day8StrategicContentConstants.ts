@@ -1,3 +1,6 @@
+import { mergeCopyPools } from '@/core/contentVarietyQuality';
+
+import { DAY8_STRATEGIC_CONTENT_COPY_EXPANSION } from './day8StrategicContentCopyExpansion';
 import type {
   Day8StrategicContentDayPolicy,
   Day8StrategicContentKind,
@@ -114,7 +117,7 @@ export const DAY8_STRATEGIC_CONTENT_FAKE_CLAIM_PATTERNS = [
   /tamamen\s+(çöktü|düzeldi)/i,
 ];
 
-export const DAY8_STRATEGIC_CONTENT_COPY: Record<Day8StrategicContentKind, string[]> = {
+const DAY8_STRATEGIC_CONTENT_COPY_BASE: Record<Day8StrategicContentKind, string[]> = {
   strategic_operation_focus: [
     'Bugünün ana odağı tek olay değil; şehirdeki öncelik sırası.',
     'Bugün karar, hangi sinyali önce okuyacağını belirleyecek.',
@@ -191,6 +194,11 @@ export const DAY8_STRATEGIC_CONTENT_COPY: Record<Day8StrategicContentKind, strin
     'Şehir yeni faza geçiyor; ilk önceliği sakin belirle.',
   ],
 };
+
+export const DAY8_STRATEGIC_CONTENT_COPY = mergeCopyPools(
+  DAY8_STRATEGIC_CONTENT_COPY_BASE,
+  DAY8_STRATEGIC_CONTENT_COPY_EXPANSION,
+);
 
 export function resolveDay8StrategicContentDayPolicy(day: number): Day8StrategicContentDayPolicy {
   if (day <= 9) return 'day_8_9';

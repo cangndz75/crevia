@@ -6,6 +6,8 @@ import type {
   OperationPortfolioItem,
 } from './dailyCapacityPortfolioTypes';
 import { PORTFOLIO_MAX_CARD_MODELS } from './dailyCapacityPortfolioConstants';
+import type { ResourcePressureDifferentiationResult } from '@/core/resourcePressureDifferentiation';
+import { enrichPortfolioItemDecisionLine } from '@/core/resourcePressureDifferentiation';
 
 const TITLE_MAX = 44;
 const SUMMARY_MAX = 90;
@@ -121,6 +123,9 @@ export function buildDailyCapacityPortfolioSummaryCard(
 
 export function buildOperationPortfolioCardModels(
   result: DailyCapacityPortfolioResult,
+  options?: {
+    resourcePressureDifferentiation?: ResourcePressureDifferentiationResult | null;
+  },
 ): OperationPortfolioCardModel[] {
   const eceLine = buildEcePortfolioLine(result);
   const visible = result.items
@@ -133,7 +138,14 @@ export function buildOperationPortfolioCardModels(
   for (const [index, item] of visible.entries()) {
     const title = clampLine(item.title, TITLE_MAX);
     const subtitle = item.subtitle ? clampLine(item.subtitle, SUMMARY_MAX) : undefined;
-    const decision = clampLine(decisionLine(item), DECISION_MAX);
+    const decision = clampLine(
+      enrichPortfolioItemDecisionLine(
+        decisionLine(item),
+        item.kind,
+        options?.resourcePressureDifferentiation,
+      ) ?? decisionLine(item),
+      DECISION_MAX,
+    );
     const deferRiskLine = item.deferRiskLine ? clampLine(item.deferRiskLine, DECISION_MAX) : undefined;
     const selectBenefitLine = item.selectBenefitLine
       ? clampLine(item.selectBenefitLine, DECISION_MAX)

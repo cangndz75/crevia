@@ -1,3 +1,4 @@
+import { pickSurfaceCopy } from '@/core/contentVarietyQuality';
 import {
   AUTHORITY_POSITIVE_COMEBACK_PERMISSIONS,
   POSITIVE_COMEBACK_BENEFIT_LINES,
@@ -80,9 +81,9 @@ function resolveDayPolicy(day: number): PositiveComebackDayPolicy {
   return 'day_10_plus';
 }
 
-function pickCopy(kind: PositiveComebackKind, seed = 0): string {
+function pickCopy(kind: PositiveComebackKind, seed = 0, previousLines?: readonly string[]): string {
   const lines = POSITIVE_COMEBACK_COPY[kind];
-  return lines[Math.abs(seed) % lines.length] ?? lines[0];
+  return pickSurfaceCopy(kind, 'report', lines, { seed, previousLines });
 }
 
 function pickBenefitLine(kind: PositiveComebackKind, seed = 0): string {

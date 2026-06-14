@@ -42,6 +42,3 @@ export {
   buildReportDay8StrategicContentNote,
   collectDay8StrategicContentPresentationLines,
 } from './day8StrategicContentPresentation';
-
-export { verifyDay8StrategicContentScenario } from './verifyDay8StrategicContentScenario';
-export type { VerifyDay8StrategicContentOutcome } from './verifyDay8StrategicContentScenario';

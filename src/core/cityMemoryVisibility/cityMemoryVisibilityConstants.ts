@@ -1,3 +1,6 @@
+import { mergeCopyPools } from '@/core/contentVarietyQuality';
+
+import { CITY_MEMORY_VISIBILITY_COPY_EXPANSION } from './cityMemoryVisibilityCopyExpansion';
 import type {
   CityMemoryVisibilityKind,
   CityMemoryVisibilitySourceKind,
@@ -43,7 +46,7 @@ export const CITY_MEMORY_VISIBILITY_KIND_LABELS: Record<CityMemoryVisibilityKind
   fallback: 'Hafiza',
 };
 
-export const CITY_MEMORY_VISIBILITY_COPY_PACK: Record<
+const CITY_MEMORY_VISIBILITY_COPY_PACK_BASE: Record<
   CityMemoryVisibilityKind,
   readonly string[]
 > = {
@@ -103,3 +106,8 @@ export const CITY_MEMORY_VISIBILITY_COPY_PACK: Record<
     'Kararlarin izi zamanla daha net okunur.',
   ],
 };
+
+export const CITY_MEMORY_VISIBILITY_COPY_PACK = mergeCopyPools(
+  CITY_MEMORY_VISIBILITY_COPY_PACK_BASE as Record<CityMemoryVisibilityKind, string[]>,
+  CITY_MEMORY_VISIBILITY_COPY_EXPANSION as Partial<Record<CityMemoryVisibilityKind, string[]>>,
+);

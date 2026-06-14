@@ -12,7 +12,7 @@ import {
 import type { PortfolioDeferBinding } from './portfolioDeferRiskTypes';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 26;
+const EXPECTED_SAVE_VERSION = 27;
 
 export type VerifyPortfolioDeferRiskOutcome = {
   ok: boolean;
@@ -168,7 +168,7 @@ export function verifyPortfolioDeferRiskScenario(): VerifyPortfolioDeferRiskOutc
     if (!pass) ok = false;
   };
 
-  record(assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION, 'SAVE_VERSION unchanged', `SAVE_VERSION ${SAVE_VERSION}`));
+  record(assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION, 'SAVE_VERSION 27', `SAVE_VERSION ${SAVE_VERSION}`));
   record(assert(checks, !readRepo('src/store/useGameStore.ts').includes('portfolioDeferRisk'), 'useGameStore untouched', 'useGameStore wired'));
   record(assert(checks, !readRepo('src/core/game/applyDecision.ts').includes('portfolioDeferRisk'), 'applyDecision untouched', 'applyDecision wired'));
   record(assert(checks, !readRepo('src/core/game/endDay.ts').includes('portfolioDeferRisk'), 'day pipeline untouched', 'endDay wired'));

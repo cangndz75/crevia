@@ -1,3 +1,4 @@
+import { pickSurfaceCopy } from '@/core/contentVarietyQuality';
 import {
   CITY_MEMORY_TECHNICAL_TOKEN_PATTERN,
   CITY_MEMORY_VISIBILITY_COPY_PACK,
@@ -115,8 +116,7 @@ function shortLine(text: string): string {
 
 function copyLine(kind: CityMemoryVisibilityKind, seed: string): string {
   const lines = CITY_MEMORY_VISIBILITY_COPY_PACK[kind];
-  const index = Math.abs([...seed].reduce((sum, char) => sum + char.charCodeAt(0), 0)) % lines.length;
-  return lines[index] ?? lines[0] ?? 'Sehir hafizasi sakin ilerliyor.';
+  return pickSurfaceCopy(kind, 'report', lines, { duplicateKey: seed });
 }
 
 function sourceRank(kind: CityMemoryVisibilitySourceKind): number {

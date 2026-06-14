@@ -2,6 +2,8 @@ import type {
   PortfolioDeferBinding,
   PortfolioDeferRiskResult,
 } from './portfolioDeferRiskTypes';
+import type { ResourcePressureDifferentiationResult } from '@/core/resourcePressureDifferentiation';
+import { buildDeferRiskCostReasonLine } from '@/core/resourcePressureDifferentiation';
 
 const TECHNICAL_ENUM_PATTERN = /[a-z]+_[a-z_]+/;
 
@@ -17,11 +19,14 @@ function duplicateLine(line: string, existingLines: readonly string[]): boolean 
 export function buildPortfolioDeferReportLine(
   result: PortfolioDeferRiskResult | null | undefined,
   existingLines: readonly string[] = [],
+  resourcePressureDifferentiation?: ResourcePressureDifferentiationResult | null,
 ): string | undefined {
   const line = result?.reportSummaryLine;
-  if (!line || duplicateLine(line, existingLines)) return undefined;
-  if (TECHNICAL_ENUM_PATTERN.test(line)) return undefined;
-  return line;
+  const costHint = buildDeferRiskCostReasonLine(resourcePressureDifferentiation, existingLines);
+  const merged = costHint && line && !line.includes(costHint) ? `${line} ${costHint}` : line ?? costHint;
+  if (!merged || duplicateLine(merged, existingLines)) return undefined;
+  if (TECHNICAL_ENUM_PATTERN.test(merged)) return undefined;
+  return merged;
 }
 
 export function buildPortfolioDeferTomorrowActionLine(

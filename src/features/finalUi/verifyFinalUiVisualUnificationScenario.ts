@@ -30,7 +30,7 @@ import {
 import { gameUi } from '@/ui/theme/gameUiTokens';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 26;
+const EXPECTED_SAVE_VERSION = 27;
 
 const OFF_THEME_HEX = /#[0-9A-Fa-f]{6}/g;
 const ALLOWED_HEX = new Set<string>(
@@ -216,7 +216,7 @@ export function verifyFinalUiVisualUnificationScenario(): {
     if (!pass) ok = false;
   };
 
-  record(assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION, 'SAVE_VERSION unchanged'));
+  record(assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION, 'SAVE_VERSION 27'));
   record(assert(checks, !readRepo('src/store/gamePersist.ts').includes('finalUiVisual'), 'persist shape unchanged'));
   record(assert(checks, !readRepo('src/core/game/applyDecision.ts').includes('finalUiVisual'), 'applyDecision unchanged'));
   record(assert(checks, !readRepo('src/core/dayPipeline/dayPipelineOrchestrator.ts').includes('finalUiVisual'), 'day pipeline unchanged'));
