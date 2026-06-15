@@ -1,4 +1,5 @@
 import { createDay1Seed } from '@/core/content/day1Seed';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import type { DailyReport } from '@/core/models/DailyReport';
 import type { EventCard } from '@/core/models/EventCard';
 import { normalizePersistedSave, SAVE_VERSION } from '@/store/gamePersist';
@@ -708,7 +709,7 @@ export function verifyAdvisorScenario(): VerifyAdvisorOutcome {
     snapshots: seed.snapshots,
   });
   const persistOk =
-    SAVE_VERSION === 26 &&
+    isCurrentSaveVersion(SAVE_VERSION) &&
     hydrated != null &&
     hydrated.advisorState.advisorId === 'ece_operations_assistant' &&
     hydrated.advisorState.reliabilityScore === DEFAULT_RELIABILITY_SCORE;

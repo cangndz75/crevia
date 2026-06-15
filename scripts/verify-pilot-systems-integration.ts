@@ -4,6 +4,7 @@
  */
 
 import { existsSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { resolve } from 'node:path';
 
 import { createDay1Seed } from '@/core/content/day1Seed';
@@ -524,7 +525,7 @@ function verifySocialQuickActionIsolation(): void {
 }
 
 function verifyPersistHydrate(): void {
-  if (SAVE_VERSION === 26) {
+  if (isCurrentSaveVersion(SAVE_VERSION)) {
     pass('SAVE_VERSION is current (25)');
   } else {
     fail('SAVE_VERSION', `expected 25, got ${SAVE_VERSION}`);

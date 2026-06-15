@@ -1,10 +1,11 @@
+import { EXPECTED_SAVE_VERSION_FOR_VERIFY } from '@/core/quality/saveVersionPolicy';
 import type {
   DistrictArchetypeId,
   DistrictCriterionId,
   DistrictGameplayTag,
 } from './districtPersonalityTypes';
 
-export const DISTRICT_PERSONALITY_EXPECTED_SAVE_VERSION = 26;
+export const DISTRICT_PERSONALITY_EXPECTED_SAVE_VERSION = EXPECTED_SAVE_VERSION_FOR_VERIFY;
 
 export const DISTRICT_PERSONALITY_PROHIBITED_TERMS = [
   'gelir',

@@ -1,4 +1,5 @@
 import { mergeCopyPools } from '@/core/contentVarietyQuality';
+import { EXPECTED_SAVE_VERSION_FOR_VERIFY } from '@/core/quality/saveVersionPolicy';
 
 import { CITY_MEMORY_VISIBILITY_COPY_EXPANSION } from './cityMemoryVisibilityCopyExpansion';
 import type {
@@ -12,7 +13,7 @@ export const CITY_MEMORY_VISIBILITY_ACCESSIBILITY_MAX = 160;
 export const CITY_MEMORY_VISIBILITY_MAX_TRACES = 3;
 export const CITY_MEMORY_VISIBILITY_PRIORITY_MAX = 100;
 
-export const CITY_MEMORY_VISIBILITY_EXPECTED_SAVE_VERSION = 26;
+export const CITY_MEMORY_VISIBILITY_EXPECTED_SAVE_VERSION = EXPECTED_SAVE_VERSION_FOR_VERIFY;
 
 export const CITY_MEMORY_TECHNICAL_TOKEN_PATTERN = /\b[a-z]+_[a-z_]+\b/;
 

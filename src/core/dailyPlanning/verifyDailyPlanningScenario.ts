@@ -1,4 +1,5 @@
 import { createDay1Seed } from '@/core/content/day1Seed';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import type { EventCard } from '@/core/models/EventCard';
 import { createInitialOperationSignalsState } from '@/core/operations/operationSignalState';
 import { normalizePersistedSave, SAVE_VERSION } from '@/store/gamePersist';
@@ -438,7 +439,7 @@ export function verifyDailyPlanningScenario(): VerifyDailyPlanningOutcome {
     snapshots: seed.snapshots,
   });
   const persistOk =
-    SAVE_VERSION === 26 &&
+    isCurrentSaveVersion(SAVE_VERSION) &&
     hydrated != null &&
     hydrated.dailyOperationsPlan.day === seed.gameState.city.day;
 
@@ -489,7 +490,7 @@ export function verifyDailyPlanningScenario(): VerifyDailyPlanningOutcome {
       'Suggested plan başarısız',
     ) && ok;
 
-  if (!warn(checks, SAVE_VERSION === 26, 'Full loop SAVE_VERSION 22', `SAVE_VERSION=${SAVE_VERSION}`)) {
+  if (!warn(checks, isCurrentSaveVersion(SAVE_VERSION), 'Full loop SAVE_VERSION 22', `SAVE_VERSION=${SAVE_VERSION}`)) {
     hasWarn = true;
   }
 

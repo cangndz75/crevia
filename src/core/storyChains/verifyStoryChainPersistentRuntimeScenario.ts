@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { appendCityArchiveEntries, buildCityArchiveEntriesForDay } from '@/core/cityArchive/cityArchiveEngine';
@@ -163,7 +164,7 @@ export function verifyStoryChainPersistentRuntimeScenario(): VerifyStoryChainPer
   const ece = buildPersistentStoryChainEceHint(archive, 5, []);
   record(assert(checks, ece == null || ece.startsWith('Ece'), 'Ece hint safe'));
 
-  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION remains 24'));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION remains 24'));
   record(assert(checks, !readRepo('src/core/game/applyDecision.ts').includes('storyChainPersistent'), 'applyDecision unchanged'));
   record(assert(checks, !readRepo('src/store/gamePersist.ts').includes('storyChainState'), 'no new persist field'));
   record(assert(checks, readRepo('src/store/useGameStore.ts').includes('appendDayCloseCityArchiveWithStoryChains'), 'endCurrentDay story chain wiring'));

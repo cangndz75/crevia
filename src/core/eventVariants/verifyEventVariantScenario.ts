@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { buildEventSelectionResult } from '@/core/eventSelection/eventFamilySelectionEngine';
@@ -88,7 +89,7 @@ export function verifyEventVariantScenario(): VerifyEventVariantOutcome {
     if (!pass) ok = false;
   };
 
-  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 23', `SAVE_VERSION ${SAVE_VERSION}`));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 23', `SAVE_VERSION ${SAVE_VERSION}`));
 
   for (const kind of EVENT_VARIANT_KINDS) {
     const def = EVENT_VARIANT_DEFINITIONS[kind];

@@ -1,4 +1,5 @@
 import { createDay1Seed } from '@/core/content/day1Seed';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { createInitialAssignmentsState } from '@/core/assignments/assignmentState';
 import { processAssignmentsEndOfDay } from '@/core/assignments/assignmentEngine';
 import { createInitialCrisisState } from '@/core/crisis/crisisState';
@@ -460,7 +461,7 @@ export function verifyDayPipelineScenario(): VerifyDayPipelineOutcome {
     'full eligible',
   );
 
-  add(SAVE_VERSION === 26, 'SAVE_VERSION 22', 'save version');
+  add(isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 22', 'save version');
   add(
     END_OF_DAY_PIPELINE_STEP_DEFINITIONS.every((s) => !s.id.includes('persist')),
     'No new persist key introduced',

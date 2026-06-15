@@ -1,4 +1,5 @@
 import { createDay1Seed } from '@/core/content/day1Seed';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { createInitialAssignmentsState } from '@/core/assignments/assignmentState';
 import { createInitialCrisisState } from '@/core/crisis/crisisState';
 import { deriveCrisisAccessMode } from '@/core/crisis/crisisEngine';
@@ -216,7 +217,7 @@ export function verifyCrisisActionScenario(): VerifyCrisisActionOutcome {
     'migrate',
   );
 
-  add(SAVE_VERSION === 26, 'Full loop SAVE_VERSION 22', 'save version');
+  add(isCurrentSaveVersion(SAVE_VERSION), 'Full loop SAVE_VERSION 22', 'save version');
 
   const cta = getInteractionContractsForComponent('HubCrisisActionCard').find(
     (c) => c.label === 'Hamleyi Seç',

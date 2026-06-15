@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { EXPECTED_SAVE_VERSION_FOR_VERIFY } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -13,7 +14,7 @@ import {
 import { ACTIVE_OPERATION_MAP_PHASES } from './activeOperationMapBindingTypes';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 26;
+const EXPECTED_SAVE_VERSION = EXPECTED_SAVE_VERSION_FOR_VERIFY;
 
 export type VerifyActiveOperationMapBindingOutcome = {
   ok: boolean;

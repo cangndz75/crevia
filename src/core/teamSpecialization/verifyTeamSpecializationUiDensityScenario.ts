@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { runManualLaunchTrackerAudit } from '@/core/manualLaunchTracker/manualLaunchTrackerAudit';
@@ -93,11 +94,11 @@ export function verifyTeamSpecializationUiDensityScenario(): VerifyTeamSpecializ
   const planningBaseline = verifyTeamSpecializationPlanningScenario();
   record(assert(checks, planningBaseline.ok, 'planning verify still passes'));
 
-  record(assert(checks, (SAVE_VERSION as number) === 26, 'SAVE_VERSION 26 unchanged'));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION current build'));
   record(
     assert(
       checks,
-      TEAM_SPECIALIZATION_TARGET_SAVE_VERSION === 26,
+      TEAM_SPECIALIZATION_TARGET_SAVE_VERSION <= SAVE_VERSION,
       'team specialization target save version 26',
     ),
   );

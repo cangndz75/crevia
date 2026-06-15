@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { EXPECTED_SAVE_VERSION_FOR_VERIFY, isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import {
@@ -138,7 +139,7 @@ export function verifyMotionFoundationScenario(): VerifyMotionFoundationOutcome 
   record(docs.includes('VoiceOver/TalkBack manual QA pending'), 'Docs manual accessibility QA pending');
 
   const persist = readRepo('src/store/gamePersist.ts');
-  record(SAVE_VERSION === 26 && persist.includes('export const SAVE_VERSION = 26'), 'SAVE_VERSION unchanged');
+  record(isCurrentSaveVersion(SAVE_VERSION) && persist.includes(`export const SAVE_VERSION: number = ${EXPECTED_SAVE_VERSION_FOR_VERIFY}`), 'SAVE_VERSION unchanged');
   record(!persist.includes('motionFoundationState'), 'Persist shape unchanged');
   record(!readRepo('src/core/game/applyDecision.ts').includes('motionFoundation'), 'applyDecision unchanged');
   record(!readRepo('src/core/dayPipeline/dayPipelineOrchestrator.ts').includes('motionFoundation'), 'dayPipeline unchanged');

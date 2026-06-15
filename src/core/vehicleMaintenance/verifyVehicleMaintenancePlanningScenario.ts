@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { runManualLaunchTrackerAudit } from '@/core/manualLaunchTracker/manualLaunchTrackerAudit';
@@ -111,7 +112,7 @@ export function verifyVehicleMaintenancePlanningScenario(): VerifyVehicleMainten
     ),
   );
 
-  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 26 runtime active'));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 26 runtime active'));
   record(assert(checks, VEHICLE_MAINTENANCE_CURRENT_SAVE_VERSION === 25, 'Planning current SAVE_VERSION 25'));
   record(assert(checks, VEHICLE_MAINTENANCE_TARGET_SAVE_VERSION === 25, 'Target SAVE_VERSION 25 for planning snapshot'));
   record(assert(checks, readRepo('src/store/gamePersist.ts').includes('vehicleMaintenance'), 'persist shape includes vehicleMaintenance'));

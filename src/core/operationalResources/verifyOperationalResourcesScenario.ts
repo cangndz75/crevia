@@ -1,4 +1,5 @@
 import { createDay1Seed } from '@/core/content/day1Seed';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { createInitialAssignmentsState } from '@/core/assignments/assignmentState';
 import { createInitialCrisisState } from '@/core/crisis/crisisState';
 import { createInitialDailyOperationsPlan } from '@/core/dailyPlanning/dailyPlanningState';
@@ -317,7 +318,7 @@ export function verifyOperationalResourcesScenario(): VerifyOperationalResources
     'v22 whitelist',
   );
 
-  add(SAVE_VERSION === 26, 'SAVE_VERSION 23', String(SAVE_VERSION));
+  add(isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 23', String(SAVE_VERSION));
 
   const hubContracts = getInteractionContractsForComponent('HubOperationalResourcesCard');
   add(hubContracts.length >= 1, 'Contract HubOperationalResourcesCard', 'contract hub');

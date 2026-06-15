@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -452,7 +453,7 @@ export function verifyContentSafetyPackStage2Scenario(): VerifyContentSafetyPack
   );
   record(assert(checks, !readRepo('src/core/postPilot/postPilotEventEngine.ts').includes('csp2-'), 'postPilot dokunulmadı', 'postPilot değişti'));
   record(assert(checks, !readRepo('src/core/game/applyDecision.ts').includes('contentPacks'), 'applyDecision değişmedi', 'applyDecision değişti'));
-  record(assert(checks, SAVE_VERSION === 26, `SAVE_VERSION (${SAVE_VERSION})`, 'SAVE_VERSION değişti'));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), `SAVE_VERSION (${SAVE_VERSION})`, 'SAVE_VERSION değişti'));
 
   record(
     assert(

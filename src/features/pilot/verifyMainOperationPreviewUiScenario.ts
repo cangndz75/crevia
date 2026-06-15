@@ -1,4 +1,5 @@
 import { SAVE_VERSION } from '@/store/gamePersist';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import {
   ROADMAP_STEPS,
   STATUS_CHIPS,
@@ -113,7 +114,7 @@ export function verifyMainOperationPreviewUiScenario(): VerifyMainOperationPrevi
       legacyHit.join(', '),
     ) && ok;
 
-  ok = assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION güncel (22)') && ok;
+  ok = assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION güncel (22)') && ok;
 
   return { ok, checks };
 }

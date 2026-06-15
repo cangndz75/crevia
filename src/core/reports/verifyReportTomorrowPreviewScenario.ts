@@ -1,4 +1,5 @@
 import { verifyCarryOverMemoryScenario } from '@/core/carryOver/verifyCarryOverMemoryScenario';
+import { EXPECTED_SAVE_VERSION_FOR_VERIFY } from '@/core/quality/saveVersionPolicy';
 import { verifyContentSafetyPackStage3Scenario } from '@/core/contentPacks/verifyContentSafetyPackStage3Scenario';
 import { buildTomorrowHintLine } from '@/core/contentPacks/eventEchoPresentation';
 import { buildEchoContextFromEventResult } from '@/core/contentPacks/eventEchoSelectors';
@@ -36,7 +37,7 @@ import {
   validateReportTomorrowPreviewTextLength,
 } from './reportTomorrowPreviewValidation';
 
-const EXPECTED_SAVE_VERSION = 26;
+const EXPECTED_SAVE_VERSION = EXPECTED_SAVE_VERSION_FOR_VERIFY;
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
 

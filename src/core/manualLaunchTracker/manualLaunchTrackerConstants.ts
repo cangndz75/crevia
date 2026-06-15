@@ -1,3 +1,4 @@
+import { EXPECTED_SAVE_VERSION_FOR_VERIFY } from '@/core/quality/saveVersionPolicy';
 import type {
   ManualLaunchBlocker,
   ManualLaunchBlockerGroupId,
@@ -9,7 +10,7 @@ export const MANUAL_LAUNCH_TRACKER_DOCS_PATH = 'docs/crevia-manual-launch-blocke
 
 export const MANUAL_LAUNCH_RELEASE_CANDIDATE_AUDIT_PATH = 'docs/crevia-release-candidate-audit.md';
 
-export const MANUAL_LAUNCH_TRACKER_EXPECTED_SAVE_VERSION = 26;
+export const MANUAL_LAUNCH_TRACKER_EXPECTED_SAVE_VERSION = EXPECTED_SAVE_VERSION_FOR_VERIFY;
 
 export const MANUAL_LAUNCH_TRACKER_MIN_BLOCKER_COUNT = 30;
 

@@ -1,4 +1,5 @@
 import { verifyCrisisActionScenario } from '@/core/crisisActions/verifyCrisisActionScenario';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { verifyDayPipelineScenario } from '@/core/dayPipeline/verifyDayPipelineScenario';
 import { verifyGameplayImpactBalanceScenario } from '@/core/balance/verifyGameplayImpactBalanceScenario';
 import { runFullLoopAnalysis } from '@/core/fullLoop/runFullLoopSimulation';
@@ -444,7 +445,7 @@ export function verifyFullSeasonSimulationScenario(): VerifyFullSeasonSimulation
     'limited vs full too similar',
   );
 
-  add(SAVE_VERSION === 26, 'SAVE_VERSION unchanged at 23', 'save version changed');
+  add(isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION unchanged at 23', 'save version changed');
 
   const report = buildFullSeasonSimulationConsoleReport(audit);
   add(report.length > 80, 'Console report non-empty', 'empty report');

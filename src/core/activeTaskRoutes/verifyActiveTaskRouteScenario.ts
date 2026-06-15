@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -263,7 +264,7 @@ export function verifyActiveTaskRouteScenario(): VerifyActiveTaskRouteOutcome {
   for (const permissionId of ACTIVE_TASK_ROUTE_PERMISSION_IDS) {
     record(assert(results, typeof permissionId === 'string' && permissionId.length > 0, `permission string ${permissionId}`, `permission string invalid ${permissionId}`));
   }
-  record(assert(results, SAVE_VERSION === 26, 'SAVE_VERSION unchanged note', `SAVE_VERSION changed: ${SAVE_VERSION}`));
+  record(assert(results, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION unchanged note', `SAVE_VERSION changed: ${SAVE_VERSION}`));
   pushResult(results, 'PASS', 'Persist shape unchanged note', 'active task route state is not stored');
 
   for (const file of [

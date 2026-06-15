@@ -1,4 +1,5 @@
 import { pilotEvents } from '@/core/content/pilotEvents';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { createDay1Seed } from '@/core/content/day1Seed';
 import {
   CARRY_OVER_MAX_NEGATIVE_FRACTION,
@@ -1399,6 +1400,6 @@ export function runFullLoopAnalysis(): FullLoopAnalysisResult {
     totalFAIL,
     topWarnings: topWarnings.slice(0, 12),
     recommendedSmallFixes: collectRecommendedFixes(scenarios),
-    saveVersionOk: SAVE_VERSION === 26,
+    saveVersionOk: isCurrentSaveVersion(SAVE_VERSION),
   };
 }

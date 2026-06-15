@@ -21,6 +21,12 @@ import {
   qualityAuditRequiresGameplayOrPersist,
   runQualityAudit,
 } from './qualityAuditPresentation';
+import {
+  getExpectedSaveVersionForCurrentBuild,
+  isCurrentSaveVersion,
+  STRATEGY_HISTORY_MIGRATION_FROM_VERSION,
+} from './saveVersionPolicy';
+import { SAVE_VERSION } from '@/store/gamePersist';
 
 export type VerifyQualityAuditOutcome = {
   ok: boolean;
@@ -145,6 +151,37 @@ export function verifyQualityAuditScenario(): VerifyQualityAuditOutcome {
     typeof pkg.scripts?.['verify:quality-audit'] === 'string',
     'verify:quality-audit package.json’da tanımlı',
     pkg.scripts?.['verify:quality-audit'] ?? 'missing',
+  );
+
+  assert(
+    checks,
+    getExpectedSaveVersionForCurrentBuild() === 27,
+    'currentSaveVersion 27',
+    String(SAVE_VERSION),
+  );
+  assert(
+    checks,
+    isCurrentSaveVersion(SAVE_VERSION),
+    'SAVE_VERSION policy helper matches runtime',
+    String(SAVE_VERSION),
+  );
+  assert(
+    checks,
+    typeof pkg.scripts?.['verify:save-version-policy'] === 'string',
+    'verify:save-version-policy package.json’da tanımlı',
+    pkg.scripts?.['verify:save-version-policy'] ?? 'missing',
+  );
+  assert(
+    checks,
+    existsSync(join(REPO_ROOT, 'src/core/quality/saveVersionPolicy.ts')),
+    'saveVersionPolicy helper mevcut',
+    existsSync(join(REPO_ROOT, 'src/core/quality/saveVersionPolicy.ts')) ? 'ok' : 'missing saveVersionPolicy.ts',
+  );
+  assert(
+    checks,
+    STRATEGY_HISTORY_MIGRATION_FROM_VERSION === 26,
+    'migrationCoverage includes v26→v27 source',
+    String(STRATEGY_HISTORY_MIGRATION_FROM_VERSION),
   );
 
   void EVENT_AUTHORING_EXAMPLE_PROFILES;

@@ -1,4 +1,5 @@
 import { createDay1Seed } from '@/core/content/day1Seed';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { createDefaultPilotState } from '@/core/game/createDefaultPilotState';
 import {
   applyFullAccessToGameState,
@@ -469,7 +470,7 @@ export function verifyMainOperationScenario(): VerifyMainOperationOutcome {
   ok =
     assert(
       checks,
-      SAVE_VERSION === 26,
+      isCurrentSaveVersion(SAVE_VERSION),
       'Full loop SAVE_VERSION 22 ile çalışıyor',
       `SAVE_VERSION=${SAVE_VERSION}`,
     ) && ok;

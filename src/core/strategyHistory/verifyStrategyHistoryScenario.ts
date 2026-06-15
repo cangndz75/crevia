@@ -1,4 +1,5 @@
 import { createDay1Seed } from '@/core/content/day1Seed';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { buildDominantStrategyDetector } from '@/core/dominantStrategyDetector/dominantStrategyDetectorModel';
 import type { FollowUpExecutionCandidate } from '@/core/followUpExecution/followUpExecutionTypes';
 import { executeFollowUpActionLite } from '@/core/followUpExecution/followUpExecutionModel';
@@ -62,7 +63,7 @@ export function verifyStrategyHistoryScenario(): VerifyStrategyHistoryOutcome {
     if (!pass) ok = false;
   };
 
-  record(assert(checks, SAVE_VERSION === 27, 'SAVE_VERSION 27', `SAVE_VERSION ${SAVE_VERSION}`));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 27', `SAVE_VERSION ${SAVE_VERSION}`));
 
   let state = createEmptyStrategyHistoryState();
   const decisionRecord = buildStrategyDecisionRecordFromDecisionRecord(

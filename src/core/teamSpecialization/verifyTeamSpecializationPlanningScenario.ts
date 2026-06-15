@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion, STRATEGY_HISTORY_MIGRATION_FROM_VERSION } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { runManualLaunchTrackerAudit } from '@/core/manualLaunchTracker/manualLaunchTrackerAudit';
@@ -123,13 +124,13 @@ export function verifyTeamSpecializationPlanningScenario(): VerifyTeamSpecializa
     ),
   );
 
-  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 26 after runtime V1'));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 26 after runtime V1'));
   record(assert(checks, TEAM_SPECIALIZATION_CURRENT_SAVE_VERSION === 25, 'Planning baseline SAVE_VERSION 25'));
   record(assert(checks, TEAM_SPECIALIZATION_TARGET_SAVE_VERSION === 25, 'Planning target SAVE_VERSION 25 (pre-implementation)'));
   record(
     assert(
       checks,
-      TEAM_SPECIALIZATION_IMPLEMENTATION_SAVE_VERSION === 26,
+      TEAM_SPECIALIZATION_IMPLEMENTATION_SAVE_VERSION === STRATEGY_HISTORY_MIGRATION_FROM_VERSION,
       'Future implementation SAVE_VERSION 26 documented',
     ),
   );

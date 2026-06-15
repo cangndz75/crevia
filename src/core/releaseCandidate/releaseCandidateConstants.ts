@@ -1,3 +1,4 @@
+import { EXPECTED_SAVE_VERSION_FOR_VERIFY } from '@/core/quality/saveVersionPolicy';
 import type {
   ReleaseCandidateBoardItem,
   ReleaseCandidateGameplayArea,
@@ -6,7 +7,7 @@ import type {
 
 export const RELEASE_CANDIDATE_DOCS_PATH = 'docs/crevia-release-candidate-audit.md';
 
-export const RELEASE_CANDIDATE_EXPECTED_SAVE_VERSION = 26;
+export const RELEASE_CANDIDATE_EXPECTED_SAVE_VERSION = EXPECTED_SAVE_VERSION_FOR_VERIFY;
 
 export const RELEASE_CANDIDATE_MANUAL_LAUNCH_TRACKER_PATH =
   'docs/crevia-manual-launch-blocker-tracker.md';

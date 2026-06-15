@@ -25,5 +25,3 @@ export {
   pickSurfaceCopy,
   selectDeterministicCopyVariant,
 } from './contentVarietyQualityModel';
-
-export { verifyContentVarietyQualityScenario } from './verifyContentVarietyQualityScenario';

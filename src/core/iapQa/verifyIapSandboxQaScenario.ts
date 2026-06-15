@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { verifyAnalyticsScenario } from '@/core/analytics/verifyAnalyticsScenario';
@@ -293,7 +294,7 @@ export function verifyIapSandboxQaScenario(): VerifyIapSandboxQaOutcome {
       'Missing soft launch IAP sandbox finding',
     ) && ok;
 
-  ok = assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 23', 'SAVE_VERSION changed') && ok;
+  ok = assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 23', 'SAVE_VERSION changed') && ok;
 
   const persist = readRepo('src/store/gamePersist.ts');
   ok =

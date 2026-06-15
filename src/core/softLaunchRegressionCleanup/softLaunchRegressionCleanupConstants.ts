@@ -1,3 +1,4 @@
+import { EXPECTED_SAVE_VERSION_FOR_VERIFY } from '@/core/quality/saveVersionPolicy';
 import type {
   SoftLaunchCompletionModuleRegistration,
   SoftLaunchManualBlocker,
@@ -6,7 +7,7 @@ import type {
 export const SOFT_LAUNCH_REGRESSION_CLEANUP_DOCS_PATH =
   'docs/crevia-soft-launch-regression-cleanup.md';
 
-export const SOFT_LAUNCH_REGRESSION_CLEANUP_EXPECTED_SAVE_VERSION = 26;
+export const SOFT_LAUNCH_REGRESSION_CLEANUP_EXPECTED_SAVE_VERSION = EXPECTED_SAVE_VERSION_FOR_VERIFY;
 
 export const SOFT_LAUNCH_MANUAL_BLOCKERS: readonly SoftLaunchManualBlocker[] = [
   {

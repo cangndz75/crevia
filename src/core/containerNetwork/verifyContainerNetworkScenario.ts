@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -654,7 +655,7 @@ export function verifyContainerNetworkScenario(): VerifyContainerNetworkOutcome 
     ),
   );
 
-  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION unchanged at 23', 'SAVE_VERSION changed'));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION unchanged at 23', 'SAVE_VERSION changed'));
 
   const indexSource = readRepo('src/core/containerNetwork/index.ts');
   record(assert(checks, indexSource.includes('export type'), 'type exports present', 'missing type exports'));

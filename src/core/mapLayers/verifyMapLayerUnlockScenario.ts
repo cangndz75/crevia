@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -166,7 +167,7 @@ export function verifyMapLayerUnlockScenario(): VerifyMapLayerUnlockOutcome {
   const mapLayerSrc = readRepo('src/core/mapLayers/mapLayerUnlockModel.ts') + readRepo('src/core/mapLayers/mapLayerPresentation.ts');
   record(assert(checks, !mapLayerSrc.includes("from '@/core/districtTrust"), 'no districtTrust circular import', 'districtTrust import detected'));
 
-  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`));
   checks.push('PASS Persist shape unchanged by scope: map layer state is not stored');
   checks.push('PASS Map UI integration skipped: foundation view model only, no redesign');
 

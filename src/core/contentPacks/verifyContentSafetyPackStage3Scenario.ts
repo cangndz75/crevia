@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -296,7 +297,7 @@ export function verifyContentSafetyPackStage3Scenario(): VerifyContentSafetyPack
   record(assert(checks, !!goldenBundle.reportLine, 'golden report', 'golden report'));
 
   record(assert(checks, !readRepo('src/core/contentPacks/eventEchoSelectors.ts').includes('Math.random'), 'no Math.random', 'random'));
-  record(assert(checks, SAVE_VERSION === 26, `SAVE_VERSION (${SAVE_VERSION})`, 'SAVE_VERSION'));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), `SAVE_VERSION (${SAVE_VERSION})`, 'SAVE_VERSION'));
   record(assert(checks, !readRepo('src/core/game/applyDecision.ts').includes('eventEcho'), 'applyDecision', 'applyDecision'));
   record(assert(checks, !readRepo('src/core/postPilot/postPilotEventEngine.ts').includes('eventEchoCopy'), 'postPilot', 'postPilot'));
   record(assert(checks, buildEventEchoSummaryForDocs().length > 80, 'presentation summary', 'summary'));

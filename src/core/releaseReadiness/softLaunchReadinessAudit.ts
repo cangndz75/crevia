@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { runCrashPerformanceAudit } from '@/core/crashPerformance/crashPerformanceAudit';
@@ -227,7 +228,7 @@ export function buildAreaSummaries(
 export function auditSaveMigrationReadiness(): SoftLaunchReadinessFinding[] {
   const findings: SoftLaunchReadinessFinding[] = [];
 
-  if (SAVE_VERSION === 26) {
+  if (isCurrentSaveVersion(SAVE_VERSION)) {
     findings.push(
       pass(
         'save_migration.save_version_23',

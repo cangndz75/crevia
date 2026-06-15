@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { verifyDayPipelineScenario } from '@/core/dayPipeline/verifyDayPipelineScenario';
@@ -237,7 +238,7 @@ export function verifySelectorAuditScenario(): VerifySelectorAuditOutcome {
       'Forbidden words in audit',
     ) && ok;
 
-  ok = assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 23', 'SAVE_VERSION changed') && ok;
+  ok = assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 23', 'SAVE_VERSION changed') && ok;
 
   const seasonEndCard = readRepo(
     'src/features/reports/components/ReportSeasonEndEvaluationCard.tsx',

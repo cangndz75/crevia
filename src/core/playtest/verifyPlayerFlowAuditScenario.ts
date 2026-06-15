@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { verifyDayPipelineScenario } from '@/core/dayPipeline/verifyDayPipelineScenario';
@@ -244,7 +245,7 @@ export function verifyPlayerFlowAuditScenario(): VerifyPlayerFlowAuditOutcome {
     'forbidden',
   );
 
-  add(SAVE_VERSION === 26, 'SAVE_VERSION unchanged at 23', String(SAVE_VERSION));
+  add(isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION unchanged at 23', String(SAVE_VERSION));
 
   add(
     scenario.checks.some((c) => c.id === 'crisis_map_priority'),

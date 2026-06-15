@@ -1,4 +1,5 @@
 import { SAVE_VERSION } from '@/store/gamePersist';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 
 import {
   INTERACTION_FORBIDDEN_WORDS,
@@ -542,7 +543,7 @@ export function verifyInteractionContractsScenario(): VerifyInteractionContracts
     ),
   );
 
-  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION değişmedi (22)', `SAVE_VERSION ${SAVE_VERSION}`));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION değişmedi (22)', `SAVE_VERSION ${SAVE_VERSION}`));
 
   const staticWithNotes = INTERACTION_CONTRACT_REGISTRY.filter(
     (c) => c.visualAffordance === 'static_card',

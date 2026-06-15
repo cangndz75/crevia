@@ -1,4 +1,5 @@
 import { runFullLoopAnalysis } from '@/core/fullLoop/runFullLoopSimulation';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { buildDecisionOptionCardPresentation } from '@/features/events/utils/decisionOptionCardIntegration';
 import { createEmptyDecisionResultFallback } from '@/features/events/utils/decisionResultModel';
 import { pilotEvents } from '@/core/content/pilotEvents';
@@ -167,7 +168,7 @@ export function verifyMicroInteractionsScenario(): VerifyMicroInteractionsOutcom
   );
 
   const loop = runFullLoopAnalysis();
-  record(checks, 'SAVE_VERSION güncel', SAVE_VERSION === 26);
+  record(checks, 'SAVE_VERSION güncel', isCurrentSaveVersion(SAVE_VERSION));
   const loopNoCrash = loop.scenarios.every((s) => s.crashes === 0);
   record(checks, 'full loop invariant FAIL yok', loop.totalFAIL === 0 && loopNoCrash);
   record(

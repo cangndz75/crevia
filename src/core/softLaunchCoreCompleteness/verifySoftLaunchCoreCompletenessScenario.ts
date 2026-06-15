@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -88,7 +89,7 @@ export function verifySoftLaunchCoreCompletenessScenario(): VerifySoftLaunchCore
     ) && ok;
   }
 
-  ok = assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION at 24', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION at 24', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
   ok = assert(
     checks,
     result.nonGoalsConfirmed.some((line) => line.includes('SAVE_VERSION remains 24')),

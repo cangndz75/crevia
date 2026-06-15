@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { buildDistrictMemoryRuntimeSnapshot } from '@/core/districtMemoryRuntime/districtMemoryRuntimeModel';
@@ -95,7 +96,7 @@ export function verifyStoryChainScenario(): VerifyStoryChainOutcome {
     if (!pass) ok = false;
   };
 
-  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION remains 23', `SAVE_VERSION ${SAVE_VERSION}`));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION remains 23', `SAVE_VERSION ${SAVE_VERSION}`));
   record(assert(checks, STORY_CHAIN_TEMPLATES.length >= 8, '8+ story chain templates', `templates ${STORY_CHAIN_TEMPLATES.length}`));
 
   for (const kind of STORY_CHAIN_KINDS) {

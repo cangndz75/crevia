@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { buildEchoContextFromEventResult } from '@/core/contentPacks/eventEchoSelectors';
@@ -424,7 +425,7 @@ export function verifyDynamicSocialEchoScenario(): VerifyDynamicSocialEchoOutcom
     ),
   );
 
-  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION unchanged', `save=${SAVE_VERSION}`));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION unchanged', `save=${SAVE_VERSION}`));
 
   const modelValidation = validateSocialEchoModel(sampleEcho);
   record(assert(checks, modelValidation.ok, 'model validation', modelValidation.issues.join(',')));

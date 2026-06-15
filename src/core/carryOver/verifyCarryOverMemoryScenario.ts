@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { buildTomorrowHintLine } from '@/core/contentPacks/eventEchoPresentation';
@@ -353,7 +354,7 @@ export function verifyCarryOverMemoryScenario(): VerifyCarryOverMemoryOutcome {
       'random',
     ),
   );
-  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION', 'save version'));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION', 'save version'));
   record(assert(checks, !readRepo('src/core/game/applyDecision.ts').includes('carryOver'), 'applyDecision untouched', 'apply'));
   record(assert(checks, !readRepo('src/core/postPilot/postPilotEventEngine.ts').includes('carryOver'), 'postPilot untouched', 'postPilot'));
 

@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -264,7 +265,7 @@ export function verifyPilotThemeRhythmScenario(): PilotThemeVerifyOutcome {
   record(
     assert(
       checks,
-      SAVE_VERSION === 26,
+      isCurrentSaveVersion(SAVE_VERSION),
       `SAVE_VERSION değişmedi (${SAVE_VERSION})`,
       'SAVE_VERSION değişti',
     ),

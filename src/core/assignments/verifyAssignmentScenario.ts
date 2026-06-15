@@ -1,4 +1,5 @@
 import { createDay1Seed } from '@/core/content/day1Seed';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import type { EventCard } from '@/core/models/EventCard';
 import { createInitialAdvisorState } from '@/core/advisors/advisorState';
 import { createInitialDailyOperationsPlan } from '@/core/dailyPlanning/dailyPlanningState';
@@ -644,7 +645,7 @@ export function verifyAssignmentScenario(): VerifyAssignmentOutcome {
   ok =
     assert(
       checks,
-      SAVE_VERSION === 26 && hydratedV16?.assignments != null,
+      isCurrentSaveVersion(SAVE_VERSION) && hydratedV16?.assignments != null,
       'Full loop SAVE_VERSION 22 ile çalışıyor',
       `SAVE_VERSION=${SAVE_VERSION}`,
     ) && ok;

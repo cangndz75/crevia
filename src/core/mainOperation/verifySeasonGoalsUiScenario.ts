@@ -1,4 +1,5 @@
 import { createDay1Seed } from '@/core/content/day1Seed';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { createInitialAssignmentsState } from '@/core/assignments/assignmentState';
 import { createInitialCrisisState } from '@/core/crisis/crisisState';
 import { createInitialAdvisorState } from '@/core/advisors/advisorState';
@@ -406,7 +407,7 @@ export function verifySeasonGoalsUiScenario(): VerifySeasonGoalsUiOutcome {
   ok =
     assert(
       checks,
-      SAVE_VERSION === 26,
+      isCurrentSaveVersion(SAVE_VERSION),
       'Full loop SAVE_VERSION 22 ile çalışıyor',
       `SAVE_VERSION ${SAVE_VERSION}`,
     ) && ok;

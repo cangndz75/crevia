@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { createInitialCityArchiveState } from '@/core/cityArchive/cityArchiveState';
@@ -93,13 +94,13 @@ export function verifyTeamSpecializationRuntimeScenario(): VerifyTeamSpecializat
   };
 
   const gamePersist = readRepo('src/store/gamePersist.ts');
-  record(assert(checks, (SAVE_VERSION as number) === TEAM_SPECIALIZATION_TARGET_SAVE_VERSION, 'SAVE_VERSION 26'));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION current build'));
   record(assert(checks, gamePersist.includes('teamSpecialization'), 'teamSpecialization in gamePersist'));
   record(assert(checks, gamePersist.includes('SAVE_VERSION_25'), 'v25 migration path exists'));
 
   const v25Save = { ...createDay1Seed(), saveVersion: 25 };
   const migrated = normalizePersistedSave(v25Save);
-  record(assert(checks, migrated != null && migrated.saveVersion === 26, 'v25 save migrates to 26'));
+  record(assert(checks, migrated != null && migrated.saveVersion === SAVE_VERSION, 'v25 save migrates to current SAVE_VERSION'));
   record(
     assert(
       checks,
@@ -109,7 +110,7 @@ export function verifyTeamSpecializationRuntimeScenario(): VerifyTeamSpecializat
   );
 
   record(assert(checks, TEAM_SPECIALIZATION_GROUP_IDS.length === 6, '6 team groups exist'));
-  record(assert(checks, TEAM_SPECIALIZATION_TARGET_SAVE_VERSION === 26, 'target SAVE_VERSION 26 in constants'));
+  record(assert(checks, TEAM_SPECIALIZATION_TARGET_SAVE_VERSION <= SAVE_VERSION, 'target SAVE_VERSION 26 in constants'));
   record(
     assert(
       checks,

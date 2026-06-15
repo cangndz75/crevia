@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { runFullLoopAnalysis } from '@/core/fullLoop/runFullLoopSimulation';
@@ -193,7 +194,7 @@ export function verifyRealDevicePlaytestScenario(): VerifyRealDevicePlaytestOutc
   ok = assert(checks, verifyQualityAuditScenario().ok, 'verify:quality-audit compatible', 'Quality audit broken') && ok;
   ok = assert(checks, verifyPerformanceSelectorPassTwoScenario().ok, 'verify:performance-selector-pass-two compatible', 'Perf pass two broken') && ok;
 
-  ok = assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 23', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 23', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
 
   const persist = readRepo('src/store/gamePersist.ts');
   ok =

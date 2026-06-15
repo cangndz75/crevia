@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -296,7 +297,7 @@ export function verifyContentSafetyPackStage1Scenario(): VerifyContentSafetyPack
   );
 
   record(assert(checks, buildNextContentPackStep().includes('Aşama 2'), 'Next step Aşama 2', 'Next step hatalı'));
-  record(assert(checks, SAVE_VERSION === 26, `SAVE_VERSION (${SAVE_VERSION})`, 'SAVE_VERSION değişti'));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), `SAVE_VERSION (${SAVE_VERSION})`, 'SAVE_VERSION değişti'));
   record(assert(checks, !readRepo('src/core/game/generateDailyEventSet.ts').includes('applyDecision'), 'generateDailyEventSet applyDecision yok', 'n/a'));
   record(
     assert(

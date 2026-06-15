@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { buildEventEchoBundle, buildEchoContextFromEventResult } from '@/core/contentPacks/eventEchoSelectors';
@@ -390,7 +391,7 @@ export function verifyEventDomainUiPrioritizationScenario(): VerifyEventDomainUi
   record(assert(checks, !allUiText.toLowerCase().includes('rank up'), 'no rank up', 'rank up found'));
   record(assert(checks, !/\bxp\b/i.test(allUiText), 'no xp', 'xp found'));
 
-  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION unchanged', 'SAVE_VERSION changed'));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION unchanged', 'SAVE_VERSION changed'));
 
   const persistSrc = readRepo('src/store/gamePersist.ts');
   record(

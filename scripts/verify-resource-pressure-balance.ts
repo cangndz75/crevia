@@ -4,6 +4,7 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -203,7 +204,7 @@ export function verifyResourcePressureBalanceScenario(): Outcome {
   if (!assert(checks, !modelSource.includes('applyDecision'), 'no applyDecision in portfolio model', 'applyDecision in portfolio model')) {
     ok = false;
   }
-  if (!assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION unchanged (26)', `SAVE_VERSION changed (${SAVE_VERSION})`)) {
+  if (!assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION unchanged (26)', `SAVE_VERSION changed (${SAVE_VERSION})`)) {
     ok = false;
   }
 

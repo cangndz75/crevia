@@ -1,4 +1,5 @@
 import { SAVE_VERSION } from '@/store/gamePersist';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 
 import { createInitialAuthorityState } from './authoritySeed';
 import type { AuthorityPermissionId } from './authorityTypes';
@@ -75,7 +76,7 @@ export function verifyAuthorityPermissionShowcaseScenario(): VerifyAuthorityPerm
   ok =
     assert(
       checks,
-      SAVE_VERSION === 26,
+      isCurrentSaveVersion(SAVE_VERSION),
       'SAVE_VERSION değişmedi (25)',
       `SAVE_VERSION beklenmeyen: ${SAVE_VERSION}`,
     ) && ok;

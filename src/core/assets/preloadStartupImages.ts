@@ -1,7 +1,9 @@
 import { Image } from 'expo-image';
 import { Image as RNImage } from 'react-native';
 
+import { criticalEventImageModules } from '@/core/assets/eventScreenAssets';
 import { creviaAssets } from '@/core/assets/creviaAssets';
+import { eventAssets as operationalEventAssets } from '@/features/events/utils/eventAssets';
 import { hubAssets } from '@/features/hub/utils/hubAssets';
 
 const TAB_BAR_IMAGES = [
@@ -56,6 +58,11 @@ export async function preloadStartupImages(): Promise<void> {
 
   collectImageModules(creviaAssets, modules);
   collectImageModules(hubAssets, modules);
+  collectImageModules(operationalEventAssets, modules);
+
+  for (const image of criticalEventImageModules) {
+    modules.add(image);
+  }
 
   await Promise.all([...modules].map((moduleId) => prefetchModule(moduleId)));
 }

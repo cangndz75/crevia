@@ -1,4 +1,5 @@
 import { ANALYTICS_SCHEMA_VERSION } from '@/core/analytics/analyticsConstants';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import {
   MAIN_OPERATION_ENTITLEMENT_ID,
   MAIN_OPERATION_IAP_PRODUCT_ID,
@@ -216,7 +217,7 @@ export function verifyRankPermissionScenario(): VerifyRankPermissionOutcome {
       'Status label mismatch',
     ) && ok;
 
-  ok = assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
   checks.push('PASS Persist shape unchanged by scope: rank permissions are presentation-only');
   checks.push('PASS Existing authority engine imported only for type/constant compatibility, not mutated');
   ok =

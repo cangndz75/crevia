@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "crevia",
+    "name": "Crevia",
     "slug": "crevia",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,10 +8,12 @@
     "scheme": "crevia",
     "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.cngndz75.crevia",
+      "buildNumber": "1",
+      "supportsTablet": false
     },
     "android": {
-      "navigationBarColor": "#0F2C2D",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -19,7 +21,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.cngndz75.crevia"
+      "package": "com.cngndz75.crevia",
+      "versionCode": 1
     },
     "web": {
       "output": "static",
@@ -38,7 +41,8 @@
         }
       ],
       "expo-font",
-      "@sentry/react-native"
+      "@sentry/react-native",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true

@@ -1,4 +1,5 @@
 import { buildActiveTaskRouteUiModel } from '@/core/activeTaskRoutes';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import type { CarryOverMemoryModel } from '@/core/carryOver';
 import { createDay1Seed } from '@/core/content/day1Seed';
 import {
@@ -316,7 +317,7 @@ export function verifyStoryChainRuntimeHintScenario(): VerifyStoryChainRuntimeHi
       allHintTexts.join(' | '),
     ) && ok;
 
-  ok = record(checks, SAVE_VERSION === 26, 'SAVE_VERSION değişmez', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = record(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION değişmez', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
 
   ok =
     record(checks, scenarioOk(verifyStoryChainScenario()), 'verify:story-chains bozulmaz', 'story-chains regressed') &&

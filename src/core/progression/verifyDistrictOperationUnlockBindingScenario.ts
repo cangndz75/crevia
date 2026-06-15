@@ -1,4 +1,5 @@
 import { SAVE_VERSION } from '@/store/gamePersist';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { createInitialAuthorityState } from '@/core/authority/authoritySeed';
 import { createFullMainOperationSeasonState } from '@/core/mainOperation/mainOperationState';
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
@@ -76,7 +77,7 @@ export function verifyDistrictOperationUnlockBindingScenario(): VerifyDistrictOp
   ok =
     assert(
       checks,
-      SAVE_VERSION === 26,
+      isCurrentSaveVersion(SAVE_VERSION),
       'SAVE_VERSION değişmedi (25)',
       `SAVE_VERSION beklenmeyen: ${SAVE_VERSION}`,
     ) && ok;

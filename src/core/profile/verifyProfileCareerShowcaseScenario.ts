@@ -1,4 +1,5 @@
 import { createInitialAdvisorState } from '@/core/advisors/advisorState';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { createInitialAuthorityState } from '@/core/authority/authoritySeed';
 import { createInitialBadgeState } from '@/core/badges/badgeSeed';
 import { buildDistrictMemoryRuntimeSnapshot } from '@/core/districtMemoryRuntime';
@@ -202,7 +203,7 @@ export function verifyProfileCareerShowcaseScenario(): VerifyProfileCareerShowca
     'ProfileScreen renders ProfileCareerShowcaseCard after ProfileAuthorityCard',
   );
 
-  record(checks, 'SAVE_VERSION değişmez', SAVE_VERSION === 26, String(SAVE_VERSION));
+  record(checks, 'SAVE_VERSION değişmez', isCurrentSaveVersion(SAVE_VERSION), String(SAVE_VERSION));
 
   const failCount = checks.filter((check) => !check.ok).length;
   return {

@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { runManualLaunchTrackerAudit } from '@/core/manualLaunchTracker/manualLaunchTrackerAudit';
@@ -84,7 +85,7 @@ export function verifyContentRuntimeActivationFullImplementationScenario(): Veri
     ok = value && ok;
   };
 
-  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 24 unchanged'));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 24 unchanged'));
   record(assert(checks, !readRepo('src/store/gamePersist.ts').includes('limited_full'), 'persist shape unchanged'));
   record(assert(checks, !readRepo('src/core/game/applyDecision.ts').includes('limited_full'), 'applyDecision unchanged'));
 

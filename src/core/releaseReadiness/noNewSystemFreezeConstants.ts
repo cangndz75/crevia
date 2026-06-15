@@ -1,3 +1,4 @@
+import { EXPECTED_SAVE_VERSION_FOR_VERIFY } from '@/core/quality/saveVersionPolicy';
 import type {
   CreviaFreezeAllowedScope,
   CreviaFreezeForbiddenScope,
@@ -7,7 +8,7 @@ import type {
 
 export const NO_NEW_SYSTEM_FREEZE_DOCS_PATH = 'docs/crevia-no-new-system-freeze.md';
 
-export const NO_NEW_SYSTEM_FREEZE_EXPECTED_SAVE_VERSION = 26;
+export const NO_NEW_SYSTEM_FREEZE_EXPECTED_SAVE_VERSION = EXPECTED_SAVE_VERSION_FOR_VERIFY;
 
 export const NO_NEW_SYSTEM_FREEZE_ALLOWED_SCOPES: readonly CreviaFreezeAllowedScope[] = [
   'bugfix',

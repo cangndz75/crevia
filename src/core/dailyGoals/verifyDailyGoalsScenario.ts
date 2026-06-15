@@ -1,4 +1,5 @@
 import { createDay1Seed } from '@/core/content/day1Seed';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import {
   createDailyGoalsForDay,
   ensureDailyGoalsForDay,
@@ -228,7 +229,7 @@ export function verifyDailyGoalsScenario(): VerifyDailyGoalsOutcome {
 
   const normalized = normalizePersistedSave(legacySave);
   assert(checks, 'v6 save dailyGoalState fallback', normalized?.dailyGoalState != null);
-  assert(checks, 'SAVE_VERSION güncel', SAVE_VERSION === 26);
+  assert(checks, 'SAVE_VERSION güncel', isCurrentSaveVersion(SAVE_VERSION));
 
   assert(
     checks,

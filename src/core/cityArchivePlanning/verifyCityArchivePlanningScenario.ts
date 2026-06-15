@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { runManualLaunchTrackerAudit } from '@/core/manualLaunchTracker/manualLaunchTrackerAudit';
@@ -122,7 +123,7 @@ export function verifyCityArchivePlanningScenario(): VerifyCityArchivePlanningOu
   record(!auditSource.includes('@/store/useGameStore'), 'Planning audit not connected to useGameStore');
   record(!auditSource.includes('@/store/gamePersist'), 'Planning audit not connected to persisted game store');
   record(!constants.includes('AsyncStorage') && !types.includes('AsyncStorage'), 'Planning module has no storage dependency');
-  record(SAVE_VERSION === 26, 'SAVE_VERSION 24 (V1 implemented)');
+  record(isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 24 (V1 implemented)');
   record(readRepo('src/store/gamePersist.ts').includes('SAVE_VERSION = 24'), 'gamePersist SAVE_VERSION 24');
   record(readRepo('src/store/gamePersist.ts').includes('cityArchive'), 'cityArchive in persist (V1)');
   record(!readRepo('src/core/game/applyDecision.ts').includes('cityArchive'), 'applyDecision unchanged by archive planning');

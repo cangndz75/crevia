@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -452,7 +453,7 @@ export function verifyTeamSpecializationScenario(): VerifyTeamSpecializationOutc
 
   const indexSrc = readRepo('src/core/teamSpecialization/index.ts');
   record(assert(checks, indexSrc.includes('teamSpecializationTypes'), 'type exports runtime-safe', 'index exports missing'));
-  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`));
   checks.push('PASS Persist shape unchanged by scope: team specialization state is not stored');
 
   return { ok, warn, checks };

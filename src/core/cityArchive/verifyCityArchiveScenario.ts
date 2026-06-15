@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { EXPECTED_SAVE_VERSION_FOR_VERIFY } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { buildCityJournalLiteModel } from '@/core/cityJournal/cityJournalModel';
@@ -29,7 +30,7 @@ import {
 import type { CityArchiveEntry } from './cityArchiveTypes';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 26;
+const EXPECTED_SAVE_VERSION = EXPECTED_SAVE_VERSION_FOR_VERIFY;
 
 export type VerifyCityArchiveOutcome = {
   ok: boolean;

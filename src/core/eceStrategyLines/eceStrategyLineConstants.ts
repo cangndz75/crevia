@@ -1,10 +1,11 @@
 import type { EceStrategyLineKind, EceStrategyLineSourceKind } from './eceStrategyLineTypes';
+import { EXPECTED_SAVE_VERSION_FOR_VERIFY } from '@/core/quality/saveVersionPolicy';
 
 export const ECE_STRATEGY_LINE_MAX = 120;
 export const ECE_STRATEGY_LINE_SHORT_MAX = 72;
 export const ECE_STRATEGY_LINE_ACCESSIBILITY_MAX = 160;
 
-export const ECE_STRATEGY_LINE_EXPECTED_SAVE_VERSION = 26;
+export const ECE_STRATEGY_LINE_EXPECTED_SAVE_VERSION = EXPECTED_SAVE_VERSION_FOR_VERIFY;
 
 export const ECE_STRATEGY_LINE_SOURCE_PRIORITY: EceStrategyLineSourceKind[] = [
   'one_more_day_retention',

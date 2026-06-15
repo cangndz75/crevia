@@ -1,4 +1,5 @@
 import { ACTIVE_OPERATION_MAP_PHASES } from '@/core/activeOperationMapBinding/activeOperationMapBindingTypes';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { verifyActiveOperationMapBindingScenario } from '@/core/activeOperationMapBinding/verifyActiveOperationMapBindingScenario';
 import { verifyDistrictPersonalityScenario } from '@/core/districtPersonality/verifyDistrictPersonalityScenario';
 import { verifyMapGameplayBindingScenario } from '@/core/mapGameplayBinding/verifyMapGameplayBindingScenario';
@@ -437,7 +438,7 @@ export function verifyMapSignalCopyScenario(): VerifyMapSignalCopyOutcome {
   );
 
   record(assert(checks, templates.length >= 4, 'core gameplay copy pool exists', 'template pool too small'));
-  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION unchanged', `SAVE_VERSION is ${SAVE_VERSION}`));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION unchanged', `SAVE_VERSION is ${SAVE_VERSION}`));
 
   const nested: Array<{ name: string; run: () => { ok: boolean } }> = [
     { name: 'verify:active-operation-map-binding', run: verifyActiveOperationMapBindingScenario },

@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { buildEventResultSystemsEchoModel } from '@/core/events/eventResultNewSystemsPresentation';
@@ -245,7 +246,7 @@ export function verifyPerformanceSelectorPassTwoScenario(): VerifyPerformanceSel
   ok = record(
     checks,
     'FAIL',
-    SAVE_VERSION === 26,
+    isCurrentSaveVersion(SAVE_VERSION),
     'SAVE_VERSION unchanged',
     `SAVE_VERSION changed: ${SAVE_VERSION}`,
   ) && ok;

@@ -1,4 +1,5 @@
 import { createDay1Seed } from '@/core/content/day1Seed';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { createInitialAssignmentsState } from '@/core/assignments/assignmentState';
 import { createInitialCrisisActionState } from '@/core/crisisActions/crisisActionState';
 import { createInitialCrisisState } from '@/core/crisis/crisisState';
@@ -423,7 +424,7 @@ export function verifySeasonEndScenario(): VerifySeasonEndOutcome {
     ) && ok;
 
   ok =
-    assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 23', 'SAVE_VERSION changed') &&
+    assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 23', 'SAVE_VERSION changed') &&
     ok;
 
   checks.push(

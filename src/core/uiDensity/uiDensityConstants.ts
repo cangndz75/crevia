@@ -1,8 +1,9 @@
 import type { UiDensityDayMode } from './uiDensityTypes';
+import { EXPECTED_SAVE_VERSION_FOR_VERIFY } from '@/core/quality/saveVersionPolicy';
 
 export const UI_DENSITY_DOCS_PATH = 'docs/crevia-ui-density-accessibility-polish.md';
 
-export const UI_DENSITY_EXPECTED_SAVE_VERSION = 26;
+export const UI_DENSITY_EXPECTED_SAVE_VERSION = EXPECTED_SAVE_VERSION_FOR_VERIFY;
 
 export const UI_DENSITY_MAX_HUB_PRIMARY_CARDS = 4;
 export const UI_DENSITY_MAX_HUB_SECONDARY_STRIPS = 3;

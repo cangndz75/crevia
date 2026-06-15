@@ -1,3 +1,4 @@
+import { isCurrentSaveVersion, STRATEGY_HISTORY_MIGRATION_FROM_VERSION } from '@/core/quality/saveVersionPolicy';
 import {
   TEAM_SPECIALIZATION_ARCHIVE_ENTRY_RECOMMENDATIONS,
   TEAM_SPECIALIZATION_ARCHIVE_INTEGRATION_RULES,
@@ -232,7 +233,7 @@ export function runTeamSpecializationPlanningAudit(): TeamSpecializationPlanning
       'Planning target SAVE_VERSION 25 preserved (pre-implementation snapshot).',
     ),
     check(
-      TEAM_SPECIALIZATION_IMPLEMENTATION_SAVE_VERSION === 26,
+      TEAM_SPECIALIZATION_IMPLEMENTATION_SAVE_VERSION === STRATEGY_HISTORY_MIGRATION_FROM_VERSION,
       'plan.future_save_version',
       'Future implementation SAVE_VERSION 26 documented.',
     ),

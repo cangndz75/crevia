@@ -50,6 +50,3 @@ export {
   buildOperationFocusBindingSubtitle,
   buildPrimaryOperationFeedBindingCard,
 } from './day8OperationFeedBindingPresentation';
-
-export { verifyDay8OperationFeedBindingScenario } from './verifyDay8OperationFeedBindingScenario';
-export type { VerifyDay8OperationFeedBindingOutcome } from './verifyDay8OperationFeedBindingScenario';

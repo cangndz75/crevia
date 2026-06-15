@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -164,7 +165,7 @@ export function verifyDistrictOperationActionScenario(): VerifyDistrictOperation
     'analytics payload contains raw copy',
   ) && ok;
 
-  ok = record(checks, SAVE_VERSION === 26, 'SAVE_VERSION unchanged without persist', `SAVE_VERSION ${SAVE_VERSION}`) && ok;
+  ok = record(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION unchanged without persist', `SAVE_VERSION ${SAVE_VERSION}`) && ok;
   ok = record(
     checks,
     !readRepo('src/store/gamePersist.ts').includes('districtOperationActionState'),

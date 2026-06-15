@@ -4,6 +4,7 @@
  */
 
 import { pilotEvents } from '@/core/content/pilotEvents';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { createDay1Seed } from '@/core/content/day1Seed';
 import { checkDecisionAffordability } from '@/core/economy/economyAffordability';
 import {
@@ -25,7 +26,7 @@ function assert(label: string, condition: boolean): void {
 
 const analysis = runFullLoopAnalysis();
 
-assert('SAVE_VERSION 24', SAVE_VERSION === 26 && analysis.saveVersionOk);
+assert('SAVE_VERSION 24', isCurrentSaveVersion(SAVE_VERSION) && analysis.saveVersionOk);
 
 const balanced = analysis.scenarios.find((s) => s.scenario === 'balanced_player');
 assert('balanced_player 7 days', (balanced?.daysCompleted ?? 0) === 7);

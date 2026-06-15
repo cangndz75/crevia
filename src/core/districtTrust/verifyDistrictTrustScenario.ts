@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -227,7 +228,7 @@ export function verifyDistrictTrustScenario(): VerifyDistrictTrustOutcome {
   const trustSource = readRepo('src/core/districtTrust/districtTrustPresentation.ts') + readRepo('src/core/districtTrust/districtTrustModel.ts');
   record(assert(checks, !trustSource.includes("from '@/core/rankPermissions"), 'no rankPermissions circular import', 'rankPermissions import detected'));
 
-  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`));
   checks.push('PASS Persist shape unchanged by scope: district trust is derived-only');
   checks.push('PASS UI integration skipped: foundation helper only, no redesign');
   record(assert(checks, MAP_DISTRICT_IDENTITY_IDS.length === 5, '5 core district ids source reused', 'district id source mismatch'));

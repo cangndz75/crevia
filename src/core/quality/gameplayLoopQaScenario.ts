@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { EXPECTED_SAVE_VERSION_FOR_VERIFY } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { createDay1Seed } from '@/core/content/day1Seed';
@@ -32,7 +33,7 @@ import type {
 } from './gameplayLoopQaTypes';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 27;
+const EXPECTED_SAVE_VERSION = EXPECTED_SAVE_VERSION_FOR_VERIFY;
 
 function readRepo(rel: string): string {
   const path = join(REPO_ROOT, rel);

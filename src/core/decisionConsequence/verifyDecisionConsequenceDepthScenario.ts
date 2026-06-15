@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { resolve } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -265,7 +266,7 @@ export function verifyDecisionConsequenceDepthScenario(): VerifyDecisionConseque
   assert(checks, centerContinuation.ok, 'verify:center-continuation-cards PASS kalir', String(centerContinuation.failCount));
   assert(checks, centerAdvisor.ok, 'verify:center-advisor PASS kalir', String(centerAdvisor.failCount));
 
-  assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION degismedi', String(SAVE_VERSION));
+  assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION degismedi', String(SAVE_VERSION));
   assert(
     checks,
     !source('src/core/game/applyDecision.ts').includes('decisionConsequence'),

@@ -1,8 +1,9 @@
 import type { OfflineResumePhase } from './offlineResumeTypes';
+import { EXPECTED_SAVE_VERSION_FOR_VERIFY } from '@/core/quality/saveVersionPolicy';
 
 export const OFFLINE_RESUME_DOCS_PATH = 'docs/crevia-offline-resume-robustness.md';
 
-export const OFFLINE_RESUME_EXPECTED_SAVE_VERSION = 26;
+export const OFFLINE_RESUME_EXPECTED_SAVE_VERSION = EXPECTED_SAVE_VERSION_FOR_VERIFY;
 
 export const OFFLINE_RESUME_KNOWN_BACKLOG = [
   'eventFamilySelectionEngine full pack gating — V1.1 backlog',

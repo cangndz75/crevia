@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -172,7 +173,7 @@ export function assertPlaytestPlanIntegrity(): {
       plan.scenarios.length >= REAL_DEVICE_PLAYTEST_MIN_SCENARIOS &&
       scenariosValid &&
       templatesValid &&
-      SAVE_VERSION === 26,
+      isCurrentSaveVersion(SAVE_VERSION),
     areaCount: plan.areas.length,
     scenarioCount: plan.scenarios.length,
     saveVersion: SAVE_VERSION,

@@ -16,13 +16,14 @@ import {
   useAppBootstrap,
   type AppBootstrapPhase,
 } from "@/features/onboarding/hooks/useAppBootstrap";
+import { usePreloadCriticalAssets } from "@/hooks/usePreloadCriticalAssets";
 import { SplashGateScreen } from "@/features/onboarding/screens/SplashGateScreen";
 import { CreviaBottomTabBar } from "@/components/navigation/CreviaBottomTabBar";
 import { CreviaErrorBoundary } from "@/ui/components/CreviaErrorBoundary";
 import { GestureRootProvider } from "@/ui/providers/GestureRootProvider";
 import { colors } from "@/ui/theme/colors";
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 initCrashReporter();
 markAppStart();
@@ -103,15 +104,17 @@ export default function RootLayout() {
     ...Ionicons.font,
   });
   const bootstrap = useAppBootstrap();
+  const { isReady: assetsReady } = usePreloadCriticalAssets();
 
   useEffect(() => {
-    if ((fontsLoaded || fontError) && bootstrap.gateOpen) {
-      SplashScreen.hideAsync();
+    if ((fontsLoaded || fontError) && bootstrap.gateOpen && assetsReady) {
+      SplashScreen.hideAsync().catch(() => {});
     }
-  }, [fontsLoaded, fontError, bootstrap.gateOpen]);
+  }, [fontsLoaded, fontError, bootstrap.gateOpen, assetsReady]);
 
   const showBrandedSplash = !bootstrap.gateOpen;
   const fontsReady = fontsLoaded || fontError;
+  const startupReady = fontsReady && assetsReady;
 
   return (
     <CreviaErrorBoundary>
@@ -119,7 +122,7 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <StatusBar style="dark" />
           <View style={styles.root}>
-          {!fontsReady ? null : showBrandedSplash ? (
+          {!startupReady ? null : showBrandedSplash ? (
             <SplashGateScreen mode="loading" />
           ) : bootstrap.phase === "ready" ? (
             <TabNavigator />

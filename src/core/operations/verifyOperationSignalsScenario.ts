@@ -1,4 +1,5 @@
 import { createDay1Seed } from '@/core/content/day1Seed';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { createInitialContainerState } from '@/core/containers/containerSeed';
 import { createInitialPersonnelState } from '@/core/personnel/personnelSeed';
 import { createInitialVehicleState } from '@/core/vehicles/vehicleSeed';
@@ -392,7 +393,7 @@ export function verifyOperationSignalsScenario(): VerifyOperationSignalsOutcome 
     snapshots: createDay1Seed().snapshots,
   });
   const persistOk =
-    SAVE_VERSION === 26 &&
+    isCurrentSaveVersion(SAVE_VERSION) &&
     hydrated != null &&
     hydrated.operationSignals != null &&
     hydrated.operationSignals.personnel.domain === 'personnel';
@@ -409,7 +410,7 @@ export function verifyOperationSignalsScenario(): VerifyOperationSignalsOutcome 
   }
 
   if (
-    !warn(checks, SAVE_VERSION === 26, 'SAVE_VERSION 22', `SAVE_VERSION=${SAVE_VERSION}`)
+    !warn(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 22', `SAVE_VERSION=${SAVE_VERSION}`)
   ) {
     hasWarn = true;
   }

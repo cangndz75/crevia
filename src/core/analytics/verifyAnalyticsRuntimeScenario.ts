@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { verifyInteractionContractsScenario } from '@/core/quality/interactionContracts/verifyInteractionContractsScenario';
@@ -504,7 +505,7 @@ export function verifyAnalyticsRuntimeScenario(): VerifyAnalyticsRuntimeOutcome 
   ok =
     assert(
       checks,
-      SAVE_VERSION === 26,
+      isCurrentSaveVersion(SAVE_VERSION),
       `SAVE_VERSION unchanged (${SAVE_VERSION})`,
       'SAVE_VERSION changed',
     ) && ok;

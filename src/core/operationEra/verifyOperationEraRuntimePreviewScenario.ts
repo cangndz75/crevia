@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { buildHubOpenEndedIntegrationModel } from '@/core/hub/hubOpenEndedIntegrationPresentation';
@@ -331,7 +332,7 @@ export function verifyOperationEraRuntimePreviewScenario(): VerifyOperationEraRu
       'generation untouched',
     ) && ok;
 
-  ok = record(checks, SAVE_VERSION === 26, 'SAVE_VERSION değişmez', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = record(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION değişmez', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
 
   const hubModel = buildHubOpenEndedIntegrationModel({
     day: 9,

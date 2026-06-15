@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -113,7 +114,7 @@ export function verifySoftLaunchReadinessScenario(): VerifySoftLaunchReadinessOu
       `Unexpected ${result.health}`,
     ) && ok;
 
-  ok = assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 23 check', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 23 check', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
 
   ok =
     assert(

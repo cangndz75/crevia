@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { verifyInteractionContractsScenario } from '@/core/quality/interactionContracts/verifyInteractionContractsScenario';
@@ -591,7 +592,7 @@ export function verifyAnalyticsScenario(): VerifyAnalyticsOutcome {
       'Network call in tracker',
     ) && ok;
 
-  ok = assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 23', 'SAVE_VERSION changed') && ok;
+  ok = assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 23', 'SAVE_VERSION changed') && ok;
 
   ok = assert(checks, verifySeasonEndScenario().ok, 'Season end compatible', 'Season end FAIL') && ok;
 

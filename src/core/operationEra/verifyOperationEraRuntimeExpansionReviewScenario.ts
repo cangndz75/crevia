@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { runNoNewSystemFreezeAudit } from '@/core/releaseReadiness/noNewSystemFreezeAudit';
@@ -80,7 +81,7 @@ export function verifyOperationEraRuntimeExpansionReviewScenario(): VerifyOperat
   ok =
     assert(
       checks,
-      !result.saveImpact.saveVersionChanged && SAVE_VERSION === 26,
+      !result.saveImpact.saveVersionChanged && isCurrentSaveVersion(SAVE_VERSION),
       'SAVE_VERSION unchanged (23)',
       `SAVE_VERSION=${SAVE_VERSION}`,
     ) && ok;
@@ -337,7 +338,7 @@ export function verifyOperationEraRuntimeExpansionReviewScenario(): VerifyOperat
     ) && ok;
 
   ok =
-    assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION 23 unchanged (cross-verify)', `SAVE_VERSION=${SAVE_VERSION}`) &&
+    assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 23 unchanged (cross-verify)', `SAVE_VERSION=${SAVE_VERSION}`) &&
     ok;
 
   const limited = buildOperationEraEligibility({ day: 8, isPostPilot: true, isLimitedMode: true });

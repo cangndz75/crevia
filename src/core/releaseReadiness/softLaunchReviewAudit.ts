@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { validateAnalyticsEventDefinitions } from '@/core/analytics/analyticsSchema';
@@ -1460,8 +1461,8 @@ function auditAreaSaveMigration(): CreviaSoftLaunchReviewFinding[] {
   findings.push(
     makeFinding(
       'save_migration_offline',
-      SAVE_VERSION === 26 ? 'save.version_stable' : 'save.version_changed',
-      SAVE_VERSION === 26 ? 'pass' : 'blocker',
+      isCurrentSaveVersion(SAVE_VERSION) ? 'save.version_stable' : 'save.version_changed',
+      isCurrentSaveVersion(SAVE_VERSION) ? 'pass' : 'blocker',
       `SAVE_VERSION ${SAVE_VERSION}`,
       'Expected 23 for this review pass.',
       'Do not bump SAVE_VERSION without migration plan.',

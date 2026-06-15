@@ -1,4 +1,5 @@
 import { createInitialOperationSignalsState } from '@/core/operations/operationSignalState';
+import { EXPECTED_SAVE_VERSION_FOR_VERIFY } from '@/core/quality/saveVersionPolicy';
 import type { DecisionImpactExplanation } from '@/core/decisionImpactExplanation';
 import type { TomorrowRiskModel } from '@/core/tomorrowRisk';
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -32,7 +33,7 @@ export type VerifyAdvisorRelationshipOutcome = {
 };
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const EXPECTED_SAVE_VERSION = 26;
+const EXPECTED_SAVE_VERSION = EXPECTED_SAVE_VERSION_FOR_VERIFY;
 
 function readRepo(rel: string): string {
   return existsSync(join(REPO_ROOT, rel)) ? readFileSync(join(REPO_ROOT, rel), 'utf8') : '';

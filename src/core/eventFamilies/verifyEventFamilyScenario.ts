@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -177,7 +178,7 @@ export function verifyEventFamilyScenario(): VerifyEventFamilyOutcome {
     record(assert(checks, !readRepo(file).includes('eventFamilies'), `${file} untouched by eventFamilies`, `${file} imports eventFamilies`));
   }
 
-  record(assert(checks, SAVE_VERSION === 26, 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`));
   checks.push('PASS Persist shape unchanged by scope: event family fixtures are verify-only');
 
   const coverage = buildVariantCoverageSummary(EVENT_FAMILY_VERIFY_FIXTURES);

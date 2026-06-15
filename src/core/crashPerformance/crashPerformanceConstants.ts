@@ -1,11 +1,12 @@
 import type { CrashReportingProvider } from './crashPerformanceTypes';
+import { EXPECTED_SAVE_VERSION_FOR_VERIFY } from '@/core/quality/saveVersionPolicy';
 
 export const CRASH_PERFORMANCE_DOCS_PATH = 'docs/crevia-crash-performance-sdk-integration.md';
 
 export const CRASH_PERFORMANCE_MANUAL_LAUNCH_TRACKER_PATH =
   'docs/crevia-manual-launch-blocker-tracker.md';
 
-export const CRASH_PERFORMANCE_EXPECTED_SAVE_VERSION = 26;
+export const CRASH_PERFORMANCE_EXPECTED_SAVE_VERSION = EXPECTED_SAVE_VERSION_FOR_VERIFY;
 
 export const CRASH_PERFORMANCE_SELECTED_PROVIDER: CrashReportingProvider = 'sentry';
 

@@ -1,64 +1,69 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { EventFilterChips } from '@/features/events/components/decision-center/EventFilterChips';
-import { EventSummaryChips } from '@/features/events/components/decision-center/EventSummaryChips';
-import { PendingEventsList } from '@/features/events/components/decision-center/PendingEventsList';
-import { PriorityEventCard } from '@/features/events/components/decision-center/PriorityEventCard';
-import { ResolvedEventsPreview } from '@/features/events/components/decision-center/ResolvedEventsPreview';
-import { EventsIntroRow } from '@/features/events/components/EventsIntroRow';
-import { eventsScreen } from '@/features/events/theme/eventsScreenTokens';
+import { CityMapHero } from '@/features/events/components/olaylar/CityMapHero';
+import { EventsBottomSheet } from '@/features/events/components/olaylar/EventsBottomSheet';
+import { FloatingEventStats } from '@/features/events/components/olaylar/FloatingEventStats';
+import { OlaylarEventsHeader } from '@/features/events/components/olaylar/OlaylarEventsHeader';
+import { OlaylarFilterChips } from '@/features/events/components/olaylar/OlaylarFilterChips';
+import { OlaylarPriorityEventCard } from '@/features/events/components/olaylar/OlaylarPriorityEventCard';
+import { ResolvedEventList } from '@/features/events/components/olaylar/ResolvedEventList';
+import { olaylar } from '@/features/events/theme/olaylarScreenTokens';
+import type { OlaylarFilterKey } from '@/features/events/types/olaylarScreenTypes';
 import {
-  computeDaySummary,
-  filterPendingEvents,
-  pickPriorityEvent,
-  shouldShowPriorityEvent,
-  type EventScreenFilterKey,
-} from '@/features/events/utils/eventsScreenModel';
+  buildOlaylarStats,
+  buildPriorityEventView,
+  buildResolvedEventViews,
+  resolveOlaylarPriority,
+} from '@/features/events/utils/olaylarScreenPresentation';
+import { useGameStatus } from '@/store/gameSelectors';
 import {
   selectActiveEvents,
   selectDecisionHistory,
   selectFeaturedEventId,
   useGameStore,
 } from '@/store/useGameStore';
+import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
 import { GameButton } from '@/ui/components/GameButton';
-import { GameScreenShell } from '@/ui/components/GameScreenShell';
-import { spacing } from '@/ui/theme/spacing';
-import { typography } from '@/ui/theme/typography';
 
 export function EventsDecisionCenterScreen() {
   const router = useRouter();
+  const tabBarHeight = useAppTabBarHeight();
+  const status = useGameStatus();
 
   const activeEvents = useGameStore(selectActiveEvents);
   const featuredEventId = useGameStore(selectFeaturedEventId);
   const decisionHistory = useGameStore(selectDecisionHistory);
   const endCurrentDay = useGameStore((s) => s.endCurrentDay);
 
-  const [filter, setFilter] = useState<EventScreenFilterKey>('all');
+  const [filter, setFilter] = useState<OlaylarFilterKey>('all');
 
-  const priorityEvent = useMemo(
-    () => pickPriorityEvent(activeEvents, featuredEventId),
-    [activeEvents, featuredEventId],
-  );
-
-  const summaryStats = useMemo(
-    () => computeDaySummary(activeEvents, decisionHistory),
+  const stats = useMemo(
+    () => buildOlaylarStats(activeEvents, decisionHistory),
     [activeEvents, decisionHistory],
   );
 
-  const pendingEvents = useMemo(
-    () =>
-      filterPendingEvents(
-        activeEvents,
-        priorityEvent?.id ?? null,
-        filter,
-      ),
-    [activeEvents, priorityEvent?.id, filter],
+  const { priorityEvent, showPriority } = useMemo(
+    () => resolveOlaylarPriority(activeEvents, featuredEventId, filter),
+    [activeEvents, featuredEventId, filter],
   );
 
-  const showPriority =
-    shouldShowPriorityEvent(priorityEvent, filter) && priorityEvent != null;
+  const priorityView = useMemo(
+    () => buildPriorityEventView(priorityEvent),
+    [priorityEvent],
+  );
+
+  const resolvedItems = useMemo(
+    () => buildResolvedEventViews(decisionHistory, filter !== 'resolved'),
+    [decisionHistory, filter],
+  );
+
+  const resolvedOnlyItems = useMemo(
+    () => buildResolvedEventViews(decisionHistory, false),
+    [decisionHistory],
+  );
 
   const handleEventPress = useCallback(
     (eventId: string) => {
@@ -72,61 +77,107 @@ export function EventsDecisionCenterScreen() {
     router.push('/reports');
   };
 
+  const showResolvedOnly = filter === 'resolved';
+  const showEmptyActive = !showResolvedOnly && activeEvents.length === 0;
+
   return (
-    <GameScreenShell
-      headerVariant="events"
-      backgroundColor={eventsScreen.bg}
-      contentStyle={styles.content}>
-      <EventsIntroRow />
-      <EventSummaryChips stats={summaryStats} />
-      <EventFilterChips active={filter} onChange={setFilter} />
+    <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
+      <OlaylarEventsHeader
+        header={{
+          level: status.level,
+          xp: status.xp,
+          xpTarget: status.xpTarget,
+          resourceLabel: status.budgetFormatted,
+        }}
+      />
 
-      {filter === 'resolved' ? (
-        <ResolvedEventsPreview records={decisionHistory} />
-      ) : (
-        <>
-          {showPriority ? <PriorityEventCard event={priorityEvent} /> : null}
+      <View style={styles.mapSection}>
+        <CityMapHero />
+        <FloatingEventStats stats={stats} />
+      </View>
 
-          {activeEvents.length === 0 ? (
-            <View style={styles.emptyActive}>
-              <Text style={typography.subtitle}>Aktif olay kalmadı</Text>
+      <EventsBottomSheet bottomInset={tabBarHeight}>
+        <OlaylarFilterChips active={filter} onChange={setFilter} />
+
+        {showResolvedOnly ? (
+          resolvedOnlyItems.length > 0 ? (
+            <ResolvedEventList
+              items={resolvedOnlyItems}
+              onSeeAll={() => {
+                // TODO: tüm çözülenler geçmişi
+              }}
+            />
+          ) : (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>Henüz çözülen olay yok</Text>
               <Text style={styles.emptyBody}>
-                Bugünün kararlarını tamamladın. Günü bitirerek raporu
-                görüntüleyebilirsin.
+                Bugün tamamlanan kararlar burada listelenir.
               </Text>
-              <GameButton title="Günü Bitir" onPress={handleEndDay} />
             </View>
-          ) : null}
+          )
+        ) : (
+          <>
+            {showPriority && priorityView ? (
+              <OlaylarPriorityEventCard
+                event={priorityView}
+                onPress={() => handleEventPress(priorityView.id)}
+              />
+            ) : null}
 
-          <PendingEventsList
-            events={pendingEvents}
-            onEventPress={handleEventPress}
-          />
+            {showEmptyActive ? (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyTitle}>Aktif olay kalmadı</Text>
+                <Text style={styles.emptyBody}>
+                  Bugünün kararlarını tamamladın. Günü bitirerek raporu görüntüleyebilirsin.
+                </Text>
+                <GameButton title="Günü Bitir" onPress={handleEndDay} />
+              </View>
+            ) : null}
 
-          {filter === 'all' ? (
-            <ResolvedEventsPreview records={decisionHistory} />
-          ) : null}
-        </>
-      )}
-    </GameScreenShell>
+            {filter === 'all' ? (
+              <ResolvedEventList
+                items={resolvedItems}
+                onSeeAll={() => {
+                  // TODO: tüm çözülenler geçmişi
+                }}
+                onItemPress={() => {
+                  // TODO: çözülen olay detayı
+                }}
+              />
+            ) : null}
+          </>
+        )}
+      </EventsBottomSheet>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    gap: 16,
-    paddingTop: 4,
+  root: {
+    flex: 1,
+    backgroundColor: olaylar.bg,
   },
-  emptyActive: {
-    gap: spacing.md,
-    padding: spacing.lg,
-    backgroundColor: eventsScreen.card,
-    borderRadius: eventsScreen.radiusMd,
+  mapSection: {
+    height: olaylar.mapHeight + 8,
+    position: 'relative',
+    zIndex: 1,
+  },
+  emptyCard: {
+    gap: 10,
+    padding: 16,
+    backgroundColor: olaylar.bg,
+    borderRadius: olaylar.radiusCard,
     borderWidth: 1,
-    borderColor: eventsScreen.border,
+    borderColor: olaylar.border,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: olaylar.text,
   },
   emptyBody: {
-    ...typography.body,
-    color: eventsScreen.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+    color: olaylar.textMuted,
   },
 });
