@@ -201,6 +201,10 @@ export type DailyCapacityPortfolioInput = {
   authorityPermissionIds?: string[];
   authorityRankId?: string;
   recentPortfolioItemIds?: string[];
+  /** Runtime binding: gunluk katalog adaylari (post-pilot catalog). */
+  catalogOperationEvents?: unknown[];
+  /** Runtime binding: store'dan gelen ertelenmis operasyon id'leri. */
+  deferredOperationEventIds?: string[];
 };
 
 export type DailyCapacityPortfolioResult = {

@@ -1,6 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { assertVerifySaveVersionPolicy } from '@/core/quality/saveVersionPolicy';
+import { SAVE_VERSION } from '@/store/gamePersist';
+
 import { verifyCityEchoBindingScenario } from '../src/core/cityEchoBinding/verifyCityEchoBindingScenario';
 
 const result = verifyCityEchoBindingScenario();
@@ -30,7 +33,7 @@ record('Report integration helper var', report.includes('buildCityEchoReportLine
 record('Hub compact integration helper var', hub.includes('buildCityEchoHubLine'));
 record('Decision Impact Explanation ile bağ kuruluyor', report.includes('buildDecisionImpactExplanation') && hub.includes('buildDecisionImpactExplanationForHub'));
 record('Tomorrow Risk ile bağ kuruluyor', report.includes('tomorrowRiskPresentation') && hub.includes('tomorrowRiskPresentation'));
-record('SAVE_VERSION 25', persist.includes('export const SAVE_VERSION = 26;'));
+record('SAVE_VERSION matches policy', assertVerifySaveVersionPolicy(persist, SAVE_VERSION));
 record('applyDecision değişmedi', !applyDecision.includes('cityEchoBinding'));
 record('event generation değişmedi', !dayPipeline.includes('cityEchoBinding'));
 record('package.json script var', packageJson.includes('"verify:city-echo-binding"'));

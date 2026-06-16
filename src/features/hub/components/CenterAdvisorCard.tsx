@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -21,31 +22,55 @@ import type { CenterHomeVisibilityState } from '@/features/hub/utils/centerHomeP
 type IconName = keyof typeof Ionicons.glyphMap;
 
 const palette = {
-  card: '#FFFCF5',
   teal: '#07564F',
-  tealMid: '#0D7168',
-  tealSoft: '#E8F4EF',
+  tealDeep: '#043A36',
+  tealPanel: '#0A514B',
+  tealInk: '#EAF7F2',
   gold: '#D8A72E',
   goldSoft: '#F5E3AF',
-  green: '#3E9E6A',
-  amber: '#C78925',
-  red: '#B85A4B',
-  text: '#173D3A',
-  muted: '#6D736C',
-  border: 'rgba(7, 86, 79, 0.12)',
+  green: '#62C487',
+  amber: '#E2A83A',
+  red: '#D77764',
+  mutedOnDark: 'rgba(234,247,242,0.72)',
+  border: 'rgba(245,227,175,0.22)',
   white: '#FFFFFF',
 } as const;
 
 const toneStyles: Record<
   CenterAdvisorTone,
-  { border: string; accent: string; icon: IconName }
+  { border: string; accent: string; icon: IconName; label: string }
 > = {
-  calm: { border: palette.border, accent: palette.tealMid, icon: 'leaf-outline' },
-  positive: { border: 'rgba(62,158,106,0.28)', accent: palette.green, icon: 'checkmark-circle-outline' },
-  warning: { border: 'rgba(199,137,37,0.35)', accent: palette.amber, icon: 'alert-circle-outline' },
-  urgent: { border: 'rgba(184,90,75,0.35)', accent: palette.red, icon: 'warning-outline' },
-  teaching: { border: 'rgba(216,167,46,0.35)', accent: palette.gold, icon: 'school-outline' },
-  celebration: { border: 'rgba(62,158,106,0.35)', accent: palette.green, icon: 'sparkles-outline' },
+  calm: { border: palette.border, accent: palette.goldSoft, icon: 'leaf-outline', label: 'Sinyal' },
+  positive: {
+    border: 'rgba(98,196,135,0.34)',
+    accent: palette.green,
+    icon: 'checkmark-circle-outline',
+    label: 'Tamamlanan hedef',
+  },
+  warning: {
+    border: 'rgba(226,168,58,0.42)',
+    accent: palette.amber,
+    icon: 'alert-circle-outline',
+    label: 'Dikkat',
+  },
+  urgent: {
+    border: 'rgba(215,119,100,0.42)',
+    accent: palette.red,
+    icon: 'warning-outline',
+    label: 'Risk',
+  },
+  teaching: {
+    border: 'rgba(245,227,175,0.34)',
+    accent: palette.goldSoft,
+    icon: 'school-outline',
+    label: 'Fırsat',
+  },
+  celebration: {
+    border: 'rgba(98,196,135,0.34)',
+    accent: palette.green,
+    icon: 'sparkles-outline',
+    label: 'Sonuç',
+  },
 };
 
 type CenterAdvisorCardProps = {
@@ -79,9 +104,7 @@ export function CenterAdvisorCard({
     compact,
   );
 
-  if (!isVisible) {
-    return null;
-  }
+  if (!isVisible) return null;
 
   const tone = toneStyles[advisor.tone];
   const primaryAction = advisor.action;
@@ -97,153 +120,168 @@ export function CenterAdvisorCard({
     <View
       style={[
         styles.card,
-        compact ? styles.cardCompact : undefined,
         { borderColor: tone.border },
         advisor.motionHint?.attentionLevel === 'strong' ? styles.cardAttention : undefined,
       ]}
       accessibilityRole="summary"
       accessibilityLabel={advisor.accessibilityLabel}>
-      {advisor.shouldShowAvatar ? (
-        <Animated.View
-          style={[styles.avatarWrap, compact ? styles.avatarWrapCompact : undefined, avatarStyle]}>
-          <Image
-            source={hubAssets.advisorPortrait}
-            style={styles.avatar}
-            contentFit="cover"
-          />
-        </Animated.View>
-      ) : (
-        <View style={styles.iconWrap}>
-          <Ionicons name={tone.icon} size={16} color={tone.accent} />
-        </View>
-      )}
+      <LinearGradient
+        colors={[palette.tealPanel, palette.tealDeep]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.cardGradient}>
+        <View style={styles.innerGlow} />
 
-      <View style={styles.copyBlock}>
-        <View style={styles.titleRow}>
-          <Text style={styles.advisorName} numberOfLines={1}>
-            {advisor.title}
-          </Text>
-          {!compact ? (
-            <View style={[styles.tonePill, { backgroundColor: `${tone.accent}18` }]}>
-              <Text style={[styles.tonePillText, { color: tone.accent }]} numberOfLines={1}>
-                {advisor.sourceLabel}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-
-        <Text style={styles.contextLine} numberOfLines={compact ? 1 : 2}>
-          {sanitizeCenterDisplayText(advisor.contextLine, 'Bugünkü akışa odaklan.')}
-        </Text>
-
-        {!compact ? (
-          <Animated.Text style={[styles.recommendation, speechStyle]} numberOfLines={2}>
-            {sanitizeCenterDisplayText(advisor.recommendation, 'Önce aktif hedefi incele.')}
-          </Animated.Text>
+        {advisor.shouldShowAvatar ? (
+          <Animated.View
+            style={[styles.avatarWrap, compact ? styles.avatarWrapCompact : undefined, avatarStyle]}>
+            <Image source={hubAssets.advisorPortrait} style={styles.avatar} contentFit="cover" />
+          </Animated.View>
         ) : (
-          <Text style={styles.recommendationCompact} numberOfLines={1}>
-            {sanitizeCenterDisplayText(advisor.recommendation, 'Önce aktif hedefi incele.')}
-          </Text>
+          <View style={styles.iconWrap}>
+            <Ionicons name={tone.icon} size={16} color={tone.accent} />
+          </View>
         )}
 
-        {advisor.reason && !compact ? (
-          <Text style={styles.reason} numberOfLines={2}>
-            {advisor.reason}
-          </Text>
-        ) : null}
+        <View style={styles.copyBlock}>
+          <View style={styles.titleRow}>
+            <View style={styles.titleCopy}>
+              <Text style={styles.sectionLabel} numberOfLines={1}>
+                {"ECE'NİN ÖNERİSİ"}
+              </Text>
+              <Text style={styles.advisorName} numberOfLines={1}>
+                {advisor.title}
+              </Text>
+            </View>
+            <View style={[styles.tonePill, { backgroundColor: `${tone.accent}24` }]}>
+              <Text style={[styles.tonePillText, { color: tone.accent }]} numberOfLines={1}>
+                {tone.label}
+              </Text>
+            </View>
+          </View>
 
-        {advisor.caution ? (
-          <Text style={[styles.caution, { color: tone.accent }]} numberOfLines={2}>
-            {advisor.caution}
+          <Text style={styles.contextLine} numberOfLines={compact ? 1 : 2}>
+            {sanitizeCenterDisplayText(advisor.contextLine, 'Bugünkü akışa odaklan.')}
           </Text>
-        ) : null}
 
-        <View style={styles.actionRow}>
-          {primaryAction ? (
-            <CreviaAnimatedPressable
-              onPress={() => handleAction(primaryAction.route, primaryAction.enabled)}
-              reducedMotion={reducedMotion}
-              pressScale={0.975}
-              accessibilityRole="button"
-              accessibilityLabel={primaryAction.label}
-              accessibilityState={{ disabled: !primaryAction.enabled }}
-              disabled={!primaryAction.enabled}
-              style={[
-                styles.primaryAction,
-                !primaryAction.enabled ? styles.primaryActionDisabled : undefined,
-              ]}>
-              <Text
+          {!compact ? (
+            <Animated.Text style={[styles.recommendation, speechStyle]} numberOfLines={2}>
+              {sanitizeCenterDisplayText(advisor.recommendation, 'Önce aktif hedefi incele.')}
+            </Animated.Text>
+          ) : (
+            <Text style={styles.recommendationCompact} numberOfLines={1}>
+              {sanitizeCenterDisplayText(advisor.recommendation, 'Önce aktif hedefi incele.')}
+            </Text>
+          )}
+
+          {advisor.caution ? (
+            <Text style={[styles.caution, { color: tone.accent }]} numberOfLines={2}>
+              {advisor.caution}
+            </Text>
+          ) : null}
+
+          <View style={styles.actionRow}>
+            {primaryAction ? (
+              <CreviaAnimatedPressable
+                onPress={() => handleAction(primaryAction.route, primaryAction.enabled)}
+                reducedMotion={reducedMotion}
+                pressScale={0.975}
+                accessibilityRole="button"
+                accessibilityLabel={primaryAction.label}
+                accessibilityState={{ disabled: !primaryAction.enabled }}
+                disabled={!primaryAction.enabled}
                 style={[
-                  styles.primaryActionText,
-                  !primaryAction.enabled ? styles.primaryActionTextDisabled : undefined,
-                ]}
-                numberOfLines={1}>
-                {primaryAction.label}
-              </Text>
-            </CreviaAnimatedPressable>
-          ) : null}
+                  styles.primaryAction,
+                  !primaryAction.enabled ? styles.primaryActionDisabled : undefined,
+                ]}>
+                <Text
+                  style={[
+                    styles.primaryActionText,
+                    !primaryAction.enabled ? styles.primaryActionTextDisabled : undefined,
+                  ]}
+                  numberOfLines={1}>
+                  {primaryAction.label}
+                </Text>
+                {primaryAction.enabled ? (
+                  <Ionicons name="chevron-forward" size={12} color={palette.teal} />
+                ) : null}
+              </CreviaAnimatedPressable>
+            ) : null}
 
-          {secondaryAction ? (
-            <Pressable
-              onPress={() => handleAction(secondaryAction.route, secondaryAction.enabled)}
-              accessibilityRole="button"
-              accessibilityLabel={secondaryAction.label}
-              style={({ pressed }) => [
-                styles.secondaryAction,
-                pressed ? pressedScale(pressed) : undefined,
-              ]}>
-              <Text style={styles.secondaryActionText} numberOfLines={1}>
-                {secondaryAction.label}
-              </Text>
-            </Pressable>
-          ) : null}
+            {secondaryAction ? (
+              <Pressable
+                onPress={() => handleAction(secondaryAction.route, secondaryAction.enabled)}
+                accessibilityRole="button"
+                accessibilityLabel={secondaryAction.label}
+                style={({ pressed }) => [
+                  styles.secondaryAction,
+                  pressed ? pressedScale(pressed) : undefined,
+                ]}>
+                <Text style={styles.secondaryActionText} numberOfLines={1}>
+                  {secondaryAction.label}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
-      </View>
+      </LinearGradient>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 11,
-    backgroundColor: palette.card,
+    borderRadius: 22,
     borderWidth: 1,
-  },
-  cardCompact: {
-    paddingVertical: 8,
+    overflow: 'hidden',
+    backgroundColor: palette.tealDeep,
   },
   cardAttention: {
     borderWidth: 1.5,
   },
+  cardGradient: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 11,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    minWidth: 0,
+  },
+  innerGlow: {
+    position: 'absolute',
+    top: -24,
+    right: 8,
+    width: 132,
+    height: 88,
+    borderRadius: 999,
+    backgroundColor: 'rgba(245,227,175,0.12)',
+  },
   avatarWrap: {
     width: 52,
     height: 60,
-    borderRadius: 14,
+    borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: palette.goldSoft,
+    borderWidth: 1,
+    borderColor: 'rgba(245,227,175,0.38)',
     flexShrink: 0,
   },
   avatarWrapCompact: {
-    width: 40,
-    height: 46,
-    borderRadius: 12,
+    width: 42,
+    height: 48,
+    borderRadius: 14,
   },
   avatar: {
     width: '100%',
     height: '100%',
   },
   iconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: palette.tealSoft,
+    backgroundColor: 'rgba(255,255,255,0.12)',
     flexShrink: 0,
     marginTop: 2,
   },
@@ -259,50 +297,55 @@ const styles = StyleSheet.create({
     gap: 6,
     minWidth: 0,
   },
-  advisorName: {
+  titleCopy: {
     flex: 1,
+    minWidth: 0,
+    gap: 1,
+  },
+  sectionLabel: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.9,
+    color: 'rgba(245,227,175,0.88)',
+  },
+  advisorName: {
     fontSize: 12,
     fontWeight: '900',
-    color: palette.teal,
+    color: palette.tealInk,
   },
   tonePill: {
     borderRadius: 999,
     paddingHorizontal: 7,
     paddingVertical: 3,
+    maxWidth: 112,
     flexShrink: 0,
   },
   tonePillText: {
     fontSize: 8,
-    fontWeight: '800',
+    fontWeight: '900',
   },
   contextLine: {
     fontSize: 11,
     lineHeight: 15,
-    fontWeight: '700',
-    color: palette.text,
+    fontWeight: '800',
+    color: palette.tealInk,
   },
   recommendation: {
     fontSize: 12,
     lineHeight: 17,
     fontWeight: '600',
-    color: palette.text,
+    color: palette.mutedOnDark,
   },
   recommendationCompact: {
     fontSize: 11,
     lineHeight: 15,
     fontWeight: '600',
-    color: palette.muted,
-  },
-  reason: {
-    fontSize: 10,
-    lineHeight: 14,
-    fontWeight: '500',
-    color: palette.muted,
+    color: palette.mutedOnDark,
   },
   caution: {
     fontSize: 10,
     lineHeight: 14,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   actionRow: {
     flexDirection: 'row',
@@ -315,21 +358,24 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: palette.tealSoft,
+    backgroundColor: palette.goldSoft,
     borderWidth: 1,
-    borderColor: palette.border,
+    borderColor: 'rgba(245,227,175,0.5)',
     maxWidth: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   primaryActionDisabled: {
     opacity: 0.55,
   },
   primaryActionText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '900',
     color: palette.teal,
   },
   primaryActionTextDisabled: {
-    color: palette.muted,
+    color: 'rgba(7,86,79,0.62)',
   },
   secondaryAction: {
     paddingVertical: 4,
@@ -338,8 +384,8 @@ const styles = StyleSheet.create({
   },
   secondaryActionText: {
     fontSize: 10,
-    fontWeight: '700',
-    color: palette.tealMid,
+    fontWeight: '800',
+    color: palette.goldSoft,
     textDecorationLine: 'underline',
   },
 });

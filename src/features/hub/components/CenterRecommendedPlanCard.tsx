@@ -17,7 +17,7 @@ type IconName = keyof typeof Ionicons.glyphMap;
 
 const palette = {
   card: '#FFFCF5',
-  cardWarm: '#FDF5E6',
+  cardWarm: '#FFF4D7',
   teal: '#07564F',
   tealMid: '#0D7168',
   tealSoft: '#E8F4EF',
@@ -26,7 +26,7 @@ const palette = {
   green: '#3E9E6A',
   amber: '#C78925',
   muted: '#6D736C',
-  border: 'rgba(7, 86, 79, 0.1)',
+  border: 'rgba(7, 86, 79, 0.12)',
   white: '#FFFFFF',
 } as const;
 
@@ -58,30 +58,43 @@ function resolveIcon(iconKey: string): IconName {
 function stepStateStyle(state: CenterRecommendedPlanStep['state']) {
   switch (state) {
     case 'done':
-      return { color: palette.green, opacity: 1 };
+      return { color: palette.green, opacity: 1, bg: 'rgba(62,158,106,0.12)' };
     case 'current':
-      return { color: palette.teal, opacity: 1 };
+      return { color: palette.teal, opacity: 1, bg: palette.goldSoft };
     case 'next':
-      return { color: palette.muted, opacity: 0.9 };
+      return { color: palette.tealMid, opacity: 0.88, bg: palette.tealSoft };
     default:
-      return { color: palette.muted, opacity: 0.55 };
+      return { color: palette.muted, opacity: 0.55, bg: 'rgba(7, 86, 79, 0.06)' };
   }
 }
 
-function PlanStepsRow({ steps }: { steps: CenterRecommendedPlanStep[] }) {
+function PlanStepsFlow({ steps }: { steps: CenterRecommendedPlanStep[] }) {
   return (
-    <View style={styles.stepsRow}>
+    <View style={styles.stepsFlow}>
       {steps.map((step, index) => {
         const tone = stepStateStyle(step.state);
         return (
-          <View key={step.id} style={styles.stepItem}>
-            <View style={[styles.stepIcon, { backgroundColor: tone.color + '18' }]}>
-              <Ionicons name={resolveIcon(step.iconKey)} size={12} color={tone.color} />
+          <View key={step.id} style={styles.stepRow}>
+            <View style={styles.stepRail}>
+              <View style={[styles.stepIcon, { backgroundColor: tone.bg }]}>
+                <Ionicons name={resolveIcon(step.iconKey)} size={13} color={tone.color} />
+              </View>
+              {index < steps.length - 1 ? <View style={styles.stepConnector} /> : null}
             </View>
-            <Text style={[styles.stepLabel, { color: tone.color, opacity: tone.opacity }]} numberOfLines={1}>
-              {step.label}
-            </Text>
-            {index < steps.length - 1 ? <View style={styles.stepConnector} /> : null}
+            <View style={styles.stepCopy}>
+              <Text style={[styles.stepLabel, { color: tone.color, opacity: tone.opacity }]} numberOfLines={1}>
+                {step.label}
+              </Text>
+              <Text style={styles.stepState} numberOfLines={1}>
+                {step.state === 'done'
+                  ? 'Tamamlandı'
+                  : step.state === 'current'
+                    ? 'Aktif adım'
+                    : step.state === 'next'
+                      ? 'Sıradaki'
+                      : 'Kilitli'}
+              </Text>
+            </View>
           </View>
         );
       })}
@@ -104,8 +117,9 @@ export function CenterRecommendedPlanCard({
   if (plan.visibility === 'locked' || plan.planType === 'locked') {
     return (
       <View style={styles.section} accessibilityLabel={plan.accessibilityLabel}>
-        <Text style={styles.sectionEyebrow}>ÖNERİLEN PLAN</Text>
+        <Text style={styles.sectionEyebrow}>BUGÜNKÜ PLAN</Text>
         <View style={styles.lockedCard}>
+          <Ionicons name="lock-closed-outline" size={15} color={palette.gold} />
           <Text style={styles.lockedText} numberOfLines={2}>
             {plan.lockedTeaser ?? plan.body}
           </Text>
@@ -122,17 +136,6 @@ export function CenterRecommendedPlanCard({
 
   return (
     <View style={styles.section} accessibilityLabel={plan.accessibilityLabel}>
-      <View style={styles.headerRow}>
-        <View style={styles.headerCopy}>
-          <Text style={styles.sectionEyebrow}>{plan.title.toLocaleUpperCase('tr-TR')}</Text>
-          {plan.subtitle ? (
-            <Text style={styles.sectionSubtitle} numberOfLines={1}>
-              {plan.subtitle}
-            </Text>
-          ) : null}
-        </View>
-      </View>
-
       <View
         style={[
           styles.card,
@@ -140,50 +143,53 @@ export function CenterRecommendedPlanCard({
           highlight ? styles.cardHighlight : undefined,
         ]}>
         <LinearGradient
-          colors={[palette.cardWarm, palette.card]}
+          colors={[palette.card, palette.cardWarm]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.cardGradient}>
-          <View style={[styles.accentRail, { backgroundColor: tone.accent }]} />
-          <View style={styles.copy}>
-            <Text style={styles.body} numberOfLines={2}>
-              {plan.body}
-            </Text>
+          <View style={styles.headerRow}>
+            <View style={styles.headerCopy}>
+              <Text style={styles.sectionEyebrow}>BUGÜNKÜ PLAN</Text>
+              <Text style={styles.title} numberOfLines={1}>
+                {plan.title}
+              </Text>
+            </View>
             {plan.insight ? (
               <View style={[styles.insightPill, { backgroundColor: tone.pill }]}>
                 <Text style={[styles.insightLabel, { color: tone.accent }]} numberOfLines={1}>
                   {plan.insight.label}
                 </Text>
-                <Text style={styles.insightText} numberOfLines={1}>
-                  {plan.insight.text}
-                </Text>
               </View>
             ) : null}
-            {plan.steps && plan.steps.length > 0 ? <PlanStepsRow steps={plan.steps} /> : null}
-            {plan.cta ? (
-              <CreviaAnimatedPressable
-                onPress={handleCtaPress}
-                reducedMotion={reducedMotion}
-                disabled={!plan.cta.enabled}
-                accessibilityRole="button"
-                accessibilityLabel={plan.cta.label}
-                accessibilityState={{ disabled: !plan.cta.enabled }}
-                style={[
-                  styles.ctaPill,
-                  { borderColor: tone.border, backgroundColor: tone.pill },
-                  !plan.cta.enabled ? styles.ctaPillDisabled : undefined,
-                ]}>
-                <Text
-                  style={[styles.ctaText, { color: plan.cta.enabled ? tone.accent : palette.muted }]}
-                  numberOfLines={1}>
-                  {plan.cta.label}
-                </Text>
-                {plan.cta.enabled ? (
-                  <Ionicons name="chevron-forward" size={12} color={tone.accent} />
-                ) : null}
-              </CreviaAnimatedPressable>
-            ) : null}
           </View>
+
+          <Text style={styles.body} numberOfLines={2}>
+            {plan.body}
+          </Text>
+
+          {plan.steps && plan.steps.length > 0 ? <PlanStepsFlow steps={plan.steps} /> : null}
+
+          {plan.cta ? (
+            <CreviaAnimatedPressable
+              onPress={handleCtaPress}
+              reducedMotion={reducedMotion}
+              disabled={!plan.cta.enabled}
+              accessibilityRole="button"
+              accessibilityLabel={plan.cta.label}
+              accessibilityState={{ disabled: !plan.cta.enabled }}
+              style={[
+                styles.ctaPill,
+                { borderColor: tone.border, backgroundColor: tone.pill },
+                !plan.cta.enabled ? styles.ctaPillDisabled : undefined,
+              ]}>
+              <Text
+                style={[styles.ctaText, { color: plan.cta.enabled ? tone.accent : palette.muted }]}
+                numberOfLines={1}>
+                {plan.cta.label}
+              </Text>
+              {plan.cta.enabled ? <Ionicons name="chevron-forward" size={12} color={tone.accent} /> : null}
+            </CreviaAnimatedPressable>
+          ) : null}
         </LinearGradient>
       </View>
     </View>
@@ -192,105 +198,99 @@ export function CenterRecommendedPlanCard({
 
 const styles = StyleSheet.create({
   section: {
-    paddingHorizontal: 16,
     marginBottom: CENTER_SUPPORT_SECTION_MARGIN,
+  },
+  card: {
+    borderRadius: 22,
+    borderWidth: 1,
+    overflow: 'hidden',
+    backgroundColor: palette.card,
+  },
+  cardHighlight: {
+    borderWidth: 1.5,
+  },
+  cardGradient: {
+    padding: 14,
+    gap: 10,
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    gap: 10,
+    minWidth: 0,
   },
   headerCopy: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   sectionEyebrow: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.1,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1,
+    color: palette.tealMid,
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: '900',
     color: palette.teal,
   },
-  sectionSubtitle: {
-    fontSize: 13,
-    color: palette.muted,
-  },
-  card: {
-    borderRadius: 18,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  cardHighlight: {
-    shadowColor: palette.teal,
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
-  cardGradient: {
-    flexDirection: 'row',
-    minHeight: 88,
-  },
-  accentRail: {
-    width: 4,
-  },
-  copy: {
-    flex: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 8,
-  },
   body: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '700',
     color: '#173D3A',
   },
   insightPill: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
     borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    maxWidth: 116,
+    flexShrink: 0,
   },
   insightLabel: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '900',
   },
-  insightText: {
-    fontSize: 11,
-    color: palette.muted,
-    flexShrink: 1,
+  stepsFlow: {
+    gap: 0,
   },
-  stepsRow: {
+  stepRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    gap: 9,
+    minHeight: 38,
   },
-  stepItem: {
-    flexDirection: 'row',
+  stepRail: {
+    width: 26,
     alignItems: 'center',
-    gap: 4,
-    flexShrink: 1,
   },
   stepIcon: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    maxWidth: 72,
-  },
   stepConnector: {
-    width: 10,
-    height: 1,
-    backgroundColor: 'rgba(7, 86, 79, 0.15)',
-    marginHorizontal: 2,
+    flex: 1,
+    width: 2,
+    backgroundColor: 'rgba(7, 86, 79, 0.12)',
+  },
+  stepCopy: {
+    flex: 1,
+    minWidth: 0,
+    paddingBottom: 9,
+    gap: 1,
+  },
+  stepLabel: {
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  stepState: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: palette.muted,
   },
   ctaPill: {
     alignSelf: 'flex-start',
@@ -307,19 +307,26 @@ const styles = StyleSheet.create({
   },
   ctaText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   lockedCard: {
-    borderRadius: 16,
+    minHeight: 54,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: palette.border,
     backgroundColor: palette.card,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   lockedText: {
-    fontSize: 13,
-    lineHeight: 18,
+    flex: 1,
+    minWidth: 0,
+    fontSize: 12,
+    lineHeight: 17,
     color: palette.muted,
+    fontWeight: '700',
   },
 });

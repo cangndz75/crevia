@@ -9,7 +9,6 @@ import { buildMainOperationEngineInput } from '@/core/mainOperation/mainOperatio
 import { deriveMainOperationAccessMode } from '@/core/mainOperation/mainOperationEngine';
 import {
   buildFullMainOperationDailySet,
-  filterMainOperationActiveEvents,
   resolveFullMainOperationMaxEvents,
   shouldUseFullMainOperationEvents,
 } from '@/core/mainOperation/mainOperationEventGeneration';
@@ -19,6 +18,7 @@ import {
   augmentPostPilotDailySetWithContentActivation,
   type ContentRuntimeActivationInput,
 } from '@/core/contentRuntimeActivation';
+import { applyPortfolioCapacityToPostPilotDailySet } from '@/core/dailyCapacityPortfolio/dailyCapacityRuntimeBindingModel';
 
 import {
   MAX_POST_PILOT_ACTIVE_EVENTS,
@@ -210,23 +210,28 @@ function syncFromExistingSet(
   existing: PostPilotDailyEventSet,
   reason: string,
   maxEvents: number,
+  mainOperationContext?: EnsurePostPilotDailyEventsInput['mainOperationContext'],
 ): PostPilotEventGenerationResult {
   const blockedIds = getBlockedEventIds(gameState);
   const budget = gameState.city.budget;
-  const activeEvents = filterActiveEvents(
-    existing.catalog,
-    existing.allEventIds,
+  const day = dayFromSet(existing, postPilotOperation, gameState);
+  const capacitySelection = applyPortfolioCapacityToPostPilotDailySet({
+    day,
+    gameState,
+    dailySet: existing,
     blockedIds,
     budget,
     maxEvents,
-  );
+    mainOperationContext,
+  });
+  const activeEvents = capacitySelection.activeEvents;
   const eventPool = cloneEventCards(existing.catalog);
   const anchorStillActive = activeEvents.some(
     (event) => event.id === existing.anchorEventId,
   );
   const featuredEventId = anchorStillActive
     ? existing.anchorEventId
-    : activeEvents[0]?.id;
+    : capacitySelection.featuredEventId ?? activeEvents[0]?.id;
 
   return {
     events: activeEvents,
@@ -236,8 +241,11 @@ function syncFromExistingSet(
     reason,
     postPilotOperation: {
       ...postPilotOperation,
-      postPilotDailyEventSet: existing,
-      operationDay: dayFromSet(existing, postPilotOperation, gameState),
+      postPilotDailyEventSet: {
+        ...existing,
+        deferredEventIds: capacitySelection.deferredEventIds,
+      },
+      operationDay: day,
     },
   };
 }
@@ -304,6 +312,7 @@ export function ensurePostPilotDailyEventsForDay(
       existing,
       'already_generated_for_day',
       maxEvents,
+      input.mainOperationContext,
     );
   }
 
@@ -328,19 +337,25 @@ export function ensurePostPilotDailyEventsForDay(
       }),
     );
     const blockedIds = getBlockedEventIds(gameState);
-    const activeEvents = filterMainOperationActiveEvents(
-      dailySet.catalog,
-      dailySet.allEventIds,
+    const capacitySelection = applyPortfolioCapacityToPostPilotDailySet({
+      day,
+      gameState,
+      dailySet,
       blockedIds,
-      gameState.city.budget,
+      budget: gameState.city.budget,
       maxEvents,
-    );
+      mainOperationContext: input.mainOperationContext,
+    });
+    const activeEvents = capacitySelection.activeEvents;
 
     const nextPostPilot: PostPilotOperationState = {
       ...postPilotOperation,
       operationDay: day,
       lastUpdatedDay: day,
-      postPilotDailyEventSet: dailySet,
+      postPilotDailyEventSet: {
+        ...dailySet,
+        deferredEventIds: capacitySelection.deferredEventIds,
+      },
       scopes: derivePostPilotScopeStatuses({
         postPilotOperation,
         pilotStatus: gameState.pilot.status,
@@ -350,6 +365,7 @@ export function ensurePostPilotDailyEventsForDay(
 
     const featuredEventId =
       activeEvents.find((event) => event.id === dailySet.anchorEventId)?.id ??
+      capacitySelection.featuredEventId ??
       activeEvents[0]?.id;
 
     return {
@@ -380,23 +396,25 @@ export function ensurePostPilotDailyEventsForDay(
     scope,
   );
   const blockedIds = getBlockedEventIds(gameState);
-  const activeEvents = filterActiveEvents(
-    dailySet.catalog,
-    dailySet.allEventIds,
+  const capacitySelection = applyPortfolioCapacityToPostPilotDailySet({
+    day,
+    gameState,
+    dailySet,
     blockedIds,
-    gameState.city.budget,
+    budget: gameState.city.budget,
     maxEvents,
-  );
-
-  if (activeEvents.length > maxEvents) {
-    activeEvents.length = maxEvents;
-  }
+    mainOperationContext: input.mainOperationContext,
+  });
+  const activeEvents = capacitySelection.activeEvents;
 
   const nextPostPilot: PostPilotOperationState = {
     ...postPilotOperation,
     operationDay: day,
     lastUpdatedDay: day,
-    postPilotDailyEventSet: dailySet,
+    postPilotDailyEventSet: {
+      ...dailySet,
+      deferredEventIds: capacitySelection.deferredEventIds,
+    },
     scopes: derivePostPilotScopeStatuses({
       postPilotOperation,
       pilotStatus: gameState.pilot.status,
@@ -406,6 +424,7 @@ export function ensurePostPilotDailyEventsForDay(
 
   const featuredEventId =
     activeEvents.find((event) => event.id === dailySet.anchorEventId)?.id ??
+    capacitySelection.featuredEventId ??
     activeEvents[0]?.id;
 
   return {

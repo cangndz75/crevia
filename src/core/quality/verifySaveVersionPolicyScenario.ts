@@ -4,6 +4,7 @@ import { join, relative } from 'node:path';
 import { createDay1Seed } from '@/core/content/day1Seed';
 import {
   assertCurrentSaveVersion,
+  assertGamePersistExportsCurrentSaveVersion,
   assertMigrationSupportsVersion,
   buildSaveVersionPolicyReport,
   EXPECTED_SAVE_VERSION_FOR_VERIFY,
@@ -33,6 +34,10 @@ const ACTIVE_LEGACY_PATTERNS: { id: string; regex: RegExp }[] = [
   { id: 'expected_save_version_26', regex: /EXPECTED_SAVE_VERSION\s*=\s*26\b/ },
   { id: 'named_expected_save_version_26', regex: /EXPECTED_SAVE_VERSION\s*=\s*26;/ },
   { id: 'must_remain_26', regex: /must remain 26|remain 26/i },
+  {
+    id: 'game_persist_literal_save_version_includes',
+    regex: /includes\(['"][^'"]*SAVE_VERSION\s*=\s*26/,
+  },
 ];
 
 function assert(checks: string[], pass: boolean, ok: string, fail?: string): boolean {
@@ -57,6 +62,7 @@ function scanLegacyVersionChecks(): { file: string; patternId: string }[] {
   for (const root of SCAN_ROOTS) {
     for (const file of walkTsFiles(join(REPO_ROOT, root))) {
       if (file.includes('_bulk-save-version-27-fix')) continue;
+    if (file.includes('save-version-27-fix')) continue;
       if (file.includes('verifySaveVersionPolicyScenario')) continue;
       if (file.includes('saveVersionPolicy.ts')) continue;
       const content = readFileSync(file, 'utf8');
@@ -113,7 +119,7 @@ export function verifySaveVersionPolicyScenario(): VerifySaveVersionPolicyOutcom
   record(
     assert(
       checks,
-      persistSource.includes(`export const SAVE_VERSION: number = ${SAVE_VERSION}`),
+      assertGamePersistExportsCurrentSaveVersion(persistSource),
       'gamePersist exports current SAVE_VERSION literal',
     ),
   );

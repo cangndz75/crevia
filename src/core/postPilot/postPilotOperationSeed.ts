@@ -49,6 +49,9 @@ function normalizePostPilotDailyEventSet(raw: unknown): PostPilotDailyEventSet |
   const sideEventIds = Array.isArray(raw.sideEventIds)
     ? raw.sideEventIds.filter((id): id is string => typeof id === 'string')
     : [];
+  const deferredEventIds = Array.isArray(raw.deferredEventIds)
+    ? raw.deferredEventIds.filter((id): id is string => typeof id === 'string')
+    : [];
 
   return {
     day: Math.max(POST_PILOT_FIRST_OPERATION_DAY, Math.round(day)),
@@ -56,6 +59,7 @@ function normalizePostPilotDailyEventSet(raw: unknown): PostPilotDailyEventSet |
     sideEventIds,
     allEventIds: allEventIds.filter((id): id is string => typeof id === 'string'),
     catalog: catalog as PostPilotDailyEventSet['catalog'],
+    deferredEventIds,
   };
 }
 

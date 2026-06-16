@@ -1,5 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { EXPECTED_SAVE_VERSION_FOR_VERIFY } from '@/core/quality/saveVersionPolicy';
+import {
+  assertVerifySaveVersionPolicy,
+  EXPECTED_SAVE_VERSION_FOR_VERIFY,
+} from '@/core/quality/saveVersionPolicy';
 import { join } from 'node:path';
 
 import { SAVE_VERSION } from '@/store/gamePersist';
@@ -235,7 +238,14 @@ export function verifyActiveOperationMapBindingScenario(): VerifyActiveOperation
   record(assert(checks, mapUiPresentation.includes('activeOperationCardNumberOfLines'), 'layout guard records active operation card', 'layout guard missing active operation card'));
   record(assert(checks, packageJson.includes('verify:active-operation-map-binding'), 'package script registered', 'package script missing'));
   record(assert(checks, existsSync(join(REPO_ROOT, 'docs/crevia-active-operation-map-binding-pass.md')), 'binding docs exist', 'binding docs missing'));
-  record(assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION && gamePersist.includes('SAVE_VERSION = 26'), 'SAVE_VERSION unchanged', 'SAVE_VERSION changed'));
+  record(
+    assert(
+      checks,
+      assertVerifySaveVersionPolicy(gamePersist, SAVE_VERSION),
+      'SAVE_VERSION matches policy',
+      `SAVE_VERSION drift: runtime=${SAVE_VERSION}, expected=${EXPECTED_SAVE_VERSION}`,
+    ),
+  );
   record(assert(checks, !applyDecision.includes('activeOperationMapBinding'), 'applyDecision untouched by binding', 'applyDecision imports binding'));
   record(assert(checks, !dayPipeline.includes('activeOperationMapBinding'), 'day pipeline untouched by binding', 'day pipeline imports binding'));
 

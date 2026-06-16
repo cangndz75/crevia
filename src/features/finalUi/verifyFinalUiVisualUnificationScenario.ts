@@ -52,7 +52,7 @@ function normalizeLine(line: string | undefined | null): string {
   return line?.trim().toLowerCase().replace(/\s+/g, ' ') ?? '';
 }
 
-function countExactDuplicates(lines: Array<string | undefined | null>): number {
+function countExactDuplicates(lines: (string | undefined | null)[]): number {
   const normalized = lines.filter(Boolean).map((line) => normalizeLine(line));
   return normalized.length - new Set(normalized).size;
 }
@@ -226,13 +226,14 @@ export function verifyFinalUiVisualUnificationScenario(): {
   record(assert(checks, gameplayQa.ok, 'gameplay-loop-qa PASS'));
 
   const hubHome = readRepo('src/features/hub/components/HubReferenceHome.tsx');
+  const hubLowerDashboard = readRepo('src/features/hub/components/CenterLowerDashboard.tsx');
   record(assert(checks, hubHome.includes('CenterHomeHeader'), 'Hub uses CenterHomeHeader'));
-  record(assert(checks, hubHome.includes('HubActiveTaskCardStack'), 'Hub uses active target hero'));
-  record(assert(checks, hubHome.includes('CenterAdvisorCard'), 'Hub uses advisor card'));
-  record(assert(checks, hubHome.includes('CenterOperationFocusSection'), 'Hub uses operation focus'));
-  record(assert(checks, hubHome.includes('presentation.operationFocus'), 'Hub operationFocus wired'));
-  record(assert(checks, hubHome.includes('CenterPortfolioSurface'), 'Hub portfolio surface'));
-  record(assert(checks, hubHome.includes('CenterContinuationCardsSection'), 'Hub continuation cards'));
+  record(assert(checks, hubHome.includes('CenterLowerDashboard'), 'Hub uses lower dashboard'));
+  record(assert(checks, hubLowerDashboard.includes('SignalStatusCard'), 'Hub lower signal status card'));
+  record(assert(checks, hubLowerDashboard.includes('TaskFlowCard'), 'Hub lower task flow card'));
+  record(assert(checks, hubLowerDashboard.includes('DailyBonusCard'), 'Hub lower daily bonus card'));
+  record(assert(checks, hubLowerDashboard.includes('ContinueOperationCard'), 'Hub lower continuation operation cards'));
+  record(assert(checks, hubLowerDashboard.includes('presentation.activeTarget'), 'Hub lower dashboard state wired'));
   record(assert(checks, hubHome.includes('gameUi'), 'Hub uses gameUi tokens'));
 
   const bottomNav = readRepo('src/components/navigation/CreviaBottomTabBar.tsx');

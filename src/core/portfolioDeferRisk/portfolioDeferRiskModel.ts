@@ -2,6 +2,10 @@ import type {
   OperationPortfolioDeferRisk,
   OperationPortfolioItem,
 } from '@/core/dailyCapacityPortfolio';
+import {
+  buildAuthorityDeferMitigationLine,
+  buildAuthorityGameplayEffectSnapshot,
+} from '@/core/authorityGameplayExpansion/authorityGameplayEffectModel';
 
 import type {
   PortfolioDeferBinding,
@@ -184,6 +188,7 @@ function shouldBuildBinding(
 function buildBinding(
   item: OperationPortfolioItem,
   input: PortfolioDeferRiskInput,
+  authorityEffectSnapshot?: ReturnType<typeof buildAuthorityGameplayEffectSnapshot>,
 ): PortfolioDeferBinding | null {
   const kind = resolveKind(item);
   if (kind === 'none') return null;
@@ -195,6 +200,7 @@ function buildBinding(
   const reportLine = reportLineForItem(item, kind);
   const tomorrowLine = tomorrowLineForItem(item, kind, input);
   const isFallback = item.confidence === 'low' || sourceKinds.includes('fallback');
+  const mitigationLine = buildAuthorityDeferMitigationLine(item, authorityEffectSnapshot);
 
   return {
     id: `portfolio_defer_${item.id}`,
@@ -205,6 +211,7 @@ function buildBinding(
     nextActionLine: tomorrowLine,
     reportLine,
     tomorrowLine,
+    mitigationLine,
     districtId: item.districtId,
     districtName: item.districtName,
     deferRisk: item.deferRisk,
@@ -237,6 +244,10 @@ export function buildPortfolioDeferRiskBindings(
   }
 
   const duplicateSourceIds = extractDuplicateSourceIds(input);
+  const authorityEffectSnapshot = buildAuthorityGameplayEffectSnapshot({
+    day,
+    permissionIds: input.authorityPermissionIds ?? [],
+  });
   const candidates = [
     ...input.portfolioResult.deferredItems,
     ...input.portfolioResult.watchOnlyItems,
@@ -244,7 +255,7 @@ export function buildPortfolioDeferRiskBindings(
 
   const bindings = candidates
     .filter((item) => shouldBuildBinding(item, duplicateSourceIds))
-    .map((item) => buildBinding(item, input))
+    .map((item) => buildBinding(item, input, authorityEffectSnapshot))
     .filter((binding): binding is PortfolioDeferBinding => Boolean(binding))
     .sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id))
     .slice(0, MAX_BINDINGS);
@@ -256,7 +267,10 @@ export function buildPortfolioDeferRiskBindings(
     bindings,
     primaryBinding,
     reportSummaryLine: primaryBinding?.reportLine,
-    tomorrowActionLine: primaryBinding?.tomorrowLine,
+    tomorrowActionLine:
+      primaryBinding?.mitigationLine ??
+      primaryBinding?.tomorrowLine ??
+      primaryBinding?.nextActionLine,
     hasActionableDeferredRisk: bindings.some((binding) => binding.isActionable),
     sourceIds,
   };

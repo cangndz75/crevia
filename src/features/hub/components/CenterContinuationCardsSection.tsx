@@ -15,8 +15,8 @@ import type { CenterHomeVisibilityState } from '@/features/hub/utils/centerHomeP
 type IconName = keyof typeof Ionicons.glyphMap;
 
 const palette = {
-  card: '#FFFCF5',
-  cardWarm: '#F8F4EB',
+  card: '#F8F1E3',
+  cardWarm: '#FFF3D2',
   teal: '#07564F',
   tealMid: '#0D7168',
   tealSoft: '#E8F4EF',
@@ -25,7 +25,7 @@ const palette = {
   green: '#3E9E6A',
   amber: '#C78925',
   muted: '#6D736C',
-  border: 'rgba(7, 86, 79, 0.08)',
+  border: 'rgba(7, 86, 79, 0.12)',
   white: '#FFFFFF',
 } as const;
 
@@ -184,11 +184,10 @@ export function CenterContinuationCardsSection({
 
 const styles = StyleSheet.create({
   section: {
-    paddingHorizontal: 16,
     marginBottom: CENTER_SUPPORT_SECTION_MARGIN,
   },
   headerRow: {
-    marginBottom: 8,
+    marginBottom: 9,
     gap: 2,
   },
   sectionEyebrow: {
@@ -219,10 +218,10 @@ const styles = StyleSheet.create({
     gap: 10,
     backgroundColor: palette.card,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 18,
     paddingHorizontal: 10,
     paddingVertical: 10,
-    minHeight: 68,
+    minHeight: 74,
   },
   cardCompact: {
     minHeight: 72,
@@ -234,12 +233,13 @@ const styles = StyleSheet.create({
     backgroundColor: palette.cardWarm,
   },
   cardLocked: {
-    opacity: 0.92,
+    opacity: 0.94,
+    backgroundColor: '#F2EBDD',
   },
   iconWrap: {
     width: 30,
     height: 30,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -267,6 +267,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     maxWidth: 84,
+    borderWidth: 1,
+    borderColor: 'rgba(216,167,46,0.18)',
   },
   labelText: {
     fontSize: 9,

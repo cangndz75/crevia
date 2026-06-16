@@ -1,8 +1,9 @@
 import {
   buildDailyCapacityPortfolio,
   buildDailyCapacityPortfolioSummaryCard,
+  buildDailyCapacityPortfolioStoreInput,
   buildOperationPortfolioCardModels,
-  type DailyCapacityPortfolioInput,
+  type DailyCapacityPortfolioResult,
   type OperationPortfolioCardModel,
 } from '@/core/dailyCapacityPortfolio';
 import type { GameState } from '@/core/models/GameState';
@@ -60,6 +61,8 @@ export type BuildCenterPortfolioSurfaceInput = {
   operationSignalsSection?: CenterOperationSignals | null;
   recommendedPlanBody?: string | null;
   resourcePressureDifferentiation?: ResourcePressureDifferentiationResult | null;
+  /** Runtime binding: onceden hesaplanmis portfolio sonucu. */
+  dailyCapacityPortfolioResult?: DailyCapacityPortfolioResult | null;
 };
 
 const TEXT_LIMITS = {
@@ -108,74 +111,6 @@ function uniqueStrings(values: Array<string | undefined | null>): string[] {
     result.push(trimmed);
   }
   return result;
-}
-
-function makeGenericSignal(
-  id: string,
-  title: string,
-  summary: string,
-  score = 55,
-): { id: string; title: string; summary: string; score: number; sourceIds: string[] } {
-  return {
-    id,
-    title,
-    summary,
-    score,
-    sourceIds: [id],
-  };
-}
-
-function buildSocialPulseSignal(socialPulseState?: SocialPulseState | null) {
-  if (!socialPulseState) return undefined;
-  const raw = socialPulseState as unknown;
-  if (!isRecord(raw)) return undefined;
-
-  const score =
-    typeof raw.cityMoodScore === 'number'
-      ? raw.cityMoodScore
-      : typeof raw.score === 'number'
-        ? raw.score
-        : 56;
-  const title = asString(raw.title) ?? 'Sosyal nabız';
-  const summary =
-    asString(raw.summary) ??
-    asString(raw.lastSignalLine) ??
-    'Şehir tepkisi izleniyor.';
-
-  return makeGenericSignal('hub_social_pulse', title, summary, score);
-}
-
-function buildDailyCapacityPortfolioInput(
-  input: BuildCenterPortfolioSurfaceInput,
-): DailyCapacityPortfolioInput {
-  const rawState = input.gameState as unknown as Record<string, unknown>;
-  const pilot = isRecord(rawState.pilot) ? rawState.pilot : undefined;
-  const events = asArray(rawState.events);
-  const activeEvents = events.filter((event) => {
-    if (!isRecord(event)) return true;
-    const status = asString(event.status);
-    return status !== 'resolved' && status !== 'completed' && status !== 'expired';
-  });
-
-  return {
-    day: input.day,
-    activeEvents,
-    postPilotState: pilot?.postPilotOperation,
-    operationSignals: input.operationSignals ?? undefined,
-    tomorrowRiskSignals: input.hubTomorrowRisk ?? undefined,
-    vehicleMaintenanceSignals: input.hubVehicleMaintenanceLine
-      ? makeGenericSignal(
-          'hub_vehicle_maintenance',
-          'Bakım uyarısı',
-          input.hubVehicleMaintenanceLine,
-          62,
-        )
-      : undefined,
-    teamSpecializationSignals: input.hubTeamSpecializationLine
-      ? makeGenericSignal('hub_team_specialization', 'Ekip odağı', input.hubTeamSpecializationLine, 54)
-      : undefined,
-    socialPulseSignals: buildSocialPulseSignal(input.socialPulseState),
-  };
 }
 
 function avoidExactDuplicateTitle(title: string, avoidTitles: string[], fallback: string): string {
@@ -309,8 +244,16 @@ function buildItem(
 export function buildCenterPortfolioSurface(
   input: BuildCenterPortfolioSurfaceInput,
 ): CenterPortfolioSurfaceModel {
-  const portfolioInput = buildDailyCapacityPortfolioInput(input);
-  const result = buildDailyCapacityPortfolio(portfolioInput);
+  const portfolioInput = buildDailyCapacityPortfolioStoreInput({
+    day: input.day,
+    gameState: input.gameState,
+    operationSignals: input.operationSignals,
+    socialPulseState: input.socialPulseState,
+    hubTomorrowRisk: input.hubTomorrowRisk,
+    hubVehicleMaintenanceLine: input.hubVehicleMaintenanceLine,
+    hubTeamSpecializationLine: input.hubTeamSpecializationLine,
+  });
+  const result = input.dailyCapacityPortfolioResult ?? buildDailyCapacityPortfolio(portfolioInput);
   const summary = buildDailyCapacityPortfolioSummaryCard(result);
   const cardLimit = input.day <= 1 ? 1 : CENTER_PORTFOLIO_SURFACE_MAX_ITEMS;
   const visibleCards = buildOperationPortfolioCardModels(result, {

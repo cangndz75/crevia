@@ -853,9 +853,84 @@ export function adaptFallbackWatchItem(day: number): PortfolioAdapterDraft[] {
   ];
 }
 
+function eventUrgencyFromRisk(riskLevel: unknown, day: number): 'low' | 'medium' | 'high' {
+  if (typeof riskLevel === 'string') {
+    if (riskLevel === 'high' || riskLevel === 'critical') return 'high';
+    if (riskLevel === 'low') return 'low';
+  }
+  return day <= 1 ? 'medium' : 'high';
+}
+
+export function adaptCatalogOperationCandidates(
+  day: number,
+  catalog: unknown[] | undefined,
+  operationSignals?: unknown,
+  deferredOperationEventIds?: string[],
+): PortfolioAdapterDraft[] {
+  const events = asArray(catalog);
+  if (events.length === 0) return [];
+
+  const deferredSet = new Set(deferredOperationEventIds ?? []);
+  const priorityDistrictId =
+    isRecord(operationSignals) ? asString(operationSignals.priorityDistrictId) : undefined;
+  const drafts: PortfolioAdapterDraft[] = [];
+
+  for (const [index, raw] of events.entries()) {
+    if (!isRecord(raw)) continue;
+    const eventId = asString(raw.id) ?? `catalog_event_${index}`;
+    const title = asString(raw.title) ?? 'Operasyon adayi';
+    const districtName = asString(raw.district) ?? asString(raw.neighborhoodId);
+    const districtId = asString(raw.neighborhoodId) ?? asString(raw.districtId);
+    const urgency = eventUrgencyFromRisk(raw.riskLevel, day);
+    const districtMatch = Boolean(
+      priorityDistrictId &&
+        (districtId === priorityDistrictId || districtName === priorityDistrictId),
+    );
+
+    drafts.push({
+      id: `portfolio_active_operation_${eventId}`,
+      kind: 'active_operation',
+      title,
+      subtitle: districtName ? `${districtName} sahasi` : undefined,
+      districtId,
+      districtName,
+      pressureLevel: districtMatch ? 'high' : urgency === 'high' ? 'medium' : 'low',
+      urgency,
+      opportunityValue: 'none',
+      deferRisk: deferredSet.has(eventId) ? 'pressure_may_grow' : 'none',
+      recommendedReason: deferredSet.has(eventId)
+        ? 'Kapasite disi; yarin icin izleniyor.'
+        : day <= 1
+          ? 'Gunun ana operasyonu.'
+          : 'Bugunun operasyon adayi.',
+      selectBenefitLine: 'Bugun bu operasyonu acmak kapasiteyi netlestirir.',
+      sourceIds: uniqueStrings([eventId, `catalog_event_day_${day}`]),
+      sourceKinds: ['active_events', 'post_pilot_event_quota'],
+      confidence: 'high',
+      isActionable: !deferredSet.has(eventId),
+      isMapRecommended: districtMatch,
+      isFollowUp: false,
+      isSelectedCandidate: !deferredSet.has(eventId),
+      isWatchOnlyCandidate: false,
+      isLockedCandidate: false,
+      hasTomorrowRiskSource: deferredSet.has(eventId),
+      hasTrustSource: false,
+      hasResourceSource: false,
+      hasRouteSource: false,
+      hasSocialSource: false,
+      hasOpportunitySource: false,
+      hasMemorySource: false,
+    });
+  }
+
+  return drafts;
+}
+
 export function collectPortfolioDrafts(input: {
   day: number;
   activeEvents?: unknown[];
+  catalogOperationEvents?: unknown[];
+  deferredOperationEventIds?: string[];
   operationSignals?: unknown;
   districtPersonalityProfiles?: unknown[];
   eventGameplayVarietyProfiles?: unknown[];
@@ -870,8 +945,18 @@ export function collectPortfolioDrafts(input: {
   districtMemorySignals?: unknown;
   rewardComebackSignals?: unknown;
 }): PortfolioAdapterDraft[] {
+  const catalogDrafts =
+    asArray(input.catalogOperationEvents).length > 0
+      ? adaptCatalogOperationCandidates(
+          input.day,
+          input.catalogOperationEvents,
+          input.operationSignals,
+          input.deferredOperationEventIds,
+        )
+      : adaptActiveEvents(input.day, input.activeEvents);
+
   const drafts = [
-    ...adaptActiveEvents(input.day, input.activeEvents),
+    ...catalogDrafts,
     ...adaptOperationSignals(input.operationSignals),
     ...adaptDistrictPersonalityProfiles(input.districtPersonalityProfiles),
     ...adaptEventGameplayVarietyProfiles(input.eventGameplayVarietyProfiles),

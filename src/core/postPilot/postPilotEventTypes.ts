@@ -12,6 +12,8 @@ export type PostPilotDailyEventSet = {
   sideEventIds: string[];
   allEventIds: string[];
   catalog: EventCard[];
+  /** Capacity-aware selection: operasyonlar bugun aktif degil, yarin baskisi. */
+  deferredEventIds?: string[];
 };
 
 export type PostPilotEventScopeContext = {

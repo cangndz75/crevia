@@ -16,8 +16,8 @@ import type { CenterHomeVisibilityState } from '@/features/hub/utils/centerHomeP
 type IconName = keyof typeof Ionicons.glyphMap;
 
 const palette = {
-  card: '#FFFCF5',
-  cardWarm: '#FDF5E6',
+  card: '#F7F0E4',
+  cardWarm: '#FFF3D5',
   teal: '#07564F',
   tealMid: '#0D7168',
   tealSoft: '#E8F4EF',
@@ -28,7 +28,7 @@ const palette = {
   red: '#B85A4B',
   text: '#173D3A',
   muted: '#6D736C',
-  border: 'rgba(7, 86, 79, 0.1)',
+  border: 'rgba(7, 86, 79, 0.14)',
   white: '#FFFFFF',
 } as const;
 
@@ -39,19 +39,19 @@ const toneStyles: Record<
   success: {
     accent: palette.green,
     border: 'rgba(62,158,106,0.28)',
-    gradient: ['#F2FAF4', '#E2F3E8'],
+    gradient: ['#EAF7ED', '#DDEEE5'],
     pill: 'rgba(62,158,106,0.12)',
   },
   stable: {
     accent: palette.tealMid,
     border: palette.border,
-    gradient: [palette.tealSoft, '#F4FAF8'],
+    gradient: [palette.tealSoft, '#ECF5EF'],
     pill: palette.tealSoft,
   },
   warning: {
     accent: palette.amber,
     border: 'rgba(199,137,37,0.32)',
-    gradient: [palette.goldSoft, '#F8EFD4'],
+    gradient: ['#FFE5A2', '#F8E2B8'],
     pill: 'rgba(199,137,37,0.12)',
   },
   urgent: {
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     marginBottom: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 2,
     gap: 12,
   },
   headerCopy: {
@@ -301,16 +301,16 @@ const styles = StyleSheet.create({
     color: palette.tealMid,
   },
   list: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 2,
     gap: 10,
   },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     backgroundColor: palette.card,
-    paddingVertical: 12,
+    paddingVertical: 11,
     paddingRight: 10,
     paddingLeft: 0,
     gap: 10,
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
   },
   summaryLine: {
     marginTop: 8,
-    paddingHorizontal: 20,
+    paddingHorizontal: 2,
     fontSize: 12,
     color: palette.muted,
     fontWeight: '500',

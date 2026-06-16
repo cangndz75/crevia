@@ -14,6 +14,7 @@ import {
   buildDailyPlanHubModel,
   buildDailyPlanningEngineInputFromStore,
 } from '@/core/dailyPlanning';
+import { buildDailyCapacityRuntimeSnapshot } from '@/core/dailyCapacityPortfolio';
 import type {
   DailyContainerFocus,
   DailyPersonnelFocus,
@@ -71,17 +72,24 @@ export function HubDailyOperationsPlanCard({
   const [draftVehicle, setDraftVehicle] = useState(dailyOperationsPlan.vehicleFocus);
   const [draftContainer, setDraftContainer] = useState(dailyOperationsPlan.containerFocus);
 
-  const planningInput = useMemo(
-    () =>
-      buildDailyPlanningEngineInputFromStore({
-        gameState,
-        operationSignals,
-        advisorState,
-        dailyOperationsPlan,
-        isDay1Tutorial: isDay1,
-      }),
-    [gameState, operationSignals, advisorState, dailyOperationsPlan, isDay1],
-  );
+  const planningInput = useMemo(() => {
+    const base = buildDailyPlanningEngineInputFromStore({
+      gameState,
+      operationSignals,
+      advisorState,
+      dailyOperationsPlan,
+      isDay1Tutorial: isDay1,
+    });
+    const runtimeSnapshot = buildDailyCapacityRuntimeSnapshot({
+      day: gameState.city.day,
+      gameState,
+      operationSignals,
+    });
+    return {
+      ...base,
+      planPortfolioView: runtimeSnapshot.planPortfolioView,
+    };
+  }, [gameState, operationSignals, advisorState, dailyOperationsPlan, isDay1]);
 
   const hubModel = useMemo(
     () => buildDailyPlanHubModel(planningInput),

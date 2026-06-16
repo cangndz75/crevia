@@ -4,6 +4,7 @@ import type { CityMemoryVisibilityResult } from '@/core/cityMemoryVisibility/cit
 import type { Day8StrategicContentResult } from '@/core/day8StrategicContent/day8StrategicContentTypes';
 import type { DistrictNeglectRecoveryResult } from '@/core/districtNeglectRecovery/districtNeglectRecoveryTypes';
 import type { MapGameplayBinding } from '@/core/mapGameplayBinding/mapGameplayBindingTypes';
+import type { MapGameplayRuntimeFeedbackResult } from '@/core/mapGameplayBinding/mapGameplayRuntimeFeedbackTypes';
 import type { MapPresenceViewModel } from '@/core/mapPresence/mapPresenceTypes';
 import type { PositiveComebackResult } from '@/core/positiveComeback/positiveComebackTypes';
 
@@ -57,6 +58,8 @@ export type MapMarkerMotionModel = {
   sourceKinds: MapMotionSourceKind[];
   priority: number;
   reducedMotionFallback: boolean;
+  portfolioStatus?: string;
+  portfolioBadgeLabel?: string;
 };
 
 export type MapMotionPresentationResult = {
@@ -79,6 +82,7 @@ export type MapMotionPresentationInput = {
   cityMemoryVisibility?: CityMemoryVisibilityResult | null;
   activeTaskRoute?: CreviaActiveTaskRouteUiModel | null;
   mapPresenceViewModel?: MapPresenceViewModel | null;
+  mapGameplayRuntimeFeedback?: MapGameplayRuntimeFeedbackResult | null;
 };
 
 export const MAP_MOTION_MAX_ANIMATED = 5;
@@ -587,6 +591,71 @@ function collectFromMapPresence(
   });
 }
 
+function collectFromMapGameplayRuntimeFeedback(
+  drafts: Map<string, MotionDraft>,
+  feedback: MapGameplayRuntimeFeedbackResult | null | undefined,
+): void {
+  if (!feedback || feedback.mode !== 'portfolio_runtime' || feedback.markers.length === 0) return;
+
+  for (const marker of feedback.markers) {
+    const districtId = normalizeMapMotionDistrictId(marker.districtId ?? marker.districtName);
+    let kind: MapMarkerMotionKind = 'safe_watch';
+    let intensity: MapMotionIntensity = 'subtle';
+    let pulse = false;
+    let glow = false;
+    let routeHint = false;
+    const sourceKinds: MapMotionSourceKind[] = ['daily_capacity_portfolio', 'map_gameplay_binding'];
+
+    switch (marker.status) {
+      case 'active':
+        kind = 'active_operation';
+        intensity = 'strong';
+        pulse = true;
+        routeHint = true;
+        break;
+      case 'today_focus':
+        kind = 'active_operation';
+        intensity = 'medium';
+        pulse = true;
+        routeHint = true;
+        break;
+      case 'recommended':
+        kind = 'positive_opportunity';
+        intensity = 'medium';
+        glow = true;
+        break;
+      case 'deferred':
+      case 'blocked_by_capacity':
+        kind = 'safe_watch';
+        intensity = 'subtle';
+        sourceKinds.push('portfolio_defer_risk');
+        break;
+      case 'completed':
+        kind = 'city_memory_trace';
+        intensity = 'subtle';
+        break;
+      default:
+        kind = 'safe_watch';
+        break;
+    }
+
+    pushDraft(drafts, {
+      districtId,
+      markerId: marker.eventId,
+      kind,
+      intensity,
+      pulse,
+      glow,
+      routeHint,
+      label: marker.badgeLabel,
+      accessibilityLabel: `${marker.explanationLine}. ${marker.ctaLabel}`,
+      sourceIds: uniqueStrings(marker.sourceIds),
+      sourceKinds: uniqueSourceKinds(sourceKinds),
+      priority: clampPriority(marker.priority),
+    });
+  }
+}
+
 function applyPerformanceGuards(
   markers: MapMarkerMotionModel[],
   reducedMotion: boolean,
@@ -671,6 +740,7 @@ export function buildMapMotionPresentation(
   collectFromCityMemory(drafts, input.cityMemoryVisibility);
   collectFromActiveTaskRoute(drafts, input.activeTaskRoute);
   collectFromMapPresence(drafts, input.mapPresenceViewModel, input.focusDistrictId);
+  collectFromMapGameplayRuntimeFeedback(drafts, input.mapGameplayRuntimeFeedback);
 
   if (drafts.size === 0) {
     pushDraft(drafts, {
@@ -694,6 +764,23 @@ export function buildMapMotionPresentation(
     sourceKinds: uniqueSourceKinds(draft.sourceKinds),
     reducedMotionFallback: false,
   }));
+
+  if (input.mapGameplayRuntimeFeedback?.mode === 'portfolio_runtime') {
+    const feedbackByEvent = new Map(
+      input.mapGameplayRuntimeFeedback.markers
+        .filter((marker) => marker.eventId)
+        .map((marker) => [marker.eventId as string, marker]),
+    );
+    markers = markers.map((marker) => {
+      const feedback = marker.markerId ? feedbackByEvent.get(marker.markerId) : undefined;
+      if (!feedback) return marker;
+      return {
+        ...marker,
+        portfolioStatus: feedback.status,
+        portfolioBadgeLabel: feedback.badgeLabel,
+      };
+    });
+  }
 
   markers = applyPerformanceGuards(markers, reducedMotion);
 

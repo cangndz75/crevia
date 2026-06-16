@@ -449,6 +449,7 @@ function buildPortfolioSurfaceSection(
     operationSignalsSection: context.operationSignals,
     recommendedPlanBody: context.recommendedPlanBody,
     resourcePressureDifferentiation: context.memoryFollowUp?.resourcePressureDifferentiation,
+    dailyCapacityPortfolioResult: context.memoryFollowUp?.dailyCapacityPortfolio,
   });
 }
 

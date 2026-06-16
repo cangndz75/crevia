@@ -25,6 +25,7 @@ export type PortfolioDeferBinding = {
   nextActionLine?: string;
   reportLine?: string;
   tomorrowLine?: string;
+  mitigationLine?: string;
   districtId?: string;
   districtName?: string;
   deferRisk: string;

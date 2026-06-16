@@ -8,6 +8,7 @@ import { buildEndOfDayReportViewModel } from '@/features/reports/utils/endOfDayR
 import { buildDailyReport } from '@/core/game/buildDailyReport';
 import { createDay1Seed } from '@/core/content/day1Seed';
 import { createInitialOperationSignalsState } from '@/core/operations/operationSignalState';
+import { assertVerifySaveVersionPolicy } from '@/core/quality/saveVersionPolicy';
 import { SAVE_VERSION } from '@/store/gamePersist';
 
 import { ECE_STRATEGY_LINE_CONTENT_PACK } from './eceStrategyLineContentPack';
@@ -170,9 +171,9 @@ export function verifyEceStrategyLinesScenario(): EceStrategyLinesVerifyOutcome 
     assert(
       checks,
       SAVE_VERSION === ECE_STRATEGY_LINE_EXPECTED_SAVE_VERSION &&
-        readRepo('src/store/gamePersist.ts').includes('export const SAVE_VERSION = 26;'),
-      'SAVE_VERSION unchanged',
-      `SAVE_VERSION ${SAVE_VERSION}`,
+        assertVerifySaveVersionPolicy(readRepo('src/store/gamePersist.ts'), SAVE_VERSION),
+      'SAVE_VERSION matches policy',
+      `SAVE_VERSION drift: runtime=${SAVE_VERSION}, expected=${ECE_STRATEGY_LINE_EXPECTED_SAVE_VERSION}`,
     ) && ok;
   ok = verifyNoForbiddenRuntimeCalls(checks) && ok;
 

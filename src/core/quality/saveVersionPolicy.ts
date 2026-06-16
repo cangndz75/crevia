@@ -18,6 +18,24 @@ export function assertCurrentSaveVersion(version: number = SAVE_VERSION): boolea
   return isCurrentSaveVersion(version);
 }
 
+/** Verify scripts: gamePersist.ts exports the runtime SAVE_VERSION literal. */
+export function assertGamePersistExportsCurrentSaveVersion(
+  persistSource: string,
+  version: number = SAVE_VERSION,
+): boolean {
+  return persistSource.includes(`export const SAVE_VERSION: number = ${version}`);
+}
+
+/** Verify scripts: runtime SAVE_VERSION matches policy helper (no hard-coded version literals). */
+export function assertVerifySaveVersionPolicy(
+  persistSource?: string,
+  version: number = SAVE_VERSION,
+): boolean {
+  if (!isCurrentSaveVersion(version)) return false;
+  if (persistSource == null || persistSource.length === 0) return true;
+  return assertGamePersistExportsCurrentSaveVersion(persistSource, version);
+}
+
 export function assertMigrationSupportsVersion(fromVersion: number, toVersion: number): boolean {
   if (fromVersion === STRATEGY_HISTORY_MIGRATION_FROM_VERSION && toVersion === SAVE_VERSION) {
     return true;

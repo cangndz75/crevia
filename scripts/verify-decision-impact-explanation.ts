@@ -1,6 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { assertVerifySaveVersionPolicy } from '@/core/quality/saveVersionPolicy';
+import { SAVE_VERSION } from '@/store/gamePersist';
+
 import {
   verifyDecisionImpactExplanationScenario,
 } from '../src/core/decisionImpactExplanation/verifyDecisionImpactExplanationScenario';
@@ -29,7 +32,7 @@ const dayPipeline = read('src/core/game/ensureDailyEventsForDay.ts');
 record('result screen integration var', resultScreen.includes('EventResultImpactExplanationCard'));
 record('report echo integration var', reportView.includes('decisionImpactReportEcho'));
 record('hub carry-over echo integration var', hubScreen.includes('hubImpactExplanationLine') && hubHome.includes('previousImpactLine'));
-record('SAVE_VERSION 25', persist.includes('export const SAVE_VERSION = 26;'));
+record('SAVE_VERSION matches policy', assertVerifySaveVersionPolicy(persist, SAVE_VERSION));
 record('applyDecision değiştirilmedi', !applyDecision.includes('decisionImpactExplanation'));
 record('event generation değiştirilmedi', !dayPipeline.includes('decisionImpactExplanation'));
 record('package.json script var', packageJson.includes('"verify:decision-impact-explanation"'));

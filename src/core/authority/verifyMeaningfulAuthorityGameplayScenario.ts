@@ -28,6 +28,7 @@ import {
   auditEventPlanPhasePresentation,
   buildEventPlanPhasePresentation,
 } from '@/features/events/utils/eventPlanPhasePresentation';
+import { verifyAuthorityGameplayDeepeningScenario } from '@/core/authorityGameplayExpansion/verifyAuthorityGameplayDeepeningScenario';
 
 export type VerifyMeaningfulAuthorityGameplayOutcome = {
   ok: boolean;
@@ -323,6 +324,13 @@ export function verifyMeaningfulAuthorityGameplayScenario(): VerifyMeaningfulAut
   ] as const;
   for (const script of downstreamScripts) {
     assert(checks, true, `${script} delegated to package scripts`, 'run separately');
+  }
+
+  const deepening = verifyAuthorityGameplayDeepeningScenario();
+  for (const line of deepening.checks) {
+    const pass = line.startsWith('PASS');
+    const name = line.replace(/^PASS |^FAIL /, '');
+    assert(checks, pass, `deepening ${name}`, pass ? 'ok' : line);
   }
 
   const failCount = checks.filter((c) => !c.ok).length;

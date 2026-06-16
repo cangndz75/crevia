@@ -4,7 +4,7 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
+import { assertVerifySaveVersionPolicy } from '@/core/quality/saveVersionPolicy';
 
 import { SAVE_VERSION } from '../src/store/gamePersist';
 import { ONBOARDING_CONTINUATION_STEPS, ONBOARDING_DISTRICT_OPTIONS } from '../src/features/onboarding/utils/onboardingContinuationConstants';
@@ -120,7 +120,7 @@ const persist = repo('src/store/gamePersist.ts');
 const applyDecision = repo('src/core/game/applyDecision.ts');
 const dayPipeline = repo('src/core/dayPipeline/dayPipelineOrchestrator.ts');
 const eventGeneration = repo('src/core/game/generateDailyEventSet.ts');
-add(isCurrentSaveVersion(SAVE_VERSION) && persist.includes('export const SAVE_VERSION = 26;'), 'SAVE_VERSION 25');
+add(assertVerifySaveVersionPolicy(persist, SAVE_VERSION), 'SAVE_VERSION matches policy');
 add(!applyDecision.includes('onboardingContinuation'), 'applyDecision untouched by continuation');
 add(!dayPipeline.includes('onboardingContinuation'), 'dayPipeline untouched by continuation');
 add(!eventGeneration.includes('onboardingContinuation'), 'event generation untouched by continuation');

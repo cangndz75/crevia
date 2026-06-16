@@ -27,6 +27,7 @@ import {
 import { buildDistrictPersonalityProfile } from '@/core/districtPersonality';
 import { buildEventGameplayVarietyProfile } from '@/core/eventVariety/eventGameplayVarietyModel';
 import { buildMapGameplayBindings } from '@/core/mapGameplayBinding/mapGameplayBindingModel';
+import { buildMapGameplayRuntimeFeedback } from '@/core/mapGameplayBinding/mapGameplayRuntimeFeedbackModel';
 import { buildMapDistrictIntelligenceModel } from '@/core/map/mapDistrictIntelligencePresentation';
 import {
   buildDistrictReportCardFullModel,
@@ -543,26 +544,51 @@ export function MapScreen() {
     primaryMapEvent,
   ]);
 
-  const mapMotionPresentation = useMemo(() => {
-    const memoryFollowUpContext =
-      showPostPilotMapChrome && gameDay >= 8
-        ? buildMemoryFollowUpPresentationContext({
-            day: gameDay,
-            gameState: gameStateForMap,
-            operationSignals,
-          })
-        : null;
+  const postPilotMemoryFollowUpContext = useMemo(() => {
+    if (!showPostPilotMapChrome || gameDay < 8) return null;
+    return buildMemoryFollowUpPresentationContext({
+      day: gameDay,
+      gameState: gameStateForMap,
+      operationSignals,
+    });
+  }, [gameDay, gameStateForMap, operationSignals, showPostPilotMapChrome]);
 
+  const mapGameplayRuntimeFeedback = useMemo(() => {
+    if (!activeOperationMapContext || !postPilotMemoryFollowUpContext) return null;
+    return buildMapGameplayRuntimeFeedback({
+      day: gameDay,
+      gameState: gameStateForMap,
+      snapshot: postPilotMemoryFollowUpContext.dailyCapacityRuntimeSnapshot,
+      mapGameplayBindings: activeOperationMapContext.mapGameplayBindings,
+      activeOperationBinding: activeOperationMapContext.binding,
+      deferredEventIds: postPilotOperation?.postPilotDailyEventSet?.deferredEventIds,
+      explicitActiveEventId: primaryMapEvent?.id,
+      authorityEffectSnapshot:
+        postPilotMemoryFollowUpContext.dailyCapacityRuntimeSnapshot?.authorityEffectSnapshot,
+    });
+  }, [
+    activeOperationMapContext,
+    gameDay,
+    gameStateForMap,
+    postPilotMemoryFollowUpContext,
+    postPilotOperation?.postPilotDailyEventSet?.deferredEventIds,
+    primaryMapEvent?.id,
+  ]);
+
+  const mapMotionPresentation = useMemo(() => {
     return buildMapMotionPresentation({
       day: gameDay,
       reducedMotion: reducedMotionMode,
       focusDistrictId,
       activeOperationBinding: activeOperationMapContext?.binding,
-      mapGameplayBindings: activeOperationMapContext?.mapGameplayBindings,
-      day8StrategicContent: memoryFollowUpContext?.day8StrategicContent,
-      districtNeglectRecovery: memoryFollowUpContext?.districtNeglectRecovery,
-      positiveComeback: memoryFollowUpContext?.positiveComeback,
-      cityMemoryVisibility: memoryFollowUpContext?.cityMemoryVisibility,
+      mapGameplayBindings:
+        mapGameplayRuntimeFeedback?.enrichedBindings ??
+        activeOperationMapContext?.mapGameplayBindings,
+      mapGameplayRuntimeFeedback,
+      day8StrategicContent: postPilotMemoryFollowUpContext?.day8StrategicContent,
+      districtNeglectRecovery: postPilotMemoryFollowUpContext?.districtNeglectRecovery,
+      positiveComeback: postPilotMemoryFollowUpContext?.positiveComeback,
+      cityMemoryVisibility: postPilotMemoryFollowUpContext?.cityMemoryVisibility,
       activeTaskRoute: activeTaskRoutePreview,
       mapPresenceViewModel,
     });
@@ -571,11 +597,10 @@ export function MapScreen() {
     activeTaskRoutePreview,
     focusDistrictId,
     gameDay,
-    gameStateForMap,
+    mapGameplayRuntimeFeedback,
     mapPresenceViewModel,
-    operationSignals,
+    postPilotMemoryFollowUpContext,
     reducedMotionMode,
-    showPostPilotMapChrome,
   ]);
 
   const postPilotMapContextLine = useMemo(() => {

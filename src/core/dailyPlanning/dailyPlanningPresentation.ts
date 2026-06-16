@@ -161,7 +161,13 @@ export function buildDailyPlanHubModel(
       used,
       plan.operationFocusPoints.total,
     ),
-    advisorLine: getDailyPlanAdvisorComment(input, plan),
+    advisorLine: [
+      getDailyPlanAdvisorComment(input, plan),
+      input.planPortfolioView?.authorityLine,
+      input.planPortfolioView?.primaryTradeoffLine ?? input.planPortfolioView?.capacityLabel,
+    ]
+      .filter((line): line is string => Boolean(line?.trim()))
+      .join(' · '),
     ctaLabel: confirmed
       ? DAILY_PLANNING_COPY.updateLabel
       : DAILY_PLANNING_COPY.confirmLabel,

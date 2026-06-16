@@ -12,6 +12,11 @@ import {
   resolvePortfolioItemLimit,
 } from './dailyCapacityPortfolioConstants';
 import {
+  buildAuthorityGameplayEffectSnapshot,
+  enrichPortfolioItemWithAuthorityEffect,
+  resolveAuthorityPortfolioPriorityBonus,
+} from '@/core/authorityGameplayExpansion/authorityGameplayEffectModel';
+import {
   collectPortfolioDrafts,
   type PortfolioAdapterDraft,
 } from './dailyCapacityPortfolioSourceAdapters';
@@ -149,6 +154,8 @@ function computePriority(
   day: number,
   seenDistricts: Set<string>,
   seenKinds: Set<string>,
+  permissionIds: Set<string>,
+  authorityEffectSnapshot?: ReturnType<typeof buildAuthorityGameplayEffectSnapshot>,
 ): number {
   let score = PORTFOLIO_KIND_PRIORITY_BASE[draft.kind];
   if (draft.urgency === 'high') score += 12;
@@ -157,6 +164,20 @@ function computePriority(
   if (draft.isMapRecommended) score += 8;
   if (draft.confidence === 'high') score += 5;
   if (day >= 8) score += 5;
+  if (draft.sourceKinds.includes('map_gameplay_binding')) score += 6;
+  if (draft.sourceKinds.includes('active_operation_map_binding')) score += 5;
+  if (draft.sourceKinds.includes('operation_signals') && draft.pressureLevel === 'high') {
+    score += 7;
+  }
+  if (draft.sourceKinds.includes('decision_consequence')) score += 4;
+  if (draft.sourceKinds.includes('tomorrow_risk')) score += 6;
+  if (permissionIds.has('resource_pressure_summary') && draft.kind === 'resource_pressure') {
+    score += 4;
+  }
+  if (permissionIds.has('district_trust_preview') && draft.hasTrustSource) score += 4;
+  if (permissionIds.has('assignment_fit_preview') && draft.kind === 'active_operation') score += 3;
+  if (permissionIds.has('tomorrow_risk_preview') && draft.hasTomorrowRiskSource) score += 3;
+  score += resolveAuthorityPortfolioPriorityBonus(draft, authorityEffectSnapshot);
   if (draft.districtId && seenDistricts.has(draft.districtId)) score -= 8;
   if (seenKinds.has(draft.kind)) score -= 6;
   if (draft.confidence === 'low') score -= 10;
@@ -204,7 +225,7 @@ function dedupeDrafts(drafts: PortfolioAdapterDraft[]): PortfolioAdapterDraft[] 
   return [...byKey.values()];
 }
 
-function suppressSpam(drafts: PortfolioAdapterDraft[]): PortfolioAdapterDraft[] {
+function suppressSpam(drafts: PortfolioAdapterDraft[], day: number): PortfolioAdapterDraft[] {
   const kindCount = new Map<string, number>();
   const districtCount = new Map<string, number>();
   const result: PortfolioAdapterDraft[] = [];
@@ -216,8 +237,9 @@ function suppressSpam(drafts: PortfolioAdapterDraft[]): PortfolioAdapterDraft[] 
     const districtKey = draft.districtId ?? 'city';
     const nextKindCount = (kindCount.get(kindKey) ?? 0) + 1;
     const nextDistrictCount = (districtCount.get(districtKey) ?? 0) + 1;
+    const maxPerKind = kindKey === 'active_operation' && day >= 8 ? 4 : 2;
 
-    if (nextKindCount > 2 || (draft.districtId && nextDistrictCount > 2)) {
+    if (nextKindCount > maxPerKind || (draft.districtId && nextDistrictCount > 2)) {
       continue;
     }
 
@@ -271,6 +293,8 @@ function assignStatuses(
       selectedUsed += 1;
     } else if (draft.isWatchOnlyCandidate) {
       status = 'watch_only';
+    } else if (draft.isSelectedCandidate && selectedUsed >= selectedBudget) {
+      status = 'deferred';
     } else if (selectedUsed >= selectedBudget && draft.urgency !== 'low') {
       status = 'deferred';
     } else {
@@ -427,15 +451,27 @@ export function buildDailyCapacityPortfolio(
   const operationSlotLimit = resolveOperationSlotLimit(day);
   const portfolioItemLimit = resolvePortfolioItemLimit(day);
   const permissionIds = new Set(input.authorityPermissionIds ?? []);
+  const authorityEffectSnapshot = buildAuthorityGameplayEffectSnapshot({
+    day,
+    permissionIds: [...permissionIds],
+    rankId: input.authorityRankId,
+  });
 
   const rawDrafts = collectPortfolioDrafts(input);
-  const deduped = suppressSpam(dedupeDrafts(rawDrafts));
+  const deduped = suppressSpam(dedupeDrafts(rawDrafts), day);
 
   const seenDistricts = new Set<string>();
   const seenKinds = new Set<string>();
   const scored = deduped
     .map((draft) => {
-      const priority = computePriority(draft, day, seenDistricts, seenKinds);
+      const priority = computePriority(
+        draft,
+        day,
+        seenDistricts,
+        seenKinds,
+        permissionIds,
+        authorityEffectSnapshot,
+      );
       if (draft.districtId) seenDistricts.add(draft.districtId);
       seenKinds.add(draft.kind);
       return { ...draft, priority };
@@ -458,16 +494,19 @@ export function buildDailyCapacityPortfolio(
           ? 'Ozet gorunur; detay yetkiyle acilir.'
           : undefined;
 
-    return {
-      ...item,
-      visibilityLevel,
-      deferRiskLine: riskLine,
-      authorityTeaserLine,
-      urgency:
-        item.confidence === 'low' && item.sourceKinds.includes('fallback')
-          ? 'low'
-          : item.urgency,
-    };
+    return enrichPortfolioItemWithAuthorityEffect(
+      {
+        ...item,
+        visibilityLevel,
+        deferRiskLine: riskLine,
+        authorityTeaserLine,
+        urgency:
+          item.confidence === 'low' && item.sourceKinds.includes('fallback')
+            ? 'low'
+            : item.urgency,
+      },
+      authorityEffectSnapshot,
+    );
   });
 
   const visibleItems = items

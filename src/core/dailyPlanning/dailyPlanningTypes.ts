@@ -147,4 +147,5 @@ export type DailyPlanningEngineInput = {
   dailyOperationsPlan?: DailyOperationsPlanState;
   isDay1Tutorial?: boolean;
   postPilotLightPhase?: boolean;
+  planPortfolioView?: import('@/core/dailyCapacityPortfolio/dailyCapacityRuntimeBindingTypes').DailyOperationsPlanPortfolioView;
 };

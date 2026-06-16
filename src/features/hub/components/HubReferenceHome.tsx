@@ -3,16 +3,11 @@ import { StatusBar } from 'expo-status-bar';
 import { type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 
-import { CenterAdvisorCard } from '@/features/hub/components/CenterAdvisorCard';
 import { CenterCitySummaryCard } from '@/features/hub/components/CenterCitySummaryCard';
-import { CenterContinuationCardsSection } from '@/features/hub/components/CenterContinuationCardsSection';
 import { CenterDailyRewardRoute } from '@/features/hub/components/CenterDailyRewardRoute';
 import { CenterHomeHeader } from '@/features/hub/components/CenterHomeHeader';
+import { CenterLowerDashboard } from '@/features/hub/components/CenterLowerDashboard';
 import { CenterMotionEnter } from '@/features/hub/components/CenterMotionEnter';
-import { CenterOperationFocusSection } from '@/features/hub/components/CenterOperationFocusSection';
-import { CenterOperationSignalsSection } from '@/features/hub/components/CenterOperationSignalsSection';
-import { CenterPortfolioSurface } from '@/features/hub/components/CenterPortfolioSurface';
-import { CenterRecommendedPlanCard } from '@/features/hub/components/CenterRecommendedPlanCard';
 import { HubActiveTaskCardStack } from '@/features/hub/components/HubActiveTaskCardStack';
 import type { CenterHomePresentation } from '@/features/hub/utils/centerHomePresentation';
 import { isCenterModuleRenderable } from '@/features/hub/utils/centerHomePresentation';
@@ -79,54 +74,14 @@ export function HubReferenceHome({ presentation, scrollFooter }: HubReferenceHom
             />
           ) : null}
 
-          {isCenterModuleRenderable(visibilityFlags.advisorSuggestion) ? (
-            <CenterAdvisorCard
-              advisor={presentation.advisorSuggestion}
-              visibility={presentation.advisorSuggestion.visibility}
-              reducedMotion={reducedMotion}
-            />
-          ) : null}
-
-          {isCenterModuleRenderable(visibilityFlags.operationFocus) ? (
-            <CenterOperationFocusSection
-              focus={presentation.operationFocus}
-              visibility={presentation.operationFocus.visibility}
-              reducedMotion={reducedMotion}
-            />
-          ) : null}
-
           <CenterMotionEnter
             index={3}
             day={hubDay}
             reducedMotion={reducedMotion}
             hubMotionEnabled={hubMotionEnabled}
             disabled={!hubMotionEnabled}>
-            <CenterPortfolioSurface portfolio={presentation.portfolioSurface} />
+            <CenterLowerDashboard presentation={presentation} reducedMotion={reducedMotion} />
           </CenterMotionEnter>
-
-          {isCenterModuleRenderable(visibilityFlags.operationSignals) ? (
-            <CenterOperationSignalsSection
-              signalsSection={presentation.operationSignals}
-              visibility={presentation.operationSignals.visibility}
-              reducedMotion={reducedMotion}
-            />
-          ) : null}
-
-          {isCenterModuleRenderable(visibilityFlags.recommendedPlan) ? (
-            <CenterRecommendedPlanCard
-              plan={presentation.recommendedPlan}
-              visibility={presentation.recommendedPlan.visibility}
-              reducedMotion={reducedMotion}
-            />
-          ) : null}
-
-          {isCenterModuleRenderable(visibilityFlags.continuationCards) ? (
-            <CenterContinuationCardsSection
-              continuation={presentation.continuationCards}
-              visibility={presentation.continuationCards.visibility}
-              reducedMotion={reducedMotion}
-            />
-          ) : null}
 
           {scrollFooter ? <View style={styles.scrollFooter}>{scrollFooter}</View> : null}
         </View>

@@ -7,8 +7,11 @@ import {
 } from '@/core/decisionConsequence';
 import {
   buildDailyCapacityPortfolio,
-  type DailyCapacityPortfolioInput,
+  buildDailyCapacityPortfolioStoreInput,
+  buildDailyCapacityRuntimeSnapshot,
   type DailyCapacityPortfolioResult,
+  type DailyCapacityRuntimeSnapshot,
+  type DailyOperationsPlanPortfolioView,
 } from '@/core/dailyCapacityPortfolio';
 import { buildDistrictPersonalityProfile } from '@/core/districtPersonality';
 import { buildDistrictNeglectRecovery, collectDistrictNeglectRecoveryLines } from '@/core/districtNeglectRecovery';
@@ -81,6 +84,9 @@ export type MemoryFollowUpPresentationContext = {
   dominantStrategyDetector: DominantStrategyDetectorResult;
   resourcePressureDifferentiation: ResourcePressureDifferentiationResult;
   eceStrategyLines: EceStrategyLineResult;
+  planPortfolioView?: DailyOperationsPlanPortfolioView;
+  dailyCapacityRuntimeSnapshot?: DailyCapacityRuntimeSnapshot | null;
+  authorityEffectSnapshot?: DailyCapacityRuntimeSnapshot['authorityEffectSnapshot'];
   suppressSourceIds: string[];
   dedupeLines: string[];
 };
@@ -112,31 +118,16 @@ function buildSocialPulseSignal(socialPulseState?: SocialPulseState | null) {
   return makeSignal('hub_social_pulse', title, summary, score);
 }
 
-function buildPortfolioInput(snapshot: MemoryFollowUpPresentationSnapshot): DailyCapacityPortfolioInput {
-  const rawState = snapshot.gameState as unknown as Record<string, unknown>;
-  const pilot = isRecord(rawState.pilot) ? rawState.pilot : undefined;
-  const events = asArray(rawState.events);
-  const activeEvents = events.filter((event) => {
-    if (!isRecord(event)) return true;
-    const status = asString(event.status);
-    return status !== 'resolved' && status !== 'completed' && status !== 'expired';
-  });
-
-  return {
+function buildPortfolioInput(snapshot: MemoryFollowUpPresentationSnapshot) {
+  return buildDailyCapacityPortfolioStoreInput({
     day: snapshot.day,
-    activeEvents,
-    postPilotState: pilot?.postPilotOperation,
-    operationSignals: snapshot.operationSignals ?? undefined,
-    tomorrowRiskSignals: snapshot.hubTomorrowRisk ?? undefined,
-    vehicleMaintenanceSignals: snapshot.hubVehicleMaintenanceLine
-      ? makeSignal('hub_vehicle_maintenance', 'Bakım uyarısı', snapshot.hubVehicleMaintenanceLine, 62)
-      : undefined,
-    teamSpecializationSignals: snapshot.hubTeamSpecializationLine
-      ? makeSignal('hub_team_specialization', 'Ekip odağı', snapshot.hubTeamSpecializationLine, 54)
-      : undefined,
-    socialPulseSignals: buildSocialPulseSignal(snapshot.socialPulseState),
-    authorityPermissionIds: snapshot.authorityPermissionIds,
-  };
+    gameState: snapshot.gameState,
+    operationSignals: snapshot.operationSignals,
+    socialPulseState: snapshot.socialPulseState,
+    hubTomorrowRisk: snapshot.hubTomorrowRisk,
+    hubVehicleMaintenanceLine: snapshot.hubVehicleMaintenanceLine,
+    hubTeamSpecializationLine: snapshot.hubTeamSpecializationLine,
+  });
 }
 
 function buildHubThreads(snapshot: MemoryFollowUpPresentationSnapshot) {
@@ -394,19 +385,38 @@ export function buildMemoryFollowUpPresentationContext(
   const storyChainSignals = buildStoryChainSignals(snapshot);
   const cityArchiveSignals = buildCityArchiveSignals(snapshot);
 
-  const dailyCapacityPortfolio =
-    snapshot.dailyCapacityPortfolioResult ?? buildDailyCapacityPortfolio(buildPortfolioInput(snapshot));
+  const runtimeSnapshot =
+    snapshot.dailyCapacityPortfolioResult == null
+      ? buildDailyCapacityRuntimeSnapshot({
+          day,
+          gameState: snapshot.gameState,
+          operationSignals: snapshot.operationSignals,
+          socialPulseState: snapshot.socialPulseState,
+          hubTomorrowRisk: snapshot.hubTomorrowRisk,
+          hubVehicleMaintenanceLine: snapshot.hubVehicleMaintenanceLine,
+          hubTeamSpecializationLine: snapshot.hubTeamSpecializationLine,
+          decisionConsequenceThreads: decisionThreads,
+          carryOverSignals,
+        })
+      : null;
 
-  const portfolioDeferRisk = buildPortfolioDeferRiskBindings({
-    day,
-    portfolioResult: dailyCapacityPortfolio,
-    decisionConsequenceThreads: decisionThreads,
-    tomorrowRiskSignals: snapshot.hubTomorrowRisk ?? undefined,
-    carryOverSignals,
-    cityArchiveSignals,
-    storyChainSignals,
-    authorityPermissionIds: snapshot.authorityPermissionIds,
-  });
+  const dailyCapacityPortfolio =
+    snapshot.dailyCapacityPortfolioResult ??
+    runtimeSnapshot?.portfolio ??
+    buildDailyCapacityPortfolio(buildPortfolioInput(snapshot));
+
+  const portfolioDeferRisk =
+    runtimeSnapshot?.portfolioDeferRisk ??
+    buildPortfolioDeferRiskBindings({
+      day,
+      portfolioResult: dailyCapacityPortfolio,
+      decisionConsequenceThreads: decisionThreads,
+      tomorrowRiskSignals: snapshot.hubTomorrowRisk ?? undefined,
+      carryOverSignals,
+      cityArchiveSignals,
+      storyChainSignals,
+      authorityPermissionIds: snapshot.authorityPermissionIds,
+    });
 
   const oneMoreDayRetention = buildOneMoreDayRetention({
     day,
@@ -713,6 +723,9 @@ export function buildMemoryFollowUpPresentationContext(
     dominantStrategyDetector,
     resourcePressureDifferentiation,
     eceStrategyLines,
+    planPortfolioView: runtimeSnapshot?.planPortfolioView,
+    dailyCapacityRuntimeSnapshot: runtimeSnapshot,
+    authorityEffectSnapshot: runtimeSnapshot?.authorityEffectSnapshot,
     suppressSourceIds: collectSuppressSourceIds({ oneMoreDayRetention, eceStrategyLines }),
     dedupeLines,
   };
