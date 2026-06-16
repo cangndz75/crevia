@@ -22,7 +22,7 @@ import {
 import type { CreviaActiveTaskRouteUiModel } from '@/core/activeTaskRoutes/activeTaskRouteUiTypes';
 import {
   buildActiveOperationMapBinding,
-  buildActiveOperationMapCardModel,
+  buildPolishedActiveOperationMapCard,
 } from '@/core/activeOperationMapBinding';
 import { buildDistrictPersonalityProfile } from '@/core/districtPersonality';
 import { buildEventGameplayVarietyProfile } from '@/core/eventVariety/eventGameplayVarietyModel';
@@ -364,7 +364,6 @@ export function MapScreen() {
 
     return {
       binding: activeOperationBinding,
-      card: buildActiveOperationMapCardModel(activeOperationBinding, { day: gameDay }),
       mapGameplayBindings,
     };
   }, [
@@ -378,8 +377,6 @@ export function MapScreen() {
     operationSignals,
     primaryMapEvent,
   ]);
-
-  const activeOperationMapCard = activeOperationMapContext?.card ?? null;
 
   const mapDistrictIntelligence = useMemo(() => {
     const base = buildMapDistrictIntelligenceModel({
@@ -571,6 +568,30 @@ export function MapScreen() {
     gameDay,
     gameStateForMap,
     postPilotMemoryFollowUpContext,
+    postPilotOperation?.postPilotDailyEventSet?.deferredEventIds,
+    primaryMapEvent?.id,
+  ]);
+
+  const activeOperationMapCard = useMemo(() => {
+    const binding = activeOperationMapContext?.binding;
+    if (!binding) return null;
+    return buildPolishedActiveOperationMapCard({
+      day: gameDay,
+      binding,
+      runtimeFeedback: mapGameplayRuntimeFeedback ?? undefined,
+      authorityEffectSnapshot:
+        postPilotMemoryFollowUpContext?.dailyCapacityRuntimeSnapshot?.authorityEffectSnapshot,
+      deferredEventIds: postPilotOperation?.postPilotDailyEventSet?.deferredEventIds,
+      explicitEventId: primaryMapEvent?.id,
+      mitigationLine:
+        postPilotMemoryFollowUpContext?.dailyCapacityRuntimeSnapshot?.portfolioDeferRisk
+          .primaryBinding?.mitigationLine,
+    });
+  }, [
+    activeOperationMapContext?.binding,
+    gameDay,
+    mapGameplayRuntimeFeedback,
+    postPilotMemoryFollowUpContext?.dailyCapacityRuntimeSnapshot,
     postPilotOperation?.postPilotDailyEventSet?.deferredEventIds,
     primaryMapEvent?.id,
   ]);

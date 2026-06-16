@@ -240,6 +240,7 @@
     "verify:district-personality": "npx tsx scripts/verify-district-personality.ts",
     "analyze:district-personality": "npx tsx scripts/analyze-district-personality.ts",
     "verify:active-operation-map-binding": "npx tsx scripts/verify-active-operation-map-binding.ts",
+    "verify:active-operation-map-binding-polish": "npx tsx scripts/verify-active-operation-map-binding-polish.ts",
     "analyze:active-operation-map-binding": "npx tsx scripts/analyze-active-operation-map-binding.ts",
     "verify:daily-capacity-portfolio": "npx tsx scripts/verify-daily-capacity-portfolio.ts",
     "verify:daily-capacity-runtime-binding": "npx tsx scripts/verify-daily-capacity-runtime-binding.ts",
