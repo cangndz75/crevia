@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
@@ -11,11 +11,11 @@ import {
   useCenterCtaPulse,
   useCenterProgressHighlight,
 } from '@/shared/motion';
+import { hubAssets } from '@/features/hub/utils/hubAssets';
 import type {
   CenterActiveTarget,
   CenterActiveTargetDomain,
   CenterActiveTargetImpact,
-  CenterActiveTargetReward,
 } from '@/features/hub/utils/centerActiveTargetPresentation';
 import type { CenterHomeVisibilityState } from '@/features/hub/utils/centerHomePresentation';
 
@@ -37,9 +37,6 @@ const palette = {
   white: '#FFFFFF',
 } as const;
 
-const routeHeroImage = require('@/assets/districts/route/district_route_network_01.png');
-const HERO_SLOT_HEIGHT = 132;
-
 type IconName = keyof typeof Ionicons.glyphMap;
 
 const domainIcons: Record<CenterActiveTargetDomain, IconName> = {
@@ -50,14 +47,6 @@ const domainIcons: Record<CenterActiveTargetDomain, IconName> = {
   logistics: 'cube-outline',
   general: 'flag-outline',
 };
-
-const rewardToneColors = {
-  gold: palette.gold,
-  green: palette.green,
-  teal: palette.teal,
-  purple: '#8747C8',
-  neutral: palette.muted,
-} as const;
 
 const impactToneColors = {
   positive: palette.green,
@@ -70,13 +59,6 @@ type HubActiveTaskCardStackProps = {
   visibility?: CenterHomeVisibilityState;
   reducedMotion?: boolean;
 };
-
-function pressedScale(pressed: boolean) {
-  return {
-    opacity: pressed ? 0.92 : 1,
-    transform: [{ scale: pressed ? 0.985 : 1 }],
-  };
-}
 
 function resolveIcon(iconKey: string, domain: CenterActiveTargetDomain): IconName {
   const known: Record<string, IconName> = {
@@ -121,18 +103,6 @@ function TaskStatusBar({
   );
 }
 
-function RewardCapsule({ reward }: { reward: CenterActiveTargetReward }) {
-  const color = rewardToneColors[reward.tone];
-  return (
-    <View style={styles.rewardCapsule}>
-      <Ionicons name={resolveIcon(reward.iconKey, 'general')} size={18} color={color} />
-      <Text style={[styles.rewardText, { color }]} numberOfLines={2}>
-        {reward.label}
-      </Text>
-    </View>
-  );
-}
-
 function ImpactChip({ impact }: { impact: CenterActiveTargetImpact }) {
   const color = impactToneColors[impact.tone];
   return (
@@ -146,6 +116,22 @@ function ImpactChip({ impact }: { impact: CenterActiveTargetImpact }) {
       </Text>
     </View>
   );
+}
+
+function resolveDisplayCopy(activeTarget: CenterActiveTarget) {
+  const isDay1Entry = activeTarget.id === 'day1-entry';
+  return {
+    badge: isDay1Entry ? 'ANA GÖREV' : (activeTarget.categoryLabel?.toUpperCase() ?? 'AKTİF HEDEF'),
+    title: isDay1Entry ? 'İlk olayı çöz' : activeTarget.title,
+    subtitle: isDay1Entry ? 'ilk olay' : activeTarget.subtitle,
+    description: isDay1Entry
+      ? 'Operasyon merkezindeki ilk olaya müdahale et.'
+      : activeTarget.description,
+    rewardLabel: isDay1Entry
+      ? '+30 ilerleme'
+      : activeTarget.reward?.label ?? '',
+    rewardIcon: (isDay1Entry ? 'flash-outline' : activeTarget.reward?.iconKey) as string,
+  };
 }
 
 export function HubActiveTaskCardStack({
@@ -174,6 +160,7 @@ export function HubActiveTaskCardStack({
   const showProgress = Boolean(activeTarget.progress);
   const statusCompleted = activeTarget.status === 'completed';
   const statusEmpty = activeTarget.status === 'empty';
+  const display = resolveDisplayCopy(activeTarget);
 
   return (
     <View style={styles.wrap}>
@@ -192,16 +179,15 @@ export function HubActiveTaskCardStack({
         accessibilityLabel={activeTarget.accessibilityLabel}>
         <View style={styles.taskHero}>
           <Image
-            source={routeHeroImage}
+            source={hubAssets.centerSummaryHero}
             style={styles.taskHeroImage}
             contentFit="cover"
-            transition={0}
+            transition={180}
             cachePolicy="memory-disk"
           />
           <View style={styles.taskLabel}>
-            <Ionicons name="star" size={11} color={palette.gold} />
             <Text style={styles.taskLabelText} numberOfLines={1}>
-              {activeTarget.categoryLabel?.toUpperCase() ?? 'AKTİF HEDEF'}
+              {display.badge}
             </Text>
           </View>
           {statusCompleted ? (
@@ -224,23 +210,34 @@ export function HubActiveTaskCardStack({
               </View>
               <View style={styles.titleBlock}>
                 <Text style={styles.taskTitle} numberOfLines={2}>
-                  {activeTarget.title}
+                  {display.title}
                 </Text>
-                {activeTarget.subtitle ? (
+                {display.subtitle ? (
                   <Text style={styles.taskSubtitle} numberOfLines={1}>
-                    {activeTarget.subtitle}
+                    {display.subtitle}
                   </Text>
                 ) : null}
               </View>
             </View>
             <Text style={styles.taskBody} numberOfLines={2}>
-              {activeTarget.description}
+              {display.description}
             </Text>
           </View>
-          {activeTarget.reward ? <RewardCapsule reward={activeTarget.reward} /> : null}
+          {activeTarget.reward || activeTarget.id === 'day1-entry' ? (
+            <View style={styles.rewardCapsule}>
+              <Ionicons
+                name={resolveIcon(display.rewardIcon, 'general')}
+                size={18}
+                color={palette.green}
+              />
+              <Text style={[styles.rewardText, { color: palette.green }]} numberOfLines={2}>
+                {display.rewardLabel}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
-        {activeTarget.impactPreview.length > 0 ? (
+        {activeTarget.impactPreview.length > 0 && activeTarget.id !== 'day1-entry' ? (
           <View style={styles.impactRow}>
             {activeTarget.impactPreview.map((impact) => (
               <ImpactChip key={`${impact.id}-${impact.label}`} impact={impact} />
@@ -302,18 +299,15 @@ export function HubActiveTaskCardStack({
 
 const styles = StyleSheet.create({
   wrap: {
-    paddingTop: 4,
-    paddingRight: 4,
-    paddingBottom: 2,
+    minWidth: 0,
   },
   taskCard: {
     borderRadius: 24,
     padding: 12,
-    gap: 10,
-    borderWidth: 2,
+    gap: 12,
+    borderWidth: 1,
     borderColor: palette.cardBorder,
     overflow: 'hidden',
-    minHeight: HERO_SLOT_HEIGHT,
   },
   taskCardPulseReady: {
     borderColor: palette.gold,
@@ -322,8 +316,8 @@ const styles = StyleSheet.create({
     borderColor: '#C78925',
   },
   taskHero: {
-    height: 108,
-    borderRadius: 16,
+    height: 118,
+    borderRadius: 18,
     overflow: 'hidden',
     backgroundColor: palette.tealSoft,
     position: 'relative',
@@ -338,13 +332,10 @@ const styles = StyleSheet.create({
     left: 12,
     top: 12,
     zIndex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
     borderRadius: 999,
-    paddingHorizontal: 9,
+    paddingHorizontal: 10,
     paddingVertical: 5,
-    backgroundColor: 'rgba(7, 86, 79, 0.9)',
+    backgroundColor: 'rgba(7, 86, 79, 0.92)',
     maxWidth: '72%',
   },
   taskLabelText: {
@@ -517,8 +508,8 @@ const styles = StyleSheet.create({
     color: palette.muted,
   },
   taskCta: {
-    minHeight: 50,
-    borderRadius: 16,
+    minHeight: 48,
+    borderRadius: 14,
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',

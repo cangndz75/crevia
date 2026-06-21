@@ -43,8 +43,8 @@ export function verifyCenterHomeIaScenario(): {
   );
   assert(
     checks,
-    day1.visibilityFlags.operationFocus === 'locked',
-    'Day 1 operation focus locked',
+    day1.visibilityFlags.operationFocus === 'visible',
+    'Day 1 operation focus visible',
   );
   assert(
     checks,

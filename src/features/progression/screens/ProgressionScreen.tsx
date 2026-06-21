@@ -11,9 +11,7 @@ import { DistrictExpansionBindingPanel } from '@/features/progression/components
 import { CollectionProgressHeroCard } from '@/features/progression/components/authorities/CollectionProgressHeroCard';
 import {
   AUTHORITY_COLLECTION_THEME,
-  buildAuthorityBadgePreviewModels,
   buildCollectionHeroModel,
-  buildWeeklyUnlockModels,
 } from '@/features/progression/utils/authorityCollectionPresentation';
 import { deriveAuthoritiesScreenModel } from '@/features/progression/utils/authoritiesScreenModel';
 import { useGameStore } from '@/store/useGameStore';
@@ -46,19 +44,9 @@ export function ProgressionScreen() {
     [badgeState, pilotDay, model.collectionCollected, model.collectionProgress, model.collectionTotal],
   );
 
-  const weeklyItems = useMemo(
-    () => buildWeeklyUnlockModels(model.weeklyItems),
-    [model.weeklyItems],
-  );
-
-  const previewItems = useMemo(
-    () => buildAuthorityBadgePreviewModels(model.gridItems),
-    [model.gridItems],
-  );
-
   return (
     <GameScreenShell
-      screenTitle="Yetkiler"
+      screenTitle="Başarılar"
       backgroundColor={AUTHORITY_COLLECTION_THEME.screenBg}
       contentStyle={styles.content}>
       <CollectionProgressHeroCard {...heroModel} />
@@ -66,9 +54,6 @@ export function ProgressionScreen() {
 
       {tab === 'authorities' ? (
         <AuthoritiesTabPanel
-          daysLeft={model.daysLeftThisWeek}
-          weeklyItems={weeklyItems}
-          previewItems={previewItems}
           authorityState={authorityState}
           pilotDay={pilotDay}
           totalXp={totalXp}

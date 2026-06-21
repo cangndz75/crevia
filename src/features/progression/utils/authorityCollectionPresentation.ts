@@ -11,12 +11,14 @@ import type {
 } from './authoritiesScreenModel';
 
 export const AUTHORITY_COLLECTION_THEME = {
-  screenBg: '#F8F4EA',
+  screenBg: '#F8F9F5',
   cardBg: '#FFFEFA',
   mintSoft: '#E8F8F5',
   mintSoftAlt: '#DFF4EF',
   gold: '#F4B51F',
   goldDark: '#E7A90E',
+  goldSoft: '#F5D98A',
+  tealDark: '#2D6A6A',
   purple: '#8D6AD8',
   textPrimary: '#202428',
   textSecondary: '#6F7478',

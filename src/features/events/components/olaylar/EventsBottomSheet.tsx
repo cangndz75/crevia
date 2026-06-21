@@ -41,8 +41,8 @@ const styles = StyleSheet.create({
   },
   handleWrap: {
     alignItems: 'center',
-    paddingTop: 8,
-    paddingBottom: 4,
+    paddingTop: 9,
+    paddingBottom: 5,
   },
   handle: {
     width: 36,
@@ -56,6 +56,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: olaylar.screenPadding,
     paddingTop: 4,
-    gap: 14,
+    gap: 12,
   },
 });

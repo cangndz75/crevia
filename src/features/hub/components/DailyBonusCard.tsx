@@ -79,7 +79,7 @@ function BonusNode({
 }
 
 export function DailyBonusCard({
-  title = 'GÜNLÜK BONUS',
+  title = 'GÜNLÜK SERİ',
   subtitle = 'Serini koru, ödülleri topla!',
   nodes,
   rewardAmount,

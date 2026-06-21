@@ -1,79 +1,26 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
-import { CENTER_SUPPORT_SECTION_MARGIN } from '@/features/hub/utils/centerLayoutTokens';
 import { CreviaAnimatedPressable } from '@/shared/motion';
 import type {
   CenterOperationFocus,
   CenterOperationFocusItem,
-  CenterOperationFocusItemTone,
 } from '@/features/hub/utils/centerOperationFocusPresentation';
 import type { CenterHomeVisibilityState } from '@/features/hub/utils/centerHomePresentation';
+import { CENTER_COMPACT_BREAKPOINT } from '@/features/hub/utils/centerLayoutTokens';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
 const palette = {
-  cream: '#FFFCF5',
-  warm: '#FFF3D7',
+  cream: '#F7F3E7',
+  card: '#FFFFFF',
+  deepGreen: '#064E45',
   teal: '#07564F',
-  tealMid: '#0D7168',
-  tealDark: '#043A36',
-  tealSoft: '#DFF1EB',
-  gold: '#D8A72E',
-  goldSoft: '#F5E3AF',
-  green: '#3E9E6A',
-  amber: '#C78925',
-  red: '#B85A4B',
-  text: '#173D3A',
-  muted: '#68746E',
-  border: 'rgba(7, 86, 79, 0.12)',
-  white: '#FFFFFF',
+  muted: '#6B7D78',
+  border: 'rgba(6, 78, 69, 0.12)',
 } as const;
-
-const toneAccent: Record<
-  CenterOperationFocusItemTone,
-  { border: string; accent: string; pill: string; gradient: [string, string] }
-> = {
-  success: {
-    border: 'rgba(62,158,106,0.30)',
-    accent: palette.green,
-    pill: 'rgba(62,158,106,0.12)',
-    gradient: ['#FFF9E8', '#E6F6EA'],
-  },
-  stable: {
-    border: palette.border,
-    accent: palette.tealMid,
-    pill: palette.tealSoft,
-    gradient: ['#FFF8E6', '#E8F4EF'],
-  },
-  warning: {
-    border: 'rgba(199,137,37,0.36)',
-    accent: palette.amber,
-    pill: 'rgba(199,137,37,0.12)',
-    gradient: ['#FFF2D2', '#F8E7B5'],
-  },
-  urgent: {
-    border: 'rgba(184,90,75,0.34)',
-    accent: palette.red,
-    pill: 'rgba(184,90,75,0.10)',
-    gradient: ['#FFF1DB', '#F8DED8'],
-  },
-  locked: {
-    border: 'rgba(7, 86, 79, 0.10)',
-    accent: palette.gold,
-    pill: 'rgba(216,167,46,0.13)',
-    gradient: ['#F8F2E6', '#EEE7D9'],
-  },
-  neutral: {
-    border: palette.border,
-    accent: palette.tealMid,
-    pill: palette.tealSoft,
-    gradient: ['#FFF8E6', '#EFF7F4'],
-  },
-};
 
 type CenterOperationFocusSectionProps = {
   focus: CenterOperationFocus;
@@ -84,35 +31,75 @@ type CenterOperationFocusSectionProps = {
 
 function resolveIcon(iconKey: string): IconName {
   const known: Record<string, IconName> = {
+    'locate-outline': 'locate-outline',
+    'map-outline': 'map-outline',
+    'people-outline': 'people-outline',
+    'pulse-outline': 'pulse-outline',
     'bus-outline': 'bus-outline',
     'leaf-outline': 'leaf-outline',
     'flash-outline': 'flash-outline',
-    'people-outline': 'people-outline',
     'cube-outline': 'cube-outline',
     'construct-outline': 'construct-outline',
     'grid-outline': 'grid-outline',
     'flag-outline': 'flag-outline',
-    'map-outline': 'map-outline',
     'navigate-outline': 'navigate-outline',
+    'radio-outline': 'radio-outline',
   };
   return known[iconKey] ?? 'ellipse-outline';
 }
 
-function statusLabel(item: CenterOperationFocusItem): string {
-  if (item.isLocked) return item.statusLabel || 'Kilitli';
-  if (item.isActiveTargetDomain) return 'Hazır';
-  return item.statusLabel;
-}
+function FocusTile({
+  item,
+  compact,
+  reducedMotion,
+}: {
+  item: CenterOperationFocusItem;
+  compact: boolean;
+  reducedMotion: boolean;
+}) {
+  const router = useRouter();
+  const clickable = Boolean(item.route) && !item.isLocked;
 
-function FocusChip({ item }: { item: CenterOperationFocusItem }) {
-  const tone = toneAccent[item.tone] ?? toneAccent.neutral;
-  return (
-    <View style={[styles.chip, { backgroundColor: tone.pill, borderColor: tone.border }]}>
-      <Ionicons name={resolveIcon(item.iconKey)} size={12} color={tone.accent} />
-      <Text style={[styles.chipText, { color: tone.accent }]} numberOfLines={1}>
+  const handlePress = () => {
+    if (!clickable || !item.route) return;
+    playLightImpactHaptic();
+    router.push(item.route as Href);
+  };
+
+  const content = (
+    <>
+      <View style={[styles.iconCircle, compact && styles.iconCircleCompact]}>
+        <Ionicons
+          name={resolveIcon(item.iconKey)}
+          size={compact ? 20 : 22}
+          color={item.isLocked ? palette.muted : palette.deepGreen}
+        />
+      </View>
+      <Text
+        style={[styles.tileLabel, compact && styles.tileLabelCompact, item.isLocked && styles.tileLabelMuted]}
+        numberOfLines={2}>
         {item.title}
       </Text>
-    </View>
+    </>
+  );
+
+  if (!clickable) {
+    return (
+      <View style={styles.tile} accessibilityRole="text" accessibilityLabel={item.title}>
+        {content}
+      </View>
+    );
+  }
+
+  return (
+    <CreviaAnimatedPressable
+      onPress={handlePress}
+      reducedMotion={reducedMotion}
+      accessibilityRole="button"
+      accessibilityLabel={item.title}
+      style={styles.tile}>
+      {content}
+    </CreviaAnimatedPressable>
   );
 }
 
@@ -123,248 +110,156 @@ export function CenterOperationFocusSection({
   onViewAllPress,
 }: CenterOperationFocusSectionProps) {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const compact = width <= CENTER_COMPACT_BREAKPOINT;
   const isVisible = (visibility ?? focus.visibility) !== 'hidden';
 
   if (!isVisible || focus.items.length === 0) return null;
 
-  const primary =
-    focus.items.find((item) => item.domain === focus.selectedDomain) ?? focus.items[0];
-  const supporting = focus.items.filter((item) => item.id !== primary.id).slice(0, 3);
-  const tone = toneAccent[primary.tone] ?? toneAccent.neutral;
-  const clickable = Boolean(primary.route) && !primary.isLocked;
+  const showViewAll = focus.showViewAll || Boolean(focus.cta?.route);
+  const viewAllEnabled = focus.cta?.enabled !== false;
 
-  const handlePress = () => {
+  const handleViewAll = () => {
     if (onViewAllPress) {
       onViewAllPress();
       return;
     }
-    const route = primary.route ?? focus.cta?.route;
-    if (!route || primary.isLocked || focus.cta?.enabled === false) return;
+    const route = focus.cta?.route ?? '/events';
+    if (!viewAllEnabled) return;
     playLightImpactHaptic();
     router.push(route as Href);
   };
 
-  const content = (
-    <LinearGradient
-      colors={tone.gradient}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.heroGradient}>
-      <View style={styles.heroTopRow}>
-        <View style={styles.heroCopy}>
-          <Text style={styles.sectionLabel} numberOfLines={1}>
-            OPERASYON HUB
-          </Text>
-          <Text style={styles.heroTitle} numberOfLines={2}>
-            {primary.isLocked ? 'İlk Operasyon Hazırlanıyor' : primary.title}
-          </Text>
-        </View>
-        <View style={[styles.statusPill, { backgroundColor: tone.pill, borderColor: tone.border }]}>
-          <Text style={[styles.statusText, { color: tone.accent }]} numberOfLines={1}>
-            {statusLabel(primary)}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.heroBodyRow}>
-        <View style={[styles.heroIcon, { backgroundColor: palette.white, borderColor: tone.border }]}>
-          <Ionicons name={resolveIcon(primary.iconKey)} size={22} color={tone.accent} />
-        </View>
-        <View style={styles.heroBodyCopy}>
-          <Text style={styles.heroSubtitle} numberOfLines={2}>
-            {primary.subtitle ?? focus.subtitle ?? 'Bugünün operasyon kararı burada netleşir.'}
-          </Text>
-          <View style={styles.rewardRow}>
-            <View style={styles.rewardChip}>
-              <Text style={styles.rewardText} numberOfLines={1}>
-                {primary.sourceLabel}
-              </Text>
-            </View>
-            {supporting.slice(0, 2).map((item) => (
-              <FocusChip key={item.id} item={item} />
-            ))}
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.footerRow}>
-        <Text style={styles.contextLine} numberOfLines={2}>
-          {focus.helperText ?? 'Bu operasyon tamamlanınca yeni sinyaller açılır.'}
-        </Text>
-        <View style={[styles.cta, !clickable ? styles.ctaDisabled : undefined]}>
-          <Text style={styles.ctaText} numberOfLines={1}>
-            {focus.cta?.label ?? (clickable ? 'İncele' : 'Yakında')}
-          </Text>
-          {clickable ? <Ionicons name="chevron-forward" size={14} color={palette.teal} /> : null}
-        </View>
-      </View>
-    </LinearGradient>
-  );
-
   return (
     <View style={styles.section} accessibilityLabel={focus.accessibilityLabel}>
-      {clickable ? (
-        <CreviaAnimatedPressable
-          onPress={handlePress}
-          reducedMotion={reducedMotion}
-          accessibilityRole="button"
-          accessibilityLabel={`${primary.title}. ${primary.statusLabel}`}
-          style={[styles.heroCard, { borderColor: tone.border }]}>
-          {content}
-        </CreviaAnimatedPressable>
-      ) : (
-        <View
-          style={[styles.heroCard, { borderColor: tone.border }]}
-          accessibilityRole="text"
-          accessibilityLabel={`${primary.title}. ${primary.statusLabel}`}>
-          {content}
+      <View style={styles.headerRow}>
+        <Text style={styles.sectionTitle} numberOfLines={1}>
+          {focus.title}
+        </Text>
+        {showViewAll ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Tümünü gör"
+            onPress={handleViewAll}
+            disabled={!viewAllEnabled}
+            hitSlop={8}
+            style={({ pressed }) => [styles.viewAllBtn, pressed && viewAllEnabled ? styles.viewAllPressed : undefined]}>
+            <Text style={[styles.viewAllText, !viewAllEnabled && styles.viewAllTextMuted]} numberOfLines={1}>
+              Tümünü Gör
+            </Text>
+            <Ionicons
+              name="chevron-forward"
+              size={14}
+              color={viewAllEnabled ? palette.teal : palette.muted}
+            />
+          </Pressable>
+        ) : null}
+      </View>
+
+      <View style={styles.card}>
+        <View style={styles.tilesRow}>
+          {focus.items.slice(0, 4).map((item) => (
+            <FocusTile key={item.id} item={item} compact={compact} reducedMotion={reducedMotion} />
+          ))}
         </View>
-      )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   section: {
-    marginBottom: CENTER_SUPPORT_SECTION_MARGIN,
+    gap: 10,
+    minWidth: 0,
   },
-  heroCard: {
-    borderRadius: 24,
-    borderWidth: 1,
-    overflow: 'hidden',
-    backgroundColor: palette.cream,
-  },
-  heroGradient: {
-    padding: 15,
-    gap: 13,
-  },
-  heroTopRow: {
+  headerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 8,
     minWidth: 0,
   },
-  heroCopy: {
+  sectionTitle: {
     flex: 1,
-    minWidth: 0,
-    gap: 3,
-  },
-  sectionLabel: {
-    fontSize: 10,
+    fontSize: 18,
     fontWeight: '900',
-    letterSpacing: 1,
-    color: palette.tealMid,
+    color: palette.deepGreen,
   },
-  heroTitle: {
-    fontSize: 20,
-    lineHeight: 24,
-    fontWeight: '900',
-    color: palette.tealDark,
-  },
-  statusPill: {
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    maxWidth: 116,
+  viewAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
     flexShrink: 0,
   },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '900',
+  viewAllPressed: {
+    opacity: 0.75,
   },
-  heroBodyRow: {
-    flexDirection: 'row',
-    gap: 11,
-    minWidth: 0,
-  },
-  heroIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  heroBodyCopy: {
-    flex: 1,
-    minWidth: 0,
-    gap: 9,
-  },
-  heroSubtitle: {
-    fontSize: 13,
-    lineHeight: 18,
+  viewAllText: {
+    fontSize: 12,
     fontWeight: '700',
-    color: palette.text,
+    color: palette.teal,
   },
-  rewardRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  rewardChip: {
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: 'rgba(255,255,255,0.72)',
-    borderWidth: 1,
-    borderColor: 'rgba(216,167,46,0.22)',
-    maxWidth: 136,
-  },
-  rewardText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: palette.gold,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-    maxWidth: 126,
-  },
-  chipText: {
-    fontSize: 10,
-    fontWeight: '900',
-    flexShrink: 1,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    minWidth: 0,
-  },
-  contextLine: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: '700',
+  viewAllTextMuted: {
     color: palette.muted,
   },
-  cta: {
-    minHeight: 34,
-    borderRadius: 999,
-    paddingHorizontal: 12,
+  card: {
+    borderRadius: 24,
+    backgroundColor: palette.cream,
+    borderWidth: 1,
+    borderColor: palette.border,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    shadowColor: 'rgba(15, 60, 52, 0.12)',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  tilesRow: {
     flexDirection: 'row',
+    gap: 8,
+    minWidth: 0,
+  },
+  tile: {
+    flex: 1,
+    minWidth: 0,
+    backgroundColor: palette.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: palette.border,
+    paddingHorizontal: 6,
+    paddingVertical: 10,
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 96,
+  },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    backgroundColor: palette.goldSoft,
-    flexShrink: 0,
-    maxWidth: 126,
+    backgroundColor: 'rgba(6, 78, 69, 0.06)',
   },
-  ctaDisabled: {
-    opacity: 0.68,
+  iconCircleCompact: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
-  ctaText: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: palette.teal,
+  tileLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '700',
+    color: palette.deepGreen,
+    textAlign: 'center',
+    minHeight: 28,
+  },
+  tileLabelCompact: {
+    fontSize: 10,
+    lineHeight: 13,
+    minHeight: 26,
+  },
+  tileLabelMuted: {
+    color: palette.muted,
   },
 });

@@ -354,58 +354,73 @@ function mergeDraft(
 function buildDay1Focus(): CenterOperationFocus {
   const items: CenterOperationFocusItem[] = [
     {
-      id: 'focus-day1-first-operation',
-      domain: 'transport',
-      title: 'İlk Operasyon',
+      id: 'focus-day1-set-goal',
+      domain: 'general',
+      title: 'İlk hedefi belirle',
       statusLabel: 'Hazır',
-      subtitle: 'İlk olayla başlar',
-      tone: 'locked',
+      subtitle: 'Günün odak noktası',
+      tone: 'neutral',
       priority: 'normal',
-      iconKey: 'flag-outline',
+      iconKey: 'locate-outline',
       sourceLabel: 'Giriş',
-      isLocked: true,
+      isLocked: false,
     },
     {
-      id: 'focus-day1-planning',
+      id: 'focus-day1-task-flow',
       domain: 'logistics',
-      title: 'Planlama',
-      statusLabel: 'Kilitli',
-      subtitle: 'İlk olayla açılır',
-      tone: 'locked',
-      priority: 'low',
+      title: 'Görev akışını yönet',
+      statusLabel: 'Hazır',
+      subtitle: 'Görev adımlarını izle',
+      tone: 'neutral',
+      priority: 'normal',
       iconKey: 'map-outline',
       sourceLabel: 'Giriş',
-      isLocked: true,
+      isLocked: false,
     },
     {
-      id: 'focus-day1-field-flow',
-      domain: 'general',
-      title: 'Saha Akışı',
-      statusLabel: 'Yakında',
-      subtitle: 'Yönlendirme sonrası görünür',
-      tone: 'locked',
-      priority: 'low',
-      iconKey: 'navigate-outline',
+      id: 'focus-day1-teams',
+      domain: 'transport',
+      title: 'Ekipleri yönlendir',
+      statusLabel: 'Hazır',
+      subtitle: 'Saha ekiplerini koordine et',
+      tone: 'neutral',
+      priority: 'normal',
+      iconKey: 'people-outline',
       sourceLabel: 'Giriş',
-      isLocked: true,
+      route: '/events',
+      isLocked: false,
+    },
+    {
+      id: 'focus-day1-signals',
+      domain: 'general',
+      title: 'Sinyal durumunu gözle',
+      statusLabel: 'Hazır',
+      subtitle: 'Şehir sinyallerini izle',
+      tone: 'neutral',
+      priority: 'normal',
+      iconKey: 'pulse-outline',
+      sourceLabel: 'Giriş',
+      route: '/risks',
+      isLocked: false,
     },
   ];
 
   return {
-    visibility: 'locked',
+    visibility: 'visible',
     title: 'Operasyon Odağı',
-    subtitle: 'Alanlar ilk olayla netleşir',
+    subtitle: 'Bugünün operasyon adımları',
     items,
-    helperText: 'İlk olayı tamamladıkça operasyon alanları netleşir.',
+    helperText: 'İlk operasyonla merkez akışı genişler.',
     cta: {
-      label: 'Yakında',
-      actionKey: 'locked',
-      enabled: false,
+      label: 'Tümünü Gör',
+      route: '/events',
+      actionKey: 'view_operations',
+      enabled: true,
     },
-    displayMode: 'locked',
+    displayMode: 'grid',
     motionHint: { revealLevel: 'none', shouldUseStagger: false },
-    accessibilityLabel: 'Operasyon odağı kilitli. İlk olayı tamamladıkça alanlar açılır.',
-    showViewAll: false,
+    accessibilityLabel: 'Operasyon odağı. Dört operasyon adımı gösteriliyor.',
+    showViewAll: true,
   };
 }
 
@@ -800,11 +815,11 @@ export function centerOperationFocusNoFakeRisk(focus: CenterOperationFocus): boo
 
 export function centerOperationFocusDay1Locked(focus: CenterOperationFocus): boolean {
   return (
-    focus.visibility === 'locked' &&
-    focus.displayMode === 'locked' &&
-    focus.items.length >= 2 &&
-    focus.items.length <= 3 &&
-    focus.items.every((item) => item.isLocked)
+    focus.visibility === 'visible' &&
+    focus.displayMode === 'grid' &&
+    focus.items.length === 4 &&
+    focus.title === 'Operasyon Odağı' &&
+    focus.showViewAll === true
   );
 }
 

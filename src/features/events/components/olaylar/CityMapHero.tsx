@@ -28,8 +28,13 @@ export function CityMapHero() {
           />
         )}
         <LinearGradient
-          colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.45)', 'rgba(248,250,248,1)']}
-          locations={[0.5, 0.82, 1]}
+          colors={[
+            'rgba(255,255,255,0.78)',
+            'rgba(255,255,255,0.08)',
+            'rgba(255,255,255,0.42)',
+            'rgba(248,250,248,1)',
+          ]}
+          locations={[0, 0.32, 0.82, 1]}
           style={styles.fade}
         />
 
@@ -65,8 +70,6 @@ const styles = StyleSheet.create({
     borderRadius: olaylar.radiusHero,
     overflow: 'hidden',
     backgroundColor: '#EEF5F1',
-    borderWidth: 1,
-    borderColor: 'rgba(6, 78, 69, 0.08)',
   },
   mapImage: {
     ...StyleSheet.absoluteFillObject,
@@ -80,17 +83,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pinLeft: {
-    left: '18%',
-    top: '42%',
+    left: '16%',
+    top: '44%',
   },
   pinCenter: {
     left: '50%',
-    top: '34%',
-    marginLeft: -24,
+    top: '39%',
+    marginLeft: -28,
   },
   pinRight: {
-    right: '16%',
-    top: '48%',
+    right: '15%',
+    top: '47%',
   },
   pinDot: {
     width: 34,
@@ -102,9 +105,9 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
   },
   pinCritical: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: olaylar.critical,
   },
   pinUrgent: {
@@ -121,9 +124,11 @@ const styles = StyleSheet.create({
   },
   pulseRing: {
     position: 'absolute',
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: 'rgba(239, 68, 68, 0.16)',
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    backgroundColor: 'rgba(239, 68, 68, 0.18)',
+    borderWidth: 3,
+    borderColor: 'rgba(239, 68, 68, 0.26)',
   },
 });

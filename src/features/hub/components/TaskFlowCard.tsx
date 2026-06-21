@@ -1,5 +1,4 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -12,6 +11,8 @@ import {
 
 import { pushHubRoute } from './centerLowerDashboardShared';
 
+type IconName = keyof typeof Ionicons.glyphMap;
+
 export type TaskFlowCardProps = {
   steps: TaskFlowStep[];
   ctaLabel?: string;
@@ -19,6 +20,13 @@ export type TaskFlowCardProps = {
   reducedMotion?: boolean;
   onPress?: () => void;
 };
+
+const stepIcons: IconName[] = ['flag-outline', 'locate-outline', 'trophy-outline'];
+
+function resolveStepIcon(index: number, state: TaskFlowStep['state']): IconName {
+  if (state === 'locked') return 'lock-closed-outline';
+  return stepIcons[index] ?? 'ellipse-outline';
+}
 
 export function TaskFlowCard({
   steps,
@@ -31,177 +39,195 @@ export function TaskFlowCard({
   const handlePress = onPress ?? (() => pushHubRoute(router, route));
 
   return (
-    <LinearGradient
-      colors={[centerLowerPalette.tealPanel, centerLowerPalette.tealDeep]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.topCard}>
-      <View style={styles.cardGlowGold} />
-      <Text style={styles.cardEyebrow} numberOfLines={1}>
+    <View style={styles.card}>
+      <Text style={styles.eyebrow} numberOfLines={1}>
         GÖREV AKIŞI
       </Text>
-      <View style={styles.taskList}>
+
+      <View style={styles.stepperRow}>
         {steps.map((step, index) => {
           const completed = step.state === 'completed';
           const active = step.state === 'active';
           const locked = step.state === 'locked';
+
           return (
-            <View key={step.id} style={styles.taskRow}>
-              <View style={styles.taskRail}>
+            <View key={step.id} style={styles.stepCol}>
+              <View style={styles.stepTop}>
+                {index > 0 ? <View style={styles.connectorLeft} /> : <View style={styles.connectorSpacer} />}
                 <View
                   style={[
-                    styles.taskBadge,
-                    completed ? styles.taskBadgeCompleted : undefined,
-                    active ? styles.taskBadgeActive : undefined,
-                    locked ? styles.taskBadgeLocked : undefined,
+                    styles.stepBadge,
+                    completed ? styles.stepBadgeCompleted : undefined,
+                    active ? styles.stepBadgeActive : undefined,
+                    locked ? styles.stepBadgeLocked : undefined,
                   ]}>
-                  <Text style={styles.taskBadgeText}>{index + 1}</Text>
+                  <Text
+                    style={[
+                      styles.stepBadgeText,
+                      completed ? styles.stepBadgeTextLight : undefined,
+                    ]}>
+                    {index + 1}
+                  </Text>
                 </View>
-                {index < steps.length - 1 ? <View style={styles.taskConnector} /> : null}
+                {index < steps.length - 1 ? <View style={styles.connectorRight} /> : <View style={styles.connectorSpacer} />}
               </View>
-              <View style={styles.taskCopy}>
-                <Text style={styles.taskTitle} numberOfLines={1}>
-                  {step.title}
-                </Text>
-                <Text style={styles.taskSubtitle} numberOfLines={1}>
-                  {step.subtitle}
-                </Text>
-              </View>
+
               <Ionicons
-                name={completed ? 'checkmark-circle' : locked ? 'lock-closed' : 'chevron-forward'}
+                name={resolveStepIcon(index, step.state)}
                 size={16}
                 color={
                   completed
-                    ? centerLowerPalette.mint
-                    : locked
-                      ? centerLowerPalette.goldSoft
-                      : centerLowerPalette.gold
+                    ? centerLowerPalette.tealPanel
+                    : active
+                      ? centerLowerPalette.gold
+                      : centerLowerPalette.mutedDark
                 }
+                style={styles.stepIcon}
               />
+
+              <Text style={styles.stepTitle} numberOfLines={1}>
+                {step.title}
+              </Text>
+              <Text style={styles.stepSubtitle} numberOfLines={2}>
+                {step.subtitle}
+              </Text>
             </View>
           );
         })}
       </View>
+
       <CreviaAnimatedPressable
         onPress={handlePress}
         reducedMotion={reducedMotion}
         pressScale={0.98}
         accessibilityRole="button"
         accessibilityLabel={ctaLabel}
-        style={styles.taskCta}>
-        <Text style={styles.taskCtaText} numberOfLines={1}>
+        style={styles.cta}>
+        <Text style={styles.ctaText} numberOfLines={1}>
           {ctaLabel}
         </Text>
-        <Ionicons name="chevron-forward" size={13} color={centerLowerPalette.tealDeep} />
+        <Ionicons name="chevron-forward" size={13} color={centerLowerPalette.tealPanel} />
       </CreviaAnimatedPressable>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  topCard: {
-    minHeight: 224,
+  card: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: centerLowerPalette.borderGold,
-    padding: 12,
-    overflow: 'hidden',
+    borderColor: 'rgba(7, 86, 79, 0.12)',
+    backgroundColor: centerLowerPalette.cream,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 14,
     ...centerLowerPanelShadow,
   },
-  cardGlowGold: {
-    position: 'absolute',
-    right: -20,
-    top: -18,
-    width: 104,
-    height: 104,
-    borderRadius: 999,
-    backgroundColor: 'rgba(245,227,175,0.13)',
-  },
-  cardEyebrow: {
-    fontSize: 10,
+  eyebrow: {
+    fontSize: 11,
     fontWeight: '900',
     letterSpacing: 0.8,
-    color: centerLowerPalette.goldSoft,
+    color: centerLowerPalette.tealPanel,
   },
-  taskList: {
-    gap: 7,
-    marginTop: 10,
-  },
-  taskRow: {
-    minHeight: 41,
+  stepperRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    gap: 4,
     minWidth: 0,
   },
-  taskRail: {
-    width: 24,
+  stepCol: {
+    flex: 1,
+    minWidth: 0,
     alignItems: 'center',
-    alignSelf: 'stretch',
+    gap: 4,
   },
-  taskBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  stepTop: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 28,
+  },
+  connectorSpacer: {
+    flex: 1,
+  },
+  connectorLeft: {
+    flex: 1,
+    height: 2,
+    borderStyle: 'dashed',
+    borderTopWidth: 1,
+    borderColor: 'rgba(7, 86, 79, 0.18)',
+    marginRight: 2,
+  },
+  connectorRight: {
+    flex: 1,
+    height: 2,
+    borderStyle: 'dashed',
+    borderTopWidth: 1,
+    borderColor: 'rgba(7, 86, 79, 0.18)',
+    marginLeft: 2,
+  },
+  stepBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: centerLowerPalette.borderTeal,
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderColor: 'rgba(7, 86, 79, 0.16)',
+    backgroundColor: '#FFFFFF',
   },
-  taskBadgeCompleted: {
-    backgroundColor: 'rgba(157,242,210,0.20)',
-    borderColor: 'rgba(157,242,210,0.34)',
+  stepBadgeCompleted: {
+    backgroundColor: centerLowerPalette.tealPanel,
+    borderColor: centerLowerPalette.tealPanel,
   },
-  taskBadgeActive: {
+  stepBadgeActive: {
     backgroundColor: centerLowerPalette.goldSoft,
     borderColor: centerLowerPalette.gold,
   },
-  taskBadgeLocked: {
-    opacity: 0.72,
+  stepBadgeLocked: {
+    backgroundColor: '#F2F4F3',
+    borderColor: 'rgba(7, 86, 79, 0.1)',
   },
-  taskBadgeText: {
-    fontSize: 10,
+  stepBadgeText: {
+    fontSize: 11,
     fontWeight: '900',
-    color: centerLowerPalette.tealDeep,
+    color: '#173D3A',
   },
-  taskConnector: {
-    width: 1,
-    flex: 1,
+  stepBadgeTextLight: {
+    color: '#FFFFFF',
+  },
+  stepIcon: {
     marginTop: 2,
-    backgroundColor: 'rgba(157,242,210,0.22)',
   },
-  taskCopy: {
-    flex: 1,
-    minWidth: 0,
-    gap: 1,
-  },
-  taskTitle: {
+  stepTitle: {
     fontSize: 11,
     lineHeight: 14,
     fontWeight: '900',
-    color: centerLowerPalette.textLight,
+    color: '#173D3A',
+    textAlign: 'center',
   },
-  taskSubtitle: {
+  stepSubtitle: {
     fontSize: 9,
     lineHeight: 12,
-    fontWeight: '700',
-    color: centerLowerPalette.mutedLight,
+    fontWeight: '600',
+    color: centerLowerPalette.mutedDark,
+    textAlign: 'center',
+    minHeight: 24,
   },
-  taskCta: {
-    minHeight: 30,
-    borderRadius: 999,
-    marginTop: 'auto',
-    paddingHorizontal: 10,
+  cta: {
+    minHeight: 40,
+    borderRadius: 14,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    backgroundColor: centerLowerPalette.goldSoft,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(7, 86, 79, 0.14)',
   },
-  taskCtaText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: centerLowerPalette.tealDeep,
+  ctaText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: centerLowerPalette.tealPanel,
   },
 });

@@ -28,6 +28,8 @@ export const hubAssets = {
     progressChest: creviaAssets.icons.premium.diamondGold,
     mahalleThumb: creviaAssets.buildings.statusSquare,
   },
+  centerSummaryHero: require('@/assets/districts/central/district_central_overview_01.png'),
+  centerSummaryPark: require('@/assets/districts/status/district_safe_zone_01.png'),
 } as const;
 
 const pilotDistrictHero: Record<PilotDistrictId, ImageSource> = {

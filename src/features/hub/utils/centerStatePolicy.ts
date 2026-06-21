@@ -7,7 +7,7 @@ import type { CenterOperationSignals } from './centerOperationSignalsPresentatio
 import type { CenterQuickActions } from './centerQuickActionsPresentation';
 import type { CenterRecommendedPlan } from './centerRecommendedPlanPresentation';
 
-export const CENTER_DAY_ONE_MAX_OPERATION_FOCUS_ITEMS = 3;
+export const CENTER_DAY_ONE_MAX_OPERATION_FOCUS_ITEMS = 4;
 export const CENTER_DAY_ONE_MAX_CONTINUATION_CARDS = 2;
 export const CENTER_DAY_ONE_MAX_QUICK_ACTIONS = 4;
 
@@ -183,7 +183,7 @@ export function applyCenterVisibilityPolicy(
   }
 
   if (day <= 1) {
-    next.operationFocus = 'locked';
+    next.operationFocus = 'visible';
     next.quickActions = presentation.quickActions.visibility === 'hidden' ? 'hidden' : 'locked';
     next.recommendedPlan =
       presentation.recommendedPlan.visibility === 'hidden' ? 'hidden' : 'visible';

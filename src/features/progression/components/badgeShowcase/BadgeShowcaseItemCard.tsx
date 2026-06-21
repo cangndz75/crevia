@@ -16,12 +16,14 @@ import { spacing } from '@/ui/theme/spacing';
 type BadgeShowcaseItemCardProps = {
   item: BadgeShowcaseItem;
   compact?: boolean;
+  grid?: boolean;
   onPress?: (item: BadgeShowcaseItem) => void;
 };
 
 export function BadgeShowcaseItemCard({
   item,
   compact = false,
+  grid = false,
   onPress,
 }: BadgeShowcaseItemCardProps) {
   const rarityStyle = resolveBadgeShowcaseRarityStyle(item.rarity, item.state);
@@ -37,28 +39,40 @@ export function BadgeShowcaseItemCard({
       accessibilityLabel={`${item.title}, ${item.statePillLabel}`}
       style={({ pressed }) => [
         styles.card,
+        grid && styles.cardGrid,
+        compact && !grid && styles.cardCompact,
         shadows.soft,
-        compact && styles.cardCompact,
         {
-          backgroundColor: BADGE_SHOWCASE_THEME.cardBg,
-          borderColor: rarityStyle.border,
+          backgroundColor: '#FFFEFA',
+          borderColor: item.state === 'earned' ? rarityStyle.border : BADGE_SHOWCASE_THEME.border,
           opacity: item.state === 'locked' ? 0.92 : 1,
         },
         pressed && onPress ? styles.pressed : null,
       ]}>
-      <View style={[styles.glow, { backgroundColor: rarityStyle.glow }]} />
-      <View style={[styles.iconWrap, { backgroundColor: rarityStyle.iconBg }]}>
-        <Ionicons name={iconName} size={compact ? 14 : 16} color={rarityStyle.iconColor} />
+      {item.state === 'earned' ? (
+        <View style={styles.statusCorner}>
+          <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+        </View>
+      ) : null}
+
+      <View style={[styles.iconWrap, { backgroundColor: '#F0F2F0' }]}>
+        <Ionicons
+          name={item.state === 'locked' ? 'lock-closed-outline' : iconName}
+          size={compact ? 16 : 18}
+          color="#8A9094"
+        />
       </View>
+
       <Text style={styles.title} numberOfLines={2}>
         {item.title}
       </Text>
-      {!compact ? (
-        <Text style={styles.description} numberOfLines={2}>
-          {item.description}
-        </Text>
-      ) : null}
+
+      <Text style={styles.description} numberOfLines={2}>
+        {item.description}
+      </Text>
+
       <BadgeShowcaseStatePill label={item.statePillLabel} state={item.state} />
+
       {item.progressLabel ? (
         <Text
           style={styles.progress}
@@ -75,12 +89,19 @@ const styles = StyleSheet.create({
   card: {
     minWidth: 140,
     width: 156,
-    borderRadius: radius.lg,
+    borderRadius: 16,
     borderWidth: 1,
-    padding: spacing.sm,
-    gap: 6,
+    padding: spacing.md,
+    gap: 8,
     overflow: 'hidden',
     flexShrink: 0,
+    position: 'relative',
+  },
+  cardGrid: {
+    width: '48%',
+    minWidth: 0,
+    flexGrow: 1,
+    flexBasis: '47%',
   },
   cardCompact: {
     minWidth: 128,
@@ -90,28 +111,37 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     transform: [{ scale: 0.98 }],
   },
-  glow: {
-    ...StyleSheet.absoluteFillObject,
+  statusCorner: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#2D6A6A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
   },
   iconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '800',
     color: BADGE_SHOWCASE_THEME.textPrimary,
-    lineHeight: 15,
+    lineHeight: 18,
     flexShrink: 1,
   },
   description: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     color: BADGE_SHOWCASE_THEME.textSecondary,
-    lineHeight: 13,
+    lineHeight: 15,
     flexShrink: 1,
   },
   progress: {

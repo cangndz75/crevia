@@ -1,10 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { playSelectionHaptic } from '@/core/feedback/hapticFeedback';
 import { AUTHORITY_COLLECTION_THEME } from '@/features/progression/utils/authorityCollectionPresentation';
-import { colors } from '@/ui/theme/colors';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
@@ -20,8 +18,8 @@ const TABS: {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { key: 'authorities', label: 'Yetkiler', icon: 'shield-checkmark' },
-  { key: 'badges', label: 'Rozetler', icon: 'medal-outline' },
+  { key: 'authorities', label: 'Yetkiler', icon: 'shield-checkmark-outline' },
+  { key: 'badges', label: 'Rozetler', icon: 'trophy-outline' },
   { key: 'expansions', label: 'Açılımlar', icon: 'map-outline' },
 ];
 
@@ -40,22 +38,20 @@ export function AuthorityTabsPill({ active, onChange }: AuthorityTabsPillProps) 
           <Pressable
             key={tab.key}
             onPress={() => handlePress(tab.key)}
-            style={[styles.tab, selected && styles.tabActive]}
+            style={styles.tab}
             accessibilityRole="tab"
             accessibilityState={{ selected }}>
             <Ionicons
               name={tab.icon}
-              size={17}
-              color={selected ? colors.primary : colors.textSecondary}
+              size={18}
+              color={selected ? AUTHORITY_COLLECTION_THEME.tealDark : AUTHORITY_COLLECTION_THEME.textSecondary}
             />
             <Text
               style={[styles.tabLabel, selected && styles.tabLabelActive]}
               numberOfLines={1}>
               {tab.label}
             </Text>
-            {selected ? (
-              <Animated.View entering={FadeIn.duration(180)} style={styles.activeLine} />
-            ) : null}
+            {selected ? <View style={styles.activeLine} /> : null}
           </Pressable>
         );
       })}
@@ -66,45 +62,42 @@ export function AuthorityTabsPill({ active, onChange }: AuthorityTabsPillProps) 
 const styles = StyleSheet.create({
   capsule: {
     flexDirection: 'row',
-    backgroundColor: AUTHORITY_COLLECTION_THEME.cardBg,
-    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: AUTHORITY_COLLECTION_THEME.border,
-    padding: 4,
-    minHeight: 58,
-    marginTop: spacing.xl,
+    paddingHorizontal: 6,
+    paddingTop: 8,
+    paddingBottom: 4,
+    minHeight: 56,
+    marginTop: spacing.lg,
   },
   tab: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: 999,
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
     position: 'relative',
     minWidth: 0,
   },
-  tabActive: {
-    backgroundColor: colors.surface,
-  },
   tabLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: AUTHORITY_COLLECTION_THEME.textSecondary,
     flexShrink: 1,
   },
   tabLabelActive: {
-    color: colors.primary,
+    color: AUTHORITY_COLLECTION_THEME.tealDark,
     fontWeight: '800',
   },
   activeLine: {
     position: 'absolute',
-    bottom: 4,
-    width: '72%',
+    bottom: 0,
+    width: '70%',
     height: 3,
     borderRadius: 2,
-    backgroundColor: colors.primary,
+    backgroundColor: AUTHORITY_COLLECTION_THEME.tealDark,
   },
 });

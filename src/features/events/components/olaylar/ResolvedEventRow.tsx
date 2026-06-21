@@ -60,6 +60,7 @@ export function ResolvedEventRow({ item, isLast = false, onPress }: ResolvedEven
       <View style={styles.riskPill}>
         <Text style={styles.riskText}>{item.riskLabel}</Text>
       </View>
+      <Ionicons name="chevron-forward" size={15} color={olaylar.textMuted} />
     </Pressable>
   );
 }
@@ -70,7 +71,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 9,
   },
   rowDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -112,7 +113,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   title: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: olaylar.text,
   },
@@ -130,12 +131,12 @@ const styles = StyleSheet.create({
   riskPill: {
     backgroundColor: olaylar.successBg,
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     flexShrink: 0,
   },
   riskText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: '#15803D',
   },

@@ -67,27 +67,28 @@ export function OlaylarPriorityEventCard({ event, onPress }: OlaylarPriorityEven
           </View>
         </View>
 
-        <View style={styles.metricsRow}>
-          <Text style={styles.metricMuted}>{event.affected} etkilenen</Text>
-          <View style={styles.metricPillRisk}>
-            <Text style={styles.metricRisk}>{event.riskDelta}</Text>
+        <View style={styles.bottomRow}>
+          <View style={styles.metricsRow}>
+            <Text style={styles.metricMuted} numberOfLines={1}>
+              {event.affected} etkilenen
+            </Text>
+            <View style={styles.metricPillRisk}>
+              <Text style={styles.metricRisk}>{event.riskDelta}</Text>
+            </View>
+            <View style={styles.metricPillXp}>
+              <Text style={styles.metricXp}>{event.xpDelta}</Text>
+            </View>
           </View>
-          <View style={styles.metricPillXp}>
-            <Text style={styles.metricXp}>{event.xpDelta}</Text>
-          </View>
-          <View style={styles.riskLabelPill}>
-            <Text style={styles.riskLabelText}>{event.riskLabel}</Text>
-          </View>
-        </View>
 
-        <Pressable
-          onPress={onPress}
-          style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
-          accessibilityRole="button"
-          accessibilityLabel="Karar Ver">
-          <Text style={styles.ctaText}>Karar Ver</Text>
-          <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
-        </Pressable>
+          <Pressable
+            onPress={onPress}
+            style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Karar Ver">
+            <Text style={styles.ctaText}>Karar Ver</Text>
+            <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -110,9 +111,9 @@ const styles = StyleSheet.create({
     backgroundColor: olaylar.critical,
   },
   inner: {
-    padding: 14,
+    padding: 13,
     paddingLeft: 16,
-    gap: 12,
+    gap: 10,
   },
   topRow: {
     flexDirection: 'row',
@@ -145,11 +146,11 @@ const styles = StyleSheet.create({
   },
   bodyRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 11,
   },
   thumbWrap: {
-    width: 92,
-    height: 92,
+    width: 88,
+    height: 88,
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
@@ -166,11 +167,11 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
     color: olaylar.text,
-    letterSpacing: -0.3,
-    lineHeight: 22,
+    letterSpacing: 0,
+    lineHeight: 20,
   },
   locationRow: {
     flexDirection: 'row',
@@ -184,20 +185,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   description: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 17,
     color: olaylar.textMuted,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   metricsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: 6,
+    flex: 1,
+    minWidth: 0,
   },
   metricMuted: {
     fontSize: 12,
     fontWeight: '600',
     color: olaylar.textMuted,
+    width: '100%',
   },
   metricPillRisk: {
     backgroundColor: olaylar.criticalBg,
@@ -221,31 +231,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: olaylar.xp,
   },
-  riskLabelPill: {
-    backgroundColor: olaylar.criticalBg,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  riskLabelText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: olaylar.critical,
-  },
   cta: {
-    height: 48,
-    borderRadius: 14,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: olaylar.green,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 3,
+    paddingHorizontal: 12,
+    flexShrink: 0,
   },
   ctaPressed: {
     opacity: 0.92,
   },
   ctaText: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: '700',
     color: '#FFFFFF',
   },

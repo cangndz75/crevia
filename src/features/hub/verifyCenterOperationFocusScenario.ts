@@ -70,7 +70,7 @@ export function verifyCenterOperationFocusScenario(): {
   });
 
   assert(checks, centerOperationFocusCoreFieldsValid(day1Focus), 'Day 1 core fields valid');
-  assert(checks, centerOperationFocusDay1Locked(day1Focus), 'Day 1 locked teaser state');
+  assert(checks, centerOperationFocusDay1Locked(day1Focus), 'Day 1 grid focus state');
   assert(checks, centerOperationFocusMaxItems(day1Focus), 'Day 1 max items');
   assert(checks, DISPLAY_MODES.includes(day1Focus.displayMode), 'Day 1 display mode valid');
 

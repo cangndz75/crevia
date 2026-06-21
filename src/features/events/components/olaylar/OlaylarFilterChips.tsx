@@ -54,15 +54,15 @@ export function OlaylarFilterChips({ active, onChange }: OlaylarFilterChipsProps
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 7,
     paddingVertical: 2,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    gap: 5,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
     borderRadius: olaylar.radiusChip,
   },
   chipIdle: {
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     backgroundColor: olaylar.green,
   },
   chipText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: olaylar.text,
   },

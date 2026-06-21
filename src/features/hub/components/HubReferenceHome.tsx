@@ -4,11 +4,10 @@ import { type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { CenterCitySummaryCard } from '@/features/hub/components/CenterCitySummaryCard';
-import { CenterDailyRewardRoute } from '@/features/hub/components/CenterDailyRewardRoute';
 import { CenterHomeHeader } from '@/features/hub/components/CenterHomeHeader';
 import { CenterLowerDashboard } from '@/features/hub/components/CenterLowerDashboard';
 import { CenterMotionEnter } from '@/features/hub/components/CenterMotionEnter';
-import { HubActiveTaskCardStack } from '@/features/hub/components/HubActiveTaskCardStack';
+import { CenterOperationFocusSection } from '@/features/hub/components/CenterOperationFocusSection';
 import type { CenterHomePresentation } from '@/features/hub/utils/centerHomePresentation';
 import { isCenterModuleRenderable } from '@/features/hub/utils/centerHomePresentation';
 import { resolveCenterSectionGap } from '@/features/hub/utils/centerLayoutTokens';
@@ -58,18 +57,10 @@ export function HubReferenceHome({ presentation, scrollFooter }: HubReferenceHom
             <CenterCitySummaryCard summary={presentation.citySummary} />
           ) : null}
 
-          {isCenterModuleRenderable(visibilityFlags.dailyReward) ? (
-            <CenterDailyRewardRoute
-              reward={presentation.dailyReward}
-              visibility={presentation.dailyReward.visibility}
-              reducedMotion={reducedMotion}
-            />
-          ) : null}
-
-          {isCenterModuleRenderable(visibilityFlags.activeTarget) ? (
-            <HubActiveTaskCardStack
-              activeTarget={presentation.activeTarget}
-              visibility={presentation.activeTarget.visibility}
+          {isCenterModuleRenderable(visibilityFlags.operationFocus) ? (
+            <CenterOperationFocusSection
+              focus={presentation.operationFocus}
+              visibility={presentation.operationFocus.visibility}
               reducedMotion={reducedMotion}
             />
           ) : null}

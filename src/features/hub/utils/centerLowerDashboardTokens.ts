@@ -1,7 +1,5 @@
 /** Merkez alt dashboard — paylaşılan renk ve layout sabitleri. */
 
-export const CENTER_LOWER_TWO_COLUMN_BREAKPOINT = 380;
-
 export const centerLowerPalette = {
   tealDeep: '#053E39',
   tealPanel: '#07564F',

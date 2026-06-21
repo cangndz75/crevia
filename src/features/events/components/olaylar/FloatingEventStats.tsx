@@ -34,11 +34,11 @@ export function FloatingEventStats({ stats }: FloatingEventStatsProps) {
 const styles = StyleSheet.create({
   row: {
     position: 'absolute',
-    top: 10,
+    top: 14,
     left: olaylar.screenPadding,
     right: olaylar.screenPadding,
     flexDirection: 'row',
-    gap: 8,
+    gap: 7,
     zIndex: 2,
   },
   card: {
@@ -46,20 +46,20 @@ const styles = StyleSheet.create({
     minWidth: 0,
     backgroundColor: olaylar.card,
     borderRadius: olaylar.radiusStat,
-    paddingVertical: 8,
-    paddingHorizontal: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 5,
     alignItems: 'center',
     gap: 2,
     borderWidth: 1,
     borderColor: olaylar.border,
   },
   count: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     color: olaylar.text,
   },
   label: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
     color: olaylar.textMuted,
   },

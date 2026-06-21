@@ -48,8 +48,8 @@ export function OlaylarEventsHeader({ header, onResourcePress }: OlaylarEventsHe
 const styles = StyleSheet.create({
   root: {
     paddingHorizontal: olaylar.screenPadding,
-    paddingTop: 4,
-    paddingBottom: 12,
+    paddingTop: 2,
+    paddingBottom: 10,
     backgroundColor: olaylar.bg,
   },
   topRow: {
@@ -63,10 +63,10 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   title: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '800',
     color: olaylar.green,
-    letterSpacing: -0.6,
+    letterSpacing: 0,
   },
   metaRow: {
     flexDirection: 'row',
@@ -101,11 +101,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     backgroundColor: olaylar.green,
-    borderRadius: 16,
+    borderRadius: 18,
     paddingVertical: 8,
     paddingLeft: 10,
     paddingRight: 8,
-    maxWidth: 132,
+    maxWidth: 138,
     flexShrink: 0,
   },
   resourceCopy: {

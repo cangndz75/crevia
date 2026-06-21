@@ -1,15 +1,14 @@
-import { useRouter } from 'expo-router';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 
+import { CenterStatusCard } from '@/features/hub/components/CenterStatusCard';
 import type { CenterHomePresentation } from '@/features/hub/utils/centerHomePresentation';
+import { isCenterModuleRenderable } from '@/features/hub/utils/centerHomePresentation';
 import { buildCenterLowerDashboardPresentation } from '@/features/hub/utils/centerLowerDashboardPresentation';
-import { CENTER_LOWER_TWO_COLUMN_BREAKPOINT } from '@/features/hub/utils/centerLowerDashboardTokens';
 
-import { ContinueOperationCard } from './ContinueOperationCard';
 import { DailyBonusCard } from './DailyBonusCard';
+import { HubActiveTaskCardStack } from './HubActiveTaskCardStack';
 import { SignalStatusCard } from './SignalStatusCard';
 import { TaskFlowCard } from './TaskFlowCard';
-import { CenterLowerSectionHeader, pushHubRoute } from './centerLowerDashboardShared';
 
 export { ContinueOperationCard } from './ContinueOperationCard';
 export { DailyBonusCard } from './DailyBonusCard';
@@ -21,20 +20,27 @@ type CenterLowerDashboardProps = {
   reducedMotion?: boolean;
 };
 
-/** Runtime: presentation.activeTarget, portfolioSurface, dailyReward, operationSignals */
+/** Merkez alt bölüm: ana görev, sinyal + merkez durumu, görev akışı, günlük seri. */
 export function CenterLowerDashboard({
   presentation,
   reducedMotion = false,
 }: CenterLowerDashboardProps) {
   const { width } = useWindowDimensions();
-  const router = useRouter();
-  const twoColumn = width >= CENTER_LOWER_TWO_COLUMN_BREAKPOINT;
+  const compactStatusCards = width < 420;
   const model = buildCenterLowerDashboardPresentation(presentation);
 
   return (
     <View style={styles.root}>
-      <View style={[styles.topGrid, !twoColumn ? styles.topGridStacked : undefined]}>
-        <View style={styles.topGridCell}>
+      {isCenterModuleRenderable(presentation.activeTarget.visibility) ? (
+        <HubActiveTaskCardStack
+          activeTarget={presentation.activeTarget}
+          visibility={presentation.activeTarget.visibility}
+          reducedMotion={reducedMotion}
+        />
+      ) : null}
+
+      <View style={styles.statusRow}>
+        <View style={styles.statusCell}>
           <SignalStatusCard
             title={model.signal.title}
             statusTitle={model.signal.statusTitle}
@@ -43,18 +49,29 @@ export function CenterLowerDashboard({
             signalStrength={model.signal.signalStrength}
             authorityLine={model.signal.authorityLine}
             route={model.signal.route}
+            compact={compactStatusCards}
             reducedMotion={reducedMotion}
           />
         </View>
-        <View style={styles.topGridCell}>
-          <TaskFlowCard
-            steps={model.taskFlow.steps}
-            ctaLabel={model.taskFlow.ctaLabel}
-            route={model.taskFlow.route}
+        <View style={styles.statusCell}>
+          <CenterStatusCard
+            title={model.merkezStatus.title}
+            statusTitle={model.merkezStatus.statusTitle}
+            statusSubtitle={model.merkezStatus.statusSubtitle}
+            ctaLabel={model.merkezStatus.ctaLabel}
+            route={model.merkezStatus.route}
+            compact={compactStatusCards}
             reducedMotion={reducedMotion}
           />
         </View>
       </View>
+
+      <TaskFlowCard
+        steps={model.taskFlow.steps}
+        ctaLabel={model.taskFlow.ctaLabel}
+        route={model.taskFlow.route}
+        reducedMotion={reducedMotion}
+      />
 
       <DailyBonusCard
         title={model.dailyBonus.title}
@@ -64,62 +81,23 @@ export function CenterLowerDashboard({
         currentDay={model.dailyBonus.currentDay}
         reducedMotion={reducedMotion}
       />
-
-      <View style={styles.continueSection}>
-        <CenterLowerSectionHeader
-          title={model.continueSection.title}
-          actionLabel={model.continueSection.actionLabel}
-          onActionPress={() => pushHubRoute(router, model.continueSection.actionRoute)}
-          reducedMotion={reducedMotion}
-        />
-        <View style={[styles.operationGrid, !twoColumn ? styles.operationGridStacked : undefined]}>
-          {model.continueSection.operations.map((operation) => (
-            <ContinueOperationCard
-              key={operation.id}
-              title={operation.title}
-              badge={operation.badge}
-              location={operation.location}
-              progress={operation.progress}
-              variant={operation.variant}
-              isLocked={operation.isLocked}
-              ctaLabel={operation.ctaLabel}
-              route={operation.route}
-              reducedMotion={reducedMotion}
-            />
-          ))}
-        </View>
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
-    gap: 14,
+    gap: 12,
     minWidth: 0,
   },
-  topGrid: {
+  statusRow: {
     flexDirection: 'row',
+    alignItems: 'stretch',
     gap: 10,
     minWidth: 0,
   },
-  topGridStacked: {
-    flexDirection: 'column',
-  },
-  topGridCell: {
+  statusCell: {
     flex: 1,
     minWidth: 0,
-  },
-  continueSection: {
-    gap: 9,
-    minWidth: 0,
-  },
-  operationGrid: {
-    flexDirection: 'row',
-    gap: 10,
-    minWidth: 0,
-  },
-  operationGridStacked: {
-    flexDirection: 'column',
   },
 });

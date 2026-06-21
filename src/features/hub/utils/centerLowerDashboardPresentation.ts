@@ -64,8 +64,17 @@ export type CenterLowerContinueModel = {
   operations: ContinueOperationModel[];
 };
 
+export type CenterLowerMerkezStatusModel = {
+  title: string;
+  statusTitle: string;
+  statusSubtitle: string;
+  ctaLabel: string;
+  route: string;
+};
+
 export type CenterLowerDashboardModel = {
   signal: CenterLowerSignalModel;
+  merkezStatus: CenterLowerMerkezStatusModel;
   taskFlow: CenterLowerTaskFlowModel;
   dailyBonus: CenterLowerDailyBonusModel;
   continueSection: CenterLowerContinueModel;
@@ -141,6 +150,25 @@ function progressForActiveTarget(presentation: CenterHomePresentation): number {
   return 30;
 }
 
+function buildMerkezStatusModel(presentation: CenterHomePresentation): CenterLowerMerkezStatusModel {
+  const insight = presentation.citySummary.primaryInsight?.text?.trim();
+  const calm =
+    presentation.citySummary.metrics.every(
+      (metric) => metric.tone === 'success' || metric.tone === 'stable' || metric.tone === 'neutral',
+    );
+
+  return {
+    title: 'MERKEZ DURUMU',
+    statusTitle: calm ? 'Merkez güvende' : 'Merkez izleniyor',
+    statusSubtitle:
+      insight && insight.length <= 72
+        ? insight
+        : 'Tüm sistemler stabil çalışıyor.',
+    ctaLabel: 'Detayları İncele',
+    route: '/events',
+  };
+}
+
 function buildSignalModel(presentation: CenterHomePresentation): CenterLowerSignalModel {
   const portfolio = presentation.portfolioSurface;
   const topSignal = presentation.operationSignals.signals[0];
@@ -176,15 +204,14 @@ function buildSignalModel(presentation: CenterHomePresentation): CenterLowerSign
   if (topSignal) {
     if (topSignal.severity === 'urgent') {
       statusTitle = 'Sinyal yükseldi';
-      statusSubtitle = topSignal.title;
+      statusSubtitle = topSignal.description?.trim() || 'Riskler yükseldi, fırsatlar daralıyor.';
       signalStrength = 58;
     } else if (topSignal.severity === 'high') {
       statusTitle = 'Sinyal dikkat çekiyor';
       statusSubtitle = topSignal.description?.trim() || topSignal.title;
       signalStrength = 72;
     } else if (statusTitle === 'Sinyalin güçlü') {
-      const helper = topSignal.description?.trim() || topSignal.helperText?.trim();
-      if (helper) statusSubtitle = helper;
+      statusSubtitle = 'Riskler düşük, fırsatlar açık.';
       signalStrength = 82;
     }
     if (topSignal.route) route = topSignal.route;
@@ -230,9 +257,10 @@ function buildTaskSteps(presentation: CenterHomePresentation): TaskFlowStep[] {
 }
 
 function buildStreakNodes(presentation: CenterHomePresentation): StreakNode[] {
-  const rewardDays = presentation.dailyReward.days.slice(0, 3);
+  const rewardDays = presentation.dailyReward.days.slice(0, 4);
+  const fallbackValues = [20, 60, 80, 100];
+
   if (rewardDays.length >= 3) {
-    const fallbackValues = [20, 40, 60];
     return rewardDays.map((day, index) => {
       const parsed = parseRewardAmount(day.rewardText);
       const state: StreakNodeState =
@@ -252,8 +280,9 @@ function buildStreakNodes(presentation: CenterHomePresentation): StreakNode[] {
   const claimed = presentation.dailyReward.claimedToday;
   return [
     { id: 'bonus-20', value: 20, state: 'claimed' },
-    { id: 'bonus-40', value: 40, state: claimed ? 'claimed' : 'active' },
-    { id: 'bonus-60', value: 60, state: 'locked' },
+    { id: 'bonus-60', value: 60, state: claimed ? 'claimed' : 'active' },
+    { id: 'bonus-80', value: 80, state: 'locked' },
+    { id: 'bonus-100', value: 100, state: 'locked' },
   ];
 }
 
@@ -348,13 +377,14 @@ export function buildCenterLowerDashboardPresentation(
       route: presentation.recommendedPlan.cta?.route ?? '/events',
     },
     dailyBonus: {
-      title: presentation.dailyReward.title || 'GÜNLÜK BONUS',
+      title: 'GÜNLÜK SERİ',
       subtitle:
         presentation.dailyReward.subtitle?.trim() || 'Serini koru, ödülleri topla!',
       nodes: buildStreakNodes(presentation),
       rewardAmount,
       currentDay: presentation.dailyReward.today.dayIndex,
     },
+    merkezStatus: buildMerkezStatusModel(presentation),
     continueSection: {
       title: 'DEVAM ET',
       actionLabel: 'Hepsini Gör',

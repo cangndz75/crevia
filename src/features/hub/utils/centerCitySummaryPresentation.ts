@@ -407,7 +407,9 @@ export function buildCenterCitySummary(
   const progress = buildProgress(input);
   const primaryInsight = buildPrimaryInsight(input);
   const subtitle =
-    input.day <= 1 ? 'Şehir sağlığı özeti' : `Gün ${input.day} · şehir sağlığı`;
+    input.day <= 1
+      ? 'Mahalle operasyonları özeti'
+      : `Gün ${input.day} · mahalle operasyonları`;
 
   const accessibilityLabel = [
     'Merkez özeti',
@@ -424,7 +426,7 @@ export function buildCenterCitySummary(
     metrics,
     primaryInsight,
     progress,
-    illustrationKey: input.day <= 1 ? 'none' : 'crest',
+    illustrationKey: 'city',
     accessibilityLabel,
   };
 }
