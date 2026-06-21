@@ -59,7 +59,7 @@ export function CollectionProgressHeroCard({
 
   return (
     <View style={styles.wrap}>
-      <LinearGradient colors={[...HERO_DARK]} style={[styles.contentCard, shadows.card]}>
+      <View style={styles.medalRow} pointerEvents="none">
         <View style={styles.medalStage}>
           <View style={styles.haloOuter} />
           <View style={styles.haloInner} />
@@ -80,7 +80,9 @@ export function CollectionProgressHeroCard({
             </LinearGradient>
           </Animated.View>
         </View>
+      </View>
 
+      <LinearGradient colors={[...HERO_DARK]} style={[styles.contentCard, shadows.card]}>
         <Text style={styles.title} numberOfLines={1}>
           Koleksiyon İlerlemesi
         </Text>
@@ -109,26 +111,30 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: spacing.md,
   },
+  medalRow: {
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginBottom: -30,
+    zIndex: 1,
+  },
+  medalStage: {
+    width: 132,
+    height: 84,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   contentCard: {
     width: '100%',
     borderRadius: 28,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    paddingTop: 56,
+    paddingTop: 40,
     paddingBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
     gap: 8,
-    overflow: 'visible',
-  },
-  medalStage: {
-    position: 'absolute',
-    top: -44,
-    width: '100%',
-    height: 96,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 2,
+    overflow: 'hidden',
   },
   haloOuter: {
     position: 'absolute',
@@ -146,7 +152,7 @@ const styles = StyleSheet.create({
   },
   laurelLeft: {
     position: 'absolute',
-    left: '24%',
+    left: 28,
     top: 36,
     width: 24,
     height: 3,
@@ -156,7 +162,7 @@ const styles = StyleSheet.create({
   },
   laurelRight: {
     position: 'absolute',
-    right: '24%',
+    right: 28,
     top: 36,
     width: 24,
     height: 3,
@@ -166,8 +172,8 @@ const styles = StyleSheet.create({
   },
   sparkleA: {
     position: 'absolute',
-    top: 14,
-    left: '20%',
+    top: 8,
+    left: 18,
     width: 5,
     height: 5,
     borderRadius: 2.5,
@@ -175,8 +181,8 @@ const styles = StyleSheet.create({
   },
   sparkleB: {
     position: 'absolute',
-    top: 22,
-    right: '22%',
+    top: 14,
+    right: 20,
     width: 4,
     height: 4,
     borderRadius: 2,
@@ -184,8 +190,8 @@ const styles = StyleSheet.create({
   },
   sparkleC: {
     position: 'absolute',
-    bottom: 4,
-    right: '30%',
+    bottom: 8,
+    right: 28,
     width: 4,
     height: 4,
     borderRadius: 2,

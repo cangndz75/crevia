@@ -14,6 +14,8 @@ import type { CenterAdvisorSuggestion } from './centerAdvisorPresentation';
 import type { CenterCitySummary } from './centerCitySummaryPresentation';
 import type { CenterHomeVisibilityState } from './centerHomePresentation';
 
+import type { CenterOperationCommandPanel } from './centerOperationCommandPresentation';
+
 export const CENTER_OPERATION_FOCUS_MAX_ITEMS = 4;
 export const CENTER_OPERATION_FOCUS_PREFERRED_ITEMS = 3;
 
@@ -94,6 +96,8 @@ export type CenterOperationFocus = {
   accessibilityLabel: string;
   /** Section header “Tümünü gör” aksiyonu */
   showViewAll: boolean;
+  /** Günün operasyon komut paneli */
+  commandPanel?: CenterOperationCommandPanel;
 };
 
 export type BuildCenterOperationFocusInput = {
@@ -814,6 +818,15 @@ export function centerOperationFocusNoFakeRisk(focus: CenterOperationFocus): boo
 }
 
 export function centerOperationFocusDay1Locked(focus: CenterOperationFocus): boolean {
+  const panel = focus.commandPanel;
+  if (panel) {
+    return (
+      focus.visibility === 'visible' &&
+      focus.title === 'Operasyon Odağı' &&
+      panel.recommendedMove.title === 'İlk olayı çöz' &&
+      panel.statusCards.length === 4
+    );
+  }
   return (
     focus.visibility === 'visible' &&
     focus.displayMode === 'grid' &&

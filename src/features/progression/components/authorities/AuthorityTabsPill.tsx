@@ -31,7 +31,8 @@ export function AuthorityTabsPill({ active, onChange }: AuthorityTabsPillProps) 
   };
 
   return (
-    <View style={[styles.capsule, shadows.soft]}>
+    <View style={styles.root}>
+      <View style={[styles.capsule, shadows.soft]}>
       {TABS.map((tab) => {
         const selected = active === tab.key;
         return (
@@ -55,11 +56,17 @@ export function AuthorityTabsPill({ active, onChange }: AuthorityTabsPillProps) 
           </Pressable>
         );
       })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    position: 'relative',
+    zIndex: 20,
+    elevation: 20,
+  },
   capsule: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
@@ -70,7 +77,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 4,
     minHeight: 56,
-    marginTop: spacing.lg,
+    marginTop: spacing.sm,
   },
   tab: {
     flex: 1,

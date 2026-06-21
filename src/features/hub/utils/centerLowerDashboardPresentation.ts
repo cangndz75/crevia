@@ -228,7 +228,7 @@ function buildSignalModel(presentation: CenterHomePresentation): CenterLowerSign
   };
 }
 
-function buildTaskSteps(presentation: CenterHomePresentation): TaskFlowStep[] {
+export function buildTaskFlowSteps(presentation: CenterHomePresentation): TaskFlowStep[] {
   const target = presentation.activeTarget;
   const activeDone = target.status === 'completed' || target.visibility === 'completed';
   const reputationUnlocked =
@@ -372,7 +372,7 @@ export function buildCenterLowerDashboardPresentation(
   return {
     signal: buildSignalModel(presentation),
     taskFlow: {
-      steps: buildTaskSteps(presentation),
+      steps: buildTaskFlowSteps(presentation),
       ctaLabel: 'Tüm görevleri gör',
       route: presentation.recommendedPlan.cta?.route ?? '/events',
     },

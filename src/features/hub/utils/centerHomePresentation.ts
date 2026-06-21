@@ -38,6 +38,8 @@ import {
   buildCenterOperationFocus,
   type CenterOperationFocus,
 } from './centerOperationFocusPresentation';
+import { buildCenterOperationCommandPanel } from './centerOperationCommandPresentation';
+import { buildTaskFlowSteps } from './centerLowerDashboardPresentation';
 import {
   buildCenterOperationSignals,
   type CenterOperationSignals,
@@ -624,10 +626,31 @@ export function buildCenterHomePresentation(
     }),
   };
 
-  return {
+  const presentationBase = {
     moduleOrder: CENTER_HOME_MODULE_ORDER,
     visibilityFlags: buildVisibilityFlags(sections, day),
     ...sections,
+  };
+
+  const commandPanel = buildCenterOperationCommandPanel({
+    gameState: input.gameState,
+    day,
+    activeTarget: presentationBase.activeTarget,
+    citySummary: presentationBase.citySummary,
+    headerSummary: presentationBase.headerSummary,
+    operationSignals: presentationBase.operationSignals,
+    rawOperationSignals: input.operationSignals,
+    taskFlowSteps: buildTaskFlowSteps(presentationBase),
+  });
+
+  return {
+    ...presentationBase,
+    operationFocus: {
+      ...presentationBase.operationFocus,
+      commandPanel,
+      accessibilityLabel:
+        'Operasyon odağı. Önerilen hamle ve dört durum kartı gösteriliyor.',
+    },
   };
 }
 

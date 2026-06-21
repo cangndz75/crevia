@@ -69,8 +69,15 @@ export function verifyCenterOperationFocusScenario(): {
     operationSignals: createInitialOperationSignalsState(1),
   });
 
+  const day1Presentation = buildCenterHomePresentation({
+    gameState: day1State,
+    operationSignals: createInitialOperationSignalsState(1),
+    socialPulseState: createInitialSocialPulseState(),
+    hubQuickActionState: createInitialHubQuickActionState(1),
+  });
+
   assert(checks, centerOperationFocusCoreFieldsValid(day1Focus), 'Day 1 core fields valid');
-  assert(checks, centerOperationFocusDay1Locked(day1Focus), 'Day 1 grid focus state');
+  assert(checks, centerOperationFocusDay1Locked(day1Presentation.operationFocus), 'Day 1 command panel state');
   assert(checks, centerOperationFocusMaxItems(day1Focus), 'Day 1 max items');
   assert(checks, DISPLAY_MODES.includes(day1Focus.displayMode), 'Day 1 display mode valid');
 
@@ -159,8 +166,8 @@ export function verifyCenterOperationFocusScenario(): {
   );
   assert(
     checks,
-    centerOperationFocusMaxItems(day3Presentation.operationFocus),
-    'presentation max items',
+    day3Presentation.operationFocus.commandPanel?.statusCards.length === 4,
+    'presentation command panel status cards',
   );
 
   const emptyFocus = buildCenterOperationFocus({

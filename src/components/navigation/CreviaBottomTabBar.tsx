@@ -91,11 +91,7 @@ export function useAppTabBarHeight() {
 
 function shouldHideTabBar(state: BottomTabBarProps["state"]) {
   const activeRoute = state.routes[state.index];
-  if (
-    activeRoute.name === "profile" ||
-    activeRoute.name === "leaderboard" ||
-    activeRoute.name === "social"
-  ) {
+  if (activeRoute.name === "leaderboard" || activeRoute.name === "social") {
     return true;
   }
   if (activeRoute.name !== "events" || !activeRoute.state) {

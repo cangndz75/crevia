@@ -2,11 +2,12 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
-import { buildAuthorityPermissionPreviewSummary } from '@/core/authority/authorityPermissionPreviewModel';
 import type { AuthorityPermissionPreviewItem } from '@/core/authority/authorityPermissionPreviewTypes';
 import { AuthorityPermissionDetailModal } from '@/features/progression/components/authorityPermissionPreview/AuthorityPermissionDetailModal';
 import { AuthorityPermissionItemCard } from '@/features/progression/components/authorityPermissionPreview/AuthorityPermissionItemCard';
-import { ProgressionSectionHeader } from '@/features/progression/components/authorities/ProgressionSectionHeader';
+import { AuthorityManagementSummaryCard } from '@/features/progression/components/authorities/AuthorityManagementSummaryCard';
+import { AuthorityPermissionStatusBar } from '@/features/progression/components/authorities/AuthorityPermissionStatusBar';
+import { buildAuthorityPermissionsTabViewModel } from '@/features/progression/utils/authorityPermissionsTabPresentation';
 import { spacing } from '@/ui/theme/spacing';
 
 type AuthorityPermissionPreviewPanelProps = {
@@ -22,12 +23,12 @@ export function AuthorityPermissionPreviewPanel({
 }: AuthorityPermissionPreviewPanelProps) {
   const [selectedItem, setSelectedItem] = useState<AuthorityPermissionPreviewItem | null>(null);
 
-  const summary = useMemo(
+  const viewModel = useMemo(
     () =>
-      buildAuthorityPermissionPreviewSummary({
+      buildAuthorityPermissionsTabViewModel({
         authorityState,
-        day: pilotDay,
-        xp: totalXp,
+        pilotDay,
+        totalXp,
       }),
     [authorityState, pilotDay, totalXp],
   );
@@ -38,14 +39,12 @@ export function AuthorityPermissionPreviewPanel({
 
   return (
     <Animated.View entering={FadeIn.duration(280)} style={styles.wrap}>
-      <ProgressionSectionHeader
-        title="Yetki İzinleri"
-        countLabel={summary.activeCountLabel}
-        icon="ribbon-outline"
-      />
+      <AuthorityManagementSummaryCard model={viewModel.managementCard} />
+
+      <AuthorityPermissionStatusBar counts={viewModel.statusCounts} />
 
       <View style={styles.grid}>
-        {summary.allItems.map((item) => (
+        {viewModel.gridItems.map((item) => (
           <AuthorityPermissionItemCard
             key={item.id}
             item={item}

@@ -28,7 +28,7 @@ export function AuthoritiesTabPanel({
 
 const styles = StyleSheet.create({
   wrap: {
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
     gap: spacing.md,
   },
 });

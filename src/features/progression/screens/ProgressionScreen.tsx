@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { AuthoritiesTabPanel } from '@/features/progression/components/authorities/AuthoritiesTabPanel';
 import {
@@ -44,13 +44,18 @@ export function ProgressionScreen() {
     [badgeState, pilotDay, model.collectionCollected, model.collectionProgress, model.collectionTotal],
   );
 
+  const showCollectionHero = tab !== 'authorities';
+
   return (
     <GameScreenShell
       screenTitle="Başarılar"
       backgroundColor={AUTHORITY_COLLECTION_THEME.screenBg}
       contentStyle={styles.content}>
-      <CollectionProgressHeroCard {...heroModel} />
-      <AuthorityTabsPill active={tab} onChange={setTab} />
+      <View style={styles.tabBarSlot}>
+        <AuthorityTabsPill active={tab} onChange={setTab} />
+      </View>
+
+      {showCollectionHero ? <CollectionProgressHeroCard {...heroModel} /> : null}
 
       {tab === 'authorities' ? (
         <AuthoritiesTabPanel
@@ -77,6 +82,11 @@ export function ProgressionScreen() {
 const styles = StyleSheet.create({
   content: {
     gap: 0,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.xs,
+  },
+  tabBarSlot: {
+    position: 'relative',
+    zIndex: 20,
+    elevation: 20,
   },
 });
