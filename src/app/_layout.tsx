@@ -65,6 +65,7 @@ function TabNavigator() {
       <Tabs.Screen name="reports" options={{ title: "Rapor" }} />
       <Tabs.Screen name="profile" options={{ href: null, title: "Profil" }} />
       <Tabs.Screen name="leaderboard" options={{ href: null, title: "Liderlik" }} />
+      <Tabs.Screen name="team-dispatch" options={{ href: null, title: "Ekip Yönlendirme" }} />
     </Tabs>
   );
 }

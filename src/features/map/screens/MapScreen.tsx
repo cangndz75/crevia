@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import { DEFAULT_PILOT_DISTRICT_ID } from '@/core/models/DistrictProfile';
@@ -91,6 +92,7 @@ import {
 } from '../data/mapAssets';
 import { mapDistrictFromPilot } from '../data/mapDistrictMapping';
 import { pilotAreaFromDistrict } from '../data/pilotAreaMapping';
+import { prefetchMapCriticalImages } from '../data/mapCriticalAssets';
 import { getDefaultLayers } from '../data/mapSelectors';
 import {
   buildMapActiveOperationOverlayModel,
@@ -140,6 +142,12 @@ export function MapScreen() {
     setMapViewMode('overview');
     setSelectedPinId(null);
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void prefetchMapCriticalImages();
+    }, []),
+  );
 
   useEffect(() => {
     setActiveLayers(getDefaultLayers(pilotAreaId));

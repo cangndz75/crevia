@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { mapMarkerImageModules } from '../data/mapCriticalAssets';
 import type { MapMarkerMotionModel } from '../utils/mapMotionPresentation';
 import { resolveMapMotionAccentColor } from '../utils/mapMarkerMotionHelper';
 import type { CreviaMapOperationMarker } from '../types/creviaMapTypes';
@@ -30,12 +31,12 @@ const MARKER_SIZE_BY_KIND: Record<NonNullable<CreviaMapOperationMarker['kind']>,
 };
 
 const MARKER_ASSET_BY_KIND: Record<NonNullable<CreviaMapOperationMarker['kind']>, number> = {
-  main: require('@/assets/maps/markers/map_marker_operation_live.png'),
-  pulse: require('@/assets/maps/markers/map_marker_operation_live.png'),
-  container: require('@/assets/maps/markers/map_marker_operation_live.png'),
-  personnel: require('@/assets/maps/markers/map_marker_personnel.png'),
-  vehicle: require('@/assets/maps/markers/map_marker_vehicle.png'),
-  completed: require('@/assets/maps/markers/map_marker_completed.png'),
+  main: mapMarkerImageModules.operationLive,
+  pulse: mapMarkerImageModules.operationLive,
+  container: mapMarkerImageModules.operationLive,
+  personnel: mapMarkerImageModules.personnel,
+  vehicle: mapMarkerImageModules.vehicle,
+  completed: mapMarkerImageModules.completed,
 };
 
 export const MapOperationMarker = memo(function MapOperationMarker({
@@ -123,6 +124,8 @@ export const MapOperationMarker = memo(function MapOperationMarker({
         }}
         contentFit="contain"
         cachePolicy="memory-disk"
+        transition={0}
+        priority="high"
         accessibilityIgnoresInvertColors
       />
     </View>

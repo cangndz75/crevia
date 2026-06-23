@@ -530,6 +530,9 @@ export const CreviaBaseMap = forwardRef<CreviaBaseMapControls, Props>(
                     style={StyleSheet.absoluteFill}
                     contentFit="fill"
                     cachePolicy="memory-disk"
+                    transition={0}
+                    priority="high"
+                    recyclingKey={`crevia-base-map-${asset.source}`}
                     accessibilityIgnoresInvertColors
                   />
                   <View style={StyleSheet.absoluteFill} pointerEvents="none">

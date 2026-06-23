@@ -5,8 +5,9 @@ import type {
   CreviaMapImageAsset,
   CreviaMapOperationMarker,
 } from '../types/creviaMapTypes';
+import { mapBaseImageModule } from './mapCriticalAssets';
 
-const CREVIA_BASE_MAP_V1_SOURCE = require('@/assets/maps/crevia_base_map_v1.png');
+const CREVIA_BASE_MAP_V1_SOURCE = mapBaseImageModule;
 
 function resolveMapAsset(moduleId: number): CreviaMapImageAsset {
   const resolved =

@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import {
   Alert,
@@ -108,6 +109,7 @@ function HubPersonnelRow({
 }
 
 export function HubPersonnelStrip() {
+  const router = useRouter();
   const teams = usePersonnelTeams();
   const restPersonnelTeam = useGameStore((s) => s.restPersonnelTeam);
 
@@ -173,13 +175,7 @@ export function HubPersonnelStrip() {
         <Text style={styles.title}>Personel Durumu</Text>
         <Pressable
           style={styles.seeAllBtn}
-          onPress={() =>
-            Alert.alert(
-              'Personel',
-              'Ekip detayları Merkez ekranındaki kartlardan yönetilir.',
-              [{ text: 'Tamam' }],
-            )
-          }
+          onPress={() => router.push('/team-dispatch')}
           accessibilityRole="button"
           accessibilityLabel="Tüm personeli gör">
           <Text style={styles.seeAllText}>Tümünü gör</Text>

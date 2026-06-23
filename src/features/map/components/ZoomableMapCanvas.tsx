@@ -349,6 +349,8 @@ export const ZoomableMapCanvas = forwardRef<ZoomableMapControls, Props>(
                   style={{ width: fitSize.width, height: fitSize.height }}
                   contentFit="fill"
                   cachePolicy="memory-disk"
+                  transition={0}
+                  priority="high"
                   recyclingKey={String(asset.src)}
                   accessibilityIgnoresInvertColors
                 />

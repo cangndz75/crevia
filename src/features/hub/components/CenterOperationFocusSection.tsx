@@ -115,6 +115,10 @@ export function CenterOperationFocusSection({
 
   const handleOpenSheet = (id: CenterOperationStatusCardId) => {
     playLightImpactHaptic();
+    if (id === 'team') {
+      router.push('/team-dispatch');
+      return;
+    }
     setOpenSheet(id);
   };
 

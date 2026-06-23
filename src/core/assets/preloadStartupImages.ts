@@ -5,6 +5,7 @@ import { criticalEventImageModules } from '@/core/assets/eventScreenAssets';
 import { creviaAssets } from '@/core/assets/creviaAssets';
 import { eventAssets as operationalEventAssets } from '@/features/events/utils/eventAssets';
 import { hubAssets } from '@/features/hub/utils/hubAssets';
+import { mapCriticalImageModules } from '@/features/map/data/mapCriticalAssets';
 
 const TAB_BAR_IMAGES = [
   require('@/assets/bt1.png'),
@@ -61,6 +62,9 @@ export async function preloadStartupImages(): Promise<void> {
   collectImageModules(operationalEventAssets, modules);
 
   for (const image of criticalEventImageModules) {
+    modules.add(image);
+  }
+  for (const image of mapCriticalImageModules) {
     modules.add(image);
   }
 

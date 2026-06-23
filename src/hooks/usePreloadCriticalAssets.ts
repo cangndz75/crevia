@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 
 import { criticalEventImageModules } from '@/core/assets/eventScreenAssets';
 import { eventAssets as allEventAssets } from '@/features/events/utils/eventAssets';
+import { mapCriticalImageModules } from '@/features/map/data/mapCriticalAssets';
 
 function collectImageModules(value: unknown, out: Set<number>): void {
   if (typeof value === 'number') {
@@ -20,6 +21,9 @@ function collectImageModules(value: unknown, out: Set<number>): void {
 const ALL_EVENT_IMAGE_MODULES: number[] = (() => {
   const modules = new Set<number>();
   for (const moduleId of criticalEventImageModules) {
+    modules.add(moduleId);
+  }
+  for (const moduleId of mapCriticalImageModules) {
     modules.add(moduleId);
   }
   collectImageModules(allEventAssets, modules);
