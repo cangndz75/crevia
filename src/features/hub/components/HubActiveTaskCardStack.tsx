@@ -9,15 +9,14 @@ import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import {
   CreviaAnimatedPressable,
   useCenterCtaPulse,
-  useCenterProgressHighlight,
 } from '@/shared/motion';
-import { hubAssets } from '@/features/hub/utils/hubAssets';
 import type {
   CenterActiveTarget,
   CenterActiveTargetDomain,
   CenterActiveTargetImpact,
 } from '@/features/hub/utils/centerActiveTargetPresentation';
 import type { CenterHomeVisibilityState } from '@/features/hub/utils/centerHomePresentation';
+import { hubAssets } from '@/features/hub/utils/hubAssets';
 
 const palette = {
   card: '#FFFCF5',
@@ -49,9 +48,9 @@ const domainIcons: Record<CenterActiveTargetDomain, IconName> = {
 };
 
 const impactToneColors = {
-  positive: palette.green,
-  neutral: palette.muted,
-  warning: palette.amber,
+  positive: palette.goldSoft,
+  neutral: 'rgba(255,255,255,0.78)',
+  warning: palette.gold,
 } as const;
 
 type HubActiveTaskCardStackProps = {
@@ -79,30 +78,6 @@ function resolveIcon(iconKey: string, domain: CenterActiveTargetDomain): IconNam
   return known[iconKey] ?? domainIcons[domain];
 }
 
-function TaskStatusBar({
-  progress,
-  highlight,
-  reducedMotion = false,
-}: {
-  progress: number;
-  highlight?: boolean;
-  reducedMotion?: boolean;
-}) {
-  const ratio = Math.max(0, Math.min(1, progress));
-  const highlightStyle = useCenterProgressHighlight(Boolean(highlight), reducedMotion);
-  return (
-    <View style={[styles.statusBar, highlight ? styles.statusBarHighlight : undefined]}>
-      <Animated.View
-        style={[
-          styles.statusBarFill,
-          { width: `${ratio * 100}%` },
-          highlight ? highlightStyle : undefined,
-        ]}
-      />
-    </View>
-  );
-}
-
 function ImpactChip({ impact }: { impact: CenterActiveTargetImpact }) {
   const color = impactToneColors[impact.tone];
   return (
@@ -120,17 +95,27 @@ function ImpactChip({ impact }: { impact: CenterActiveTargetImpact }) {
 
 function resolveDisplayCopy(activeTarget: CenterActiveTarget) {
   const isDay1Entry = activeTarget.id === 'day1-entry';
+  const isCompleted =
+    activeTarget.status === 'completed' || (activeTarget.progress?.progressRatio ?? 0) >= 1;
+
+  if (isDay1Entry && !isCompleted) {
+    return {
+      badge: 'ANA GÖREV',
+      title: 'İlk Operasyonu Planla',
+      subtitle: 'Crevia Merkez',
+      description: 'Şehrin ihtiyaçlarını analiz et, ilk operasyonunu seç ve uygulamaya koy.',
+      rewardLabel: '',
+      rewardIcon: 'flash-outline',
+    };
+  }
+
   return {
     badge: isDay1Entry ? 'ANA GÖREV' : (activeTarget.categoryLabel?.toUpperCase() ?? 'AKTİF HEDEF'),
-    title: isDay1Entry ? 'İlk olayı çöz' : activeTarget.title,
-    subtitle: isDay1Entry ? 'ilk olay' : activeTarget.subtitle,
-    description: isDay1Entry
-      ? 'Operasyon merkezindeki ilk olaya müdahale et.'
-      : activeTarget.description,
-    rewardLabel: isDay1Entry
-      ? '+30 ilerleme'
-      : activeTarget.reward?.label ?? '',
-    rewardIcon: (isDay1Entry ? 'flash-outline' : activeTarget.reward?.iconKey) as string,
+    title: activeTarget.title,
+    subtitle: activeTarget.subtitle,
+    description: activeTarget.description,
+    rewardLabel: activeTarget.reward?.valueText ?? activeTarget.reward?.label ?? '',
+    rewardIcon: (activeTarget.reward?.iconKey ?? 'flash-outline') as string,
   };
 }
 
@@ -157,19 +142,54 @@ export function HubActiveTaskCardStack({
     }
   };
 
-  const showProgress = Boolean(activeTarget.progress);
-  const statusCompleted = activeTarget.status === 'completed';
+  const statusCompleted =
+    activeTarget.status === 'completed' || (activeTarget.progress?.progressRatio ?? 0) >= 1;
   const statusEmpty = activeTarget.status === 'empty';
   const display = resolveDisplayCopy(activeTarget);
+  const focusDisplay =
+    statusCompleted
+      ? {
+          ...display,
+          badge: 'ANA GÖREV',
+          title: 'İlk hedef tamamlandı',
+          subtitle: 'Merkez akışı açıldı',
+          description: 'Merkez akışı açıldı. Şimdi yeni hedefe geçebilirsin.',
+          context: 'Bugünkü hedef tamamlandı.',
+        }
+      : activeTarget.id === 'day1-entry'
+      ? {
+          ...display,
+          badge: 'ANA GÖREV',
+          title: 'İlk Operasyonu Planla',
+          subtitle: 'Crevia Merkez',
+          description:
+            'Şehrin ihtiyaçlarını analiz et, ilk operasyonunu seç ve uygulamaya koy.',
+          context:
+            'Görev zinciri ilerledikçe şehir nabzı ve bölge gelişimi güçlenir.',
+        }
+      : {
+          ...display,
+          badge: 'ANA GÖREV',
+          title: display.title,
+          subtitle: display.subtitle,
+          description: display.description,
+          context: activeTarget.helperText,
+        };
+  const ctaLabel = statusCompleted ? 'Sıradaki Hedefe Geç' : 'GÖREVLERİ GÖR';
+  const visibleImpacts = activeTarget.impactPreview.slice(0, 3);
+  const stageText =
+    activeTarget.progress?.valueText?.trim() ||
+    (statusCompleted ? '3/3' : activeTarget.status === 'in_progress' ? '2/3' : '1/3');
 
   return (
     <View style={styles.wrap}>
       <LinearGradient
-        colors={[palette.card, palette.cardWarm]}
+        colors={[palette.tealDark, palette.teal]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[
           styles.taskCard,
+          statusCompleted ? styles.taskCardCompleted : undefined,
           activeTarget.motionHint?.shouldPulseCta ? styles.taskCardPulseReady : undefined,
           activeTarget.motionHint?.revealLevel === 'strong'
             ? styles.taskCardRevealStrong
@@ -177,121 +197,131 @@ export function HubActiveTaskCardStack({
         ]}
         accessibilityRole="summary"
         accessibilityLabel={activeTarget.accessibilityLabel}>
-        <View style={styles.taskHero}>
-          <Image
-            source={hubAssets.centerSummaryHero}
-            style={styles.taskHeroImage}
-            contentFit="cover"
-            transition={180}
-            cachePolicy="memory-disk"
-          />
+        <Image
+          source={hubAssets.day1Plan.heroBuilding}
+          style={styles.cardBgImage}
+          contentFit="cover"
+          transition={180}
+          cachePolicy="memory-disk"
+        />
+        <LinearGradient
+          colors={['rgba(4,58,54,0.88)', 'rgba(4,58,54,0.62)', 'rgba(4,58,54,0.94)']}
+          locations={[0, 0.48, 1]}
+          style={styles.cardOverlay}
+        />
+
+        <View style={styles.heroTopRow}>
           <View style={styles.taskLabel}>
             <Text style={styles.taskLabelText} numberOfLines={1}>
-              {display.badge}
+              {focusDisplay.badge}
             </Text>
           </View>
-          {statusCompleted ? (
-            <View style={styles.completedBadge}>
-              <Ionicons name="checkmark-circle" size={14} color={palette.green} />
-              <Text style={styles.completedBadgeText}>Tamamlandı</Text>
-            </View>
-          ) : null}
+          <View style={styles.stageBadge}>
+            <Text style={styles.stageValue} numberOfLines={1}>
+              {stageText}
+            </Text>
+            <Text style={styles.stageLabel} numberOfLines={1}>
+              AŞAMA
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.taskMainRow}>
-          <View style={styles.taskCopy}>
-            <View style={styles.taskTitleRow}>
-              <View style={styles.miniIcon}>
-                <Ionicons
-                  name={domainIcons[activeTarget.domain]}
-                  size={18}
-                  color={palette.teal}
-                />
-              </View>
-              <View style={styles.titleBlock}>
-                <Text style={styles.taskTitle} numberOfLines={2}>
-                  {display.title}
-                </Text>
-                {display.subtitle ? (
-                  <Text style={styles.taskSubtitle} numberOfLines={1}>
-                    {display.subtitle}
+        <View style={[styles.taskCopy, statusCompleted && styles.taskCopyCompleted]}>
+          <Text style={styles.taskSubtitle} numberOfLines={1}>
+            {focusDisplay.subtitle}
+          </Text>
+          <Text style={styles.taskTitle} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.82}>
+            {focusDisplay.title}
+          </Text>
+          <Text style={styles.taskBody} numberOfLines={3}>
+            {focusDisplay.description}
+          </Text>
+        </View>
+
+        <View style={[styles.heroFooter, statusCompleted && styles.heroFooterCompleted]}>
+          <View style={styles.rewardGroup}>
+            <Text style={styles.rewardGroupLabel} numberOfLines={1}>
+              AŞAMA ÖDÜLLERİ
+            </Text>
+            <View style={styles.impactRow}>
+              {visibleImpacts.length > 0 ? (
+                visibleImpacts.map((impact) => (
+                  <ImpactChip key={`${impact.id}-${impact.label}`} impact={impact} />
+                ))
+              ) : (
+                <>
+                  <View style={styles.impactChip}>
+                    <Ionicons name="cash-outline" size={12} color={palette.goldSoft} />
+                    <Text style={styles.impactValue} numberOfLines={1}>
+                      +3.000
+                    </Text>
+                  </View>
+                  <View style={styles.impactChip}>
+                    <Ionicons name="star" size={12} color={palette.goldSoft} />
+                    <Text style={styles.impactValue} numberOfLines={1}>
+                      +200
+                    </Text>
+                  </View>
+                </>
+              )}
+              {activeTarget.reward || activeTarget.id === 'day1-entry' ? (
+                <View style={styles.impactChip}>
+                  <Ionicons
+                    name={resolveIcon(focusDisplay.rewardIcon, 'general')}
+                    size={12}
+                    color={palette.goldSoft}
+                  />
+                  <Text style={styles.impactValue} numberOfLines={1}>
+                    {focusDisplay.rewardLabel}
                   </Text>
-                ) : null}
-              </View>
+                </View>
+              ) : null}
             </View>
-            <Text style={styles.taskBody} numberOfLines={2}>
-              {display.description}
-            </Text>
           </View>
-          {activeTarget.reward || activeTarget.id === 'day1-entry' ? (
-            <View style={styles.rewardCapsule}>
-              <Ionicons
-                name={resolveIcon(display.rewardIcon, 'general')}
-                size={18}
-                color={palette.green}
-              />
-              <Text style={[styles.rewardText, { color: palette.green }]} numberOfLines={2}>
-                {display.rewardLabel}
+
+          <Animated.View style={ctaPulseStyle}>
+            <CreviaAnimatedPressable
+              onPress={handleCtaPress}
+              reducedMotion={reducedMotion}
+              pressScale={0.975}
+              accessibilityRole="button"
+              accessibilityLabel={activeTarget.cta.label}
+              accessibilityState={{ disabled: !activeTarget.cta.enabled }}
+              disabled={!activeTarget.cta.enabled}
+              style={[
+                styles.taskCta,
+                !activeTarget.cta.enabled ? styles.taskCtaDisabled : undefined,
+                statusEmpty ? styles.taskCtaSecondary : undefined,
+              ]}>
+              <Text
+                style={[
+                  styles.taskCtaText,
+                  !activeTarget.cta.enabled ? styles.taskCtaTextDisabled : undefined,
+                ]}
+                numberOfLines={1}>
+                {ctaLabel}
               </Text>
-            </View>
-          ) : null}
+              {activeTarget.cta.enabled ? (
+                <View style={styles.ctaArrow}>
+                  <Ionicons name="chevron-forward" size={16} color={palette.tealDark} />
+                </View>
+              ) : null}
+            </CreviaAnimatedPressable>
+          </Animated.View>
         </View>
 
-        {activeTarget.impactPreview.length > 0 && activeTarget.id !== 'day1-entry' ? (
-          <View style={styles.impactRow}>
-            {activeTarget.impactPreview.map((impact) => (
-              <ImpactChip key={`${impact.id}-${impact.label}`} impact={impact} />
-            ))}
+        {statusCompleted ? (
+          <View style={styles.completedBadge}>
+            <Ionicons name="checkmark-circle" size={14} color={palette.green} />
+            <Text style={styles.completedBadgeText}>Tamamlandı</Text>
           </View>
         ) : null}
 
-        {showProgress && activeTarget.progress ? (
-          <View style={styles.progressBlock}>
-            <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>{activeTarget.progress.label}</Text>
-              <Text style={styles.progressValue}>{activeTarget.progress.valueText}</Text>
-            </View>
-            <TaskStatusBar
-              progress={activeTarget.progress.progressRatio}
-              highlight={activeTarget.motionHint?.shouldHighlightProgress}
-              reducedMotion={reducedMotion}
-            />
-          </View>
-        ) : activeTarget.helperText ? (
-          <Text style={styles.helperText} numberOfLines={2}>
-            {activeTarget.helperText}
+        {(statusCompleted || activeTarget.helperText) && activeTarget.id !== 'day1-entry' ? (
+          <Text style={styles.helperText} numberOfLines={1}>
+            {statusCompleted ? 'Bugünkü hedef tamamlandı.' : activeTarget.helperText}
           </Text>
         ) : null}
-
-        <Animated.View style={ctaPulseStyle}>
-          <CreviaAnimatedPressable
-            onPress={handleCtaPress}
-            reducedMotion={reducedMotion}
-            pressScale={0.975}
-            accessibilityRole="button"
-            accessibilityLabel={activeTarget.cta.label}
-            accessibilityState={{ disabled: !activeTarget.cta.enabled }}
-            disabled={!activeTarget.cta.enabled}
-            style={[
-              styles.taskCta,
-              !activeTarget.cta.enabled ? styles.taskCtaDisabled : undefined,
-              statusEmpty ? styles.taskCtaSecondary : undefined,
-            ]}>
-            <Text
-              style={[
-                styles.taskCtaText,
-                !activeTarget.cta.enabled ? styles.taskCtaTextDisabled : undefined,
-              ]}
-              numberOfLines={1}>
-              {activeTarget.cta.label.toUpperCase()}
-            </Text>
-            {activeTarget.cta.enabled ? (
-              <View style={styles.ctaArrow}>
-                <Ionicons name="chevron-forward" size={18} color={palette.tealDark} />
-              </View>
-            ) : null}
-          </CreviaAnimatedPressable>
-        </Animated.View>
       </LinearGradient>
     </View>
   );
@@ -303,11 +333,18 @@ const styles = StyleSheet.create({
   },
   taskCard: {
     borderRadius: 24,
-    padding: 12,
-    gap: 12,
+    minHeight: 216,
+    padding: 16,
+    gap: 14,
     borderWidth: 1,
-    borderColor: palette.cardBorder,
+    borderColor: 'rgba(245, 227, 175, 0.28)',
     overflow: 'hidden',
+    justifyContent: 'space-between',
+  },
+  taskCardCompleted: {
+    minHeight: 168,
+    padding: 13,
+    gap: 10,
   },
   taskCardPulseReady: {
     borderColor: palette.gold,
@@ -315,22 +352,79 @@ const styles = StyleSheet.create({
   taskCardRevealStrong: {
     borderColor: '#C78925',
   },
-  taskHero: {
-    height: 118,
-    borderRadius: 18,
-    overflow: 'hidden',
-    backgroundColor: palette.tealSoft,
-    position: 'relative',
-    flexShrink: 0,
+  cardBgImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: undefined,
+    height: undefined,
   },
-  taskHeroImage: {
-    width: '100%',
-    height: '100%',
+  cardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    zIndex: 1,
+  },
+  stageBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(4, 58, 54, 0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 227, 175, 0.6)',
+  },
+  stageValue: {
+    fontSize: 14,
+    lineHeight: 17,
+    fontWeight: '900',
+    color: palette.goldSoft,
+    fontVariant: ['tabular-nums'],
+  },
+  stageLabel: {
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '900',
+    color: 'rgba(255,255,255,0.72)',
+  },
+  heroFooter: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 10,
+    zIndex: 1,
+  },
+  heroFooterCompleted: {
+    alignItems: 'center',
+  },
+  rewardGroup: {
+    flex: 1,
+    minWidth: 0,
+    gap: 5,
+  },
+  rewardGroupLabel: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    color: 'rgba(255,255,255,0.76)',
+  },
+  briefBadge: {
+    position: 'absolute',
+    right: 14,
+    bottom: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.82)',
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   taskLabel: {
-    position: 'absolute',
-    left: 12,
-    top: 12,
     zIndex: 2,
     borderRadius: 999,
     paddingHorizontal: 10,
@@ -347,8 +441,8 @@ const styles = StyleSheet.create({
   },
   completedBadge: {
     position: 'absolute',
-    right: 10,
-    top: 10,
+    right: 13,
+    top: 52,
     zIndex: 2,
     flexDirection: 'row',
     alignItems: 'center',
@@ -363,74 +457,40 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: palette.green,
   },
-  taskMainRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    minWidth: 0,
-  },
   taskCopy: {
-    flex: 1,
     minWidth: 0,
-    gap: 5,
+    maxWidth: '72%',
+    gap: 6,
+    zIndex: 1,
   },
-  taskTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    minWidth: 0,
-  },
-  titleBlock: {
-    flex: 1,
-    minWidth: 0,
-    gap: 1,
-  },
-  miniIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: palette.tealSoft,
-    flexShrink: 0,
-    marginTop: 1,
+  taskCopyCompleted: {
+    maxWidth: '82%',
+    gap: 4,
   },
   taskTitle: {
-    fontSize: 18,
-    lineHeight: 22,
+    fontSize: 28,
+    lineHeight: 32,
     fontWeight: '900',
-    color: palette.text,
+    color: '#FFFFFF',
   },
   taskSubtitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: palette.teal,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.7,
+    color: palette.goldSoft,
+    textTransform: 'uppercase',
   },
   taskBody: {
     fontSize: 12,
     lineHeight: 17,
-    fontWeight: '500',
-    color: palette.muted,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.86)',
   },
-  rewardCapsule: {
-    width: 78,
-    alignSelf: 'flex-start',
-    flexShrink: 0,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 8,
-    gap: 3,
-    backgroundColor: palette.tealSoft,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  rewardText: {
+  taskContext: {
     fontSize: 11,
-    lineHeight: 13,
-    fontWeight: '900',
-    textAlign: 'center',
+    lineHeight: 15,
+    fontWeight: '800',
+    color: palette.goldSoft,
   },
   impactRow: {
     flexDirection: 'row',
@@ -443,22 +503,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     borderRadius: 999,
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     paddingVertical: 4,
-    backgroundColor: 'rgba(7, 86, 79, 0.06)',
+    backgroundColor: 'rgba(4, 58, 54, 0.62)',
     borderWidth: 1,
-    borderColor: palette.border,
+    borderColor: 'rgba(245,227,175,0.22)',
     maxWidth: '100%',
   },
   impactLabel: {
     fontSize: 9,
     fontWeight: '700',
-    color: palette.muted,
+    color: 'rgba(255,255,255,0.72)',
     flexShrink: 1,
   },
   impactValue: {
     fontSize: 9,
     fontWeight: '900',
+    color: palette.goldSoft,
     flexShrink: 1,
   },
   progressBlock: {
@@ -504,20 +565,22 @@ const styles = StyleSheet.create({
   helperText: {
     fontSize: 11,
     lineHeight: 15,
-    fontWeight: '600',
-    color: palette.muted,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.72)',
+    zIndex: 1,
   },
   taskCta: {
-    minHeight: 48,
-    borderRadius: 14,
-    paddingHorizontal: 14,
+    minHeight: 38,
+    borderRadius: 999,
+    paddingLeft: 13,
+    paddingRight: 5,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    backgroundColor: palette.teal,
+    gap: 6,
+    backgroundColor: 'rgba(245, 227, 175, 0.18)',
     borderWidth: 1,
-    borderColor: palette.gold,
+    borderColor: 'rgba(245, 227, 175, 0.48)',
     flexShrink: 0,
   },
   taskCtaSecondary: {
@@ -531,7 +594,7 @@ const styles = StyleSheet.create({
   taskCtaText: {
     flexShrink: 1,
     minWidth: 0,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '900',
     color: palette.goldSoft,
     textAlign: 'center',

@@ -66,6 +66,15 @@ export type EventInspectScanHint = {
   estimatedDurationMs: number;
 };
 
+export type EventInspectRevealItem = {
+  id: string;
+  title: string;
+  body: string;
+  impactChip: string;
+  tone: EventInspectFindingTone;
+  iconKey: string;
+};
+
 export type EventInspectPhasePresentation = {
   title: string;
   subtitle?: string;
@@ -73,6 +82,7 @@ export type EventInspectPhasePresentation = {
   domainLabel?: string;
   status: EventInspectPhaseStatus;
   findings: EventInspectFinding[];
+  revealItems: EventInspectRevealItem[];
   advisorComment?: EventInspectAdvisorComment;
   primaryCta: EventInspectCta;
   footerHint: string;
@@ -470,7 +480,7 @@ function buildInspectCta(interactionState: EventInspectInteractionState): EventI
 
   if (interactionState === 'revealed') {
     return {
-      label: 'Planlamaya Geç',
+      label: 'Bulguları Planla',
       actionKey: 'go_to_plan',
       enabled: true,
     };
@@ -481,6 +491,37 @@ function buildInspectCta(interactionState: EventInspectInteractionState): EventI
     actionKey: 'start_inspection',
     enabled: true,
   };
+}
+
+function buildRevealImpactChip(finding: EventInspectFinding): string {
+  switch (finding.kind) {
+    case 'risk':
+      return finding.priority === 'urgent' ? 'Risk kritik' : 'Risk etkisi';
+    case 'resource':
+      return 'Kaynak etkisi';
+    case 'social':
+      return 'Güven etkisi';
+    case 'district':
+      return 'Mahalle kaynağı';
+    case 'route':
+      return 'Rota baskısı';
+    case 'team':
+      return 'Ekip temposu';
+    default:
+      return finding.sourceLabel;
+  }
+}
+
+function buildInspectRevealItems(findings: EventInspectFinding[]): EventInspectRevealItem[] {
+  const titles = ['İlk sinyal', 'Saha bulgusu', 'Kritik ipucu'];
+  return findings.slice(0, 3).map((finding, index) => ({
+    id: `reveal-${finding.id}`,
+    title: titles[index] ?? finding.title,
+    body: finding.body,
+    impactChip: buildRevealImpactChip(finding),
+    tone: finding.tone,
+    iconKey: finding.iconKey,
+  }));
 }
 
 function buildFooterHint(interactionState: EventInspectInteractionState): string {
@@ -539,6 +580,7 @@ export function buildEventInspectPhasePresentation(
     domainLabel,
     status,
     findings,
+    revealItems: buildInspectRevealItems(findings),
     advisorComment,
     primaryCta: buildInspectCta(interactionState),
     footerHint: buildFooterHint(interactionState),

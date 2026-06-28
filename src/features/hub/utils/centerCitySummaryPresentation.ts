@@ -151,7 +151,7 @@ function buildReputationMetric(
       id: 'reputation',
       label: 'Şehir İtibarı',
       valueText: 'Başlangıç',
-      helperText: 'İlk gün güven oluşuyor',
+      helperText: 'Güçlü',
       tone: 'neutral',
       iconKey: 'star-outline',
       sourceLabel: 'day1.fallback',
@@ -192,7 +192,7 @@ function buildHappinessMetric(
       id: 'happiness',
       label: 'Vatandaş Mutluluğu',
       valueText: 'Dengeli',
-      helperText: 'Sosyal nabız oluşuyor',
+      helperText: 'Kırılgan',
       tone: 'stable',
       iconKey: 'happy-outline',
       sourceLabel: 'day1.fallback',
@@ -239,7 +239,7 @@ function buildOperationMetric(input: BuildCenterCitySummaryInput): CenterCitySum
       id: 'activeOperations',
       label: 'Bugünkü Odak',
       valueText: 'Hazır',
-      helperText: 'İlk hedef hazır',
+      helperText: 'Operasyona uygun',
       tone: 'stable',
       iconKey: 'flag-outline',
       sourceLabel: 'day1.fallback',
@@ -334,7 +334,7 @@ function buildPrimaryInsight(input: BuildCenterCitySummaryInput): CenterCitySumm
   if (input.day <= 1) {
     return {
       label: 'İlk adım',
-      text: 'Şehri tanı, ilk hedefe başlayarak merkez akışını aç.',
+      text: 'Güven güçlü, sosyal denge dikkat istiyor. İlk olay tamamlanınca yeni fırsat kartları açılır.',
       tone: 'neutral',
     };
   }
@@ -421,7 +421,7 @@ export function buildCenterCitySummary(
     .join('. ');
 
   return {
-    title: 'MERKEZ ÖZETİ',
+    title: 'ŞEHİR NABZI',
     subtitle,
     metrics,
     primaryInsight,

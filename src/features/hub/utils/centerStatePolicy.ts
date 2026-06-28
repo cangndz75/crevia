@@ -1,4 +1,4 @@
-import type { CenterHomeModuleKey, CenterHomePresentation, CenterHomeVisibilityFlags, CenterHomeVisibilityState } from './centerHomePresentation';
+import type { CenterHomeCoreSections, CenterHomeModuleKey, CenterHomePresentation, CenterHomeVisibilityFlags, CenterHomeVisibilityState } from './centerHomePresentation';
 import type { CenterActiveTarget } from './centerActiveTargetPresentation';
 import type { CenterAdvisorSuggestion } from './centerAdvisorPresentation';
 import type { CenterContinuationCards } from './centerContinuationCardsPresentation';
@@ -173,7 +173,7 @@ export function resolveCenterModulePolicy(input: {
 
 export function applyCenterVisibilityPolicy(
   flags: CenterHomeVisibilityFlags,
-  presentation: Omit<CenterHomePresentation, 'moduleOrder' | 'visibilityFlags'>,
+  presentation: CenterHomeCoreSections,
   day: number,
 ): CenterHomeVisibilityFlags {
   const next: CenterHomeVisibilityFlags = { ...flags };

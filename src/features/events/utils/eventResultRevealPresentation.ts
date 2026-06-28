@@ -56,6 +56,24 @@ export type EventResultRevealItem = {
   revealOrder: number;
 };
 
+export type EventResultImpactCard = {
+  id: 'social_trust' | 'budget_resource' | 'operation_risk';
+  title: string;
+  body: string;
+  deltaText: string;
+  tone: 'positive' | 'neutral' | 'warning';
+  iconKey: string;
+};
+
+export type EventResultRecentImpactPreview = {
+  eventId: string;
+  title: string;
+  districtName: string;
+  tone: EventResultOutcomeBand;
+  summary: string;
+  impactCards: EventResultImpactCard[];
+};
+
 export type EventResultAdvisorComment = {
   title: string;
   text: string;
@@ -87,6 +105,8 @@ export type EventResultRevealPresentation = {
   title: string;
   subtitle?: string;
   outcome: EventResultOutcomeSummary;
+  impactCards: EventResultImpactCard[];
+  recentImpact: EventResultRecentImpactPreview;
   revealItems: EventResultRevealItem[];
   advisorComment: EventResultAdvisorComment;
   finalActions: EventResultAction[];
@@ -200,6 +220,81 @@ function formatMetricDelta(metric?: DecisionMetricChange): string | undefined {
     return `${sign}${metric.delta}`;
   }
   return `${sign}${metric.delta}`;
+}
+
+function formatImpactDelta(metric?: DecisionMetricChange): string {
+  return formatMetricDelta(metric) ?? 'Dengeli';
+}
+
+function impactTone(metric?: DecisionMetricChange): EventResultImpactCard['tone'] {
+  if (!metric || metric.delta === 0 || metric.direction === 'flat') return 'neutral';
+  if (metric.isGood) return 'positive';
+  return 'warning';
+}
+
+function buildResultImpactCards(snapshot: DecisionResultSnapshot): EventResultImpactCard[] {
+  const publicMetric = findMetric(snapshot.metricChanges, 'publicSatisfaction');
+  const budgetMetric = findMetric(snapshot.metricChanges, 'budget');
+  const riskMetric = findMetric(snapshot.metricChanges, 'operationRisk');
+  const personnelMetric = findMetric(snapshot.metricChanges, 'personnelMorale');
+
+  return [
+    {
+      id: 'social_trust',
+      title: 'Sosyal güven',
+      body:
+        impactTone(publicMetric) === 'positive'
+          ? 'Mahalle güveni kararın ardından toparlandı.'
+          : impactTone(publicMetric) === 'warning'
+            ? 'Mahalle güveni sınırlı tepki verdi.'
+            : 'Mahalle güveni dengede kaldı.',
+      deltaText: formatImpactDelta(publicMetric),
+      tone: impactTone(publicMetric),
+      iconKey: 'people-outline',
+    },
+    {
+      id: 'budget_resource',
+      title: 'Bütçe / kaynak',
+      body:
+        impactTone(budgetMetric) === 'warning' || impactTone(personnelMetric) === 'warning'
+          ? 'Kaynak baskısı yarına iz bırakabilir.'
+          : 'Kaynak kullanımı kontrol altında kaldı.',
+      deltaText: formatImpactDelta(budgetMetric),
+      tone:
+        impactTone(budgetMetric) === 'warning' || impactTone(personnelMetric) === 'warning'
+          ? 'warning'
+          : impactTone(budgetMetric),
+      iconKey: 'wallet-outline',
+    },
+    {
+      id: 'operation_risk',
+      title: 'Risk baskısı',
+      body:
+        impactTone(riskMetric) === 'positive'
+          ? 'Operasyon riski geriye çekildi.'
+          : impactTone(riskMetric) === 'warning'
+            ? 'Risk baskısı tamamen sönmedi.'
+            : 'Risk seviyesi izlemeye alındı.',
+      deltaText: formatImpactDelta(riskMetric),
+      tone: impactTone(riskMetric),
+      iconKey: 'pulse-outline',
+    },
+  ];
+}
+
+function buildRecentImpactPreview(
+  snapshot: DecisionResultSnapshot,
+  outcome: EventResultOutcomeSummary,
+  impactCards: EventResultImpactCard[],
+): EventResultRecentImpactPreview {
+  return {
+    eventId: snapshot.eventId,
+    title: snapshot.summaryTitle || outcome.label,
+    districtName: snapshot.neighborhoodName || 'Merkez',
+    tone: outcome.outcomeBand,
+    summary: outcome.body,
+    impactCards,
+  };
 }
 
 function buildTaskItem(snapshot: DecisionResultSnapshot): EventResultRevealItem {
@@ -687,6 +782,8 @@ export function buildEventResultRevealPresentation(
   const isFallback = input.isFallback ?? false;
   const reducedMotion = input.reducedMotion ?? false;
   const outcome = buildOutcomeSummary(input.snapshot, isFallback);
+  const impactCards = buildResultImpactCards(input.snapshot);
+  const recentImpact = buildRecentImpactPreview(input.snapshot, outcome, impactCards);
   const revealItems = buildRevealItems(input.snapshot, input);
   const selectedPlanContext = buildSelectedPlanContext(input.selectedPlanStrategyId);
   const advisorComment = buildEventResultAdvisorComment(input, outcome, revealItems);
@@ -697,6 +794,8 @@ export function buildEventResultRevealPresentation(
     title: 'Operasyon Sonucu',
     subtitle: input.snapshot.eventTitle,
     outcome,
+    impactCards,
+    recentImpact,
     revealItems,
     advisorComment,
     finalActions,
@@ -718,6 +817,12 @@ export function auditEventResultRevealPresentation(
   if (!model.accessibilityLabel.trim()) issues.push('accessibilityLabel empty');
   if (!model.outcome.label.trim() || !model.outcome.body.trim()) {
     issues.push('outcome incomplete');
+  }
+  if (model.impactCards.length !== 3) {
+    issues.push('impactCards count should be 3');
+  }
+  if (!model.recentImpact.eventId.trim() || !model.recentImpact.summary.trim()) {
+    issues.push('recentImpact incomplete');
   }
   if (!['success', 'partial', 'mixed', 'risk', 'unknown'].includes(model.outcome.outcomeBand)) {
     issues.push('invalid outcomeBand');

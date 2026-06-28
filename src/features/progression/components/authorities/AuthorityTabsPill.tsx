@@ -2,8 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { playSelectionHaptic } from '@/core/feedback/hapticFeedback';
-import { AUTHORITY_COLLECTION_THEME } from '@/features/progression/utils/authorityCollectionPresentation';
-import { shadows } from '@/ui/theme/shadows';
+import { growth } from '@/features/progression/theme/growthScreenTokens';
 import { spacing } from '@/ui/theme/spacing';
 
 export type AuthorityTabKey = 'authorities' | 'badges' | 'expansions';
@@ -19,7 +18,7 @@ const TABS: {
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
   { key: 'authorities', label: 'Yetkiler', icon: 'shield-checkmark-outline' },
-  { key: 'badges', label: 'Rozetler', icon: 'trophy-outline' },
+  { key: 'badges', label: 'Rozetler', icon: 'star-outline' },
   { key: 'expansions', label: 'Açılımlar', icon: 'map-outline' },
 ];
 
@@ -32,30 +31,27 @@ export function AuthorityTabsPill({ active, onChange }: AuthorityTabsPillProps) 
 
   return (
     <View style={styles.root}>
-      <View style={[styles.capsule, shadows.soft]}>
-      {TABS.map((tab) => {
-        const selected = active === tab.key;
-        return (
-          <Pressable
-            key={tab.key}
-            onPress={() => handlePress(tab.key)}
-            style={styles.tab}
-            accessibilityRole="tab"
-            accessibilityState={{ selected }}>
-            <Ionicons
-              name={tab.icon}
-              size={18}
-              color={selected ? AUTHORITY_COLLECTION_THEME.tealDark : AUTHORITY_COLLECTION_THEME.textSecondary}
-            />
-            <Text
-              style={[styles.tabLabel, selected && styles.tabLabelActive]}
-              numberOfLines={1}>
-              {tab.label}
-            </Text>
-            {selected ? <View style={styles.activeLine} /> : null}
-          </Pressable>
-        );
-      })}
+      <View style={[styles.capsule, growth.shadow]}>
+        {TABS.map((tab) => {
+          const selected = active === tab.key;
+          return (
+            <Pressable
+              key={tab.key}
+              onPress={() => handlePress(tab.key)}
+              style={[styles.tab, selected ? styles.tabActive : null]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected }}>
+              <Ionicons
+                name={tab.icon}
+                size={18}
+                color={selected ? growth.gold : growth.textMuted}
+              />
+              <Text style={[styles.tabLabel, selected && styles.tabLabelActive]}>
+                {tab.label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );
@@ -69,14 +65,12 @@ const styles = StyleSheet.create({
   },
   capsule: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    backgroundColor: growth.glass,
+    borderRadius: growth.radiusTab,
     borderWidth: 1,
-    borderColor: AUTHORITY_COLLECTION_THEME.border,
-    paddingHorizontal: 6,
-    paddingTop: 8,
-    paddingBottom: 4,
-    minHeight: 56,
+    borderColor: growth.border,
+    padding: 4,
+    minHeight: 52,
     marginTop: spacing.sm,
   },
   tab: {
@@ -84,27 +78,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 4,
-    position: 'relative',
+    borderRadius: 16,
     minWidth: 0,
+    minHeight: 44,
+  },
+  tabActive: {
+    backgroundColor: growth.mintMuted,
+    borderWidth: 1,
+    borderColor: growth.goldBorder,
+    ...growth.glowGold,
   },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    color: AUTHORITY_COLLECTION_THEME.textSecondary,
+    color: growth.textMuted,
     flexShrink: 1,
   },
   tabLabelActive: {
-    color: AUTHORITY_COLLECTION_THEME.tealDark,
+    color: growth.gold,
     fontWeight: '800',
-  },
-  activeLine: {
-    position: 'absolute',
-    bottom: 0,
-    width: '70%',
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: AUTHORITY_COLLECTION_THEME.tealDark,
   },
 });

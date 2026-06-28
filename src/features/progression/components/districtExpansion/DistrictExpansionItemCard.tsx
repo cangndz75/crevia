@@ -39,7 +39,7 @@ export function DistrictExpansionItemCard({
         shadows.soft,
         {
           borderColor: stateStyle.border,
-          backgroundColor: '#FFFEFA',
+          backgroundColor: DISTRICT_EXPANSION_THEME.cardBg,
         },
         pressed && onPress ? styles.pressed : null,
       ]}>
@@ -49,11 +49,11 @@ export function DistrictExpansionItemCard({
         </View>
       ) : null}
 
-      <View style={[styles.iconWrap, { backgroundColor: '#F0F2F0' }]}>
+      <View style={[styles.iconWrap, { backgroundColor: DISTRICT_EXPANSION_THEME.mintSoft }]}>
         <Ionicons
           name={item.state === 'locked' ? 'lock-closed-outline' : 'map-outline'}
           size={compact ? 16 : 18}
-          color="#8A9094"
+          color={DISTRICT_EXPANSION_THEME.tealDark}
         />
       </View>
 
@@ -72,9 +72,9 @@ export function DistrictExpansionItemCard({
 
 const styles = StyleSheet.create({
   card: {
-    minWidth: 148,
-    width: 164,
-    borderRadius: 16,
+    width: '100%',
+    minWidth: 0,
+    borderRadius: 18,
     borderWidth: 1,
     padding: spacing.md,
     gap: 8,
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#2D6A6A',
+    backgroundColor: '#40D7B0',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,

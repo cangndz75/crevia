@@ -1,33 +1,32 @@
 import type { DistrictUnlockBindingState } from '@/core/progression/districtOperationUnlockBindingTypes';
-import { colors } from '@/ui/theme/colors';
 
 export const DISTRICT_EXPANSION_THEME = {
-  cardBg: '#FFFEFA',
-  textPrimary: '#202428',
-  textSecondary: '#6F7478',
-  border: 'rgba(20, 30, 30, 0.08)',
-  tealDark: '#07564F',
-  mintSoft: '#E8F8F5',
+  cardBg: 'rgba(8, 43, 39, 0.84)',
+  textPrimary: '#F6F1DF',
+  textSecondary: '#B7C8C2',
+  border: 'rgba(110, 235, 200, 0.16)',
+  tealDark: '#40D7B0',
+  mintSoft: 'rgba(64, 215, 176, 0.16)',
 } as const;
 
 export function resolveDistrictExpansionStateStyle(state: DistrictUnlockBindingState) {
   switch (state) {
     case 'active':
       return {
-        pillBg: colors.primaryMuted,
-        pillText: colors.primary,
-        border: 'rgba(26,143,138,0.22)',
+        pillBg: DISTRICT_EXPANSION_THEME.mintSoft,
+        pillText: DISTRICT_EXPANSION_THEME.tealDark,
+        border: 'rgba(64, 215, 176, 0.28)',
       };
     case 'next':
       return {
-        pillBg: colors.hubGoldMuted,
-        pillText: colors.hubGoldDark,
-        border: 'rgba(212,160,23,0.28)',
+        pillBg: 'rgba(214, 180, 90, 0.18)',
+        pillText: '#D6B45A',
+        border: 'rgba(214, 180, 90, 0.30)',
       };
     default:
       return {
-        pillBg: colors.backgroundAlt,
-        pillText: colors.textSecondary,
+        pillBg: 'rgba(255, 255, 255, 0.06)',
+        pillText: DISTRICT_EXPANSION_THEME.textSecondary,
         border: DISTRICT_EXPANSION_THEME.border,
       };
   }

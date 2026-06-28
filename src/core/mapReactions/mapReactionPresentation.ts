@@ -66,6 +66,7 @@ export function buildMapReactionLiteInputFromMapContext(params: {
   operationalResources?: unknown;
   tomorrowRisk?: MapReactionLiteInput['tomorrowRisk'];
   cityEcho?: MapReactionLiteInput['cityEcho'];
+  recentDecisionRecord?: MapReactionLiteInput['recentDecisionRecord'];
   districtReportCard?: MapReactionLiteInput['districtReportCard'];
   operationalResourcePresence?: MapReactionLiteInput['operationalResourcePresence'];
   contentPackMeta?: MapReactionLiteInput['contentPackMeta'];

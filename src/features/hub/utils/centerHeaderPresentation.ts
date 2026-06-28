@@ -113,7 +113,7 @@ function resolvePlayerRoleLabel(gameState: GameState): string {
   if (rankLabel) return rankLabel;
   const role = gameState.player.role?.trim();
   if (role) return role;
-  return 'Başkan';
+  return 'Saha Koordinatörü';
 }
 
 function buildDayOneResourceChips(): CenterHeaderResourceChip[] {
@@ -121,7 +121,7 @@ function buildDayOneResourceChips(): CenterHeaderResourceChip[] {
     {
       id: 'day',
       label: 'Gün',
-      valueText: '1',
+      valueText: 'Gün 1',
       tone: 'teal',
       iconKey: 'calendar-outline',
       sourceLabel: 'city.day',
@@ -136,7 +136,7 @@ function buildDayOneResourceChips(): CenterHeaderResourceChip[] {
     },
     {
       id: 'advisor_ready',
-      label: 'Ece',
+      label: 'Durum',
       valueText: 'Hazır',
       tone: 'green',
       iconKey: 'bulb-outline',
@@ -346,7 +346,7 @@ export function buildCenterHeaderSummary(
   const day = input.day;
   const cityName = resolveCityName(input);
   const displayCityName = truncateDisplayText(cityName);
-  const playerName = input.gameState.player.name?.trim() || 'Başkan';
+  const playerName = input.gameState.player.name?.trim() || 'Can';
   const playerRoleLabel = resolvePlayerRoleLabel(input.gameState);
   const levelLabel =
     typeof input.playerLevel === 'number' && input.playerLevel > 0
@@ -355,7 +355,7 @@ export function buildCenterHeaderSummary(
   const resourceChips = buildCenterHeaderResourceChips(input);
   const notification = buildCenterHeaderNotification(input);
 
-  const subtitle = day > 1 ? `Merkez · Gün ${day}` : 'Merkez · Başlangıç';
+  const subtitle = day > 1 ? `Gün ${day} · Operasyon Dönemi` : 'Gün 1 · Başlangıç Dönemi';
 
   const accessibilityLabel = [
     'Crevia Merkez',

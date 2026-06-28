@@ -1,34 +1,31 @@
 import { StyleSheet } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
-import { AuthorityPermissionPreviewPanel } from '@/features/progression/components/authorityPermissionPreview/AuthorityPermissionPreviewPanel';
-import { spacing } from '@/ui/theme/spacing';
+import { GrowthAuthorityProgressCard } from '@/features/progression/components/growth/GrowthAuthorityProgressCard';
+import { GrowthDailyTasksSection } from '@/features/progression/components/growth/GrowthDailyTasksSection';
+import { GrowthNextTargetCard } from '@/features/progression/components/growth/GrowthNextTargetCard';
+import { GrowthRecentAuthoritiesStrip } from '@/features/progression/components/growth/GrowthRecentAuthoritiesStrip';
+import type { GrowthAuthoritiesTabModel } from '@/features/progression/utils/growthScreenPresentation';
+import { growth } from '@/features/progression/theme/growthScreenTokens';
 
 type AuthoritiesTabPanelProps = {
-  authorityState: unknown;
-  pilotDay: number;
-  totalXp?: number;
+  model: GrowthAuthoritiesTabModel;
 };
 
-export function AuthoritiesTabPanel({
-  authorityState,
-  pilotDay,
-  totalXp = 0,
-}: AuthoritiesTabPanelProps) {
+export function AuthoritiesTabPanel({ model }: AuthoritiesTabPanelProps) {
   return (
     <Animated.View entering={FadeIn.duration(260)} style={styles.wrap}>
-      <AuthorityPermissionPreviewPanel
-        authorityState={authorityState}
-        pilotDay={pilotDay}
-        totalXp={totalXp}
-      />
+      <GrowthAuthorityProgressCard model={model.authorityProgress} />
+      <GrowthRecentAuthoritiesStrip items={model.recentAuthorities} />
+      <GrowthNextTargetCard model={model.nextTarget} />
+      <GrowthDailyTasksSection tasks={model.dailyTasks} />
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
-    marginTop: spacing.md,
-    gap: spacing.md,
+    gap: growth.sectionGap,
+    paddingBottom: 8,
   },
 });

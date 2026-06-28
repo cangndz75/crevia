@@ -1,24 +1,30 @@
 import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
+import type { BadgeShowcaseItem } from '@/core/badges/badgeShowcaseTypes';
 import { AuthoritiesTabPanel } from '@/features/progression/components/authorities/AuthoritiesTabPanel';
 import {
   AuthorityTabsPill,
   type AuthorityTabKey,
 } from '@/features/progression/components/authorities/AuthorityTabsPill';
-import { BadgeShowcasePanel } from '@/features/progression/components/badgeShowcase/BadgeShowcasePanel';
-import { DistrictExpansionBindingPanel } from '@/features/progression/components/districtExpansion/DistrictExpansionBindingPanel';
-import { CollectionProgressHeroCard } from '@/features/progression/components/authorities/CollectionProgressHeroCard';
-import {
-  AUTHORITY_COLLECTION_THEME,
-  buildCollectionHeroModel,
-} from '@/features/progression/utils/authorityCollectionPresentation';
-import { deriveAuthoritiesScreenModel } from '@/features/progression/utils/authoritiesScreenModel';
+import { BadgeShowcaseDetailModal } from '@/features/progression/components/badgeShowcase/BadgeShowcaseDetailModal';
+import { BadgeShowcaseItemCard } from '@/features/progression/components/badgeShowcase/BadgeShowcaseItemCard';
+import { DistrictExpansionItemCard } from '@/features/progression/components/districtExpansion/DistrictExpansionItemCard';
+import { GrowthBadgeCollectionHero } from '@/features/progression/components/growth/GrowthBadgeCollectionHero';
+import { GrowthNextUnlockCard } from '@/features/progression/components/growth/GrowthNextUnlockCard';
+import { GrowthScreenHeader } from '@/features/progression/components/growth/GrowthScreenHeader';
+import { GrowthSectionHeader } from '@/features/progression/components/growth/GrowthSectionHeader';
+import { GrowthUnlockNetworkHero } from '@/features/progression/components/growth/GrowthUnlockNetworkHero';
+import { growth } from '@/features/progression/theme/growthScreenTokens';
+import { buildGrowthScreenPresentation } from '@/features/progression/utils/growthScreenPresentation';
+import { useGameStatus } from '@/store/gameSelectors';
 import { useGameStore } from '@/store/useGameStore';
 import { GameScreenShell } from '@/ui/components/GameScreenShell';
 import { spacing } from '@/ui/theme/spacing';
 
 export function ProgressionScreen() {
+  const status = useGameStatus();
   const totalXp = useGameStore((s) => s.playerProgress?.totalXp ?? 0);
   const pilotDay = useGameStore((s) => s.gameState.pilot.currentPilotDay);
   const badgeState = useGameStore((s) => s.gameState.pilot.badgeState);
@@ -27,53 +33,93 @@ export function ProgressionScreen() {
   const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
   const operationSignals = useGameStore((s) => s.operationSignals);
   const socialPulse = useGameStore((s) => s.socialPulseState);
+  const dailyGoalState = useGameStore((s) => s.dailyGoalState);
   const [tab, setTab] = useState<AuthorityTabKey>('authorities');
+  const [selectedBadge, setSelectedBadge] = useState<BadgeShowcaseItem | null>(null);
 
-  const model = useMemo(
-    () => deriveAuthoritiesScreenModel(totalXp, pilotDay),
-    [totalXp, pilotDay],
-  );
-
-  const heroModel = useMemo(
+  const presentation = useMemo(
     () =>
-      buildCollectionHeroModel(badgeState, pilotDay, {
-        collected: model.collectionCollected,
-        total: model.collectionTotal,
-        progress: model.collectionProgress,
+      buildGrowthScreenPresentation({
+        totalXp,
+        pilotDay,
+        gameDay,
+        playerName: status.playerName,
+        role: status.role,
+        level: status.level,
+        metaLine: `${status.currentDay}. Gün · ${status.selectedDistrictName}`,
+        resourceLabel: status.budgetFormatted,
+        xp: status.xp,
+        xpTarget: status.xpTarget,
+        xpProgress: status.xpProgress,
+        authorityState,
+        badgeState,
+        dailyGoalState,
+        mainOperationSeason,
+        operationSignals,
+        socialPulse,
       }),
-    [badgeState, pilotDay, model.collectionCollected, model.collectionProgress, model.collectionTotal],
+    [
+      authorityState,
+      badgeState,
+      dailyGoalState,
+      gameDay,
+      mainOperationSeason,
+      operationSignals,
+      pilotDay,
+      socialPulse,
+      status,
+      totalXp,
+    ],
   );
-
-  const showCollectionHero = tab !== 'authorities';
 
   return (
     <GameScreenShell
-      screenTitle="Başarılar"
-      backgroundColor={AUTHORITY_COLLECTION_THEME.screenBg}
-      contentStyle={styles.content}>
+      headerVariant="none"
+      backgroundColor={growth.canvas}
+      contentStyle={styles.content}
+      reserveTabBarInset>
+      <GrowthScreenHeader model={presentation.header} />
+
       <View style={styles.tabBarSlot}>
         <AuthorityTabsPill active={tab} onChange={setTab} />
       </View>
 
-      {showCollectionHero ? <CollectionProgressHeroCard {...heroModel} /> : null}
-
       {tab === 'authorities' ? (
-        <AuthoritiesTabPanel
-          authorityState={authorityState}
-          pilotDay={pilotDay}
-          totalXp={totalXp}
-        />
+        <AuthoritiesTabPanel model={presentation.authoritiesTab} />
       ) : tab === 'badges' ? (
-        <BadgeShowcasePanel badgeState={badgeState} pilotDay={pilotDay} />
+        <Animated.View entering={FadeIn.duration(280)} style={styles.tabPanel}>
+          <GrowthBadgeCollectionHero {...presentation.badgesTab.hero} />
+          <GrowthSectionHeader title="Hedef Rozetler" />
+          <View style={styles.badgeGrid}>
+            {presentation.badgesTab.badgeItems.map((item) => (
+              <BadgeShowcaseItemCard
+                key={item.id}
+                item={item}
+                grid
+                onPress={setSelectedBadge}
+              />
+            ))}
+          </View>
+          <BadgeShowcaseDetailModal
+            item={selectedBadge}
+            visible={selectedBadge != null}
+            onClose={() => setSelectedBadge(null)}
+          />
+        </Animated.View>
       ) : (
-        <DistrictExpansionBindingPanel
-          currentDay={gameDay}
-          pilotDay={pilotDay}
-          authorityState={authorityState}
-          mainOperationSeason={mainOperationSeason}
-          operationSignals={operationSignals}
-          socialPulse={socialPulse}
-        />
+        <Animated.View entering={FadeIn.duration(280)} style={styles.tabPanel}>
+          <GrowthUnlockNetworkHero {...presentation.expansionsTab.hero} />
+          <GrowthSectionHeader
+            title="Mahalle Açılımları"
+            countLabel={presentation.expansionsTab.countLabel}
+          />
+          <View style={styles.expansionList}>
+            {presentation.expansionsTab.districtItems.map((item) => (
+              <DistrictExpansionItemCard key={item.id} item={item} />
+            ))}
+          </View>
+          <GrowthNextUnlockCard model={presentation.expansionsTab.nextUnlock} />
+        </Animated.View>
       )}
     </GameScreenShell>
   );
@@ -81,12 +127,26 @@ export function ProgressionScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    gap: 0,
+    gap: growth.sectionGap,
     paddingTop: spacing.xs,
   },
   tabBarSlot: {
     position: 'relative',
     zIndex: 20,
     elevation: 20,
+  },
+  tabPanel: {
+    gap: growth.sectionGap,
+    paddingBottom: spacing.xl,
+  },
+  badgeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: spacing.sm,
+    columnGap: spacing.sm,
+  },
+  expansionList: {
+    gap: 10,
   },
 });

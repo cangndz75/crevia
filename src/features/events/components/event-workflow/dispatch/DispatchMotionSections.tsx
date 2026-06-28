@@ -6,6 +6,7 @@ import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import type {
   EventDispatchAdvisorComment,
   EventDispatchCompatibility,
+  EventDispatchReadinessRow,
   EventDispatchRoutePreview,
   EventDispatchSelectedPlanSummary,
 } from '@/features/events/utils/eventDispatchPhasePresentation';
@@ -32,6 +33,12 @@ const REASON_TONE_BG: Record<'positive' | 'neutral' | 'warning', string> = {
   positive: 'rgba(62, 158, 106, 0.12)',
   neutral: 'rgba(11, 107, 97, 0.08)',
   warning: 'rgba(199, 137, 37, 0.14)',
+};
+
+const READINESS_TONE: Record<EventDispatchReadinessRow['tone'], string> = {
+  positive: eventDetail.success,
+  neutral: eventDetail.teal,
+  warning: eventDetail.orange,
 };
 
 const ADVISOR_TONE: Record<
@@ -63,6 +70,8 @@ function resolveIcon(iconKey: string): IconName {
     'checkmark-circle-outline': 'checkmark-circle-outline',
     'alert-circle-outline': 'alert-circle-outline',
     'briefcase-outline': 'briefcase-outline',
+    'wallet-outline': 'wallet-outline',
+    'chatbubbles-outline': 'chatbubbles-outline',
     'ellipse-outline': 'ellipse-outline',
   };
   return known[iconKey] ?? 'ellipse-outline';
@@ -154,6 +163,59 @@ export function DispatchCompatibilityStrip({
   );
 }
 
+type DispatchReadinessPanelProps = {
+  rows: EventDispatchReadinessRow[];
+  reducedMotion?: boolean;
+};
+
+export function DispatchReadinessPanel({
+  rows,
+  reducedMotion = false,
+}: DispatchReadinessPanelProps) {
+  return (
+    <CreviaMotionView
+      motionKind="card_enter"
+      surface="shared"
+      index={1}
+      reducedMotion={reducedMotion}
+      style={[styles.readinessCard, shadows.soft]}>
+      <View style={styles.readinessHeader}>
+        <Text style={styles.readinessTitle} numberOfLines={1}>
+          Operasyon hazırlığı
+        </Text>
+        <Text style={styles.readinessMeta} numberOfLines={1}>
+          kaynak kontrolü
+        </Text>
+      </View>
+      <View style={styles.readinessRows}>
+        {rows.map((row) => {
+          const color = READINESS_TONE[row.tone];
+          return (
+            <View key={row.id} style={styles.readinessRow}>
+              <View style={[styles.readinessIcon, { backgroundColor: `${color}18` }]}>
+                <Ionicons name={resolveIcon(row.iconKey)} size={14} color={color} />
+              </View>
+              <View style={styles.readinessCopy}>
+                <Text style={styles.readinessLabel} numberOfLines={1}>
+                  {row.label}
+                </Text>
+                <Text style={styles.readinessReason} numberOfLines={1}>
+                  {row.reason}
+                </Text>
+              </View>
+              <View style={[styles.readinessStatus, { backgroundColor: `${color}18` }]}>
+                <Text style={[styles.readinessStatusText, { color }]} numberOfLines={1}>
+                  {row.statusLabel}
+                </Text>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    </CreviaMotionView>
+  );
+}
+
 type DispatchRouteStepStripProps = {
   route: EventDispatchRoutePreview;
   highlight?: boolean;
@@ -185,6 +247,23 @@ export function DispatchRouteStepStrip({
             {route.estimatedLabel}
           </Text>
         ) : null}
+      </View>
+      <View style={styles.pathStrip}>
+        {route.pathLabels.map((label, index) => (
+          <View key={`${label}-${index}`} style={styles.pathStep}>
+            <Text
+              style={[
+                styles.pathLabel,
+                index === route.pathLabels.length - 1 && styles.pathLabelActive,
+              ]}
+              numberOfLines={1}>
+              {label}
+            </Text>
+            {index < route.pathLabels.length - 1 ? (
+              <Ionicons name="chevron-forward" size={12} color={eventDetail.textMuted} />
+            ) : null}
+          </View>
+        ))}
       </View>
       <View style={styles.routeSteps}>
         {route.steps.map((step, index) => (
@@ -339,6 +418,76 @@ const styles = StyleSheet.create({
     color: eventDetail.textDark,
     flexShrink: 1,
   },
+  readinessCard: {
+    marginHorizontal: eventDetail.screenPadding,
+    backgroundColor: eventDetail.card,
+    borderRadius: eventDetail.smallRadius,
+    padding: 12,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(6, 63, 59, 0.06)',
+  },
+  readinessHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  readinessTitle: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 13,
+    fontWeight: '800',
+    color: eventDetail.textDark,
+  },
+  readinessMeta: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: eventDetail.textMuted,
+  },
+  readinessRows: {
+    gap: 7,
+  },
+  readinessRow: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  readinessIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  readinessCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  readinessLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: eventDetail.textDark,
+  },
+  readinessReason: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: eventDetail.textMuted,
+  },
+  readinessStatus: {
+    minWidth: 56,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    alignItems: 'center',
+  },
+  readinessStatusText: {
+    fontSize: 10,
+    fontWeight: '900',
+  },
   routeCard: {
     marginHorizontal: eventDetail.screenPadding,
     backgroundColor: eventDetail.card,
@@ -371,6 +520,31 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: eventDetail.tealDark,
     flexShrink: 1,
+  },
+  pathStrip: {
+    minHeight: 32,
+    borderRadius: 14,
+    backgroundColor: eventDetail.mintSoft,
+    paddingHorizontal: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  pathStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  pathLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: eventDetail.textMuted,
+    maxWidth: 96,
+  },
+  pathLabelActive: {
+    color: eventDetail.tealDark,
   },
   routeSteps: {
     flexDirection: 'row',

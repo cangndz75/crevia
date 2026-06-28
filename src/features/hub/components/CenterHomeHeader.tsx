@@ -240,9 +240,9 @@ export function CenterHomeHeader({ header }: { header: CenterHeaderSummary }) {
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingBottom: 8,
     overflow: 'hidden',
-    gap: 10,
+    gap: 8,
   },
   skylineOne: {
     position: 'absolute',
@@ -330,13 +330,13 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   avatarWrap: {
-    width: 56,
-    height: 56,
+    width: 48,
+    height: 48,
     flexShrink: 0,
   },
   avatarImage: {
-    width: 56,
-    height: 56,
+    width: 48,
+    height: 48,
   },
   levelBadge: {
     position: 'absolute',
@@ -401,8 +401,8 @@ const styles = StyleSheet.create({
     flexBasis: '30%',
     borderRadius: 14,
     borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 7,
+    paddingHorizontal: 7,
+    paddingVertical: 6,
     gap: 1,
     alignItems: 'flex-start',
   },

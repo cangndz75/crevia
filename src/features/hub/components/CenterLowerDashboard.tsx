@@ -1,14 +1,14 @@
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 
-import { CenterStatusCard } from '@/features/hub/components/CenterStatusCard';
 import type { CenterHomePresentation } from '@/features/hub/utils/centerHomePresentation';
 import { isCenterModuleRenderable } from '@/features/hub/utils/centerHomePresentation';
-import { buildCenterLowerDashboardPresentation } from '@/features/hub/utils/centerLowerDashboardPresentation';
+import { CENTER_COMPACT_BREAKPOINT } from '@/features/hub/utils/centerLayoutTokens';
 
-import { DailyBonusCard } from './DailyBonusCard';
+import { CenterDailyRewardMiniStrip } from './CenterDailyRewardMiniStrip';
+import { CenterNeighborhoodEventsStrip } from './CenterNeighborhoodEventsStrip';
+import { CenterQuickActionsTiles } from './CenterQuickActionsTiles';
+import { CenterStrategicPulseCompactCard } from './CenterStrategicPulseCompactCard';
 import { HubActiveTaskCardStack } from './HubActiveTaskCardStack';
-import { SignalStatusCard } from './SignalStatusCard';
-import { TaskFlowCard } from './TaskFlowCard';
 
 export { ContinueOperationCard } from './ContinueOperationCard';
 export { DailyBonusCard } from './DailyBonusCard';
@@ -20,84 +20,56 @@ type CenterLowerDashboardProps = {
   reducedMotion?: boolean;
 };
 
-/** Merkez alt bölüm: ana görev, sinyal + merkez durumu, görev akışı, günlük seri. */
+/** Alt merkez bölümü — HubReferenceHome ana kompozisyonu kullanır; export uyumluluğu için tutulur. */
 export function CenterLowerDashboard({
   presentation,
   reducedMotion = false,
 }: CenterLowerDashboardProps) {
   const { width } = useWindowDimensions();
-  const compactStatusCards = width < 420;
-  const model = buildCenterLowerDashboardPresentation(presentation);
+  const compact = width < CENTER_COMPACT_BREAKPOINT;
+  const hasActiveTarget = isCenterModuleRenderable(presentation.activeTarget.visibility);
 
   return (
     <View style={styles.root}>
-      {isCenterModuleRenderable(presentation.activeTarget.visibility) ? (
+      {hasActiveTarget ? null : (
         <HubActiveTaskCardStack
           activeTarget={presentation.activeTarget}
           visibility={presentation.activeTarget.visibility}
           reducedMotion={reducedMotion}
         />
+      )}
+
+      <CenterStrategicPulseCompactCard
+        presentation={presentation.strategicPulse}
+        compact={compact}
+        reducedMotion={reducedMotion}
+      />
+
+      {presentation.neighborhoodEvents.visibility === 'visible' ? (
+        <CenterNeighborhoodEventsStrip
+          presentation={presentation.neighborhoodEvents}
+          compact={compact}
+          reducedMotion={reducedMotion}
+        />
       ) : null}
 
-      <View style={styles.statusRow}>
-        <View style={styles.statusCell}>
-          <SignalStatusCard
-            title={model.signal.title}
-            statusTitle={model.signal.statusTitle}
-            statusSubtitle={model.signal.statusSubtitle}
-            ctaLabel={model.signal.ctaLabel}
-            signalStrength={model.signal.signalStrength}
-            authorityLine={model.signal.authorityLine}
-            route={model.signal.route}
-            compact={compactStatusCards}
-            reducedMotion={reducedMotion}
-          />
-        </View>
-        <View style={styles.statusCell}>
-          <CenterStatusCard
-            title={model.merkezStatus.title}
-            statusTitle={model.merkezStatus.statusTitle}
-            statusSubtitle={model.merkezStatus.statusSubtitle}
-            ctaLabel={model.merkezStatus.ctaLabel}
-            route={model.merkezStatus.route}
-            compact={compactStatusCards}
-            reducedMotion={reducedMotion}
-          />
-        </View>
-      </View>
+      {presentation.quickCommands.visibility === 'visible' ? (
+        <CenterQuickActionsTiles
+          presentation={presentation.quickCommands}
+          reducedMotion={reducedMotion}
+        />
+      ) : null}
 
-      <TaskFlowCard
-        steps={model.taskFlow.steps}
-        ctaLabel={model.taskFlow.ctaLabel}
-        route={model.taskFlow.route}
-        reducedMotion={reducedMotion}
-      />
-
-      <DailyBonusCard
-        title={model.dailyBonus.title}
-        subtitle={model.dailyBonus.subtitle}
-        nodes={model.dailyBonus.nodes}
-        rewardAmount={model.dailyBonus.rewardAmount}
-        currentDay={model.dailyBonus.currentDay}
-        reducedMotion={reducedMotion}
-      />
+      {presentation.hubGameplay.dailyRewardMini && !compact ? (
+        <CenterDailyRewardMiniStrip reward={presentation.hubGameplay.dailyRewardMini} />
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
-    gap: 12,
-    minWidth: 0,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: 10,
-    minWidth: 0,
-  },
-  statusCell: {
-    flex: 1,
+    gap: 14,
     minWidth: 0,
   },
 });

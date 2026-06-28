@@ -1,4 +1,5 @@
 import { useRouter, type Href } from 'expo-router';
+import { Image } from 'expo-image';
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
@@ -23,6 +24,8 @@ import { buildProfileReferenceViewModel, PROFILE_REFERENCE_THEME } from '@/featu
 import { useGameStatus } from '@/store/gameSelectors';
 import { useGameStore } from '@/store/useGameStore';
 import { spacing } from '@/ui/theme/spacing';
+
+const cityBackdrop = require('@/assets/districts/central/district_central_overview_01.png');
 
 export function ProfileScreen() {
   const router = useRouter();
@@ -64,15 +67,25 @@ export function ProfileScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPadding }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
-        <View style={styles.headerSlot}>
-          <ProfileBrandHeader notificationCount={referenceModel.identity.notificationCount} />
+        <View style={styles.heroBand}>
+          <Image
+            source={cityBackdrop}
+            style={styles.heroBackdrop}
+            contentFit="cover"
+            accessibilityIgnoresInvertColors
+          />
+          <View style={styles.heroFade} />
+
+          <View style={styles.headerSlot}>
+            <ProfileBrandHeader notificationCount={referenceModel.identity.notificationCount} />
+          </View>
+
+          <Animated.View entering={FadeInDown.duration(320).delay(20)} style={styles.identitySlot}>
+            <ProfileIdentitySection identity={referenceModel.identity} />
+          </Animated.View>
         </View>
 
         <View style={styles.body}>
-          <Animated.View entering={FadeInDown.duration(320).delay(20)}>
-            <ProfileIdentitySection identity={referenceModel.identity} />
-          </Animated.View>
-
           <Animated.View entering={FadeIn.duration(280).delay(60)}>
             <ProfileSummaryCard summary={referenceModel.summary} />
           </Animated.View>
@@ -95,6 +108,7 @@ export function ProfileScreen() {
           <Animated.View entering={FadeIn.duration(280).delay(150)}>
             <ProfileRoadmapSection
               nodes={referenceModel.roadmap}
+              summary={referenceModel.roadmapSummary}
               onSeeFullRoadmapPress={() => router.push('/progression' as Href)}
             />
           </Animated.View>
@@ -115,14 +129,35 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
-  headerSlot: {
+  heroBand: {
+    position: 'relative',
+    overflow: 'hidden',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xs,
+    paddingBottom: 12,
+    minHeight: 386,
+  },
+  heroBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.5,
+  },
+  heroFade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(252, 249, 242, 0.72)',
+  },
+  headerSlot: {
+    position: 'relative',
+    zIndex: 1,
     paddingBottom: spacing.sm,
+  },
+  identitySlot: {
+    position: 'relative',
+    zIndex: 1,
   },
   body: {
     paddingHorizontal: spacing.lg,
     gap: 12,
+    paddingTop: 2,
   },
   dualRow: {
     flexDirection: 'row',

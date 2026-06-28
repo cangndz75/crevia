@@ -17,6 +17,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { gameUi } from '@/ui/theme/gameUiTokens';
+
 const NAVBAR_BG = require("@/assets/bt1.png");
 const MEDALLION = require("@/assets/bt2.png");
 
@@ -50,7 +52,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   },
   {
     routeName: "progression",
-    label: "Başarılar",
+    label: "Gelişim",
     icon: require("@/assets/bt4.png"),
   },
   {
@@ -59,8 +61,6 @@ const NAV_ITEMS: readonly NavItem[] = [
     icon: require("@/assets/bt7.png"),
   },
 ] as const;
-
-import { gameUi } from '@/ui/theme/gameUiTokens';
 
 const TAB_ANIMATION_MS = 150;
 const MIN_HIT_SIZE = 44;
@@ -257,6 +257,9 @@ export function CreviaBottomTabBar({
     });
     return map;
   }, [state.routes]);
+  const activeRouteName = state.routes[state.index]?.name;
+  const visualActiveRouteName =
+    activeRouteName === "profile" ? "progression" : activeRouteName;
 
   if (shouldHideTabBar(state)) {
     return null;
@@ -306,7 +309,8 @@ export function CreviaBottomTabBar({
           }
 
           const route = state.routes[routeIndex];
-          const focused = state.index === routeIndex;
+          const routeIsActive = state.index === routeIndex;
+          const focused = visualActiveRouteName === item.routeName;
 
           const onPress = () => {
             const event = navigation.emit({
@@ -314,7 +318,7 @@ export function CreviaBottomTabBar({
               target: route.key,
               canPreventDefault: true,
             });
-            if (!focused && !event.defaultPrevented) {
+            if (!routeIsActive && !event.defaultPrevented) {
               navigation.navigate(route.name, route.params);
             }
           };

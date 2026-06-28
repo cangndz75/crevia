@@ -44,12 +44,18 @@ export type EventFieldAssignmentEffect = {
   tone: 'positive' | 'neutral' | 'warning';
 };
 
+export type EventFieldResourceRow = {
+  id: 'team' | 'vehicle' | 'risk' | 'impact';
+  label: string;
+  value: string;
+  tone: 'positive' | 'neutral' | 'warning';
+  iconKey: string;
+};
+
 export type EventFieldTimelineStepId =
   | 'departed'
-  | 'route'
   | 'intervention'
-  | 'stabilized'
-  | 'completed';
+  | 'first_impact';
 
 export type EventFieldTimelineStepState = 'done' | 'current' | 'next' | 'blocked';
 
@@ -114,6 +120,7 @@ export type EventFieldPhasePresentation = {
   operationStatus: EventFieldOperationStatus;
   selectedPlan: EventFieldSelectedPlanSummary;
   assignmentEffect: EventFieldAssignmentEffect;
+  resourceRows: EventFieldResourceRow[];
   timeline: EventFieldTimeline;
   microDecision?: EventFieldMicroDecisionPresentation;
   advisorComment: EventFieldAdvisorComment;
@@ -142,11 +149,9 @@ const TIMELINE_STEP_DEFS: Array<{
   label: string;
   iconKey: string;
 }> = [
-  { id: 'departed', label: 'Ekip sahaya ulaştı', iconKey: 'people-outline' },
-  { id: 'route', label: 'Rota kontrol edildi', iconKey: 'git-network-outline' },
+  { id: 'departed', label: 'Ekip yolda', iconKey: 'people-outline' },
   { id: 'intervention', label: 'Müdahale başladı', iconKey: 'construct-outline' },
-  { id: 'stabilized', label: 'Alan dengeleniyor', iconKey: 'shield-checkmark-outline' },
-  { id: 'completed', label: 'Operasyon tamamlanıyor', iconKey: 'checkmark-circle-outline' },
+  { id: 'first_impact', label: 'İlk etki alındı', iconKey: 'shield-checkmark-outline' },
 ];
 
 const PLAN_FIELD_EFFECT: Record<EventPlanStrategyId, string> = {
@@ -288,10 +293,10 @@ function buildTimeline(
     helperText = 'Mikro karar bekleniyor · timeline duraklatıldı';
   } else if (interactionState === 'completed') {
     helperText = 'Operasyon tamamlandı · sonucu görüntüleyebilirsin';
-  } else if (currentStepId === 'route') {
-    helperText = 'Rota ve kaynak kullanımı izleniyor';
   } else if (currentStepId === 'intervention') {
     helperText = 'Saha müdahalesi devam ediyor';
+  } else if (currentStepId === 'first_impact') {
+    helperText = 'İlk saha etkisi alınıyor';
   }
 
   if (event) {
@@ -417,6 +422,59 @@ function buildFieldCta(
   };
 }
 
+function buildFieldResourceRows(
+  input: BuildEventFieldPhasePresentationInput,
+  assignmentEffect: EventFieldAssignmentEffect,
+  selectedPlan: EventFieldSelectedPlanSummary,
+): EventFieldResourceRow[] {
+  const teamTone =
+    assignmentEffect.scoreBand === 'high'
+      ? 'positive'
+      : assignmentEffect.scoreBand === 'low'
+        ? 'warning'
+        : 'neutral';
+  const vehicleTone: EventFieldResourceRow['tone'] = input.assignment?.vehicleType
+    ? teamTone === 'warning'
+      ? 'neutral'
+      : 'positive'
+    : 'warning';
+  const riskTone: EventFieldResourceRow['tone'] =
+    input.event.riskLevel === 'critical' || input.event.riskLevel === 'high'
+      ? 'warning'
+      : 'neutral';
+
+  return [
+    {
+      id: 'team',
+      label: 'Ekip',
+      value: assignmentEffect.label,
+      tone: teamTone,
+      iconKey: 'people-outline',
+    },
+    {
+      id: 'vehicle',
+      label: 'Araç',
+      value: input.assignment?.vehicleType ? 'Sahada' : 'Seçim bekliyor',
+      tone: vehicleTone,
+      iconKey: 'car-outline',
+    },
+    {
+      id: 'risk',
+      label: 'Kritik risk',
+      value: riskTone === 'warning' ? 'Yakından izleniyor' : 'Kontrol altında',
+      tone: riskTone,
+      iconKey: 'alert-circle-outline',
+    },
+    {
+      id: 'impact',
+      label: 'Beklenen etki',
+      value: selectedPlan.effectLine,
+      tone: selectedPlan.tone === 'warning' ? 'warning' : 'positive',
+      iconKey: 'pulse-outline',
+    },
+  ];
+}
+
 export function mapMicroDecisionCardToFieldPresentation(
   card: MicroDecisionCardModel,
 ): EventFieldMicroDecisionPresentation {
@@ -465,6 +523,7 @@ export function buildEventFieldPhasePresentation(
     isDay1LearningEvent: input.isDay1LearningEvent,
     recentVarietyProfiles: input.recentVarietyProfiles,
   });
+  const resourceRows = buildFieldResourceRows(input, assignmentEffect, selectedPlan);
   const advisorComment = buildEventFieldAdvisorComment(
     input,
     assignmentEffect,
@@ -481,6 +540,7 @@ export function buildEventFieldPhasePresentation(
     operationStatus: resolveOperationStatus(interactionState),
     selectedPlan,
     assignmentEffect,
+    resourceRows,
     timeline,
     microDecision: input.microDecision ?? undefined,
     advisorComment,

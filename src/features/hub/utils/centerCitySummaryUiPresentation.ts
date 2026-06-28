@@ -116,6 +116,15 @@ function resolveHelperText(metric: CenterCitySummaryMetric, accent: CenterSummar
   if (helper && helper.length <= 28) {
     return helper;
   }
+  if (metric.id === 'reputation' || metric.id === 'trust' || metric.id === 'authority') {
+    return resolvePercent(metric) >= 75 ? 'Güçlü' : 'Dikkat istiyor';
+  }
+  if (metric.id === 'happiness') {
+    return resolvePercent(metric) >= 75 ? 'Dengeli' : 'Kırılgan';
+  }
+  if (metric.id === 'activeOperations' || metric.id === 'risk') {
+    return resolvePercent(metric) >= 75 ? 'Operasyona uygun' : 'Hazırlık istiyor';
+  }
   return DEFAULT_HELPERS[accent];
 }
 

@@ -177,6 +177,8 @@ function collectGuardLines(input: MapReactionLiteInput): string[] {
     input.cityEcho?.socialLine ?? '',
     input.cityEcho?.reportLine ?? '',
     input.cityEcho?.eceLine ?? '',
+    input.recentDecisionRecord?.eventTitle ?? '',
+    input.recentDecisionRecord?.decisionLabel ?? '',
   ].filter(Boolean);
 }
 
@@ -200,6 +202,48 @@ function buildDrafts(input: MapReactionLiteInput, selectedId: MapDistrictId): Re
   const guard = collectGuardLines(input);
   const drafts: ReactionDraft[] = [];
   const selectedBoost = (districtId: MapDistrictId) => districtId === selectedId;
+
+  const recentDecision = input.recentDecisionRecord;
+  if (recentDecision?.eventId) {
+    const recentDistrict =
+      normalizeMapDistrictId(recentDecision.neighborhoodId ?? selectedId) ?? selectedId;
+    const publicDelta =
+      recentDecision.appliedEffects.publicSatisfaction ??
+      recentDecision.appliedEffects.trust ??
+      0;
+    const riskDelta = recentDecision.appliedEffects.risk ?? 0;
+    const budgetCost = recentDecision.appliedCosts?.budget ?? 0;
+    const vehicleCost = recentDecision.appliedCosts?.vehicleUsage ?? 0;
+    const kind: MapDistrictReactionKind =
+      riskDelta < 0 || publicDelta > 0
+        ? budgetCost > 2500 || vehicleCost > 0
+          ? 'route_pressure_marker'
+          : 'trust_pulse'
+        : riskDelta > 0 || publicDelta < 0
+          ? 'risk_ring'
+          : 'journal_trace';
+    const line =
+      kind === 'trust_pulse'
+        ? `${districtName(recentDistrict)} karar sonrası güven toparladı.`
+        : kind === 'risk_ring'
+          ? `${districtName(recentDistrict)} çevresinde karar baskısı sürüyor.`
+          : kind === 'route_pressure_marker'
+            ? `${districtName(recentDistrict)} kaynak ve araç baskısını haritaya taşıdı.`
+            : `${districtName(recentDistrict)} üzerinde son karar izi görünüyor.`;
+
+    pushIfUnique(
+      drafts,
+      buildReactionDraft({
+        districtId: recentDistrict,
+        kind,
+        sourceKind: 'city_echo',
+        shortLine: line,
+        scoreBoost: 16,
+        selectedBoost: selectedBoost(recentDistrict),
+      }),
+      guard,
+    );
+  }
 
   const carry = input.carryOverMemory;
   if (carry?.visible !== false && carry?.summary) {

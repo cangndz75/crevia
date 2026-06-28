@@ -11,10 +11,16 @@ type FloatingEventStatsProps = {
 const STAT_ITEMS = [
   { key: 'critical' as const, label: 'Kritik', icon: 'shield' as const, color: olaylar.critical },
   { key: 'urgent' as const, label: 'Acil', icon: 'notifications' as const, color: olaylar.urgent },
-  { key: 'active' as const, label: 'Aktif', icon: 'flash' as const, color: olaylar.urgent },
-  { key: 'resolved' as const, label: 'Çözüldü', icon: 'checkmark-circle' as const, color: olaylar.success },
+  { key: 'active' as const, label: 'Aktif', icon: 'flash' as const, color: olaylar.active },
+  {
+    key: 'resolved' as const,
+    label: 'Çözüldü',
+    icon: 'checkmark-circle' as const,
+    color: olaylar.success,
+  },
 ];
 
+/** @deprecated OlaylarEventMetricsRow kullanın. Geriye dönük export korunur. */
 export function FloatingEventStats({ stats }: FloatingEventStatsProps) {
   return (
     <View style={styles.row} pointerEvents="none">
@@ -59,7 +65,7 @@ const styles = StyleSheet.create({
     color: olaylar.text,
   },
   label: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '600',
     color: olaylar.textMuted,
   },

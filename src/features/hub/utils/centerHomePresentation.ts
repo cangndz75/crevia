@@ -1,5 +1,6 @@
 import type { HubQuickActionState } from '@/core/hubQuickActions/hubQuickActionTypes';
 import type { CityJournalHubPresentation } from '@/core/cityJournal';
+import type { DecisionRecord } from '@/core/models/DecisionRecord';
 import type { DailyGoalState } from '@/core/dailyGoals/dailyGoalTypes';
 import type { HubCardVisibilityModel } from '@/core/onboarding/firstTenMinutesTypes';
 import { buildHubCardVisibilityModel } from '@/core/onboarding/firstTenMinutesPresentation';
@@ -59,6 +60,19 @@ import {
 import {
   applyCenterVisibilityPolicy,
 } from './centerStatePolicy';
+import {
+  buildCenterHubGameplayPresentation,
+  type CenterAdvisorMiniDirectivePresentation,
+  type CenterDistrictFocusPresentation,
+  type CenterHubGameplayPresentation,
+  type CenterNeighborhoodEventsPresentation,
+  type CenterNextActionsPresentation,
+  type CenterNextTargetHeroPresentation,
+  type CenterQuickCommandsPresentation,
+  type CenterRecentImpactSummaryPresentation,
+  type CenterStrategicPulsePresentation,
+  type CenterUnlockPreviewMiniPresentation,
+} from './centerHubGameplayPresentation';
 import {
   buildMemoryFollowUpPresentationContext,
   type MemoryFollowUpPresentationContext,
@@ -123,9 +137,7 @@ export type CenterHomeVisibilityFlags = Record<
   CenterHomeVisibilityState
 >;
 
-export type CenterHomePresentation = {
-  moduleOrder: readonly CenterHomeModuleKey[];
-  visibilityFlags: CenterHomeVisibilityFlags;
+export type CenterHomeCoreSections = {
   headerSummary: CenterHomeHeaderSummary;
   citySummary: CenterHomeCitySummary;
   dailyReward: CenterDailyReward;
@@ -138,6 +150,34 @@ export type CenterHomePresentation = {
   recommendedPlan: CenterRecommendedPlan;
   continuationCards: CenterContinuationCards;
 };
+
+export type CenterHomePresentation = CenterHomeCoreSections & {
+  moduleOrder: readonly CenterHomeModuleKey[];
+  visibilityFlags: CenterHomeVisibilityFlags;
+  nextTargetHero: CenterNextTargetHeroPresentation;
+  nextActions: CenterNextActionsPresentation;
+  strategicPulse: CenterStrategicPulsePresentation;
+  neighborhoodEvents: CenterNeighborhoodEventsPresentation;
+  quickCommands: CenterQuickCommandsPresentation;
+  recentImpactSummary: CenterRecentImpactSummaryPresentation;
+  advisorMiniDirective: CenterAdvisorMiniDirectivePresentation;
+  districtFocus: CenterDistrictFocusPresentation;
+  unlockPreviewMini: CenterUnlockPreviewMiniPresentation;
+  hubGameplay: CenterHubGameplayPresentation;
+};
+
+export type {
+  CenterNextActionsPresentation,
+  CenterNextTargetHeroPresentation,
+  CenterStrategicPulsePresentation,
+  CenterNeighborhoodEventsPresentation,
+  CenterQuickCommandsPresentation,
+  CenterHubGameplayPresentation,
+  CenterRecentImpactSummaryPresentation,
+  CenterAdvisorMiniDirectivePresentation,
+  CenterDistrictFocusPresentation,
+  CenterUnlockPreviewMiniPresentation,
+} from './centerHubGameplayPresentation';
 
 export type BuildCenterHomePresentationInput = {
   gameState: GameState;
@@ -160,6 +200,7 @@ export type BuildCenterHomePresentationInput = {
   budgetDeltaLabel?: string | null;
   playerLevel?: number;
   selectedDistrictName?: string;
+  recentDecisionRecord?: DecisionRecord | null;
 };
 
 
@@ -456,7 +497,7 @@ function buildPortfolioSurfaceSection(
 }
 
 function buildVisibilityFlags(
-  sections: Omit<CenterHomePresentation, 'moduleOrder' | 'visibilityFlags'>,
+  sections: CenterHomeCoreSections,
   day: number,
 ): CenterHomeVisibilityFlags {
   const raw: CenterHomeVisibilityFlags = {
@@ -602,7 +643,7 @@ export function buildCenterHomePresentation(
     visibility,
   );
 
-  const sections = {
+  const sections: CenterHomeCoreSections = {
     headerSummary,
     citySummary,
     dailyReward,
@@ -643,7 +684,10 @@ export function buildCenterHomePresentation(
     taskFlowSteps: buildTaskFlowSteps(presentationBase),
   });
 
-  return {
+  const withCommandPanel: CenterHomeCoreSections & {
+    moduleOrder: typeof CENTER_HOME_MODULE_ORDER;
+    visibilityFlags: CenterHomeVisibilityFlags;
+  } = {
     ...presentationBase,
     operationFocus: {
       ...presentationBase.operationFocus,
@@ -651,6 +695,25 @@ export function buildCenterHomePresentation(
       accessibilityLabel:
         'Operasyon odağı. Önerilen hamle ve dört durum kartı gösteriliyor.',
     },
+  };
+
+  const hubGameplay = buildCenterHubGameplayPresentation(
+    withCommandPanel,
+    input.recentDecisionRecord,
+  );
+
+  return {
+    ...withCommandPanel,
+    nextTargetHero: hubGameplay.nextTargetHero,
+    nextActions: hubGameplay.nextActions,
+    strategicPulse: hubGameplay.strategicPulse,
+    neighborhoodEvents: hubGameplay.neighborhoodEvents,
+    quickCommands: hubGameplay.quickCommands,
+    recentImpactSummary: hubGameplay.recentImpactSummary,
+    advisorMiniDirective: hubGameplay.advisorMiniDirective,
+    districtFocus: hubGameplay.districtFocus,
+    unlockPreviewMini: hubGameplay.unlockPreviewMini,
+    hubGameplay,
   };
 }
 

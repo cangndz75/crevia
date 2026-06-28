@@ -29,7 +29,10 @@ export function ResolvedEventRow({ item, isLast = false, onPress }: ResolvedEven
       accessibilityRole="button">
       <View style={styles.thumbWrap}>
         {imageFailed ? (
-          <LinearGradient colors={['#EEF5F1', '#DCEFE8']} style={styles.thumb} />
+          <LinearGradient
+            colors={[olaylar.mapFallbackTop, olaylar.mapFallbackBottom]}
+            style={styles.thumb}
+          />
         ) : (
           <Image
             source={imageSource}
@@ -57,9 +60,17 @@ export function ResolvedEventRow({ item, isLast = false, onPress }: ResolvedEven
         </Text>
       </View>
 
-      <View style={styles.riskPill}>
-        <Text style={styles.riskText}>{item.riskLabel}</Text>
+      <View style={styles.metaCol}>
+        <View style={styles.riskPill}>
+          <Text style={styles.riskText}>{item.riskLabel}</Text>
+        </View>
+        {item.rewardLabel ? (
+          <Text style={styles.rewardText} numberOfLines={1}>
+            {item.rewardLabel}
+          </Text>
+        ) : null}
       </View>
+
       <Ionicons name="chevron-forward" size={15} color={olaylar.textMuted} />
     </Pressable>
   );
@@ -71,7 +82,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 11,
   },
   rowDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -86,7 +97,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#EEF5F1',
+    backgroundColor: olaylar.mapFallbackTop,
     borderWidth: 1,
     borderColor: olaylar.border,
   },
@@ -105,7 +116,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: '#FFFFFF',
+    borderColor: olaylar.card,
   },
   copy: {
     flex: 1,
@@ -128,16 +139,26 @@ const styles = StyleSheet.create({
     color: olaylar.success,
     marginTop: 2,
   },
+  metaCol: {
+    alignItems: 'flex-end',
+    gap: 4,
+    flexShrink: 0,
+    maxWidth: 88,
+  },
   riskPill: {
     backgroundColor: olaylar.successBg,
     borderRadius: 999,
     paddingHorizontal: 8,
-    paddingVertical: 5,
-    flexShrink: 0,
+    paddingVertical: 4,
   },
   riskText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#15803D',
+    color: olaylar.success,
+  },
+  rewardText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: olaylar.gold,
   },
 });

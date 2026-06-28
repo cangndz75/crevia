@@ -8,7 +8,6 @@ import {
   BADGE_SHOWCASE_THEME,
   resolveBadgeShowcaseRarityStyle,
 } from '@/features/progression/utils/badgeShowcaseTheme';
-import { colors } from '@/ui/theme/colors';
 import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
@@ -43,9 +42,9 @@ export function BadgeShowcaseItemCard({
         compact && !grid && styles.cardCompact,
         shadows.soft,
         {
-          backgroundColor: '#FFFEFA',
+          backgroundColor: BADGE_SHOWCASE_THEME.cardBg,
           borderColor: item.state === 'earned' ? rarityStyle.border : BADGE_SHOWCASE_THEME.border,
-          opacity: item.state === 'locked' ? 0.92 : 1,
+          opacity: item.state === 'locked' ? 0.88 : 1,
         },
         pressed && onPress ? styles.pressed : null,
       ]}>
@@ -55,11 +54,11 @@ export function BadgeShowcaseItemCard({
         </View>
       ) : null}
 
-      <View style={[styles.iconWrap, { backgroundColor: '#F0F2F0' }]}>
+      <View style={[styles.iconWrap, { backgroundColor: BADGE_SHOWCASE_THEME.mintSoft }]}>
         <Ionicons
           name={item.state === 'locked' ? 'lock-closed-outline' : iconName}
           size={compact ? 16 : 18}
-          color="#8A9094"
+          color={item.state === 'earned' ? rarityStyle.iconColor : BADGE_SHOWCASE_THEME.textSecondary}
         />
       </View>
 
@@ -118,7 +117,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#2D6A6A',
+    backgroundColor: BADGE_SHOWCASE_THEME.teal,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
@@ -131,22 +130,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
     color: BADGE_SHOWCASE_THEME.textPrimary,
-    lineHeight: 18,
+    lineHeight: 19,
     flexShrink: 1,
   },
   description: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     color: BADGE_SHOWCASE_THEME.textSecondary,
-    lineHeight: 15,
+    lineHeight: 17,
     flexShrink: 1,
   },
   progress: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
-    color: colors.primary,
+    color: BADGE_SHOWCASE_THEME.teal,
   },
 });

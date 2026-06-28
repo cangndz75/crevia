@@ -1,11 +1,12 @@
-import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { creviaAssets } from '@/core/assets/creviaAssets';
 import type { ProfileRoleAdvantageItem } from '@/features/profile/utils/profileReferencePresentation';
 import { PROFILE_REFERENCE_THEME } from '@/features/profile/utils/profileReferencePresentation';
 import { PROFILE_UI_COPY } from '@/features/profile/utils/profileScreenPresentation';
+import { radius } from '@/ui/theme/radius';
 import { shadows } from '@/ui/theme/shadows';
 import { spacing } from '@/ui/theme/spacing';
 
@@ -21,14 +22,16 @@ type ProfileRoleAdvantagesSectionProps = {
 
 export function ProfileRoleAdvantagesSection({ items }: ProfileRoleAdvantagesSectionProps) {
   return (
-    <View style={[styles.card, shadows.soft]}>
+    <View style={[styles.card, shadows.card]}>
       <View style={styles.head}>
-        <Ionicons name="trophy" size={15} color={PROFILE_REFERENCE_THEME.goldDark} />
-        <Text style={styles.title}>{PROFILE_UI_COPY.roleAdvantagesTitle}</Text>
+        <Ionicons name="shield" size={16} color="#F7D77B" />
+        <Text style={styles.title} numberOfLines={1}>
+          {PROFILE_UI_COPY.roleAdvantagesTitle}
+        </Text>
       </View>
 
       <View style={styles.list}>
-        {items.map((item) => (
+        {items.slice(0, 3).map((item) => (
           <View key={item.id} style={styles.item}>
             <Image
               source={advantageImages[item.imageKey]}
@@ -36,9 +39,17 @@ export function ProfileRoleAdvantagesSection({ items }: ProfileRoleAdvantagesSec
               contentFit="contain"
               accessibilityIgnoresInvertColors
             />
-            <Text style={styles.itemTitle} numberOfLines={2}>
-              {item.title}
-            </Text>
+            <View style={styles.itemCopy}>
+              <Text style={styles.itemTitle} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <Text style={styles.itemDescription} numberOfLines={2}>
+                {item.description}
+              </Text>
+            </View>
+            <View style={styles.chevron}>
+              <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
+            </View>
           </View>
         ))}
       </View>
@@ -48,51 +59,70 @@ export function ProfileRoleAdvantagesSection({ items }: ProfileRoleAdvantagesSec
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: PROFILE_REFERENCE_THEME.cardBg,
-    borderRadius: 16,
+    backgroundColor: PROFILE_REFERENCE_THEME.tealDark,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: PROFILE_REFERENCE_THEME.cardBorder,
+    borderColor: 'rgba(255,255,255,0.12)',
     padding: spacing.md,
     gap: spacing.sm,
   },
   head: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 7,
   },
   title: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 11,
-    fontWeight: '800',
-    color: PROFILE_REFERENCE_THEME.textPrimary,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0,
   },
   list: {
-    gap: 10,
+    gap: 9,
   },
   item: {
+    minHeight: 72,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: '#F8FCFB',
-    borderRadius: 12,
+    backgroundColor: '#FBF9F2',
+    borderRadius: 13,
     borderWidth: 1,
-    borderColor: 'rgba(26, 143, 138, 0.08)',
+    borderColor: 'rgba(255,255,255,0.46)',
     paddingHorizontal: spacing.sm,
-    paddingVertical: 10,
+    paddingVertical: 8,
     minWidth: 0,
   },
   itemArt: {
-    width: 40,
-    height: 40,
+    width: 54,
+    height: 54,
     flexShrink: 0,
   },
-  itemTitle: {
+  itemCopy: {
     flex: 1,
-    fontSize: 13,
-    fontWeight: '700',
-    color: PROFILE_REFERENCE_THEME.textPrimary,
-    lineHeight: 18,
     minWidth: 0,
+    gap: 3,
+  },
+  itemTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: PROFILE_REFERENCE_THEME.textPrimary,
+  },
+  itemDescription: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: PROFILE_REFERENCE_THEME.textSecondary,
+    lineHeight: 13,
+  },
+  chevron: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.full,
+    backgroundColor: '#B8A04C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
 });

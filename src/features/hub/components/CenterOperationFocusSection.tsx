@@ -54,6 +54,12 @@ function StatusMiniCard({
   reducedMotion: boolean;
 }) {
   const stateStyle = operationFocusStateStyle(card.state);
+  const compactTitle: Partial<Record<CenterOperationStatusCardId, string>> = {
+    flow: 'Akış',
+    team: 'Ekip',
+    signal: 'Sinyal',
+    resource: 'Kaynak',
+  };
 
   return (
     <CreviaAnimatedPressable
@@ -63,12 +69,14 @@ function StatusMiniCard({
       accessibilityLabel={`${card.title}. ${card.statusLine}`}
       style={[
         styles.statusCard,
-        { borderColor: stateStyle.border, backgroundColor: stateStyle.bg },
+        { borderColor: stateStyle.border },
       ]}>
       <View style={styles.statusHead}>
-        <Ionicons name={resolveIcon(card.iconKey)} size={15} color={stateStyle.text} />
+        <View style={styles.commandIconWrap}>
+          <Ionicons name={resolveIcon(card.iconKey)} size={18} color={stateStyle.text} />
+        </View>
         <Text style={[styles.statusTitle, { color: stateStyle.text }]} numberOfLines={1}>
-          {card.title}
+          {compactTitle[card.id] ?? card.title}
         </Text>
       </View>
       <Text style={styles.statusLine} numberOfLines={2}>
@@ -92,7 +100,6 @@ export function CenterOperationFocusSection({
   if (!isVisible || !commandPanel) return null;
 
   const { recommendedMove, statusCards, sheets } = commandPanel;
-  const moveStyle = operationFocusStateStyle(recommendedMove.state);
   const showViewAll = focus.showViewAll || Boolean(focus.cta?.route);
   const viewAllEnabled = focus.cta?.enabled !== false;
 
@@ -126,7 +133,7 @@ export function CenterOperationFocusSection({
     <View style={styles.section} accessibilityLabel={focus.accessibilityLabel}>
       <View style={styles.headerRow}>
         <Text style={styles.sectionTitle} numberOfLines={1}>
-          {focus.title}
+          Hızlı Komutlar
         </Text>
         {showViewAll ? (
           <Pressable
@@ -154,48 +161,6 @@ export function CenterOperationFocusSection({
       </View>
 
       <View style={styles.stack}>
-        <CreviaAnimatedPressable
-          onPress={handleRecommendedPress}
-          reducedMotion={reducedMotion}
-          disabled={!recommendedMove.enabled}
-          accessibilityRole="button"
-          accessibilityLabel={`${recommendedMove.title}. ${recommendedMove.description}`}
-          style={[
-            styles.recommendedCard,
-            {
-              borderColor: moveStyle.border,
-              backgroundColor: moveStyle.bg,
-            },
-          ]}>
-          <Text style={styles.recommendedEyebrow}>{recommendedMove.eyebrow}</Text>
-          <Text style={styles.recommendedTitle} numberOfLines={2}>
-            {recommendedMove.title}
-          </Text>
-          <Text style={styles.recommendedDescription} numberOfLines={3}>
-            {recommendedMove.description}
-          </Text>
-
-          <View style={styles.rewardRow}>
-            {recommendedMove.rewardLine ? (
-              <View style={styles.rewardPill}>
-                <Text style={styles.rewardPillText} numberOfLines={1}>
-                  {recommendedMove.rewardLine}
-                </Text>
-              </View>
-            ) : null}
-            {recommendedMove.unlockLine ? (
-              <Text style={styles.unlockText} numberOfLines={1}>
-                {recommendedMove.unlockLine}
-              </Text>
-            ) : null}
-          </View>
-
-          <View style={styles.recommendedCta}>
-            <Text style={styles.recommendedCtaText}>{recommendedMove.ctaLabel}</Text>
-            <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
-          </View>
-        </CreviaAnimatedPressable>
-
         <View style={styles.statusGrid}>
           {statusCards.map((card) => (
             <StatusMiniCard
@@ -206,6 +171,22 @@ export function CenterOperationFocusSection({
             />
           ))}
         </View>
+        {recommendedMove.enabled ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${recommendedMove.title}. ${recommendedMove.description}`}
+            onPress={handleRecommendedPress}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.commandHint,
+              pressed ? styles.viewAllPressed : undefined,
+            ]}>
+            <Text style={styles.commandHintText} numberOfLines={1}>
+              {recommendedMove.ctaLabel}
+            </Text>
+            <Ionicons name="chevron-forward" size={13} color={palette.teal} />
+          </Pressable>
+        ) : null}
       </View>
 
       <OperationFocusDetailSheet
@@ -334,6 +315,21 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
+  commandHint: {
+    minHeight: 36,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(7, 86, 79, 0.06)',
+  },
+  commandHintText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: palette.teal,
+  },
   statusCard: {
     width: '48%',
     flexGrow: 1,
@@ -344,12 +340,21 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 6,
     minHeight: 72,
+    backgroundColor: '#F2FAF4',
   },
   statusHead: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     minWidth: 0,
+  },
+  commandIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(157,242,210,0.32)',
   },
   statusTitle: {
     fontSize: 11,

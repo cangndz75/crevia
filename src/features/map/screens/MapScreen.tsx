@@ -61,6 +61,7 @@ import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventC
 import { buildPostPilotMapContextLineForGameState } from '@/core/postPilot/postPilotOperationUxPresentation';
 import { buildReportTomorrowPreview } from '@/core/reports/reportTomorrowPreviewPresentation';
 import { buildMemoryFollowUpPresentationContext } from '@/features/shared/utils/memoryFollowUpPresentationContext';
+import { buildMapGameplayPresentation } from '@/features/map/utils/mapGameplayPresentation';
 import { buildMapCrisisPresentationBundle } from '@/features/map/utils/mapCrisisPresentation';
 import { buildMapMotionPresentation } from '@/features/map/utils/mapMotionPresentation';
 import {
@@ -73,6 +74,7 @@ import {
   selectActiveEvents,
   selectContainerState,
   selectCurrentPilotDay,
+  selectDecisionHistory,
   selectPilotState,
   selectPostPilotOperation,
   selectSelectedPilotDistrictId,
@@ -80,7 +82,7 @@ import {
   useGameStore,
 } from '@/store/useGameStore';
 import { GameScreenShell } from '@/ui/components/GameScreenShell';
-import { colors } from '@/ui/theme/colors';
+import { mapUi } from '@/features/map/utils/mapUiTokens';
 
 import { LayerPanel } from '../components/LayerPanel';
 import { MapGuideModal } from '../components/MapGuideModal';
@@ -112,6 +114,7 @@ export function MapScreen() {
     useGameStore(selectSelectedPilotDistrictId) ?? DEFAULT_PILOT_DISTRICT_ID;
   const gameDay = useGameStore(selectCurrentPilotDay) ?? 1;
   const activeEvents = useGameStore(selectActiveEvents);
+  const decisionHistory = useGameStore(selectDecisionHistory);
   const containerState = useGameStore(selectContainerState);
   const vehicleState = useGameStore(selectVehicleStateFromStore);
   const hideMapFleetSignals = useGameStore(selectIsDay1TutorialActive);
@@ -604,6 +607,26 @@ export function MapScreen() {
     primaryMapEvent?.id,
   ]);
 
+  const mapGameplayPresentation = useMemo(
+    () =>
+      buildMapGameplayPresentation({
+        activeEvents,
+        activeOperationCard: activeOperationMapCard,
+        activeOperationBinding: activeOperationMapContext?.binding ?? null,
+        gameDay,
+        operationalResources,
+        decisionHistory,
+      }),
+    [
+      activeEvents,
+      activeOperationMapCard,
+      activeOperationMapContext?.binding,
+      decisionHistory,
+      gameDay,
+      operationalResources,
+    ],
+  );
+
   const mapMotionPresentation = useMemo(() => {
     return buildMapMotionPresentation({
       day: gameDay,
@@ -785,6 +808,7 @@ export function MapScreen() {
         },
         resourceFatigue: operationalResources,
         operationalResources,
+        recentDecisionRecord: decisionHistory.at(-1) ?? null,
         districtReportCard: mapDistrictReportCardBundle.model,
         operationalResourcePresence: operationalResourcePresenceModel ?? undefined,
         contentPackMeta: resolveContentPackMetaForWiring({
@@ -808,6 +832,7 @@ export function MapScreen() {
   }, [
     activeTaskRoutePreview?.visible,
     districtFocusedEvent,
+    decisionHistory,
     focusDistrictId,
     gameDay,
     gameStateForMap,
@@ -919,7 +944,7 @@ export function MapScreen() {
     <GameScreenShell
       scrollable={false}
       headerVariant="none"
-      backgroundColor={colors.hubCream}
+      backgroundColor={mapUi.canvas}
       reserveTabBarInset={false}
       contentStyle={styles.content}>
       <View style={styles.stack}>
@@ -954,7 +979,11 @@ export function MapScreen() {
           mapPresenceViewModel={mapPresenceViewModel}
           activeOperationOverlay={activeOperationOverlay}
           activeOperationCard={activeOperationMapCard}
+          activeOperationBinding={activeOperationMapContext?.binding ?? null}
+          mapGameplayPresentation={mapGameplayPresentation}
+          operationalResources={operationalResources}
           mapMotionPresentation={mapMotionPresentation}
+          recentDecisionRecord={decisionHistory.at(-1) ?? null}
           onLayersPress={() => setLayerPanelOpen(true)}
           onDistrictSelect={handleDistrictSelect}
           onBackToOverview={handleBackToOverview}

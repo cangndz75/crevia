@@ -3,20 +3,28 @@ import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CityMapHero } from '@/features/events/components/olaylar/CityMapHero';
-import { EventsBottomSheet } from '@/features/events/components/olaylar/EventsBottomSheet';
-import { FloatingEventStats } from '@/features/events/components/olaylar/FloatingEventStats';
-import { OlaylarEventsHeader } from '@/features/events/components/olaylar/OlaylarEventsHeader';
-import { OlaylarFilterChips } from '@/features/events/components/olaylar/OlaylarFilterChips';
-import { OlaylarPriorityEventCard } from '@/features/events/components/olaylar/OlaylarPriorityEventCard';
-import { ResolvedEventList } from '@/features/events/components/olaylar/ResolvedEventList';
+import {
+  CityMapHero,
+  EventsBottomSheet,
+  OlaylarActiveEventsSection,
+  OlaylarEventMetricsRow,
+  OlaylarEventsHeader,
+  OlaylarFieldStatusMini,
+  OlaylarFilterChips,
+  OlaylarOperationStatusStrip,
+  OlaylarPriorityEventCard,
+  OlaylarStartOperationCTA,
+  ResolvedEventList,
+} from '@/features/events/components/olaylar';
 import { olaylar } from '@/features/events/theme/olaylarScreenTokens';
 import type { OlaylarFilterKey } from '@/features/events/types/olaylarScreenTypes';
 import {
-  buildOlaylarStats,
+  buildActiveEventViews,
+  buildOlaylarScreenPresentation,
   buildPriorityEventView,
   buildResolvedEventViews,
   resolveOlaylarPriority,
+  resolvePrimaryOperationEventId,
 } from '@/features/events/utils/olaylarScreenPresentation';
 import { useGameStatus } from '@/store/gameSelectors';
 import {
@@ -36,16 +44,22 @@ export function EventsDecisionCenterScreen() {
   const activeEvents = useGameStore(selectActiveEvents);
   const featuredEventId = useGameStore(selectFeaturedEventId);
   const decisionHistory = useGameStore(selectDecisionHistory);
+  const operationalResources = useGameStore((s) => s.operationalResources);
   const endCurrentDay = useGameStore((s) => s.endCurrentDay);
 
   const [filter, setFilter] = useState<OlaylarFilterKey>('all');
 
-  const stats = useMemo(
-    () => buildOlaylarStats(activeEvents, decisionHistory),
-    [activeEvents, decisionHistory],
+  const presentation = useMemo(
+    () =>
+      buildOlaylarScreenPresentation({
+        activeEvents,
+        decisionHistory,
+        operationalResources,
+      }),
+    [activeEvents, decisionHistory, operationalResources],
   );
 
-  const { priorityEvent, showPriority } = useMemo(
+  const { priorityEvent, showPriority, pendingEvents } = useMemo(
     () => resolveOlaylarPriority(activeEvents, featuredEventId, filter),
     [activeEvents, featuredEventId, filter],
   );
@@ -53,6 +67,11 @@ export function EventsDecisionCenterScreen() {
   const priorityView = useMemo(
     () => buildPriorityEventView(priorityEvent),
     [priorityEvent],
+  );
+
+  const activeEventViews = useMemo(
+    () => buildActiveEventViews(pendingEvents),
+    [pendingEvents],
   );
 
   const resolvedItems = useMemo(
@@ -65,12 +84,26 @@ export function EventsDecisionCenterScreen() {
     [decisionHistory],
   );
 
+  const primaryOperationEventId = useMemo(
+    () => resolvePrimaryOperationEventId(activeEvents, featuredEventId),
+    [activeEvents, featuredEventId],
+  );
+
   const handleEventPress = useCallback(
     (eventId: string) => {
       router.push(`/events/${eventId}`);
     },
     [router],
   );
+
+  const handleStartOperation = useCallback(() => {
+    if (primaryOperationEventId) {
+      handleEventPress(primaryOperationEventId);
+      return;
+    }
+    endCurrentDay();
+    router.push('/reports');
+  }, [endCurrentDay, handleEventPress, primaryOperationEventId, router]);
 
   const handleEndDay = () => {
     endCurrentDay();
@@ -79,6 +112,7 @@ export function EventsDecisionCenterScreen() {
 
   const showResolvedOnly = filter === 'resolved';
   const showEmptyActive = !showResolvedOnly && activeEvents.length === 0;
+  const showFieldStatus = !showResolvedOnly && activeEvents.length > 0;
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
@@ -91,22 +125,27 @@ export function EventsDecisionCenterScreen() {
         }}
       />
 
-      <View style={styles.mapSection}>
-        <CityMapHero />
-        <FloatingEventStats stats={stats} />
-      </View>
+      <OlaylarOperationStatusStrip status={presentation.operationStatus} />
 
       <EventsBottomSheet bottomInset={tabBarHeight}>
+        <OlaylarEventMetricsRow items={presentation.eventStats} />
+
+        <CityMapHero
+          mapView={presentation.liveIncidentMap}
+          timeline={presentation.incidentTimeline}
+        />
+
+        <OlaylarStartOperationCTA
+          onPress={handleStartOperation}
+          disabled={!primaryOperationEventId && activeEvents.length === 0}
+          label={primaryOperationEventId ? 'Operasyonu Başlat' : 'Günü Bitir'}
+        />
+
         <OlaylarFilterChips active={filter} onChange={setFilter} />
 
         {showResolvedOnly ? (
           resolvedOnlyItems.length > 0 ? (
-            <ResolvedEventList
-              items={resolvedOnlyItems}
-              onSeeAll={() => {
-                // TODO: tüm çözülenler geçmişi
-              }}
-            />
+            <ResolvedEventList items={resolvedOnlyItems} />
           ) : (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>Henüz çözülen olay yok</Text>
@@ -134,14 +173,22 @@ export function EventsDecisionCenterScreen() {
               </View>
             ) : null}
 
+            <OlaylarActiveEventsSection
+              items={activeEventViews}
+              onItemPress={handleEventPress}
+            />
+
             {filter === 'all' ? (
-              <ResolvedEventList
-                items={resolvedItems}
-                onSeeAll={() => {
-                  // TODO: tüm çözülenler geçmişi
-                }}
-                onItemPress={() => {
-                  // TODO: çözülen olay detayı
+              <ResolvedEventList items={resolvedItems} onItemPress={handleEventPress} />
+            ) : null}
+
+            {showFieldStatus ? (
+              <OlaylarFieldStatusMini
+                status={presentation.fieldStatus}
+                onCtaPress={() => {
+                  if (primaryOperationEventId) {
+                    handleEventPress(primaryOperationEventId);
+                  }
                 }}
               />
             ) : null}
@@ -157,15 +204,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: olaylar.bg,
   },
-  mapSection: {
-    height: olaylar.mapHeight + 8,
-    position: 'relative',
-    zIndex: 1,
-  },
   emptyCard: {
     gap: 10,
     padding: 16,
-    backgroundColor: olaylar.bg,
+    backgroundColor: olaylar.card,
     borderRadius: olaylar.radiusCard,
     borderWidth: 1,
     borderColor: olaylar.border,

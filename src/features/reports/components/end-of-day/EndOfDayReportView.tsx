@@ -77,7 +77,10 @@ import { resolveContentPackMetaForWiring } from '@/core/contentRuntimeActivation
 import { resolveEventCardById } from '@/core/liveFlow/eventLifecycleEngine';
 import { buildTomorrowRiskPresentation } from '@/core/tomorrowRisk';
 import { buildSocialDecisionEcho } from '@/core/socialEcho/socialEchoSelectors';
-import { buildSocialEchoContextFromPulseArgs } from '@/core/socialEcho/socialEchoPresentation';
+import {
+  buildReportSocialEcho,
+  buildSocialEchoContextFromPulseArgs,
+} from '@/core/socialEcho/socialEchoPresentation';
 import { buildEventDomainFocusModel } from '@/core/events/eventDomainPresentation';
 import { ReportCarryOverPreviewCard } from '@/features/reports/components/ReportCarryOverPreviewCard';
 import {
@@ -111,6 +114,7 @@ import {
 } from '@/features/reports/presentation/reportScreenPresentation';
 import type { PilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
 import { buildEndOfDayReportViewModel } from '@/features/reports/utils/endOfDayReportPresentation';
+import { buildPostDecisionCityReactionFromRecord } from '@/features/events/utils/postDecisionCityReactionPresentation';
 import { buildMemoryFollowUpPresentationContext } from '@/features/shared/utils/memoryFollowUpPresentationContext';
 import type { useReportPilotCompletionSummary } from '@/features/pilot/hooks/usePilotCompletionSummary';
 import {
@@ -289,6 +293,11 @@ export function EndOfDayReportView({
     const dayRecords = decisionHistory.filter((r) => r.day === report.day);
     return dayRecords[dayRecords.length - 1];
   }, [decisionHistory, report.day]);
+
+  const reportDecisionMemory = useMemo(() => {
+    if (!lastDecisionForDay || report.day <= 1) return null;
+    return buildPostDecisionCityReactionFromRecord({ record: lastDecisionForDay });
+  }, [lastDecisionForDay, report.day]);
 
   const reportPackWiringContext = useMemo(() => {
     if (!lastDecisionForDay?.eventId) {
@@ -617,12 +626,38 @@ export function EndOfDayReportView({
     tomorrowRiskPresentation.report,
   ]);
 
+  const reportSocialEcho = useMemo(
+    () =>
+      buildReportSocialEcho({
+        echo: socialEchoForReport,
+        cityReaction: reportDecisionMemory ?? undefined,
+        day: report.day,
+        excludeMessages: [
+          cityEchoReportLine ?? '',
+          decisionImpactReportEcho ?? '',
+          reportDecisionMemory?.reportMemoryLine ?? '',
+          tomorrowPreviewBundle.summary.preview?.summary ?? '',
+          tomorrowRiskPresentation.report?.mainLine ?? '',
+        ],
+      }),
+    [
+      cityEchoReportLine,
+      decisionImpactReportEcho,
+      report.day,
+      reportDecisionMemory,
+      socialEchoForReport,
+      tomorrowPreviewBundle.summary.preview?.summary,
+      tomorrowRiskPresentation.report?.mainLine,
+    ],
+  );
+
   const cityJournalReportLine = useMemo(() => {
     const existingLines = [
       cityEchoReportLine ?? '',
       decisionImpactReportEcho ?? '',
       reportCarryOverMemory?.summary ?? '',
       tomorrowRiskPresentation.report?.mainLine ?? '',
+      reportSocialEcho?.message ?? '',
       socialEchoForReport?.mention ?? '',
       eventDomainFocus?.reportEchoLine ?? '',
     ].filter(Boolean);
@@ -688,6 +723,7 @@ export function EndOfDayReportView({
     reportCarryOverMemory,
     reportPackWiringContext.contentPackMeta,
     reportPackWiringContext.event,
+    reportSocialEcho?.message,
     socialEchoForReport?.mention,
     socialPulseState.globalPulseScore,
     tomorrowRiskPresentation.report,
@@ -1384,6 +1420,30 @@ export function EndOfDayReportView({
             {cityEchoReportLine ?? decisionImpactReportEcho}
           </Text>
         </CreviaAnimatedLine>
+      ) : null}
+
+      {reportDecisionMemory?.reportMemoryLine ? (
+        <CompactInsightRow
+          label="Bugünün izi"
+          line={reportDecisionMemory.reportMemoryLine}
+          tone={reportDecisionMemory.tone === 'positive' ? 'positive' : 'teal'}
+          icon="pulse-outline"
+        />
+      ) : null}
+
+      {reportSocialEcho ? (
+        <CompactInsightRow
+          label={reportSocialEcho.title}
+          line={reportSocialEcho.message}
+          tone={
+            reportSocialEcho.tone === 'positive'
+              ? 'positive'
+              : reportSocialEcho.tone === 'warning' || reportSocialEcho.tone === 'critical'
+                ? 'warning'
+                : 'teal'
+          }
+          icon="chatbubbles-outline"
+        />
       ) : null}
 
       {reportArchiveContinuity.storyChainLine ? (

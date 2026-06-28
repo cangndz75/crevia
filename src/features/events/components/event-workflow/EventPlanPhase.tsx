@@ -534,6 +534,28 @@ function PlanOptionCard({
           <PlanStat label="Süre" value={copy.duration} icon="time-outline" />
           <PlanStat label="Etki" value={copy.effect} icon="pulse-outline" />
         </View>
+        <View style={styles.tradeoffGrid}>
+          {strategy.gameplayTradeoffs.map((tradeoff) => (
+            <View key={tradeoff.id} style={styles.tradeoffRow}>
+              <Ionicons
+                name={tradeoff.iconKey as keyof typeof Ionicons.glyphMap}
+                size={13}
+                color={tradeoff.tone === 'warning' ? '#B77713' : eventDetail.tealDark}
+              />
+              <Text style={styles.tradeoffLabel} numberOfLines={1}>
+                {tradeoff.label}
+              </Text>
+              <Text
+                style={[
+                  styles.tradeoffValue,
+                  tradeoff.tone === 'warning' && styles.tradeoffValueWarning,
+                ]}
+                numberOfLines={1}>
+                {tradeoff.valueText}
+              </Text>
+            </View>
+          ))}
+        </View>
         <View style={styles.planBottomRow}>
           <EffectDots count={selected ? 4 : cardIndex(strategy.id) + 2} />
           <View style={[styles.selectPill, selected && styles.selectPillSelected]}>
@@ -1159,6 +1181,34 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '900',
     color: eventDetail.textDark,
+  },
+  tradeoffGrid: {
+    gap: 6,
+  },
+  tradeoffRow: {
+    minHeight: 30,
+    borderRadius: 12,
+    backgroundColor: '#F9F6EE',
+    paddingHorizontal: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  tradeoffLabel: {
+    width: 50,
+    fontSize: 10,
+    fontWeight: '900',
+    color: eventDetail.textMuted,
+  },
+  tradeoffValue: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 11,
+    fontWeight: '800',
+    color: eventDetail.tealDark,
+  },
+  tradeoffValueWarning: {
+    color: '#9E6E0D',
   },
   planBottomRow: {
     flexDirection: 'row',

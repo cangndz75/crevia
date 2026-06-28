@@ -11,18 +11,18 @@ import type {
 } from './authoritiesScreenModel';
 
 export const AUTHORITY_COLLECTION_THEME = {
-  screenBg: '#F8F9F5',
-  cardBg: '#FFFEFA',
-  mintSoft: '#E8F8F5',
-  mintSoftAlt: '#DFF4EF',
-  gold: '#F4B51F',
-  goldDark: '#E7A90E',
-  goldSoft: '#F5D98A',
-  tealDark: '#2D6A6A',
+  screenBg: '#041918',
+  cardBg: 'rgba(8, 43, 39, 0.84)',
+  mintSoft: 'rgba(64, 215, 176, 0.16)',
+  mintSoftAlt: '#0C332F',
+  gold: '#D6B45A',
+  goldDark: '#9B741D',
+  goldSoft: '#E8D49A',
+  tealDark: '#40D7B0',
   purple: '#8D6AD8',
-  textPrimary: '#202428',
-  textSecondary: '#6F7478',
-  border: 'rgba(20, 30, 30, 0.08)',
+  textPrimary: '#F6F1DF',
+  textSecondary: '#B7C8C2',
+  border: 'rgba(110, 235, 200, 0.16)',
 } as const;
 
 export type CollectionHeroModel = {

@@ -28,6 +28,46 @@ export type SocialEchoDomain =
 
 export type SocialEchoTone = 'teal' | 'mint' | 'amber' | 'coral' | 'neutral';
 
+export type SocialEchoPresentationSource =
+  | 'citizen'
+  | 'district'
+  | 'press'
+  | 'field'
+  | 'advisor'
+  | 'system';
+
+export type SocialEchoPresentationTone =
+  | 'positive'
+  | 'mixed'
+  | 'warning'
+  | 'critical'
+  | 'neutral';
+
+export type SocialEchoSurface =
+  | 'result'
+  | 'hub'
+  | 'map'
+  | 'report'
+  | 'recentImpact';
+
+export type SocialEchoPresentation = {
+  id: string;
+  source: SocialEchoPresentationSource;
+  tone: SocialEchoPresentationTone;
+  title: string;
+  message: string;
+  districtName?: string;
+  eventId?: string;
+  icon?: string;
+  priority: number;
+  surface: SocialEchoSurface;
+  ttl?: number;
+  action?: {
+    label: string;
+    route: string;
+  };
+};
+
 export type SocialDecisionEchoModel = {
   id: string;
   title: string;

@@ -48,6 +48,7 @@ import { eventDetail } from "@/features/events/theme/eventDetailTokens";
 import {
   buildEventInspectPhasePresentation,
   type EventInspectInteractionState,
+  type EventInspectRevealItem,
 } from "@/features/events/utils/eventInspectPhasePresentation";
 import { buildEventResultDistrictContextLine } from "@/features/events/utils/eventResultPresentation";
 import { buildInspectHeroChips } from "@/features/events/utils/eventWorkflowPresentation";
@@ -372,6 +373,11 @@ export function EventInspectPhase({
           reducedMotion={reducedMotion}
           onOpen={() => setActiveModal({ type: "incident" })}
         />
+        <InspectRevealFlow
+          items={presentation.revealItems}
+          revealed={presentation.showFindings}
+          reducedMotion={reducedMotion}
+        />
         <SignalSourceRow
           confirmedSignals={confirmedSignals}
           onPressSignal={(signalId) =>
@@ -421,6 +427,71 @@ export function EventInspectPhase({
         }}
       />
     </SafeAreaView>
+  );
+}
+
+function resolveRevealToneColor(tone: EventInspectRevealItem["tone"]): string {
+  if (tone === "urgent" || tone === "warning") return "#D9A646";
+  if (tone === "positive") return eventDetail.teal;
+  return eventDetail.tealDark;
+}
+
+function InspectRevealFlow({
+  items,
+  revealed,
+  reducedMotion,
+}: {
+  items: EventInspectRevealItem[];
+  revealed: boolean;
+  reducedMotion: boolean;
+}) {
+  return (
+    <View style={styles.cardWrap}>
+      <View style={[styles.revealFlowCard, shadows.soft]}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Sinyal çözümleme</Text>
+          <Text style={styles.sectionMeta}>
+            {revealed ? "Bulgu hazır" : "3 iz"}
+          </Text>
+        </View>
+        <View style={styles.revealFlowList}>
+          {items.map((item, index) => {
+            const color = resolveRevealToneColor(item.tone);
+            return (
+              <CreviaMotionView
+                key={item.id}
+                motionKind="line_appear"
+                surface="shared"
+                index={index}
+                reducedMotion={reducedMotion}
+                style={styles.revealItem}
+              >
+                <View style={[styles.revealIcon, { backgroundColor: `${color}18` }]}>
+                  <Ionicons
+                    name={item.iconKey as keyof typeof Ionicons.glyphMap}
+                    size={15}
+                    color={color}
+                  />
+                </View>
+                <View style={styles.revealCopy}>
+                  <Text style={styles.revealTitle} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  <Text style={styles.revealBody} numberOfLines={2}>
+                    {revealed ? item.body : "Sinyali doğrula, bulgu netleşsin."}
+                  </Text>
+                </View>
+                <View style={styles.revealChip}>
+                  <Text style={styles.revealChipText} numberOfLines={1}>
+                    {item.impactChip}
+                  </Text>
+                </View>
+              </CreviaMotionView>
+            );
+          })}
+        </View>
+      </View>
+    </View>
   );
 }
 
@@ -1624,6 +1695,61 @@ const styles = StyleSheet.create({
   signalRow: {
     flexDirection: "row",
     gap: 8,
+  },
+  revealFlowCard: {
+    borderRadius: eventDetail.cardRadius,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(6,63,59,0.08)",
+    padding: 13,
+    gap: 8,
+  },
+  revealFlowList: {
+    gap: 8,
+  },
+  revealItem: {
+    minHeight: 58,
+    borderRadius: 15,
+    backgroundColor: "#F6F2EA",
+    padding: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  revealIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  revealCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  revealTitle: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: eventDetail.textDark,
+  },
+  revealBody: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "600",
+    color: eventDetail.textMuted,
+  },
+  revealChip: {
+    maxWidth: 88,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: "#DDF4E8",
+  },
+  revealChipText: {
+    fontSize: 9,
+    fontWeight: "900",
+    color: eventDetail.tealDark,
   },
   signalCard: {
     flex: 1,

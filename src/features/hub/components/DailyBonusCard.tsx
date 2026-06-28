@@ -80,14 +80,14 @@ function BonusNode({
 
 export function DailyBonusCard({
   title = 'GÜNLÜK SERİ',
-  subtitle = 'Serini koru, ödülleri topla!',
+  subtitle = 'Merkez disiplinini koru.',
   nodes,
   rewardAmount,
   reducedMotion,
 }: DailyBonusCardProps) {
   return (
     <LinearGradient
-      colors={[centerLowerPalette.purpleDeep, centerLowerPalette.purple, centerLowerPalette.plum]}
+      colors={[centerLowerPalette.tealDeep, centerLowerPalette.tealPanel, '#234F47']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.bonusCard}>
@@ -96,7 +96,7 @@ export function DailyBonusCard({
         <Text style={styles.bonusEyebrow} numberOfLines={1}>
           {title}
         </Text>
-        <Text style={styles.bonusSubtitle} numberOfLines={1}>
+        <Text style={styles.bonusSubtitle} numberOfLines={2}>
           {subtitle}
         </Text>
       </View>
@@ -120,10 +120,10 @@ export function DailyBonusCard({
 
 const styles = StyleSheet.create({
   bonusCard: {
-    minHeight: 72,
+    minHeight: 76,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(215,200,255,0.22)',
+    borderColor: 'rgba(245,227,175,0.22)',
     paddingHorizontal: 12,
     paddingVertical: 10,
     flexDirection: 'row',
@@ -169,9 +169,9 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   bonusNode: {
-    width: 25,
-    height: 25,
-    borderRadius: 13,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.12)',

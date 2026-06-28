@@ -1,17 +1,20 @@
 import { StyleSheet, View } from 'react-native';
 
-import { CityMapCard } from '@/features/map/components/CityMapCard';
+import type { ActiveOperationMapBinding } from '@/core/activeOperationMapBinding/activeOperationMapBindingTypes';
 import type { ActiveOperationMapCardModel } from '@/core/activeOperationMapBinding';
-import type { MapActiveOperationOverlayModel } from '@/features/map/utils/mapUiPresentation';
 import type { ContainerState } from '@/core/containers/containerTypes';
-import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import type { EventCard } from '@/core/models/EventCard';
+import type { DecisionRecord } from '@/core/models/DecisionRecord';
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
+import type { OperationalResourcesState } from '@/core/operationalResources/operationalResourceTypes';
+import type { VehicleState } from '@/core/vehicles/vehicleTypes';
+import { CityMapCard } from '@/features/map/components/CityMapCard';
+import type { MapGameplayPresentation } from '@/features/map/utils/mapGameplayPresentation';
+import type { MapMotionPresentationResult } from '@/features/map/utils/mapMotionPresentation';
+import type { MapActiveOperationOverlayModel } from '@/features/map/utils/mapUiPresentation';
 
 import { type MapDistrictId } from '../data/mapAssets';
 import type { MapPresenceViewModel } from '@/core/mapPresence/mapPresenceTypes';
-import type { MapMotionPresentationResult } from '@/features/map/utils/mapMotionPresentation';
-
 import type { ActiveLayers, MapFilterId, MapViewMode, PilotAreaId } from '../types/map';
 
 type Props = {
@@ -39,7 +42,11 @@ type Props = {
   mapPresenceViewModel?: MapPresenceViewModel | null;
   activeOperationOverlay?: MapActiveOperationOverlayModel | null;
   activeOperationCard?: ActiveOperationMapCardModel | null;
+  activeOperationBinding?: ActiveOperationMapBinding | null;
+  mapGameplayPresentation?: MapGameplayPresentation | null;
+  operationalResources?: OperationalResourcesState;
   mapMotionPresentation?: MapMotionPresentationResult | null;
+  recentDecisionRecord?: DecisionRecord | null;
   onLayersPress: () => void;
   onDistrictSelect: (districtId: MapDistrictId) => void;
   onBackToOverview: () => void;

@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { createDay1Seed } from '@/core/content/day1Seed';
 import { createInitialAuthorityState } from '@/core/authority/authoritySeed';
 import { createInitialBadgeState } from '@/core/badges/badgeSeed';
@@ -11,6 +14,7 @@ import {
   buildProfileBadgeShowcaseSummary,
 } from '@/features/profile/utils/profileBadgeModel';
 import { buildProfileViewModel } from '@/features/profile/utils/profileModel';
+import { buildProfileReferenceViewModel } from '@/features/profile/utils/profileReferencePresentation';
 import {
   buildProfileScreenLayoutModel,
   collectProfileUiPresentationStrings,
@@ -30,6 +34,12 @@ export type VerifyProfileUiOutcome = {
 };
 
 type Check = { name: string; ok: boolean; detail: string };
+
+const REPO_ROOT = join(__dirname, '..', '..', '..');
+
+function readRepo(relPath: string): string {
+  return readFileSync(join(REPO_ROOT, relPath), 'utf8');
+}
 
 function assert(checks: Check[], ok: boolean, name: string, detail = ''): void {
   checks.push({ name, ok, detail: ok ? detail || 'ok' : detail || 'fail' });
@@ -278,6 +288,90 @@ export function verifyProfileUiScenario(): VerifyProfileUiOutcome {
     unknownItem.earned === false && unknownItem.title.length > 0,
     'unknown badge id crash üretmez',
     unknownItem.title,
+  );
+
+  const profileScreenSource = readRepo('src/features/profile/screens/ProfileScreen.tsx');
+  const identitySource = readRepo('src/features/profile/components/ProfileIdentitySection.tsx');
+  const summarySource = readRepo('src/features/profile/components/ProfileSummaryCard.tsx');
+  const advantagesSource = readRepo('src/features/profile/components/ProfileRoleAdvantagesSection.tsx');
+  const roadmapSource = readRepo('src/features/profile/components/ProfileRoadmapSection.tsx');
+  const bottomNavSource = readRepo('src/components/navigation/CreviaBottomTabBar.tsx');
+
+  assert(
+    checks,
+    profileScreenSource.includes('ProfileBrandHeader') &&
+      profileScreenSource.includes('ProfileIdentitySection') &&
+      profileScreenSource.includes('ProfileRoadmapSection'),
+    'Profile reference composition wired',
+  );
+  assert(
+    checks,
+    identitySource.includes('react-native-svg') && identitySource.includes('ARC_LENGTH'),
+    'Profile XP arc uses SVG and dynamic progress',
+  );
+  assert(
+    checks,
+    summarySource.includes('advantageTitle') &&
+      advantagesSource.includes('item.description') &&
+      roadmapSource.includes('summary.progress'),
+    'Profile lower cards bind dynamic presentation fields',
+  );
+  assert(
+    checks,
+    bottomNavSource.includes('activeRouteName === "profile" ? "progression" : activeRouteName'),
+    'Profile route visually focuses Gelisim bottom nav',
+  );
+
+  const liveStatus = {
+    ...sampleProfileStatus(seed.gameState),
+    xp: 63,
+    xpTarget: 200,
+    xpProgress: 0.315,
+    level: 2,
+    solvedEventsCount: 1,
+  };
+  const liveModel = buildProfileViewModel(liveStatus, seed.gameState.player);
+  const liveAuthority = buildProfileAuthoritySummaryFromPilot(
+    seed.gameState.pilot.authorityState,
+    seed.gameState.pilot.currentPilotDay,
+  );
+  const reference = buildProfileReferenceViewModel({
+    model: liveModel,
+    authoritySummary: liveAuthority,
+    authorityState: seed.gameState.pilot.authorityState,
+    pilotDay: seed.gameState.pilot.currentPilotDay,
+  });
+
+  assert(
+    checks,
+    reference.identity.xpLabel.includes('63') &&
+      reference.identity.xpLabel.includes('200') &&
+      reference.identity.levelLabel.includes('2'),
+    'Profile identity XP/level labels are dynamic',
+    `${reference.identity.xpLabel} ${reference.identity.levelLabel}`,
+  );
+  assert(
+    checks,
+    reference.identity.badges.length === 2 &&
+      reference.identity.badges.every((badge) => badge.label.length > 0),
+    'Profile identity badges are generated from state',
+    reference.identity.badges.map((badge) => badge.label).join(', '),
+  );
+  assert(
+    checks,
+    reference.roleAdvantages.length >= 3 &&
+      reference.roleAdvantages.every((item) => item.description.length > 0),
+    'Profile role advantages are dynamic and descriptive',
+    reference.roleAdvantages.map((item) => item.title).join(', '),
+  );
+  assert(
+    checks,
+    reference.roadmap.length >= 3 &&
+      reference.roadmapSummary.valueLabel.includes('/') &&
+      reference.roadmapSummary.progress >= 0 &&
+      reference.roadmapSummary.progress <= 1,
+    'Profile roadmap and trust progress are bound',
+    reference.roadmapSummary.valueLabel,
   );
 
   const failCount = checks.filter((c) => !c.ok).length;

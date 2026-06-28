@@ -11,7 +11,10 @@ import { SAVE_VERSION } from '@/store/gamePersist';
 
 import {
   buildSocialDecisionEchoCardModel,
+  buildPostDecisionSocialEchoPresentation,
+  buildReportSocialEcho,
   buildSocialEchoContextFromPulseArgs,
+  buildSocialEchoPresentation,
   buildSocialPulseEchoLine,
 } from './socialEchoPresentation';
 import {
@@ -168,6 +171,87 @@ export function verifyDynamicSocialEchoScenario(): VerifyDynamicSocialEchoOutcom
       getSocialEchoVisibility(4, day4Ctx) === 'highlighted',
       'Day 4 highlighted visibility',
       String(day4Echo?.visibility),
+    ),
+  );
+
+  const resultEchoPresentation = buildSocialEchoPresentation({
+    echo: day4Echo,
+    surface: 'result',
+    day: 4,
+  });
+  const hubEchoPresentation = buildSocialEchoPresentation({
+    echo: day4Echo,
+    surface: 'hub',
+    day: 4,
+  });
+  record(assert(checks, resultEchoPresentation?.surface === 'result', 'organic result echo surface', 'result surface'));
+  record(assert(checks, hubEchoPresentation?.surface === 'hub', 'organic hub echo surface', 'hub surface'));
+  record(
+    assert(
+      checks,
+      Boolean(resultEchoPresentation?.title && resultEchoPresentation.message.length <= 108),
+      'organic result echo compact copy',
+      'result compact',
+    ),
+  );
+  record(
+    assert(
+      checks,
+      Boolean(
+        resultEchoPresentation &&
+          hubEchoPresentation &&
+          resultEchoPresentation.message !== hubEchoPresentation.message,
+      ),
+      'surface copy avoids exact duplicate',
+      'surface duplicate',
+    ),
+  );
+
+  const reactionEcho = buildPostDecisionSocialEchoPresentation({
+    cityReaction: {
+      reactionId: 'reaction-social-smoke',
+      eventId: 'evt-social-smoke',
+      districtName: 'Cumhuriyet',
+      tone: 'positive',
+      socialEcho: {
+        sourceLabel: 'Vatandaş yorumu',
+        line: 'Cumhuriyet hızlı müdahaleyi olumlu karşıladı.',
+        tone: 'positive',
+      },
+    },
+    surface: 'recentImpact',
+    day: 3,
+  });
+  record(
+    assert(
+      checks,
+      reactionEcho?.source === 'citizen' && reactionEcho.surface === 'recentImpact',
+      'post decision social echo maps source',
+      'reaction source',
+    ),
+  );
+  const reportEcho = buildReportSocialEcho({
+    cityReaction: {
+      reactionId: 'reaction-report-smoke',
+      eventId: 'evt-report-smoke',
+      districtName: 'Sanayi',
+      tone: 'warning',
+      socialEcho: {
+        sourceLabel: 'Basın notu',
+        line: 'Sanayi tarafında gecikme algısı yeniden konuşuluyor.',
+        tone: 'warning',
+      },
+    },
+    day: 8,
+  });
+  record(
+    assert(
+      checks,
+      reportEcho?.surface === 'report' &&
+        reportEcho.title === 'Bugünün sosyal izi' &&
+        reportEcho.message.length <= 110,
+      'report social echo compact surface',
+      'report organic echo',
     ),
   );
 

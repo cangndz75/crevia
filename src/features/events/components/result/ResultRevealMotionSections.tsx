@@ -6,10 +6,13 @@ import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import type {
   EventResultAction,
   EventResultAdvisorComment,
+  EventResultImpactCard,
   EventResultOutcomeSummary,
   EventResultRevealItem,
   EventResultSelectedPlanContext,
 } from '@/features/events/utils/eventResultRevealPresentation';
+import type { PostDecisionCityReactionPresentation } from '@/features/events/utils/postDecisionCityReactionPresentation';
+import type { SocialEchoPresentation } from '@/core/socialEcho';
 import { CreviaMotionView } from '@/shared/motion';
 import { CreviaAnimatedPressable } from '@/core/animations/CreviaAnimatedPressable';
 import { shadows } from '@/ui/theme/shadows';
@@ -39,6 +42,42 @@ const ADVISOR_TONE: Record<
   positive: { border: 'rgba(62, 158, 106, 0.28)', icon: 'checkmark-circle-outline' },
 };
 
+const CITY_REACTION_TONE: Record<
+  PostDecisionCityReactionPresentation['tone'],
+  { color: string; bg: string; border: string; label: string }
+> = {
+  positive: {
+    color: eventDetail.success,
+    bg: 'rgba(62, 158, 106, 0.10)',
+    border: 'rgba(62, 158, 106, 0.24)',
+    label: 'Olumlu',
+  },
+  mixed: {
+    color: eventDetail.tealDark,
+    bg: 'rgba(11, 107, 97, 0.10)',
+    border: 'rgba(11, 107, 97, 0.20)',
+    label: 'Karma',
+  },
+  warning: {
+    color: eventDetail.orange,
+    bg: 'rgba(199, 137, 37, 0.12)',
+    border: 'rgba(199, 137, 37, 0.28)',
+    label: 'İzle',
+  },
+  critical: {
+    color: '#B84A35',
+    bg: 'rgba(184, 74, 53, 0.12)',
+    border: 'rgba(184, 74, 53, 0.28)',
+    label: 'Kritik',
+  },
+  neutral: {
+    color: eventDetail.teal,
+    bg: 'rgba(11, 107, 97, 0.08)',
+    border: 'rgba(11, 107, 97, 0.16)',
+    label: 'Dengeli',
+  },
+};
+
 function resolveIcon(iconKey: string): IconName {
   const known: Record<string, IconName> = {
     'checkmark-circle-outline': 'checkmark-circle-outline',
@@ -46,6 +85,8 @@ function resolveIcon(iconKey: string): IconName {
     'pulse-outline': 'pulse-outline',
     'document-text-outline': 'document-text-outline',
     'flag-outline': 'flag-outline',
+    'people-outline': 'people-outline',
+    'wallet-outline': 'wallet-outline',
     'cube-outline': 'cube-outline',
     'location-outline': 'location-outline',
     'chatbubbles-outline': 'chatbubbles-outline',
@@ -58,6 +99,46 @@ function resolveIcon(iconKey: string): IconName {
     'library-outline': 'library-outline',
   };
   return known[iconKey] ?? 'ellipse-outline';
+}
+
+type ResultImpactCardGridProps = {
+  cards: EventResultImpactCard[];
+  reducedMotion?: boolean;
+};
+
+export function ResultImpactCardGrid({
+  cards,
+  reducedMotion = false,
+}: ResultImpactCardGridProps) {
+  return (
+    <CreviaMotionView
+      motionKind="card_enter"
+      surface="decision_result"
+      index={1}
+      reducedMotion={reducedMotion}
+      style={styles.impactGrid}>
+      {cards.map((card) => (
+        <View key={card.id} style={[styles.impactCard, shadows.soft]}>
+          <View style={styles.impactHeader}>
+            <Ionicons
+              name={resolveIcon(card.iconKey)}
+              size={15}
+              color={ITEM_TONE[card.tone]}
+            />
+            <Text style={[styles.impactDelta, { color: ITEM_TONE[card.tone] }]} numberOfLines={1}>
+              {card.deltaText}
+            </Text>
+          </View>
+          <Text style={styles.impactTitle} numberOfLines={1}>
+            {card.title}
+          </Text>
+          <Text style={styles.impactBody} numberOfLines={2}>
+            {card.body}
+          </Text>
+        </View>
+      ))}
+    </CreviaMotionView>
+  );
 }
 
 type ResultOutcomeHeroProps = {
@@ -172,6 +253,113 @@ export function ResultPlanContextStrip({
       <Text style={styles.planLine} numberOfLines={2}>
         {context.resultLine}
       </Text>
+    </CreviaMotionView>
+  );
+}
+
+type ResultCityReactionCardProps = {
+  reaction: PostDecisionCityReactionPresentation;
+  socialEcho?: SocialEchoPresentation | null;
+  reducedMotion?: boolean;
+};
+
+export function ResultCityReactionCard({
+  reaction,
+  socialEcho,
+  reducedMotion = false,
+}: ResultCityReactionCardProps) {
+  const tone = CITY_REACTION_TONE[reaction.tone];
+  const socialTone = socialEcho ? CITY_REACTION_TONE[socialEcho.tone] : tone;
+
+  return (
+    <CreviaMotionView
+      motionKind="card_enter"
+      surface="decision_result"
+      index={2}
+      reducedMotion={reducedMotion}
+      style={[styles.cityReactionCard, { borderColor: tone.border }, shadows.soft]}>
+      <View style={styles.cityReactionHeader}>
+        <View style={[styles.cityReactionIcon, { backgroundColor: tone.bg }]}>
+          <Ionicons name="pulse-outline" size={17} color={tone.color} />
+        </View>
+        <View style={styles.cityReactionTitleBlock}>
+          <Text style={styles.cityReactionEyebrow} numberOfLines={1}>
+            Şehir Tepkisi
+          </Text>
+          <Text style={styles.cityReactionTitle} numberOfLines={2}>
+            {reaction.headline}
+          </Text>
+        </View>
+        <View style={[styles.cityReactionToneChip, { backgroundColor: tone.bg }]}>
+          <Text style={[styles.cityReactionToneText, { color: tone.color }]} numberOfLines={1}>
+            {tone.label}
+          </Text>
+        </View>
+      </View>
+
+      <Text style={styles.cityReactionSummary} numberOfLines={2}>
+        {reaction.shortSummary}
+      </Text>
+
+      <View style={styles.cityReactionImpactGrid}>
+        {reaction.impactItems.map((item) => {
+          const itemTone = CITY_REACTION_TONE[item.tone];
+          return (
+            <View key={item.id} style={[styles.cityReactionImpact, { borderColor: itemTone.border }]}>
+              <Text style={styles.cityReactionImpactLabel} numberOfLines={1}>
+                {item.label}
+              </Text>
+              <Text style={[styles.cityReactionImpactValue, { color: itemTone.color }]} numberOfLines={1}>
+                {item.valueText}
+              </Text>
+              <Text style={styles.cityReactionImpactLine} numberOfLines={2}>
+                {item.line}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+
+      <View style={styles.cityReactionEchoList}>
+        {reaction.resourceEchoes.slice(0, 4).map((echo) => {
+          const echoTone = CITY_REACTION_TONE[echo.tone];
+          return (
+            <View key={echo.id} style={styles.cityReactionEchoRow}>
+              <View style={styles.cityReactionEchoTitleWrap}>
+                <Text style={styles.cityReactionEchoTitle} numberOfLines={1}>
+                  {echo.title}
+                </Text>
+                <View style={[styles.cityReactionEchoStatus, { backgroundColor: echoTone.bg }]}>
+                  <Text style={[styles.cityReactionEchoStatusText, { color: echoTone.color }]} numberOfLines={1}>
+                    {echo.statusLabel}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.cityReactionEchoLine} numberOfLines={1}>
+                {echo.line}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+
+      <View style={styles.cityReactionSocialRow}>
+        <Ionicons
+          name="chatbubble-ellipses-outline"
+          size={14}
+          color={socialTone.color}
+        />
+        <View style={[styles.cityReactionSocialSource, { backgroundColor: socialTone.bg }]}>
+          <Text
+            style={[styles.cityReactionSocialSourceText, { color: socialTone.color }]}
+            numberOfLines={1}>
+            {socialEcho?.title ?? reaction.socialEcho.sourceLabel}
+          </Text>
+        </View>
+        <Text style={styles.cityReactionSocialText} numberOfLines={2}>
+          {socialEcho?.message ?? reaction.socialEcho.line}
+        </Text>
+      </View>
     </CreviaMotionView>
   );
 }
@@ -302,6 +490,43 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: eventDetail.textMuted,
   },
+  impactGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  impactCard: {
+    flexBasis: '31%',
+    flexGrow: 1,
+    minHeight: 112,
+    borderRadius: eventDetail.smallRadius,
+    backgroundColor: eventDetail.card,
+    borderWidth: 1,
+    borderColor: 'rgba(6, 63, 59, 0.06)',
+    padding: 10,
+    gap: 6,
+  },
+  impactHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 5,
+  },
+  impactDelta: {
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  impactTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: eventDetail.textDark,
+  },
+  impactBody: {
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '600',
+    color: eventDetail.textMuted,
+  },
   revealCard: {
     backgroundColor: eventDetail.card,
     borderRadius: eventDetail.smallRadius,
@@ -380,6 +605,161 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     fontWeight: '600',
+    color: eventDetail.textDark,
+  },
+  cityReactionCard: {
+    backgroundColor: eventDetail.card,
+    borderRadius: eventDetail.smallRadius,
+    padding: 12,
+    gap: 10,
+    borderWidth: 1,
+  },
+  cityReactionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 9,
+  },
+  cityReactionIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  cityReactionTitleBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  cityReactionEyebrow: {
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '800',
+    color: eventDetail.tealDark,
+    textTransform: 'uppercase',
+  },
+  cityReactionTitle: {
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '900',
+    color: eventDetail.textDark,
+  },
+  cityReactionToneChip: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexShrink: 0,
+  },
+  cityReactionToneText: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '900',
+  },
+  cityReactionSummary: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '600',
+    color: eventDetail.textMuted,
+  },
+  cityReactionImpactGrid: {
+    flexDirection: 'row',
+    gap: 7,
+  },
+  cityReactionImpact: {
+    flex: 1,
+    minWidth: 0,
+    borderRadius: 12,
+    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
+    padding: 8,
+    gap: 3,
+  },
+  cityReactionImpactLabel: {
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '800',
+    color: eventDetail.textMuted,
+  },
+  cityReactionImpactValue: {
+    fontSize: 14,
+    lineHeight: 17,
+    fontWeight: '900',
+    fontVariant: ['tabular-nums'],
+  },
+  cityReactionImpactLine: {
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '600',
+    color: eventDetail.textDark,
+  },
+  cityReactionEchoList: {
+    gap: 6,
+  },
+  cityReactionEchoRow: {
+    borderRadius: 11,
+    backgroundColor: 'rgba(6, 63, 59, 0.04)',
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+    gap: 3,
+  },
+  cityReactionEchoTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  cityReactionEchoTitle: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '900',
+    color: eventDetail.textDark,
+  },
+  cityReactionEchoStatus: {
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    flexShrink: 0,
+  },
+  cityReactionEchoStatusText: {
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: '900',
+  },
+  cityReactionEchoLine: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '600',
+    color: eventDetail.textMuted,
+  },
+  cityReactionSocialRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 7,
+    borderRadius: 12,
+    backgroundColor: 'rgba(11, 107, 97, 0.07)',
+    paddingHorizontal: 9,
+    paddingVertical: 8,
+  },
+  cityReactionSocialSource: {
+    maxWidth: 106,
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    flexShrink: 0,
+  },
+  cityReactionSocialSourceText: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '900',
+  },
+  cityReactionSocialText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '700',
     color: eventDetail.textDark,
   },
   actionsWrap: {

@@ -41,7 +41,7 @@ export function TaskFlowCard({
   return (
     <View style={styles.card}>
       <Text style={styles.eyebrow} numberOfLines={1}>
-        GÖREV AKIŞI
+        DÖNEM YOLU
       </Text>
 
       <View style={styles.stepperRow}>
@@ -51,7 +51,13 @@ export function TaskFlowCard({
           const locked = step.state === 'locked';
 
           return (
-            <View key={step.id} style={styles.stepCol}>
+            <View
+              key={step.id}
+              style={[
+                styles.stepCol,
+                completed ? styles.stepColCompleted : undefined,
+                active ? styles.stepColActive : undefined,
+              ]}>
               <View style={styles.stepTop}>
                 {index > 0 ? <View style={styles.connectorLeft} /> : <View style={styles.connectorSpacer} />}
                 <View
@@ -91,6 +97,11 @@ export function TaskFlowCard({
               <Text style={styles.stepSubtitle} numberOfLines={2}>
                 {step.subtitle}
               </Text>
+              {active ? (
+                <Text style={styles.stepReward} numberOfLines={1}>
+                  Yeni yetki rozeti açılır
+                </Text>
+              ) : null}
             </View>
           );
         })}
@@ -117,7 +128,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: 'rgba(7, 86, 79, 0.12)',
-    backgroundColor: centerLowerPalette.cream,
+    backgroundColor: '#FFFCF5',
     paddingHorizontal: 14,
     paddingVertical: 14,
     gap: 14,
@@ -131,7 +142,7 @@ const styles = StyleSheet.create({
   },
   stepperRow: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 6,
     minWidth: 0,
   },
   stepCol: {
@@ -139,6 +150,17 @@ const styles = StyleSheet.create({
     minWidth: 0,
     alignItems: 'center',
     gap: 4,
+    borderRadius: 16,
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+  },
+  stepColCompleted: {
+    opacity: 0.72,
+  },
+  stepColActive: {
+    backgroundColor: 'rgba(216, 167, 46, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(216, 167, 46, 0.24)',
   },
   stepTop: {
     width: '100%',
@@ -151,18 +173,16 @@ const styles = StyleSheet.create({
   },
   connectorLeft: {
     flex: 1,
-    height: 2,
-    borderStyle: 'dashed',
-    borderTopWidth: 1,
-    borderColor: 'rgba(7, 86, 79, 0.18)',
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: 'rgba(7, 86, 79, 0.14)',
     marginRight: 2,
   },
   connectorRight: {
     flex: 1,
-    height: 2,
-    borderStyle: 'dashed',
-    borderTopWidth: 1,
-    borderColor: 'rgba(7, 86, 79, 0.18)',
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: 'rgba(216, 167, 46, 0.22)',
     marginLeft: 2,
   },
   stepBadge: {
@@ -212,6 +232,13 @@ const styles = StyleSheet.create({
     color: centerLowerPalette.mutedDark,
     textAlign: 'center',
     minHeight: 24,
+  },
+  stepReward: {
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: '900',
+    color: centerLowerPalette.tealPanel,
+    textAlign: 'center',
   },
   cta: {
     minHeight: 40,

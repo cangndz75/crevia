@@ -17,7 +17,7 @@ export function ResolvedEventList({ items, onSeeAll, onItemPress }: ResolvedEven
   return (
     <View style={styles.section}>
       <View style={styles.header}>
-        <Text style={styles.title}>Çözülen Olaylar</Text>
+        <Text style={styles.title}>ÇÖZÜLEN OLAYLAR</Text>
         <Pressable
           onPress={onSeeAll}
           style={({ pressed }) => [styles.seeAll, pressed && styles.pressed]}
@@ -53,9 +53,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title: {
-    fontSize: 18,
+    fontSize: 13,
     fontWeight: '800',
-    color: olaylar.text,
+    color: olaylar.textSoft,
+    letterSpacing: 0.6,
   },
   seeAll: {
     flexDirection: 'row',

@@ -21,6 +21,7 @@ import {
   DispatchCompatibilityStrip,
   DispatchPhaseHeader,
   DispatchPlanSummaryStrip,
+  DispatchReadinessPanel,
   DispatchRouteStepStrip,
 } from '@/features/events/components/event-workflow/dispatch/DispatchMotionSections';
 import { DispatchWorkflowFooter } from '@/features/events/components/event-workflow/dispatch/DispatchWorkflowFooter';
@@ -264,6 +265,11 @@ export function EventDispatchPhase({
 
         <DispatchPlanSummaryStrip
           plan={presentation.selectedPlan}
+          reducedMotion={reducedMotion}
+        />
+
+        <DispatchReadinessPanel
+          rows={presentation.readinessRows}
           reducedMotion={reducedMotion}
         />
 

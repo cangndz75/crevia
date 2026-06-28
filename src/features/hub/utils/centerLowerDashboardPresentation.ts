@@ -1,4 +1,4 @@
-import type { CenterHomePresentation } from '@/features/hub/utils/centerHomePresentation';
+import type { CenterHomeCoreSections } from '@/features/hub/utils/centerHomePresentation';
 
 import type { CenterPortfolioItemModel } from './centerDailyCapacityPortfolioPresentation';
 
@@ -26,6 +26,8 @@ export type ContinueOperationModel = {
   title: string;
   badge: string;
   location: string;
+  impactLine?: string;
+  rewardLine?: string;
   progress: number;
   variant: ContinueOperationVariant;
   isLocked: boolean;
@@ -86,6 +88,8 @@ const FALLBACK_OPERATIONS: ContinueOperationModel[] = [
     title: 'Roger Operasyonu',
     badge: 'Kolay',
     location: 'Konum: Çamlıca Bölgesi',
+    impactLine: 'Etki: Risk azalır',
+    rewardLine: 'Ödül: +Güven',
     progress: 65,
     variant: 'easy',
     isLocked: false,
@@ -96,6 +100,8 @@ const FALLBACK_OPERATIONS: ContinueOperationModel[] = [
     title: 'Yaklaşan Operasyon',
     badge: 'Zor',
     location: 'Konum: Boğaziçi Hattı',
+    impactLine: 'Risk: Orta',
+    rewardLine: 'Etki: Hazırlık artar',
     progress: 30,
     variant: 'hard',
     isLocked: true,
@@ -126,21 +132,23 @@ function isDeferredPortfolioItem(item: CenterPortfolioItemModel): boolean {
   );
 }
 
-function badgeForActiveTarget(presentation: CenterHomePresentation): string {
+function badgeForActiveTarget(presentation: CenterHomeCoreSections): string {
+  if (presentation.activeTarget.status === 'completed') return 'Tamamlandı';
   const priority = presentation.activeTarget.priority;
   if (priority === 'urgent') return 'Acil';
   if (priority === 'high') return 'Orta';
   return 'Kolay';
 }
 
-function locationForActiveTarget(presentation: CenterHomePresentation): string {
+function locationForActiveTarget(presentation: CenterHomeCoreSections): string {
   const target = presentation.activeTarget;
+  if (target.id === 'day1-entry') return 'Merkez Akışı · Başlangıç';
   if (target.subtitle?.trim()) return `Konum: ${target.subtitle.trim()}`;
   if (target.categoryLabel?.trim()) return `Konum: ${target.categoryLabel.trim()}`;
   return 'Konum: Şehir merkezi';
 }
 
-function progressForActiveTarget(presentation: CenterHomePresentation): number {
+function progressForActiveTarget(presentation: CenterHomeCoreSections): number {
   const ratio = presentation.activeTarget.progress?.progressRatio;
   if (typeof ratio === 'number' && Number.isFinite(ratio)) {
     return clampPercent(Math.round(ratio * 100));
@@ -150,7 +158,7 @@ function progressForActiveTarget(presentation: CenterHomePresentation): number {
   return 30;
 }
 
-function buildMerkezStatusModel(presentation: CenterHomePresentation): CenterLowerMerkezStatusModel {
+function buildMerkezStatusModel(presentation: CenterHomeCoreSections): CenterLowerMerkezStatusModel {
   const insight = presentation.citySummary.primaryInsight?.text?.trim();
   const calm =
     presentation.citySummary.metrics.every(
@@ -169,12 +177,12 @@ function buildMerkezStatusModel(presentation: CenterHomePresentation): CenterLow
   };
 }
 
-function buildSignalModel(presentation: CenterHomePresentation): CenterLowerSignalModel {
+function buildSignalModel(presentation: CenterHomeCoreSections): CenterLowerSignalModel {
   const portfolio = presentation.portfolioSurface;
   const topSignal = presentation.operationSignals.signals[0];
 
   let statusTitle = 'Sinyalin güçlü';
-  let statusSubtitle = 'Akış seninle.';
+  let statusSubtitle = 'İlk olay ilerledikçe risk ve fırsat kartları görünür olur.';
   let signalStrength = 88;
   let route = presentation.operationSignals.cta?.route ?? '/events';
   let authorityLine: string | undefined;
@@ -211,7 +219,7 @@ function buildSignalModel(presentation: CenterHomePresentation): CenterLowerSign
       statusSubtitle = topSignal.description?.trim() || topSignal.title;
       signalStrength = 72;
     } else if (statusTitle === 'Sinyalin güçlü') {
-      statusSubtitle = 'Riskler düşük, fırsatlar açık.';
+      statusSubtitle = 'İlk olay ilerledikçe risk ve fırsat kartları görünür olur.';
       signalStrength = 82;
     }
     if (topSignal.route) route = topSignal.route;
@@ -221,14 +229,14 @@ function buildSignalModel(presentation: CenterHomePresentation): CenterLowerSign
     title: 'SİNYAL DURUMU',
     statusTitle,
     statusSubtitle,
-    ctaLabel: 'Detayları İncele',
+    ctaLabel: 'Sinyali Tara',
     signalStrength,
     authorityLine,
     route,
   };
 }
 
-export function buildTaskFlowSteps(presentation: CenterHomePresentation): TaskFlowStep[] {
+export function buildTaskFlowSteps(presentation: CenterHomeCoreSections): TaskFlowStep[] {
   const target = presentation.activeTarget;
   const activeDone = target.status === 'completed' || target.visibility === 'completed';
   const reputationUnlocked =
@@ -256,7 +264,7 @@ export function buildTaskFlowSteps(presentation: CenterHomePresentation): TaskFl
   ];
 }
 
-function buildStreakNodes(presentation: CenterHomePresentation): StreakNode[] {
+function buildStreakNodes(presentation: CenterHomeCoreSections): StreakNode[] {
   const rewardDays = presentation.dailyReward.days.slice(0, 4);
   const fallbackValues = [20, 60, 80, 100];
 
@@ -301,6 +309,10 @@ function portfolioItemToOperation(
     title: item.title,
     badge: item.badgeLabel || (deferred ? 'Ertelendi' : 'Öneri'),
     location: location.startsWith('Konum:') ? location : `Konum: ${location}`,
+    impactLine:
+      item.decisionLine?.trim() ||
+      (deferred ? 'Risk: Orta' : 'Etki: Fırsat açılır'),
+    rewardLine: deferred ? 'Etki: Hazırlık bekler' : 'Ödül: +Hazırlık',
     progress: deferred ? 30 : 55,
     variant: deferred ? 'locked' : variant,
     isLocked: deferred || !item.isActionable,
@@ -308,7 +320,7 @@ function portfolioItemToOperation(
   };
 }
 
-function buildContinueOperations(presentation: CenterHomePresentation): ContinueOperationModel[] {
+function buildContinueOperations(presentation: CenterHomeCoreSections): ContinueOperationModel[] {
   const operations: ContinueOperationModel[] = [];
   const target = presentation.activeTarget;
 
@@ -319,13 +331,24 @@ function buildContinueOperations(presentation: CenterHomePresentation): Continue
       target.cta.actionKey !== 'none';
     operations.push({
       id: target.id,
-      title: target.title,
+      title: target.status === 'completed' ? 'İlk olay çözüldü' : target.title,
       badge: badgeForActiveTarget(presentation),
       location: locationForActiveTarget(presentation),
+      impactLine:
+        target.id === 'day1-entry'
+          ? 'Etki: Risk kartları açılır'
+          : target.impactPreview[0]
+            ? `${target.impactPreview[0].label}: ${target.impactPreview[0].valueText}`
+            : 'Etki: Şehir akışı ilerler',
+      rewardLine: target.reward?.label
+        ? `Ödül: ${target.reward.label}`
+        : target.id === 'day1-entry'
+          ? 'Ödül: +30 ilerleme'
+          : undefined,
       progress: progressForActiveTarget(presentation),
       variant: 'easy',
       isLocked: !startable,
-      ctaLabel: target.cta.label,
+      ctaLabel: target.status === 'completed' ? 'Sıradaki hedef' : target.cta.label,
       route: target.cta.route ?? '/events',
     });
   }
@@ -362,7 +385,7 @@ function buildContinueOperations(presentation: CenterHomePresentation): Continue
 
 /** presentation.activeTarget ve portfolioSurface üzerinden alt dashboard modeli üretir. */
 export function buildCenterLowerDashboardPresentation(
-  presentation: CenterHomePresentation,
+  presentation: CenterHomeCoreSections,
 ): CenterLowerDashboardModel {
   const rewardAmount =
     parseRewardAmount(presentation.dailyReward.primaryReward?.valueText) ??
@@ -378,16 +401,15 @@ export function buildCenterLowerDashboardPresentation(
     },
     dailyBonus: {
       title: 'GÜNLÜK SERİ',
-      subtitle:
-        presentation.dailyReward.subtitle?.trim() || 'Serini koru, ödülleri topla!',
+      subtitle: 'Merkez disiplinini koru.',
       nodes: buildStreakNodes(presentation),
       rewardAmount,
       currentDay: presentation.dailyReward.today.dayIndex,
     },
     merkezStatus: buildMerkezStatusModel(presentation),
     continueSection: {
-      title: 'DEVAM ET',
-      actionLabel: 'Hepsini Gör',
+      title: 'Operasyon Masası',
+      actionLabel: '2 hamle',
       actionRoute: presentation.portfolioSurface.ctaRoute ?? '/events',
       operations: buildContinueOperations(presentation),
     },

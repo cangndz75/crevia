@@ -24,6 +24,7 @@ import {
   FieldAssignmentEffectStrip,
   FieldPhaseHeader,
   FieldPlanSummaryStrip,
+  FieldResourceSnapshotCard,
   FieldTimelineList,
 } from '@/features/events/components/event-workflow/field/FieldMotionSections';
 import { PlanEventSummaryCard } from '@/features/events/components/event-workflow/plan/PlanEventSummaryCard';
@@ -41,7 +42,7 @@ import { resolveInspectDistrictId } from '@/features/events/utils/eventWorkflowP
 import { useGameStore } from '@/store/useGameStore';
 import { useCreviaReducedMotion } from '@/shared/motion';
 
-const TIMELINE_MAX_INDEX = 4;
+const TIMELINE_MAX_INDEX = 2;
 
 type Props = {
   event: EventCard;
@@ -295,6 +296,11 @@ export function EventFieldPhase({
         <FieldTimelineList
           timeline={presentation.timeline}
           operationStatus={presentation.operationStatus}
+          reducedMotion={reducedMotion}
+        />
+
+        <FieldResourceSnapshotCard
+          rows={presentation.resourceRows}
           reducedMotion={reducedMotion}
         />
 

@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { CreviaGameLogo } from '@/ui/components/CreviaGameLogo';
 import { PROFILE_REFERENCE_THEME } from '@/features/profile/utils/profileReferencePresentation';
+import { CreviaGameLogo } from '@/ui/components/CreviaGameLogo';
 import { radius } from '@/ui/theme/radius';
+import { shadows } from '@/ui/theme/shadows';
 
 type ProfileBrandHeaderProps = {
   notificationCount?: number;
@@ -18,16 +19,20 @@ export function ProfileBrandHeader({
 
   return (
     <View style={styles.row}>
-      <View style={styles.logoSlot}>
-        <CreviaGameLogo width={92} />
-        <Text style={styles.tagline} numberOfLines={1}>
-          ŞEHRİNİ İNŞA ET
+      <View style={[styles.profilePill, shadows.soft]}>
+        <Ionicons name="trophy" size={14} color={PROFILE_REFERENCE_THEME.tealDeep} />
+        <Text style={styles.profilePillText} numberOfLines={1}>
+          Profil
         </Text>
+      </View>
+
+      <View style={styles.logoSlot}>
+        <CreviaGameLogo width={96} />
       </View>
 
       <Pressable
         onPress={onNotificationsPress}
-        style={styles.notifyBtn}
+        style={[styles.notifyBtn, shadows.soft]}
         accessibilityRole="button"
         accessibilityLabel="Bildirimler">
         <Ionicons name="notifications-outline" size={22} color={PROFILE_REFERENCE_THEME.tealDark} />
@@ -42,26 +47,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'center',
-    minHeight: 52,
-    paddingTop: 2,
+    minHeight: 74,
+  },
+  profilePill: {
+    position: 'absolute',
+    left: 0,
+    top: 8,
+    minWidth: 72,
+    height: 36,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(14, 79, 71, 0.12)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+  },
+  profilePillText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: PROFILE_REFERENCE_THEME.textPrimary,
   },
   logoSlot: {
     alignItems: 'center',
-    gap: 2,
+    justifyContent: 'center',
     flex: 1,
-  },
-  tagline: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: PROFILE_REFERENCE_THEME.textSecondary,
-    letterSpacing: 1.4,
   },
   notifyBtn: {
     position: 'absolute',
     right: 0,
-    top: 4,
-    width: 40,
-    height: 40,
+    top: 7,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(14, 79, 71, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },

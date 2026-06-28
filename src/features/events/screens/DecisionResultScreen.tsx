@@ -23,6 +23,7 @@ import {
 import { buildEventResultSystemsEchoModel } from '@/core/events/eventResultNewSystemsPresentation';
 import { buildMapBeforeAfterSummary } from '@/core/mapPresence';
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
+import { buildPostDecisionSocialEchoPresentation } from '@/core/socialEcho';
 import { EventCarryOverHintCard } from '@/features/events/components/EventCarryOverHintCard';
 import { EventDomainFocusStrip } from '@/features/events/components/EventDomainFocusStrip';
 import { EventMapImpactSummaryCard } from '@/features/events/components/EventMapImpactSummaryCard';
@@ -51,9 +52,12 @@ import {
   buildEventResultRevealPresentation,
   type EventResultAction,
 } from '@/features/events/utils/eventResultRevealPresentation';
+import { buildPostDecisionCityReactionPresentation } from '@/features/events/utils/postDecisionCityReactionPresentation';
 import {
   ResultAdvisorCommentCard,
+  ResultCityReactionCard,
   ResultFinalActions,
+  ResultImpactCardGrid,
   ResultOutcomeHero,
   ResultPlanContextStrip,
   ResultRevealItemCard,
@@ -587,6 +591,22 @@ export function DecisionResultScreen() {
     ],
   );
 
+  const cityReaction = useMemo(
+    () => buildPostDecisionCityReactionPresentation(isMissing ? null : result),
+    [isMissing, result],
+  );
+
+  const resultSocialEcho = useMemo(
+    () =>
+      buildPostDecisionSocialEchoPresentation({
+        cityReaction,
+        surface: 'result',
+        day: result.day ?? currentDay,
+        excludeMessages: [cityReaction?.shortSummary ?? ''],
+      }),
+    [cityReaction, currentDay, result.day],
+  );
+
   const [visibleRevealCount, setVisibleRevealCount] = useState(0);
 
   useEffect(() => {
@@ -693,6 +713,19 @@ export function DecisionResultScreen() {
                 reducedMotion={reducedMotion}
               />
             ) : null}
+
+            {cityReaction ? (
+              <ResultCityReactionCard
+                reaction={cityReaction}
+                socialEcho={resultSocialEcho}
+                reducedMotion={reducedMotion}
+              />
+            ) : null}
+
+            <ResultImpactCardGrid
+              cards={revealPresentation.impactCards}
+              reducedMotion={reducedMotion}
+            />
 
             <View style={styles.revealList}>
               {revealPresentation.revealItems

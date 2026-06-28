@@ -37,6 +37,14 @@ export type EventPlanTradeoff = {
   iconKey: string;
 };
 
+export type EventPlanGameplayTradeoff = {
+  id: 'gain' | 'risk' | 'cost' | 'system';
+  label: string;
+  valueText: string;
+  tone: 'positive' | 'neutral' | 'warning';
+  iconKey: string;
+};
+
 export type EventPlanExpectedImpact = {
   id:
     | 'duration'
@@ -59,6 +67,7 @@ export type EventPlanStrategyCard = {
   isRecommended?: boolean;
   isSelected: boolean;
   tradeoffs: EventPlanTradeoff[];
+  gameplayTradeoffs: EventPlanGameplayTradeoff[];
   expectedImpact: EventPlanExpectedImpact[];
   sourceLabel: string;
   sourceIds: string[];
@@ -257,7 +266,7 @@ export function buildEventPlanInspectSummary(
 
 type StrategyTemplate = Omit<
   EventPlanStrategyCard,
-  'isRecommended' | 'isSelected'
+  'isRecommended' | 'isSelected' | 'gameplayTradeoffs'
 >;
 
 function applyVarietyToStrategyTemplate(
@@ -490,6 +499,112 @@ function buildImpactPreview(strategy: EventPlanStrategyCard): EventPlanImpactPre
   };
 }
 
+function resolveTradeoffValue(
+  template: StrategyTemplate,
+  tradeoffId: EventPlanTradeoffId,
+  fallback: string,
+): string {
+  return template.tradeoffs.find((tradeoff) => tradeoff.id === tradeoffId)?.valueText ?? fallback;
+}
+
+function buildGameplayTradeoffs(template: StrategyTemplate): EventPlanGameplayTradeoff[] {
+  switch (template.id) {
+    case 'rapid_response':
+      return [
+        {
+          id: 'gain',
+          label: 'Kazanç',
+          valueText: 'Güven hızlı toparlanır',
+          tone: 'positive',
+          iconKey: 'trending-up-outline',
+        },
+        {
+          id: 'risk',
+          label: 'Risk',
+          valueText: resolveTradeoffValue(template, 'risk', 'Yarın baskısı artabilir'),
+          tone: 'warning',
+          iconKey: 'alert-circle-outline',
+        },
+        {
+          id: 'cost',
+          label: 'Maliyet',
+          valueText: resolveTradeoffValue(template, 'resource', 'Kaynak yüksek'),
+          tone: 'warning',
+          iconKey: 'wallet-outline',
+        },
+        {
+          id: 'system',
+          label: 'Sistem',
+          valueText: 'Ekip temposu',
+          tone: 'neutral',
+          iconKey: 'people-outline',
+        },
+      ];
+    case 'long_term_fix':
+      return [
+        {
+          id: 'gain',
+          label: 'Kazanç',
+          valueText: 'Yarın riski azalır',
+          tone: 'positive',
+          iconKey: 'calendar-outline',
+        },
+        {
+          id: 'risk',
+          label: 'Risk',
+          valueText: resolveTradeoffValue(template, 'time', 'Yavaş'),
+          tone: 'warning',
+          iconKey: 'time-outline',
+        },
+        {
+          id: 'cost',
+          label: 'Maliyet',
+          valueText: resolveTradeoffValue(template, 'resource', 'Planlama'),
+          tone: 'warning',
+          iconKey: 'wallet-outline',
+        },
+        {
+          id: 'system',
+          label: 'Sistem',
+          valueText: 'Operasyon baskısı',
+          tone: 'neutral',
+          iconKey: 'pulse-outline',
+        },
+      ];
+    default:
+      return [
+        {
+          id: 'gain',
+          label: 'Kazanç',
+          valueText: resolveTradeoffValue(template, 'trust', 'Güven dengeli'),
+          tone: 'positive',
+          iconKey: 'shield-checkmark-outline',
+        },
+        {
+          id: 'risk',
+          label: 'Risk',
+          valueText: 'Düşük risk',
+          tone: 'neutral',
+          iconKey: 'alert-circle-outline',
+        },
+        {
+          id: 'cost',
+          label: 'Maliyet',
+          valueText: resolveTradeoffValue(template, 'resource', 'Dengeli'),
+          tone: 'neutral',
+          iconKey: 'wallet-outline',
+        },
+        {
+          id: 'system',
+          label: 'Sistem',
+          valueText: resolveTradeoffValue(template, 'social', 'Sosyal denge'),
+          tone: 'neutral',
+          iconKey: 'chatbubbles-outline',
+        },
+      ];
+  }
+}
+
 export function buildEventPlanAdvisorComment(
   strategy: EventPlanStrategyCard,
   input: Pick<BuildEventPlanPhasePresentationInput, 'event' | 'isDay1LearningEvent' | 'day' | 'recentVarietyProfiles'>,
@@ -551,6 +666,7 @@ function buildStrategies(
       ...template,
       isRecommended: id === recommendedStrategyId,
       isSelected: id === selectedStrategyId,
+      gameplayTradeoffs: buildGameplayTradeoffs(template),
     };
   });
 }
@@ -644,6 +760,9 @@ export function auditEventPlanPhasePresentation(model: EventPlanPhasePresentatio
     if (strategy.isRecommended) recommendedCount += 1;
     if (strategy.tradeoffs.length === 0) {
       issues.push(`tradeoffs empty for ${strategy.id}`);
+    }
+    if (strategy.gameplayTradeoffs.length !== 4) {
+      issues.push(`gameplayTradeoffs incomplete for ${strategy.id}`);
     }
     if (strategy.expectedImpact.length > 4) {
       issues.push(`expectedImpact above max for ${strategy.id}`);

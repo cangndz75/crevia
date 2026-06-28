@@ -2,6 +2,7 @@ import type { ContentRuntimeActivationEventMeta } from '@/core/contentRuntimeAct
 import type { CarryOverMemoryModel } from '@/core/carryOver/carryOverMemoryTypes';
 import type { CityEchoBinding } from '@/core/cityEchoBinding/cityEchoBindingTypes';
 import type { CityJournalLiteModel } from '@/core/cityJournal/cityJournalTypes';
+import type { DecisionRecord } from '@/core/models/DecisionRecord';
 import type { DecisionImpactExplanation } from '@/core/decisionImpactExplanation/decisionImpactExplanationTypes';
 import type { DistrictReportCardSurfaceModel } from '@/core/districtReportCard/districtReportCardTypes';
 import type { MapDistrictId } from '@/core/districts/districtIdentityTypes';
@@ -122,6 +123,7 @@ export type MapReactionLiteInput = {
   operationalResources?: unknown;
   tomorrowRisk?: TomorrowRiskModel | null;
   cityEcho?: CityEchoBinding | null;
+  recentDecisionRecord?: DecisionRecord | null;
   decisionImpact?: DecisionImpactExplanation | null;
   districtReportCard?: DistrictReportCardSurfaceModel | null;
   operationalResourcePresence?: OperationalResourcePresenceLiteModel | null;

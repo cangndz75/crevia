@@ -13,11 +13,14 @@ export type ContinueOperationCardProps = {
   title: string;
   badge: string;
   location: string;
+  impactLine?: string;
+  rewardLine?: string;
   progress: number;
   variant: ContinueOperationVariant;
   isLocked?: boolean;
   ctaLabel?: string;
   route?: string;
+  featured?: boolean;
   reducedMotion?: boolean;
   onPress?: () => void;
 };
@@ -26,10 +29,14 @@ export function ContinueOperationCard({
   title,
   badge,
   location,
+  impactLine,
+  rewardLine,
   progress,
   variant,
   isLocked = false,
+  ctaLabel,
   route = '/events',
+  featured = false,
   reducedMotion,
   onPress,
 }: ContinueOperationCardProps) {
@@ -45,17 +52,18 @@ export function ContinueOperationCard({
       pressScale={0.98}
       accessibilityRole="button"
       accessibilityLabel={`${title}. ${location}. Yüzde ${value}.`}
-      style={styles.operationPressable}>
+      style={[styles.operationPressable, featured && styles.operationPressableFeatured]}>
       <LinearGradient
-        colors={isHard ? [centerLowerPalette.plum, '#182848'] : [centerLowerPalette.tealPanel, '#2C7E64']}
+        colors={isHard ? ['#FFF8EC', '#F3EEF8'] : ['#FFFCF5', '#EAF7EF']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.operationCard}>
-        <View style={isHard ? styles.operationMoon : styles.operationSun} />
-        <View style={styles.skyline}>
-          <View style={[styles.tower, styles.towerSmall]} />
-          <View style={[styles.tower, styles.towerTall]} />
-          <View style={[styles.tower, styles.towerMid]} />
+        style={[styles.operationCard, featured && styles.operationCardFeatured]}>
+        <View style={styles.routeMotif}>
+          <View style={styles.routeMotifLine} />
+          <View style={[styles.routeMotifPin, styles.routeMotifPinOne]} />
+          <View style={[styles.routeMotifPin, styles.routeMotifPinTwo]}>
+            <Ionicons name={isHard ? 'lock-closed' : 'flag'} size={12} color={centerLowerPalette.tealPanel} />
+          </View>
         </View>
         <View style={styles.operationTopRow}>
           <View style={[styles.operationBadge, isHard ? styles.operationBadgeHard : undefined]}>
@@ -64,9 +72,9 @@ export function ContinueOperationCard({
             </Text>
           </View>
           <Ionicons
-            name={isHard ? 'lock-closed' : 'chevron-forward'}
+            name={isHard ? 'lock-closed-outline' : 'chevron-forward'}
             size={15}
-            color={centerLowerPalette.goldSoft}
+            color={centerLowerPalette.tealPanel}
           />
         </View>
         <View style={styles.operationCopy}>
@@ -76,9 +84,26 @@ export function ContinueOperationCard({
           <Text style={styles.operationLocation} numberOfLines={1}>
             {location}
           </Text>
+          {impactLine ? (
+            <Text style={styles.operationImpact} numberOfLines={1}>
+              {impactLine}
+            </Text>
+          ) : null}
+          {rewardLine ? (
+            <Text style={styles.operationReward} numberOfLines={1}>
+              {rewardLine}
+            </Text>
+          ) : null}
         </View>
         <View style={styles.progressRow}>
-          <Text style={styles.progressText}>%{value}</Text>
+          <View style={styles.progressTextRow}>
+            <Text style={styles.progressText}>%{value}</Text>
+            {ctaLabel ? (
+              <Text style={styles.ctaHint} numberOfLines={1}>
+                {ctaLabel}
+              </Text>
+            ) : null}
+          </View>
           <View style={styles.progressTrack}>
             <View
               style={[
@@ -100,57 +125,60 @@ const styles = StyleSheet.create({
     minWidth: 0,
     borderRadius: 22,
   },
+  operationPressableFeatured: {
+    flex: 0,
+  },
   operationCard: {
-    minHeight: 152,
+    minHeight: 146,
     borderRadius: 22,
-    padding: 11,
+    padding: 13,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: centerLowerPalette.borderGold,
+    borderColor: 'rgba(7, 86, 79, 0.14)',
   },
-  operationSun: {
+  operationCardFeatured: {
+    minHeight: 166,
+    padding: 14,
+  },
+  routeMotif: {
     position: 'absolute',
-    right: 14,
-    top: 17,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(245,227,175,0.24)',
+    right: 12,
+    top: 42,
+    width: 92,
+    height: 70,
+    borderRadius: 22,
+    backgroundColor: 'rgba(7, 86, 79, 0.07)',
+    overflow: 'hidden',
   },
-  operationMoon: {
+  routeMotifLine: {
     position: 'absolute',
-    right: 14,
-    top: 17,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(215,200,255,0.22)',
+    left: 18,
+    right: 18,
+    top: 36,
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: centerLowerPalette.tealPanel,
+    transform: [{ rotate: '-18deg' }],
   },
-  skyline: {
+  routeMotifPin: {
     position: 'absolute',
-    left: 10,
-    right: 10,
-    bottom: 34,
-    height: 36,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 5,
-    opacity: 0.22,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
-  tower: {
-    width: 20,
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: 6,
-    backgroundColor: centerLowerPalette.cream,
+  routeMotifPinOne: {
+    left: 16,
+    bottom: 20,
+    backgroundColor: centerLowerPalette.mint,
   },
-  towerSmall: {
-    height: 20,
-  },
-  towerTall: {
-    height: 34,
-  },
-  towerMid: {
-    height: 27,
+  routeMotifPinTwo: {
+    right: 16,
+    top: 16,
+    backgroundColor: centerLowerPalette.goldSoft,
   },
   operationTopRow: {
     flexDirection: 'row',
@@ -162,7 +190,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    backgroundColor: 'rgba(157,242,210,0.18)',
+    backgroundColor: 'rgba(157,242,210,0.32)',
     borderWidth: 1,
     borderColor: 'rgba(157,242,210,0.24)',
     maxWidth: 78,
@@ -172,40 +200,67 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(245,227,175,0.26)',
   },
   operationBadgeText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '900',
-    color: centerLowerPalette.goldSoft,
+    color: centerLowerPalette.tealPanel,
   },
   operationCopy: {
-    marginTop: 28,
+    marginTop: 14,
     gap: 5,
     minWidth: 0,
+    maxWidth: '72%',
   },
   operationTitle: {
-    fontSize: 13,
-    lineHeight: 17,
+    fontSize: 17,
+    lineHeight: 21,
     fontWeight: '900',
-    color: centerLowerPalette.textLight,
+    color: '#173D3A',
   },
   operationLocation: {
-    fontSize: 9,
-    lineHeight: 12,
+    fontSize: 12,
+    lineHeight: 15,
     fontWeight: '700',
-    color: centerLowerPalette.mutedLight,
+    color: centerLowerPalette.mutedDark,
+  },
+  operationImpact: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '900',
+    color: centerLowerPalette.tealPanel,
+  },
+  operationReward: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '800',
+    color: '#9B741D',
   },
   progressRow: {
     marginTop: 'auto',
     gap: 5,
   },
+  progressTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    minWidth: 0,
+  },
   progressText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '900',
-    color: centerLowerPalette.goldSoft,
+    color: centerLowerPalette.tealPanel,
+  },
+  ctaHint: {
+    flexShrink: 1,
+    fontSize: 10,
+    fontWeight: '900',
+    color: centerLowerPalette.tealPanel,
+    textAlign: 'right',
   },
   progressTrack: {
     height: 5,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(7,86,79,0.10)',
     overflow: 'hidden',
   },
   progressFill: {

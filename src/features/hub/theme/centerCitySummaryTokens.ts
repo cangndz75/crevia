@@ -32,8 +32,8 @@ export const centerSummaryTokens = {
     elevation: 4,
   },
   layout: {
-    heroHeight: 148,
-    metricsOverlap: 22,
+    heroHeight: 118,
+    metricsOverlap: 16,
     statusStripMinHeight: 60,
   },
 } as const;

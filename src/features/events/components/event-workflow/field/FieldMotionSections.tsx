@@ -7,6 +7,7 @@ import type {
   EventFieldAdvisorComment,
   EventFieldAssignmentEffect,
   EventFieldPhasePresentation,
+  EventFieldResourceRow,
   EventFieldSelectedPlanSummary,
   EventFieldTimelineStep,
 } from '@/features/events/utils/eventFieldPhasePresentation';
@@ -49,13 +50,22 @@ const ADVISOR_TONE: Record<
 function resolveIcon(iconKey: string): IconName {
   const known: Record<string, IconName> = {
     'people-outline': 'people-outline',
+    'car-outline': 'car-outline',
     'git-network-outline': 'git-network-outline',
     'construct-outline': 'construct-outline',
     'shield-checkmark-outline': 'shield-checkmark-outline',
     'checkmark-circle-outline': 'checkmark-circle-outline',
+    'alert-circle-outline': 'alert-circle-outline',
+    'pulse-outline': 'pulse-outline',
   };
   return known[iconKey] ?? 'ellipse-outline';
 }
+
+const RESOURCE_TONE: Record<EventFieldResourceRow['tone'], string> = {
+  positive: eventDetail.success,
+  neutral: eventDetail.teal,
+  warning: eventDetail.orange,
+};
 
 type FieldPhaseHeaderProps = {
   title: string;
@@ -149,6 +159,52 @@ export function FieldAssignmentEffectStrip({
       <Text style={styles.effectBody} numberOfLines={2}>
         {effect.body}
       </Text>
+    </CreviaMotionView>
+  );
+}
+
+type FieldResourceSnapshotCardProps = {
+  rows: EventFieldResourceRow[];
+  reducedMotion?: boolean;
+};
+
+export function FieldResourceSnapshotCard({
+  rows,
+  reducedMotion = false,
+}: FieldResourceSnapshotCardProps) {
+  return (
+    <CreviaMotionView
+      motionKind="card_enter"
+      surface="shared"
+      index={3}
+      reducedMotion={reducedMotion}
+      style={[styles.resourceCard, shadows.soft]}>
+      <View style={styles.resourceHeader}>
+        <Text style={styles.resourceTitle} numberOfLines={1}>
+          Saha kaynakları
+        </Text>
+        <Text style={styles.resourceMeta} numberOfLines={1}>
+          canlı özet
+        </Text>
+      </View>
+      <View style={styles.resourceGrid}>
+        {rows.map((row) => {
+          const color = RESOURCE_TONE[row.tone];
+          return (
+            <View key={row.id} style={styles.resourceTile}>
+              <View style={[styles.resourceIcon, { backgroundColor: `${color}18` }]}>
+                <Ionicons name={resolveIcon(row.iconKey)} size={14} color={color} />
+              </View>
+              <Text style={styles.resourceLabel} numberOfLines={1}>
+                {row.label}
+              </Text>
+              <Text style={styles.resourceValue} numberOfLines={2}>
+                {row.value}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
     </CreviaMotionView>
   );
 }
@@ -339,6 +395,65 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: '600',
     color: eventDetail.textMuted,
+  },
+  resourceCard: {
+    marginHorizontal: eventDetail.screenPadding,
+    backgroundColor: eventDetail.card,
+    borderRadius: eventDetail.smallRadius,
+    padding: 12,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(6, 63, 59, 0.06)',
+  },
+  resourceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  resourceTitle: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 13,
+    fontWeight: '800',
+    color: eventDetail.textDark,
+  },
+  resourceMeta: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: eventDetail.textMuted,
+  },
+  resourceGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  resourceTile: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    minHeight: 82,
+    borderRadius: 14,
+    backgroundColor: eventDetail.mintSoft,
+    padding: 10,
+    gap: 5,
+  },
+  resourceIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resourceLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: eventDetail.textMuted,
+  },
+  resourceValue: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '800',
+    color: eventDetail.textDark,
   },
   timelineCard: {
     marginHorizontal: eventDetail.screenPadding,

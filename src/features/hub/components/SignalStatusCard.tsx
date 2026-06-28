@@ -113,23 +113,35 @@ export function SignalStatusCard({
       <Text style={[styles.cardEyebrow, compact && styles.cardEyebrowCompact]} numberOfLines={1}>
         {title}
       </Text>
-      <RadarRing signalStrength={signalStrength} reducedMotion={reducedMotion} compact={compact} />
-      <View style={styles.signalCopy}>
-        <Text
-          style={[styles.signalTitle, compact && styles.signalTitleCompact]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.82}>
-          {statusTitle}
-        </Text>
-        <Text style={[styles.signalSubtitle, compact && styles.signalSubtitleCompact]} numberOfLines={2}>
-          {statusSubtitle}
-        </Text>
-        {authorityLine ? (
-          <Text style={styles.authorityLine} numberOfLines={1}>
-            {authorityLine}
+      <View style={styles.liveRow}>
+        <RadarRing signalStrength={signalStrength} reducedMotion={reducedMotion} compact />
+        <View style={styles.signalCopy}>
+          <Text
+            style={[styles.signalTitle, compact && styles.signalTitleCompact]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.82}>
+            {statusTitle}
           </Text>
-        ) : null}
+          <Text style={[styles.signalSubtitle, compact && styles.signalSubtitleCompact]} numberOfLines={2}>
+            {statusSubtitle}
+          </Text>
+          <View style={styles.signalPills}>
+            <View style={styles.signalPill}>
+              <Text style={styles.signalPillText}>Fırsat: 1</Text>
+            </View>
+            <View style={styles.signalPill}>
+              <Text style={styles.signalPillText}>Risk: düşük</Text>
+            </View>
+            {authorityLine ? (
+              <View style={styles.signalPill}>
+                <Text style={styles.signalPillText} numberOfLines={1}>
+                  {authorityLine.replace('Merkez ', 'Merkez: ')}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
       </View>
       <CreviaAnimatedPressable
         onPress={handlePress}
@@ -154,26 +166,25 @@ export function SignalStatusCard({
 
 const styles = StyleSheet.create({
   topCard: {
-    flex: 1,
-    minHeight: 224,
+    minHeight: 158,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: centerLowerPalette.borderGold,
-    padding: 12,
+    padding: 14,
     overflow: 'hidden',
     ...centerLowerPanelShadow,
   },
   topCardCompact: {
-    minHeight: 196,
+    minHeight: 150,
     padding: 10,
     borderRadius: 20,
   },
   cardGlowMint: {
     position: 'absolute',
-    top: 18,
-    alignSelf: 'center',
-    width: 112,
-    height: 112,
+    right: -22,
+    top: -22,
+    width: 140,
+    height: 140,
     borderRadius: 999,
     backgroundColor: 'rgba(33,191,168,0.14)',
   },
@@ -192,11 +203,19 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 0.6,
   },
+  liveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minWidth: 0,
+  },
   radarWrap: {
-    height: 104,
+    width: 86,
+    height: 86,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 6,
+    marginTop: 0,
+    flexShrink: 0,
   },
   radarWrapCompact: {
     height: 78,
@@ -284,16 +303,18 @@ const styles = StyleSheet.create({
     bottom: 24,
   },
   signalCopy: {
-    alignItems: 'center',
-    gap: 2,
-    marginTop: 2,
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'flex-start',
+    gap: 5,
+    marginTop: 0,
   },
   signalTitle: {
     fontSize: 15,
     lineHeight: 19,
     fontWeight: '900',
     color: centerLowerPalette.textLight,
-    textAlign: 'center',
+    textAlign: 'left',
   },
   signalTitleCompact: {
     fontSize: 13,
@@ -304,7 +325,7 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     fontWeight: '700',
     color: centerLowerPalette.mutedLight,
-    textAlign: 'center',
+    textAlign: 'left',
   },
   signalSubtitleCompact: {
     fontSize: 10,
@@ -317,13 +338,33 @@ const styles = StyleSheet.create({
     color: 'rgba(157,242,210,0.78)',
     textAlign: 'center',
   },
-  signalCta: {
-    minHeight: 32,
+  signalPills: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    minWidth: 0,
+  },
+  signalPill: {
     borderRadius: 999,
-    marginTop: 'auto',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(157,242,210,0.20)',
+  },
+  signalPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: centerLowerPalette.mint,
+  },
+  signalCta: {
+    minHeight: 34,
+    borderRadius: 999,
+    marginTop: 4,
     paddingHorizontal: 9,
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     justifyContent: 'center',
     gap: 5,
     backgroundColor: 'rgba(255,255,255,0.10)',

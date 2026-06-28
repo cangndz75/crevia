@@ -3,16 +3,16 @@ import type { BadgeShowcaseState } from '@/core/badges/badgeShowcaseTypes';
 import { colors } from '@/ui/theme/colors';
 
 export const BADGE_SHOWCASE_THEME = {
-  screenBg: '#F8F4EA',
-  cardBg: '#FFFEFA',
-  mintSoft: '#E8F8F5',
-  gold: '#F4B51F',
-  goldDark: '#E7A90E',
-  teal: '#1A8F8A',
-  tealDark: '#07564F',
-  textPrimary: '#202428',
-  textSecondary: '#6F7478',
-  border: 'rgba(20, 30, 30, 0.08)',
+  screenBg: '#041918',
+  cardBg: 'rgba(8, 43, 39, 0.84)',
+  mintSoft: 'rgba(64, 215, 176, 0.16)',
+  gold: '#D6B45A',
+  goldDark: '#9B741D',
+  teal: '#40D7B0',
+  tealDark: '#0C332F',
+  textPrimary: '#F6F1DF',
+  textSecondary: '#B7C8C2',
+  border: 'rgba(110, 235, 200, 0.16)',
 } as const;
 
 export type BadgeShowcaseRarityStyle = {
@@ -75,10 +75,10 @@ export function resolveBadgeShowcaseRarityStyle(
 export function resolveBadgeShowcaseStateStyle(state: BadgeShowcaseState): BadgeShowcaseStateStyle {
   switch (state) {
     case 'earned':
-      return { pillBg: colors.primaryMuted, pillText: colors.primary };
+      return { pillBg: BADGE_SHOWCASE_THEME.mintSoft, pillText: BADGE_SHOWCASE_THEME.teal };
     case 'in_progress':
-      return { pillBg: colors.hubGoldMuted, pillText: colors.hubGoldDark };
+      return { pillBg: 'rgba(214, 180, 90, 0.18)', pillText: BADGE_SHOWCASE_THEME.gold };
     default:
-      return { pillBg: colors.backgroundAlt, pillText: colors.textSecondary };
+      return { pillBg: 'rgba(255, 255, 255, 0.06)', pillText: BADGE_SHOWCASE_THEME.textSecondary };
   }
 }

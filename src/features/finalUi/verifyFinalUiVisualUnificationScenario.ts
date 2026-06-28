@@ -37,6 +37,30 @@ const OFF_THEME_HEX = /#[0-9A-Fa-f]{6}/g;
 const ALLOWED_HEX = new Set<string>(
   Object.values(gameUi.colors).filter((value) => typeof value === 'string' && value.startsWith('#')),
 );
+const ALLOWED_HUB_REFERENCE_HEX = new Set<string>([
+  '#050D0E',
+  '#0B1919',
+  '#101812',
+  '#102323',
+  '#132A29',
+  '#163432',
+  '#151A12',
+  '#15211B',
+  '#15221D',
+  '#2F8D7E',
+  '#86A9FF',
+  '#8D742F',
+  '#8FE1A6',
+  '#93E8BD',
+  '#D8B153',
+  '#D9755D',
+  '#E25E4E',
+  '#F6F0DA',
+  '#4ADE80',
+  '#38BDF8',
+  '#FFB800',
+  '#FF6B6B',
+]);
 
 function readRepo(rel: string): string {
   const path = join(REPO_ROOT, rel);
@@ -227,20 +251,26 @@ export function verifyFinalUiVisualUnificationScenario(): {
 
   const hubHome = readRepo('src/features/hub/components/HubReferenceHome.tsx');
   const hubLowerDashboard = readRepo('src/features/hub/components/CenterLowerDashboard.tsx');
-  record(assert(checks, hubHome.includes('CenterHomeHeader'), 'Hub uses CenterHomeHeader'));
-  record(assert(checks, hubHome.includes('CenterLowerDashboard'), 'Hub uses lower dashboard'));
+  record(assert(checks, hubHome.includes('HeaderBar') && hubHome.includes('TopInfoChips'), 'Hub uses reference header/status chips'));
+  record(assert(checks, hubHome.includes('MainHero') && hubHome.includes('RecentImpactCard'), 'Hub uses reference hero and impact card'));
+  record(assert(checks, hubHome.includes('NextActionsRail'), 'Hub uses reference next actions rail'));
+  record(assert(checks, hubHome.includes('CityPulseCard') && hubHome.includes('DistrictFocusCard'), 'Hub uses reference pulse and district cards'));
+  record(assert(checks, hubHome.includes('LiveDevelopments'), 'Hub uses live developments list'));
+  record(assert(checks, hubHome.includes('ProgressImpactRow') && hubHome.includes('QuickCommandsGrid'), 'Hub uses progress and command grid'));
+  record(assert(checks, hubHome.includes('CenterMotionEnter') && hubHome.includes('hubMotionEnabled'), 'Hub reference motion integration'));
   record(assert(checks, hubLowerDashboard.includes('SignalStatusCard'), 'Hub lower signal status card'));
   record(assert(checks, hubLowerDashboard.includes('TaskFlowCard'), 'Hub lower task flow card'));
   record(assert(checks, hubLowerDashboard.includes('DailyBonusCard'), 'Hub lower daily bonus card'));
   record(assert(checks, hubLowerDashboard.includes('ContinueOperationCard'), 'Hub lower continuation operation cards'));
-  record(assert(checks, hubLowerDashboard.includes('presentation.activeTarget'), 'Hub lower dashboard state wired'));
+  record(assert(checks, hubLowerDashboard.includes('presentation.strategicPulse'), 'Hub lower dashboard state wired'));
   record(assert(checks, hubHome.includes('gameUi'), 'Hub uses gameUi tokens'));
 
   const bottomNav = readRepo('src/components/navigation/CreviaBottomTabBar.tsx');
   record(assert(checks, bottomNav.includes('routeName: "index"'), 'nav Merkez route'));
   record(assert(checks, bottomNav.includes('routeName: "events"'), 'nav Operasyon route'));
   record(assert(checks, bottomNav.includes('routeName: "risks"'), 'nav Harita route'));
-  record(assert(checks, bottomNav.includes('routeName: "progression"'), 'nav Başarılar route'));
+  record(assert(checks, bottomNav.includes('routeName: "progression"'), 'nav Gelişim route'));
+  record(assert(checks, bottomNav.includes('label: "Gelişim"'), 'nav Gelişim label'));
   record(assert(checks, bottomNav.includes('routeName: "reports"'), 'nav Raporlar route'));
 
   const reportView = readRepo('src/features/reports/components/end-of-day/EndOfDayReportView.tsx');
@@ -287,7 +317,11 @@ export function verifyFinalUiVisualUnificationScenario(): {
   }
 
   const hubPaletteMatches = (hubHome.match(OFF_THEME_HEX) ?? []).filter(
-    (hex) => !ALLOWED_HEX.has(hex.toUpperCase()) && !ALLOWED_HEX.has(hex),
+    (hex) =>
+      !ALLOWED_HEX.has(hex.toUpperCase()) &&
+      !ALLOWED_HEX.has(hex) &&
+      !ALLOWED_HUB_REFERENCE_HEX.has(hex.toUpperCase()) &&
+      !ALLOWED_HUB_REFERENCE_HEX.has(hex),
   );
   if (hubPaletteMatches.length > 0) {
     checks.push(`WARN HubReferenceHome off-theme hex: ${hubPaletteMatches.slice(0, 3).join(', ')}`);

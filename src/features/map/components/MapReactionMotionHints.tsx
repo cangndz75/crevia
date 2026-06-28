@@ -20,6 +20,7 @@ type Props = {
   journalCue?: MapJournalMotionCue;
   bubbleCue?: MapBubbleMotionCue;
   reducedMotionMode?: boolean;
+  bottomOffset?: number;
 };
 
 function FlashHint({
@@ -88,11 +89,12 @@ export function MapReactionMotionHints({
   journalCue,
   bubbleCue,
   reducedMotionMode = false,
+  bottomOffset = 12,
 }: Props) {
   if (!journalCue && !bubbleCue) return null;
 
   return (
-    <View style={styles.wrap} pointerEvents="none">
+    <View style={[styles.wrap, { bottom: bottomOffset }]} pointerEvents="none">
       {journalCue ? (
         <FlashHint
           label={journalCue.hintLine}
@@ -118,7 +120,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 12,
     right: 12,
-    bottom: 12,
     gap: 6,
     alignItems: 'flex-start',
     zIndex: 4,

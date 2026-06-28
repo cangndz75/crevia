@@ -681,9 +681,11 @@ export function HubScreen() {
         budgetDeltaLabel: gameStatus.budgetDeltaLabel,
         playerLevel: gameStatus.level,
         selectedDistrictName: gameStatus.selectedDistrictName,
+        recentDecisionRecord: decisionHistory.at(-1) ?? null,
       }),
     [
       cityEchoHubLine,
+      decisionHistory,
       gameState,
       gameStatus.budgetDeltaLabel,
       gameStatus.level,

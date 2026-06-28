@@ -60,7 +60,7 @@ function TabNavigator() {
         }}
       />
       <Tabs.Screen name="risks" options={{ title: "Harita" }} />
-      <Tabs.Screen name="progression" options={{ title: "Başarılar" }} />
+      <Tabs.Screen name="progression" options={{ title: "Gelişim" }} />
       <Tabs.Screen name="social" options={{ href: null, title: "Sosyal Nabız" }} />
       <Tabs.Screen name="reports" options={{ title: "Rapor" }} />
       <Tabs.Screen name="profile" options={{ href: null, title: "Profil" }} />

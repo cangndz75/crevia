@@ -10,6 +10,8 @@ export const PROFILE_REFERENCE_THEME = {
   teal: '#1A8F8A',
   tealDark: '#157A76',
   tealDeep: '#07564F',
+  forest: '#0E4F47',
+  forestDark: '#073B35',
   gold: '#F5B731',
   goldDark: '#D4A017',
   textPrimary: '#173D3A',
@@ -30,7 +32,14 @@ export type ProfileStrengthItem = {
 export type ProfileRoleAdvantageItem = {
   id: string;
   title: string;
+  description: string;
   imageKey: 'clipboard' | 'map' | 'crate';
+};
+
+export type ProfileIdentityBadge = {
+  id: string;
+  label: string;
+  iconKey: 'star' | 'shield-checkmark' | 'business' | 'ribbon';
 };
 
 export type ProfileRoadmapNode = {
@@ -53,12 +62,15 @@ export type ProfileReferenceViewModel = {
     levelLabel: string;
     xpProgress: number;
     notificationCount: number;
+    badges: ProfileIdentityBadge[];
   };
   summary: {
     rankLabel: string;
     subtitle: string;
     authorityTrustValue: string;
     remainingTrustValue: string;
+    advantageTitle: string;
+    advantageLabel: string;
   };
   authorityMini: {
     progressPercent: number;
@@ -68,44 +80,146 @@ export type ProfileReferenceViewModel = {
   strengths: ProfileStrengthItem[];
   roleAdvantages: ProfileRoleAdvantageItem[];
   roadmap: ProfileRoadmapNode[];
+  roadmapSummary: {
+    label: string;
+    valueLabel: string;
+    progress: number;
+  };
 };
 
 const ROLE_ADVANTAGES_BY_RANK: Record<AuthorityRankId, ProfileRoleAdvantageItem[]> = {
   field_coordinator: [
-    { id: 'priority-tasks', title: 'Öncelikli Görev Atamaları', imageKey: 'clipboard' },
-    { id: 'region-voice', title: 'Bölge Yönetiminde Söz Sahibi Ol', imageKey: 'map' },
-    { id: 'resource-access', title: 'Özel Kaynak Erişimi', imageKey: 'crate' },
+    {
+      id: 'priority-tasks',
+      title: 'Öncelikli Görev Atamaları',
+      description: 'Başlıca projelerde öncelikli rol alabilir, şehrin gelişimini hızlandırabilirsin.',
+      imageKey: 'clipboard',
+    },
+    {
+      id: 'region-voice',
+      title: 'Bölge Yönetiminde Söz Sahibi Ol',
+      description: 'Bölge planlamalarında söz sahibi olarak stratejik kararlara katkıda bulunursun.',
+      imageKey: 'map',
+    },
+    {
+      id: 'resource-access',
+      title: 'Özel Kaynak Erişimi',
+      description: 'Saha özel kaynak havuzuna erişerek projeleri daha hızlı tamamlayabilirsin.',
+      imageKey: 'crate',
+    },
   ],
   operations_responsible: [
-    { id: 'ops-scope', title: 'Operasyon Kapsamı Genişletme', imageKey: 'clipboard' },
-    { id: 'district-preview', title: 'Bölge Genişleme Önizlemesi', imageKey: 'map' },
-    { id: 'crisis-layer', title: 'Kriz Katmanı Erişimi', imageKey: 'crate' },
+    {
+      id: 'ops-scope',
+      title: 'Operasyon Kapsamı Genişletme',
+      description: 'Aynı gün içinde daha geniş görev kümelerini planlama hakkı kazanırsın.',
+      imageKey: 'clipboard',
+    },
+    {
+      id: 'district-preview',
+      title: 'Bölge Genişleme Önizlemesi',
+      description: 'Sonraki mahalle açılımlarını erkenden okuyup hazırlık yapabilirsin.',
+      imageKey: 'map',
+    },
+    {
+      id: 'crisis-layer',
+      title: 'Kriz Katmanı Erişimi',
+      description: 'Yükselen risklerde ek denetim ve müdahale akışlarını yönetirsin.',
+      imageKey: 'crate',
+    },
   ],
   unit_chief: [
-    { id: 'unit-scope', title: 'Birim Düzeyi Karar Yetkisi', imageKey: 'clipboard' },
-    { id: 'team-spec', title: 'Ekip Uzmanlık Önizlemesi', imageKey: 'map' },
-    { id: 'maintenance', title: 'Filo Bakım Penceresi', imageKey: 'crate' },
+    {
+      id: 'unit-scope',
+      title: 'Birim Düzeyi Karar Yetkisi',
+      description: 'Birime bağlı operasyonların öncelik ve kaynak dengesini kurarsın.',
+      imageKey: 'clipboard',
+    },
+    {
+      id: 'team-spec',
+      title: 'Ekip Uzmanlık Önizlemesi',
+      description: 'Ekiplerin güçlü taraflarını takip edip görevlere daha doğru bağlarsın.',
+      imageKey: 'map',
+    },
+    {
+      id: 'maintenance',
+      title: 'Filo Bakım Penceresi',
+      description: 'Araç bakım risklerini erkenden görüp operasyon kesintisini azaltırsın.',
+      imageKey: 'crate',
+    },
   ],
   district_coordinator: [
-    { id: 'map-layers', title: 'Harita Katmanları', imageKey: 'map' },
-    { id: 'story-chains', title: 'Olay Zinciri Önizlemesi', imageKey: 'clipboard' },
-    { id: 'trust-layer', title: 'Güven Katmanı Erişimi', imageKey: 'crate' },
+    {
+      id: 'map-layers',
+      title: 'Harita Katmanları',
+      description: 'Bölge davranışlarını katmanlı harita üzerinden daha erken okursun.',
+      imageKey: 'map',
+    },
+    {
+      id: 'story-chains',
+      title: 'Olay Zinciri Önizlemesi',
+      description: 'Bir kararın sonraki günlere uzanan etkisini daha net takip edersin.',
+      imageKey: 'clipboard',
+    },
+    {
+      id: 'trust-layer',
+      title: 'Güven Katmanı Erişimi',
+      description: 'Mahalle güveni ve sosyal denge sinyallerini operasyon planına katarsın.',
+      imageKey: 'crate',
+    },
   ],
   deputy_director: [
-    { id: 'operation-era', title: 'Operasyon Dönemi Önizlemesi', imageKey: 'clipboard' },
-    { id: 'adaptive-events', title: 'Uyarlanabilir Olay Ağı', imageKey: 'map' },
-    { id: 'recovery', title: 'Geri Dönüş Fırsatları', imageKey: 'crate' },
+    {
+      id: 'operation-era',
+      title: 'Operasyon Dönemi Önizlemesi',
+      description: 'Dönem hedeflerini ve uzun akışları tek merkezden yönetmeye başlarsın.',
+      imageKey: 'clipboard',
+    },
+    {
+      id: 'adaptive-events',
+      title: 'Uyarlanabilir Olay Ağı',
+      description: 'Şehrin tepkisine göre değişen olay zincirlerini daha görünür kılarsın.',
+      imageKey: 'map',
+    },
+    {
+      id: 'recovery',
+      title: 'Geri Dönüş Fırsatları',
+      description: 'Zor günlerden sonra güven ve kaynak toparlama fırsatlarını yakalarsın.',
+      imageKey: 'crate',
+    },
   ],
   department_director: [
-    { id: 'city-dev', title: 'Şehir Gelişimi Önizlemesi', imageKey: 'map' },
-    { id: 'departments', title: 'Departman Birimleri', imageKey: 'clipboard' },
-    { id: 'strategy', title: 'Stratejik Operasyon Zinciri', imageKey: 'crate' },
+    {
+      id: 'city-dev',
+      title: 'Şehir Gelişimi Önizlemesi',
+      description: 'Şehir ölçeğindeki gelişim rotasını ve yatırım etkilerini izlersin.',
+      imageKey: 'map',
+    },
+    {
+      id: 'departments',
+      title: 'Departman Birimleri',
+      description: 'Departmanlar arası görev paylaşımını daha üst düzeyden yönetirsin.',
+      imageKey: 'clipboard',
+    },
+    {
+      id: 'strategy',
+      title: 'Stratejik Operasyon Zinciri',
+      description: 'Birden fazla sistemi aynı hedefe bağlayan operasyon zincirleri kurarsın.',
+      imageKey: 'crate',
+    },
   ],
 };
 
 function scoreToSegments(score: number, total = 10): number {
   const normalized = Math.max(0, Math.min(100, score));
   return Math.max(0, Math.min(total, Math.round(normalized / 10)));
+}
+
+function clampRatio(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(1, value));
 }
 
 function buildStrengths(domainScores?: AuthorityDomainScores): ProfileStrengthItem[] {
@@ -179,6 +293,56 @@ function parseTrustValue(label: string): string {
   return match?.[1] ?? '0';
 }
 
+function truncateBadgeLabel(label: string): string {
+  return label.length > 18 ? `${label.slice(0, 16)}...` : label;
+}
+
+function buildIdentityBadges(
+  model: ProfileViewModel,
+  authoritySummary: ProfileAuthoritySummary,
+  pilotDay: number,
+): ProfileIdentityBadge[] {
+  const dayBadge =
+    pilotDay <= 2
+      ? { id: 'first-duty', label: 'İlk Görev', iconKey: 'star' as const }
+      : { id: 'field-series', label: `${pilotDay}. Gün`, iconKey: 'business' as const };
+
+  const pressureBadge =
+    model.risk >= 50
+      ? { id: 'critical-duty', label: 'Kritik Görev', iconKey: 'shield-checkmark' as const }
+      : model.solvedEvents > 0
+        ? { id: 'field-success', label: 'Saha Başarısı', iconKey: 'ribbon' as const }
+        : {
+            id: 'role-ready',
+            label: authoritySummary.nextRankLabel,
+            iconKey: 'shield-checkmark' as const,
+          };
+
+  return [dayBadge, pressureBadge].map((badge) => ({
+    ...badge,
+    label: truncateBadgeLabel(badge.label),
+  }));
+}
+
+function buildRoadmapSummary(
+  authorityTrust: number,
+  authoritySummary: ProfileAuthoritySummary,
+): ProfileReferenceViewModel['roadmapSummary'] {
+  const trustValue = Math.max(0, Math.round(authorityTrust));
+  const remaining = parseInt(parseTrustValue(authoritySummary.remainingTrustLabel), 10);
+  const targetValue = Math.max(
+    trustValue,
+    trustValue + (Number.isFinite(remaining) ? remaining : 0),
+  );
+  const safeTarget = targetValue > 0 ? targetValue : 1;
+
+  return {
+    label: 'GÜVEN PUANI',
+    valueLabel: `${trustValue} / ${safeTarget}`,
+    progress: clampRatio(trustValue / safeTarget),
+  };
+}
+
 export function buildProfileReferenceViewModel(input: {
   model: ProfileViewModel;
   authoritySummary: ProfileAuthoritySummary;
@@ -188,6 +352,9 @@ export function buildProfileReferenceViewModel(input: {
   const { model, authoritySummary, authorityState, pilotDay } = input;
   const normalized = normalizeAuthorityState(authorityState, pilotDay);
   const dayShort = model.dayLabel.split('·')[0]?.trim() || `Gün ${pilotDay}`;
+  const roleAdvantages =
+    ROLE_ADVANTAGES_BY_RANK[normalized.formalRankId] ??
+    ROLE_ADVANTAGES_BY_RANK.field_coordinator;
 
   return {
     identity: {
@@ -200,12 +367,15 @@ export function buildProfileReferenceViewModel(input: {
       levelLabel: `Seviye ${model.level}`,
       xpProgress: model.xpProgress,
       notificationCount: model.notificationCount,
+      badges: buildIdentityBadges(model, authoritySummary, pilotDay),
     },
     summary: {
       rankLabel: authoritySummary.rankLabel,
       subtitle: authoritySummary.progressSubtitle,
       authorityTrustValue: String(Math.max(0, Math.round(normalized.authorityTrust))),
       remainingTrustValue: parseTrustValue(authoritySummary.remainingTrustLabel),
+      advantageTitle: roleAdvantages[0]?.title ?? 'Rol Avantajı',
+      advantageLabel: 'AVANTAJIM',
     },
     authorityMini: {
       progressPercent: authoritySummary.progressPercent,
@@ -213,9 +383,11 @@ export function buildProfileReferenceViewModel(input: {
       remainingTrustLabel: authoritySummary.remainingTrustLabel,
     },
     strengths: buildStrengths(normalized.domainScores),
-    roleAdvantages:
-      ROLE_ADVANTAGES_BY_RANK[normalized.formalRankId] ??
-      ROLE_ADVANTAGES_BY_RANK.field_coordinator,
+    roleAdvantages,
     roadmap: buildRoadmap(normalized.formalRankId),
+    roadmapSummary: buildRoadmapSummary(
+      normalized.authorityTrust,
+      authoritySummary,
+    ),
   };
 }

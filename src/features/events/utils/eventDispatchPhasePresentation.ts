@@ -59,6 +59,15 @@ export type EventDispatchCompatibility = {
   reasons: EventDispatchCompatibilityReason[];
 };
 
+export type EventDispatchReadinessRow = {
+  id: 'team' | 'vehicle' | 'budget' | 'social';
+  label: string;
+  statusLabel: 'Hazır' | 'Sınırlı' | 'Riskli';
+  reason: string;
+  tone: 'positive' | 'neutral' | 'warning';
+  iconKey: string;
+};
+
 export type EventDispatchRouteStepId = 'team' | 'vehicle' | 'route' | 'field';
 
 export type EventDispatchRouteStepState = 'ready' | 'current' | 'locked' | 'done';
@@ -73,6 +82,7 @@ export type EventDispatchRouteStep = {
 export type EventDispatchRoutePreview = {
   title: string;
   steps: EventDispatchRouteStep[];
+  pathLabels: string[];
   estimatedLabel?: string;
   tone: 'positive' | 'neutral' | 'warning';
 };
@@ -103,6 +113,7 @@ export type EventDispatchPhasePresentation = {
   subtitle?: string;
   selectedPlan: EventDispatchSelectedPlanSummary;
   assignmentSummary: EventDispatchAssignmentSummary;
+  readinessRows: EventDispatchReadinessRow[];
   compatibility: EventDispatchCompatibility;
   routePreview: EventDispatchRoutePreview;
   advisorComment: EventDispatchAdvisorComment;
@@ -363,6 +374,11 @@ function buildRoutePreview(
 
   return {
     title: 'Yönlendirme hattı',
+    pathLabels: [
+      'Merkez',
+      event?.district?.trim() || event?.neighborhoodId?.trim() || 'Mahalle',
+      'Olay noktası',
+    ],
     steps: [
       { id: 'team', label: 'Ekip', state: teamState, iconKey: 'people-outline' },
       { id: 'vehicle', label: 'Araç', state: vehicleState, iconKey: 'car-outline' },
@@ -372,6 +388,92 @@ function buildRoutePreview(
     estimatedLabel,
     tone: routeState === 'current' ? 'positive' : 'neutral',
   };
+}
+
+function mapReadinessStatus(
+  tone: EventDispatchReadinessRow['tone'],
+): EventDispatchReadinessRow['statusLabel'] {
+  if (tone === 'positive') return 'Hazır';
+  if (tone === 'warning') return 'Riskli';
+  return 'Sınırlı';
+}
+
+function buildReadinessRows(
+  input: BuildEventDispatchPhasePresentationInput,
+  assignmentSummary: EventDispatchAssignmentSummary,
+  compatibility: EventDispatchCompatibility,
+): EventDispatchReadinessRow[] {
+  const teamTone: EventDispatchReadinessRow['tone'] =
+    assignmentSummary.status === 'ready'
+      ? compatibility.tone === 'warning'
+        ? 'neutral'
+        : 'positive'
+      : assignmentSummary.status === 'partial'
+        ? 'neutral'
+        : 'warning';
+  const vehicleTone: EventDispatchReadinessRow['tone'] =
+    input.assignment?.vehicleType
+      ? compatibility.scoreBand === 'low'
+        ? 'neutral'
+        : 'positive'
+      : 'warning';
+  const budgetTone: EventDispatchReadinessRow['tone'] =
+    input.selectedPlanStrategyId === 'rapid_response' ||
+    input.selectedPlanStrategyId === 'long_term_fix'
+      ? 'neutral'
+      : 'positive';
+  const socialTone: EventDispatchReadinessRow['tone'] =
+    (input.event.previewEffects?.publicSatisfaction ?? 0) < -4
+      ? 'warning'
+      : compatibility.tone === 'warning'
+        ? 'neutral'
+        : 'positive';
+
+  const rows: Array<Omit<EventDispatchReadinessRow, 'statusLabel'>> = [
+    {
+      id: 'team',
+      label: 'Ekip uygunluğu',
+      tone: teamTone,
+      reason:
+        assignmentSummary.personnelLabel ??
+        (teamTone === 'warning' ? 'Ekip seçimi tamamlanmadı.' : 'Ekip sahaya hazır.'),
+      iconKey: 'people-outline',
+    },
+    {
+      id: 'vehicle',
+      label: 'Araç uygunluğu',
+      tone: vehicleTone,
+      reason:
+        assignmentSummary.vehicleLabel ??
+        (vehicleTone === 'warning' ? 'Araç seçimi bekleniyor.' : 'Araç sahaya uygun.'),
+      iconKey: 'car-outline',
+    },
+    {
+      id: 'budget',
+      label: 'Bütçe durumu',
+      tone: budgetTone,
+      reason:
+        budgetTone === 'positive'
+          ? 'Plan kaynak baskısını dengede tutuyor.'
+          : 'Plan ek kaynak baskısı yaratabilir.',
+      iconKey: 'wallet-outline',
+    },
+    {
+      id: 'social',
+      label: 'Sosyal risk',
+      tone: socialTone,
+      reason:
+        socialTone === 'warning'
+          ? 'Mahalle tepkisi bu yönlendirmeye hassas.'
+          : 'Sosyal nabız yönetilebilir görünüyor.',
+      iconKey: 'chatbubbles-outline',
+    },
+  ];
+
+  return rows.map((row) => ({
+    ...row,
+    statusLabel: mapReadinessStatus(row.tone),
+  }));
 }
 
 export function buildEventDispatchAdvisorComment(
@@ -507,6 +609,7 @@ export function buildEventDispatchPhasePresentation(
       },
     ),
   };
+  const readinessRows = buildReadinessRows(input, assignmentSummary, compatibility);
   const routePreview = buildRoutePreview(
     input.assignment,
     input.assignmentReady,
@@ -535,6 +638,7 @@ export function buildEventDispatchPhasePresentation(
     subtitle: 'Ekibi seçilen plana göre sahaya yönlendir.',
     selectedPlan,
     assignmentSummary,
+    readinessRows,
     compatibility,
     routePreview,
     advisorComment,
