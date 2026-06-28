@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { OperationPortfolioBoard } from '@/features/events/components/operation-portfolio/OperationPortfolioBoard';
 import {
   CityMapHero,
   EventsBottomSheet,
@@ -13,11 +14,11 @@ import {
   OlaylarFilterChips,
   OlaylarOperationStatusStrip,
   OlaylarPriorityEventCard,
-  OlaylarStartOperationCTA,
   ResolvedEventList,
 } from '@/features/events/components/olaylar';
 import { olaylar } from '@/features/events/theme/olaylarScreenTokens';
 import type { OlaylarFilterKey } from '@/features/events/types/olaylarScreenTypes';
+import { buildEventsOperationPortfolioPresentation } from '@/features/events/utils/eventsOperationPortfolioPresentation';
 import {
   buildActiveEventViews,
   buildOlaylarScreenPresentation,
@@ -44,6 +45,7 @@ export function EventsDecisionCenterScreen() {
   const activeEvents = useGameStore(selectActiveEvents);
   const featuredEventId = useGameStore(selectFeaturedEventId);
   const decisionHistory = useGameStore(selectDecisionHistory);
+  const gameState = useGameStore((s) => s.gameState);
   const operationalResources = useGameStore((s) => s.operationalResources);
   const endCurrentDay = useGameStore((s) => s.endCurrentDay);
 
@@ -57,6 +59,16 @@ export function EventsDecisionCenterScreen() {
         operationalResources,
       }),
     [activeEvents, decisionHistory, operationalResources],
+  );
+
+  const operationPortfolio = useMemo(
+    () =>
+      buildEventsOperationPortfolioPresentation({
+        gameState,
+        activeEvents,
+        featuredEventId,
+      }),
+    [gameState, activeEvents, featuredEventId],
   );
 
   const { priorityEvent, showPriority, pendingEvents } = useMemo(
@@ -96,15 +108,6 @@ export function EventsDecisionCenterScreen() {
     [router],
   );
 
-  const handleStartOperation = useCallback(() => {
-    if (primaryOperationEventId) {
-      handleEventPress(primaryOperationEventId);
-      return;
-    }
-    endCurrentDay();
-    router.push('/reports');
-  }, [endCurrentDay, handleEventPress, primaryOperationEventId, router]);
-
   const handleEndDay = () => {
     endCurrentDay();
     router.push('/reports');
@@ -128,18 +131,18 @@ export function EventsDecisionCenterScreen() {
       <OlaylarOperationStatusStrip status={presentation.operationStatus} />
 
       <EventsBottomSheet bottomInset={tabBarHeight}>
-        <OlaylarEventMetricsRow items={presentation.eventStats} />
+        <OperationPortfolioBoard presentation={operationPortfolio} />
 
-        <CityMapHero
-          mapView={presentation.liveIncidentMap}
-          timeline={presentation.incidentTimeline}
-        />
+        {operationPortfolio.isRichDay ? (
+          <>
+            <OlaylarEventMetricsRow items={presentation.eventStats} />
 
-        <OlaylarStartOperationCTA
-          onPress={handleStartOperation}
-          disabled={!primaryOperationEventId && activeEvents.length === 0}
-          label={primaryOperationEventId ? 'Operasyonu Başlat' : 'Günü Bitir'}
-        />
+            <CityMapHero
+              mapView={presentation.liveIncidentMap}
+              timeline={presentation.incidentTimeline}
+            />
+          </>
+        ) : null}
 
         <OlaylarFilterChips active={filter} onChange={setFilter} />
 
@@ -156,7 +159,7 @@ export function EventsDecisionCenterScreen() {
           )
         ) : (
           <>
-            {showPriority && priorityView ? (
+            {showPriority && priorityView && operationPortfolio.isRichDay ? (
               <OlaylarPriorityEventCard
                 event={priorityView}
                 onPress={() => handleEventPress(priorityView.id)}
@@ -173,12 +176,14 @@ export function EventsDecisionCenterScreen() {
               </View>
             ) : null}
 
-            <OlaylarActiveEventsSection
-              items={activeEventViews}
-              onItemPress={handleEventPress}
-            />
+            {operationPortfolio.isRichDay ? (
+              <OlaylarActiveEventsSection
+                items={activeEventViews}
+                onItemPress={handleEventPress}
+              />
+            ) : null}
 
-            {filter === 'all' ? (
+            {filter === 'all' && operationPortfolio.isRichDay ? (
               <ResolvedEventList items={resolvedItems} onItemPress={handleEventPress} />
             ) : null}
 

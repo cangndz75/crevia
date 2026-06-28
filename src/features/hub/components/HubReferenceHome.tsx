@@ -29,6 +29,14 @@ import {
   hubSurfaceCollapseMode,
   hubSurfaceIsRenderable,
 } from '@/features/hub/utils/centerHomePresentation';
+import {
+  hubBandAllowsLiveDevelopments,
+  hubSectionIsHidden,
+  HUB_DENSITY_LIMITS,
+  resolveHubFeedItemCap,
+  resolveHubNextMovesCap,
+  resolveHubQuickActionsCap,
+} from '@/features/hub/utils/centerHubDensityPolicy';
 import { CenterMotionEnter } from '@/features/hub/components/CenterMotionEnter';
 import { CENTER_COMPACT_BREAKPOINT, CENTER_MIN_TOUCH_TARGET } from '@/features/hub/utils/centerLayoutTokens';
 import { hubAssets } from '@/features/hub/utils/hubAssets';
@@ -43,23 +51,34 @@ const routeActionImage = require('@/assets/events/scenes/ev_scene_route_01.png')
 const marketActionImage = require('@/assets/districts/industrial_market/district_industrial_market_overview_01.png');
 const droneActionImage = require('@/assets/districts/route/district_route_network_01.png');
 
+const g = gameUi.colors;
+
+/** Sıcak krem + altın + canlı teal — gameUi ile hizalı oyun paleti */
 const palette = {
-  appBg: '#050D0E',
-  panel: '#0B1919',
-  panelSoft: '#102323',
-  panelLift: '#132A29',
-  stroke: 'rgba(160, 206, 185, 0.13)',
-  strokeStrong: 'rgba(216, 177, 83, 0.32)',
-  text: '#F6F0DA',
-  muted: 'rgba(246, 240, 218, 0.64)',
-  faint: 'rgba(246, 240, 218, 0.42)',
-  gold: '#D8B153',
-  goldDark: '#8D742F',
-  green: '#8FE1A6',
-  mint: '#93E8BD',
-  teal: '#2F8D7E',
-  red: '#D9755D',
-  blue: '#86A9FF',
+  appBg: g.backgroundCream,
+  appBgDeep: '#EDE0C8',
+  panel: g.cardWhite,
+  panelSoft: g.cardMintTint,
+  panelWarm: g.cardWarmTint,
+  panelLift: '#FFF0D6',
+  stroke: g.borderSoft,
+  strokeStrong: 'rgba(216, 167, 46, 0.40)',
+  strokeGold: 'rgba(216, 167, 46, 0.24)',
+  text: g.textPrimary,
+  muted: g.textMuted,
+  faint: 'rgba(104, 116, 110, 0.62)',
+  gold: g.goldAccent,
+  goldLight: g.goldLight,
+  goldDark: '#A67C1A',
+  green: g.mintPositive,
+  mint: '#5FD492',
+  teal: g.primaryTeal,
+  tealMid: g.primaryTealMid,
+  tealGlow: 'rgba(7, 86, 79, 0.12)',
+  red: '#D4644A',
+  blue: '#5B8FD4',
+  heroText: '#FFF8E7',
+  heroMuted: 'rgba(255, 248, 231, 0.82)',
 } as const;
 
 type HeaderChip = CenterHomePresentation['headerSummary']['resourceChips'][number];
@@ -426,7 +445,6 @@ function TopInfoChips({
   const dayLabel = dayChip?.valueText ?? 'Gün 1';
   const seasonLabel = presentation.headerSummary.subtitle ?? 'Başlangıç Dönemi';
   const reward = presentation.dailyReward;
-  const liveBonus = presentation.strategicPulse.compact.opportunity.valueText;
   const streakCurrent = Math.max(1, reward.today.dayIndex);
   const streakTotal = Math.max(7, reward.days.length || 7);
   const streakProgress = clampPercent((streakCurrent / streakTotal) * 100);
@@ -480,20 +498,6 @@ function TopInfoChips({
           </View>
         </View>
       </RoutePressable>
-
-      <View style={[styles.infoChip, styles.liveBonusChip]}>
-        <View style={styles.infoIconBoxGold}>
-          <Ionicons name="stats-chart" size={14} color={palette.gold} />
-        </View>
-        <View style={styles.infoCopy}>
-          <Text style={styles.infoTitle} numberOfLines={1}>
-            Canlı Bonus
-          </Text>
-          <Text style={styles.liveBonusText} numberOfLines={1}>
-            {liveBonus.includes('%') ? liveBonus : `+${liveBonus}`}
-          </Text>
-        </View>
-      </View>
     </View>
   );
 }
@@ -605,16 +609,23 @@ function MainHero({
   reducedMotion: boolean;
 }) {
   const hero = resolveHeroCopy(presentation);
+  const operationMeta = presentation.gameFirst.todayFocus.operationMeta;
+
+  const metaRows = [
+    operationMeta?.districtLabel ? { label: 'Mahalle', value: operationMeta.districtLabel } : null,
+    operationMeta?.phaseLabel ? { label: 'Faz', value: operationMeta.phaseLabel } : null,
+    operationMeta?.riskLabel ? { label: 'Risk', value: operationMeta.riskLabel } : null,
+  ].filter((row): row is { label: string; value: string } => Boolean(row));
 
   return (
     <View style={styles.heroCard}>
       <CenterHubImageFrame
         source={hubAssets.centerSummaryHero}
         style={styles.heroImageFrame}
-        gradientColors={['#0B1919', '#163432', '#050D0E']}
+        gradientColors={['#0A4F48', '#127066', '#043A36']}
       />
       <LinearGradient
-        colors={['rgba(5,13,14,0.24)', 'rgba(5,13,14,0.62)', 'rgba(5,13,14,0.98)']}
+        colors={['rgba(10,79,72,0.14)', 'rgba(4,58,54,0.62)', 'rgba(4,58,54,0.97)']}
         locations={[0, 0.48, 1]}
         style={styles.heroOverlay}
       />
@@ -631,9 +642,23 @@ function MainHero({
         <Text style={styles.heroTitle} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.82}>
           {hero.title}
         </Text>
-        <Text style={styles.heroBody} numberOfLines={3}>
+        <Text style={styles.heroBody} numberOfLines={operationMeta ? 2 : 3}>
           {hero.body}
         </Text>
+        {metaRows.length > 0 ? (
+          <View style={styles.heroMetaRow}>
+            {metaRows.map((row) => (
+              <View key={row.label} style={styles.heroMetaChip}>
+                <Text style={styles.heroMetaLabel} numberOfLines={1}>
+                  {row.label}
+                </Text>
+                <Text style={styles.heroMetaValue} numberOfLines={1}>
+                  {row.value}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
         <RoutePressable
           route={hero.route}
           reducedMotion={reducedMotion}
@@ -643,7 +668,7 @@ function MainHero({
             {hero.ctaLabel}
           </Text>
           <View style={styles.heroCtaIcon}>
-            <Ionicons name="chevron-forward" size={15} color="#15211B" />
+            <Ionicons name="chevron-forward" size={15} color="#1A2818" />
           </View>
         </RoutePressable>
       </View>
@@ -658,6 +683,11 @@ function ActiveOperationFocusCard({
   presentation: CenterHomePresentation;
   reducedMotion: boolean;
 }) {
+  const layout = presentation.gameFirst.densityLayout;
+  if (layout.mergedPrimaryFocus || hubSectionIsHidden(layout.hiddenSections, 'activeOperationFocus')) {
+    return null;
+  }
+
   const focus = presentation.gameFirst.activeOperationFocus;
   if (focus.visibility !== 'visible' || !focus.operationName.trim()) return null;
 
@@ -856,6 +886,10 @@ function ProgressImpactRow({
   presentation: CenterHomePresentation;
   reducedMotion: boolean;
 }) {
+  if (hubSectionIsHidden(presentation.gameFirst.densityLayout.hiddenSections, 'progressImpact')) {
+    return null;
+  }
+
   return (
     <View style={styles.progressImpactRow}>
       <StageProgressCard presentation={presentation} />
@@ -943,7 +977,7 @@ function NextActionsRail({
   const nextMoves = presentation.gameFirst.nextMoves;
   if (nextMoves.visibility !== 'visible') return null;
 
-  const moves = nextMoves.moves.slice(0, 3);
+  const moves = nextMoves.moves.slice(0, resolveHubNextMovesCap(presentation.hubDensity?.band ?? 'day1'));
   if (moves.length === 0) return null;
 
   return (
@@ -1029,11 +1063,14 @@ function MiniCityFeedSection({
   presentation: CenterHomePresentation;
   reducedMotion: boolean;
 }) {
+  if (presentation.gameFirst.densityLayout.duplicateCityPulseSuppressed) return null;
+  if (hubSectionIsHidden(presentation.gameFirst.densityLayout.hiddenSections, 'miniCityFeed')) return null;
+
   const pulse = presentation.gameFirst.cityPulse;
   if (pulse.visibility !== 'visible') return null;
   if (!hubSurfaceIsRenderable(presentation.hubDensity, 'miniCityFeed')) return null;
 
-  const maxItems = presentation.hubDensity?.band === 'day1' ? 2 : 4;
+  const maxItems = resolveHubFeedItemCap(presentation.hubDensity?.band ?? 'day1');
   const items = pulse.items.slice(0, maxItems);
   if (items.length === 0) return null;
 
@@ -1441,6 +1478,117 @@ function PulseSparkCard({ metric }: { metric: PulseSparkMetric }) {
   );
 }
 
+function HubCompactPulseAdvisorStrip({
+  presentation,
+  reducedMotion,
+}: {
+  presentation: CenterHomePresentation;
+  reducedMotion: boolean;
+}) {
+  const bundle = presentation.gameFirst.firstViewportPulse;
+  const pulse = bundle.pulse;
+  const advisor = bundle.advisor;
+  const pulseVisible = pulse.visibility === 'visible';
+  const advisorVisible =
+    advisor.visibility === 'visible' &&
+    hubSurfaceIsRenderable(presentation.hubDensity, 'advisor');
+
+  if (!pulseVisible && !advisorVisible) return null;
+
+  const primarySignal = pulse.primarySignal;
+  const signals = pulse.signals.length > 0 ? pulse.signals : primarySignal ? [primarySignal] : [];
+  const signalRoute = primarySignal?.routeKey;
+
+  return (
+    <View style={styles.compactPulseZone}>
+      {pulseVisible ? (
+        <View style={styles.compactPulseCard}>
+          <View style={styles.compactPulseHeader}>
+            <View style={styles.compactPulseTitleRow}>
+              <View style={styles.pulseTitleIcon}>
+                <Ionicons name="pulse" size={14} color={palette.teal} />
+              </View>
+              <Text style={styles.compactPulseTitle} numberOfLines={1}>
+                {pulse.title}
+              </Text>
+            </View>
+            <View style={styles.feedStatusPill}>
+              <LiveDot reducedMotion={reducedMotion} />
+              <Text style={styles.feedStatusText} numberOfLines={1}>
+                {pulse.statusPill}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.compactPulseSignalList}>
+            {signals.map((signal) => (
+              <RoutePressable
+                key={signal.id}
+                route={signal.routeKey}
+                reducedMotion={reducedMotion}
+                accessibilityLabel={signal.message}
+                style={styles.compactPulseSignalRow}>
+                <Text style={styles.compactPulseSignalText} numberOfLines={2}>
+                  • {signal.message}
+                </Text>
+                {signal.detail ? (
+                  <Text style={styles.compactPulseSignalDetail} numberOfLines={1}>
+                    {signal.detail}
+                  </Text>
+                ) : null}
+              </RoutePressable>
+            ))}
+          </View>
+          {pulse.impactChips.length > 0 ? (
+            <View style={styles.compactImpactChipRow}>
+              {pulse.impactChips.map((chip) => (
+                <View key={chip.id} style={styles.compactImpactChip}>
+                  <Text style={styles.compactImpactChipText} numberOfLines={1}>
+                    {chip.valueText ? `${chip.label} ${chip.valueText}` : chip.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+      {advisorVisible ? (
+        <RoutePressable
+          route={advisor.suggestedAction?.route}
+          reducedMotion={reducedMotion}
+          accessibilityLabel={advisor.recommendation}
+          style={styles.compactAdvisorStrip}>
+          <View style={styles.pulseAdvisorAvatarWrap}>
+            <Image source={hubAssets.advisorPortrait} style={styles.pulseAdvisorAvatar} contentFit="cover" />
+            <View style={styles.pulseAdvisorSparkle}>
+              <Ionicons name="sparkles" size={8} color={palette.green} />
+            </View>
+          </View>
+          <View style={styles.pulseAdvisorCopy}>
+            <Text style={styles.pulseAdvisorTitle} numberOfLines={1}>
+              {advisor.advisorName}
+            </Text>
+            <Text style={styles.pulseAdvisorBody} numberOfLines={2}>
+              {advisor.recommendation}
+            </Text>
+            {advisor.reasonChip ? (
+              <View style={styles.compactAdvisorReasonChip}>
+                <Text style={styles.compactAdvisorReasonText} numberOfLines={1}>
+                  {advisor.reasonChip}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          {advisor.suggestedAction?.label ? (
+            <View style={styles.pulseAdvisorCta}>
+              <Ionicons name="arrow-forward" size={14} color={palette.text} />
+            </View>
+          ) : null}
+        </RoutePressable>
+      ) : null}
+    </View>
+  );
+}
+
 function CityPulseAdvisorStrip({
   presentation,
   reducedMotion,
@@ -1495,6 +1643,8 @@ function CityPulseCard({
   presentation: CenterHomePresentation;
   reducedMotion: boolean;
 }) {
+  if (presentation.gameFirst.densityLayout.duplicateCityPulseSuppressed) return null;
+  if (hubSectionIsHidden(presentation.gameFirst.densityLayout.hiddenSections, 'strategicPulse')) return null;
   if (!hubSurfaceIsRenderable(presentation.hubDensity, 'strategicPulse')) return null;
 
   const metrics = buildPulseSparkMetrics(presentation);
@@ -1544,7 +1694,14 @@ function DistrictFocusCard({
   presentation: CenterHomePresentation;
   reducedMotion: boolean;
 }) {
+  if (hubSectionIsHidden(presentation.gameFirst.densityLayout.hiddenSections, 'districtSpotlight')) {
+    return null;
+  }
+
   const spotlight = presentation.gameFirst.districtSpotlight;
+  const compact =
+    presentation.gameFirst.activeOperationFocus.visibility === 'visible' ||
+    presentation.gameFirst.densityLayout.mergedPrimaryFocus;
   if (spotlight.visibility !== 'visible') return null;
 
   const footerStats = [
@@ -1554,7 +1711,7 @@ function DistrictFocusCard({
   ].filter((stat): stat is { label: string; value: string; icon: IconName } => Boolean(stat));
 
   return (
-    <View style={styles.regionCard}>
+    <View style={[styles.regionCard, compact ? styles.regionCardCompact : undefined]}>
       <View style={styles.regionHeader}>
         <Text style={styles.regionEyebrow} numberOfLines={1}>
           Mahalle Odağı
@@ -1565,30 +1722,38 @@ function DistrictFocusCard({
           </Text>
         </View>
       </View>
-      <Text style={styles.regionTitle} numberOfLines={2}>
+      <Text style={styles.regionTitle} numberOfLines={compact ? 1 : 2}>
         {spotlight.districtName}
       </Text>
-      <Text style={styles.regionBody} numberOfLines={3}>
-        {spotlight.suggestedAction || spotlight.latestDevelopment || 'Mahalle sinyalleri takip ediliyor.'}
-      </Text>
-      <View style={styles.regionImageWrap}>
-        <CenterHubImageFrame
-          source={hubAssets.centerSummaryHero}
-          style={styles.regionImage}
-          gradientColors={['#102323', '#163432', '#050D0E']}
-        />
-      </View>
+      {!compact ? (
+        <>
+          <Text style={styles.regionBody} numberOfLines={2}>
+            {spotlight.suggestedAction || spotlight.latestDevelopment || 'Mahalle sinyalleri takip ediliyor.'}
+          </Text>
+          <View style={styles.regionImageWrap}>
+            <CenterHubImageFrame
+              source={hubAssets.centerSummaryHero}
+              style={styles.regionImage}
+              gradientColors={['#FFF6E6', '#EAF5EE', g.backgroundCream]}
+            />
+          </View>
+        </>
+      ) : (
+        <Text style={styles.regionBody} numberOfLines={1}>
+          {spotlight.dominantIssue || spotlight.suggestedAction || spotlight.latestDevelopment}
+        </Text>
+      )}
       <RoutePressable
         route={spotlight.cta.route}
         reducedMotion={reducedMotion}
         accessibilityLabel={spotlight.cta.label}
-        style={styles.regionCta}>
+        style={[styles.regionCta, compact ? styles.regionCtaCompact : undefined]}>
         <Text style={styles.regionCtaText} numberOfLines={1}>
           {spotlight.cta.label}
         </Text>
-        <Ionicons name="arrow-forward" size={14} color="#101812" />
+        <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
       </RoutePressable>
-      {footerStats.length > 0 ? (
+      {!compact && footerStats.length > 0 ? (
         <View style={styles.regionFooterStats}>
           {footerStats.map((stat) => (
             <View key={stat.label} style={styles.regionFooterStat}>
@@ -1735,40 +1900,19 @@ function ProgressionStrip({
       reducedMotion={reducedMotion}
       accessibilityLabel={progression.nextUnlockLabel}
       style={styles.progressionStrip}>
+      <Ionicons name="lock-open-outline" size={14} color={palette.gold} />
       <View style={styles.progressionCopy}>
         <Text style={styles.progressionRank} numberOfLines={1}>
-          {progression.rankLabel}
+          {progression.sectionTitle}
         </Text>
-        <Text style={styles.progressionUnlock} numberOfLines={2}>
+        <Text style={styles.progressionUnlock} numberOfLines={1}>
           {progression.nextUnlockLabel}
         </Text>
-        <View style={styles.progressionMetaRow}>
-          {progression.streakLabel ? (
-            <Text style={styles.progressionMeta} numberOfLines={1}>
-              {progression.streakLabel}
-            </Text>
-          ) : null}
-          {progression.periodGoalLabel ? (
-            <Text style={styles.progressionMeta} numberOfLines={1}>
-              {progression.periodGoalLabel}
-            </Text>
-          ) : null}
-        </View>
       </View>
-      {typeof progression.progressPercent === 'number' ? (
-        <View style={styles.progressionMeter}>
-          <Text style={styles.progressionMeterText} numberOfLines={1}>
-            %{progression.progressPercent}
-          </Text>
-          <View style={styles.progressionMeterTrack}>
-            <View
-              style={[
-                styles.progressionMeterFill,
-                { width: `${clampPercent(progression.progressPercent)}%` as `${number}%` },
-              ]}
-            />
-          </View>
-        </View>
+      {progression.streakLabel ? (
+        <Text style={styles.progressionMeta} numberOfLines={1}>
+          {progression.streakLabel}
+        </Text>
       ) : null}
     </RoutePressable>
   );
@@ -1815,15 +1959,17 @@ function QuickCommandsGrid({
   if (quickActions.visibility !== 'visible') return null;
   if (!hubSurfaceIsRenderable(presentation.hubDensity, 'quickActions')) return null;
 
-  const commands = quickActions.actions.slice(0, 4);
+  const cap = resolveHubQuickActionsCap(presentation.hubDensity?.band ?? 'day1');
+  const commands = quickActions.actions.slice(0, cap);
+  const overflowCount = quickActions.actions.length - commands.length;
   if (commands.length === 0) return null;
 
   return (
-    <View style={styles.darkCard}>
-      <Text style={styles.largeSectionTitle} numberOfLines={1}>
+    <View style={styles.lightCard}>
+      <Text style={styles.sectionTitle} numberOfLines={1}>
         {quickActions.title}
       </Text>
-      <View style={styles.commandsGrid}>
+      <View style={styles.quickActionChipRow}>
         {commands.map((command) => (
           <RoutePressable
             key={command.id}
@@ -1831,27 +1977,24 @@ function QuickCommandsGrid({
             disabled={command.disabled}
             reducedMotion={reducedMotion}
             accessibilityLabel={command.title}
-            style={styles.commandTile}>
+            style={styles.quickActionChip}>
             <Ionicons
               name={resolveIconName(command.iconKey, command.disabled ? 'lock-closed-outline' : 'grid-outline')}
-              size={22}
-              color={command.accent === 'gold' ? palette.gold : palette.green}
+              size={14}
+              color={command.accent === 'gold' ? palette.gold : palette.teal}
             />
-            <Text style={styles.commandTitle} numberOfLines={1}>
+            <Text style={styles.quickActionChipText} numberOfLines={1}>
               {command.title}
             </Text>
-            {command.subtitle ? (
-              <Text style={styles.commandSubtitle} numberOfLines={2}>
-                {command.subtitle}
-              </Text>
-            ) : null}
-            {command.lockReason ? (
-              <Text style={styles.commandLockReason} numberOfLines={1}>
-                {command.lockReason}
-              </Text>
-            ) : null}
           </RoutePressable>
         ))}
+        {overflowCount > 0 ? (
+          <View style={styles.quickActionOverflowChip}>
+            <Text style={styles.quickActionOverflowText} numberOfLines={1}>
+              {HUB_DENSITY_LIMITS.quickActionsOverflowLabel}
+            </Text>
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -1875,7 +2018,12 @@ export function HubReferenceHome({ presentation, scrollFooter }: HubReferenceHom
 
   return (
     <View style={styles.root}>
-      <StatusBar style="light" />
+      <LinearGradient
+        colors={[palette.appBg, palette.appBgDeep, palette.panelSoft]}
+        locations={[0, 0.45, 1]}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <StatusBar style="dark" />
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -1899,34 +2047,50 @@ export function HubReferenceHome({ presentation, scrollFooter }: HubReferenceHom
           <ActiveOperationFocusCard presentation={presentation} reducedMotion={reducedMotion} />
         </CenterMotionEnter>
         <CenterMotionEnter index={3} {...motionProps}>
-          <ProgressImpactRow presentation={presentation} reducedMotion={reducedMotion} />
+          <HubCompactPulseAdvisorStrip presentation={presentation} reducedMotion={reducedMotion} />
         </CenterMotionEnter>
-        <CenterMotionEnter index={4} {...motionProps}>
-          <NextActionsRail presentation={presentation} reducedMotion={reducedMotion} />
-        </CenterMotionEnter>
-        <CenterMotionEnter index={5} {...motionProps}>
-          <MiniCityFeedSection presentation={presentation} reducedMotion={reducedMotion} />
-        </CenterMotionEnter>
-        <CenterMotionEnter index={6} {...motionProps}>
-          <DistrictFocusCard presentation={presentation} reducedMotion={reducedMotion} />
-        </CenterMotionEnter>
-        <CenterMotionEnter index={7} {...motionProps}>
-          <ProgressionStrip presentation={presentation} reducedMotion={reducedMotion} />
-        </CenterMotionEnter>
-        <CenterMotionEnter index={8} {...motionProps}>
-          <CityAgendaSection presentation={presentation} />
-        </CenterMotionEnter>
-        <MaintenanceSignalStrip presentation={presentation} />
-        <CenterMotionEnter index={9} {...motionProps}>
-          <CityPulseCard presentation={presentation} reducedMotion={reducedMotion} />
-        </CenterMotionEnter>
-        <CenterMotionEnter index={10} {...motionProps}>
-          <LiveDevelopments presentation={presentation} reducedMotion={reducedMotion} />
-        </CenterMotionEnter>
-        <UnlockPreviewStrip presentation={presentation} reducedMotion={reducedMotion} />
-        <CenterMotionEnter index={11} {...motionProps}>
-          <QuickCommandsGrid presentation={presentation} reducedMotion={reducedMotion} />
-        </CenterMotionEnter>
+
+        <View style={styles.scrollDepthZone}>
+          <View style={styles.scrollDepthDivider}>
+            <View style={styles.scrollDepthLine} />
+            <Text style={styles.scrollDepthLabel} numberOfLines={1}>
+              Detaylar
+            </Text>
+            <View style={styles.scrollDepthLine} />
+          </View>
+
+          <CenterMotionEnter index={4} {...motionProps}>
+            <NextActionsRail presentation={presentation} reducedMotion={reducedMotion} />
+          </CenterMotionEnter>
+          <CenterMotionEnter index={5} {...motionProps}>
+            <QuickCommandsGrid presentation={presentation} reducedMotion={reducedMotion} />
+          </CenterMotionEnter>
+          <CenterMotionEnter index={6} {...motionProps}>
+            <ProgressionStrip presentation={presentation} reducedMotion={reducedMotion} />
+          </CenterMotionEnter>
+          <CenterMotionEnter index={7} {...motionProps}>
+            <DistrictFocusCard presentation={presentation} reducedMotion={reducedMotion} />
+          </CenterMotionEnter>
+          <CenterMotionEnter index={8} {...motionProps}>
+            <ProgressImpactRow presentation={presentation} reducedMotion={reducedMotion} />
+          </CenterMotionEnter>
+          <CenterMotionEnter index={9} {...motionProps}>
+            <MiniCityFeedSection presentation={presentation} reducedMotion={reducedMotion} />
+          </CenterMotionEnter>
+          <CenterMotionEnter index={10} {...motionProps}>
+            <CityAgendaSection presentation={presentation} />
+          </CenterMotionEnter>
+          <MaintenanceSignalStrip presentation={presentation} />
+          <CenterMotionEnter index={11} {...motionProps}>
+            <CityPulseCard presentation={presentation} reducedMotion={reducedMotion} />
+          </CenterMotionEnter>
+          {hubBandAllowsLiveDevelopments(densityBand) ? (
+            <CenterMotionEnter index={12} {...motionProps}>
+              <LiveDevelopments presentation={presentation} reducedMotion={reducedMotion} />
+            </CenterMotionEnter>
+          ) : null}
+          <UnlockPreviewStrip presentation={presentation} reducedMotion={reducedMotion} />
+        </View>
         {scrollFooter ? <View style={styles.scrollFooter}>{scrollFooter}</View> : null}
       </ScrollView>
     </View>
@@ -1969,7 +2133,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 2,
     borderColor: palette.gold,
-    backgroundColor: '#15221D',
+    backgroundColor: '#1A3D38',
   },
   avatarImage: {
     width: 44,
@@ -2044,9 +2208,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: palette.panelWarm,
     borderWidth: 1,
-    borderColor: palette.stroke,
+    borderColor: palette.strokeGold,
   },
   headerResourceChip: {
     flexDirection: 'row',
@@ -2067,9 +2231,9 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: palette.panelWarm,
     borderWidth: 1,
-    borderColor: palette.stroke,
+    borderColor: palette.strokeGold,
   },
   notificationDot: {
     position: 'absolute',
@@ -2091,8 +2255,8 @@ const styles = StyleSheet.create({
     minHeight: 45,
     borderRadius: 13,
     borderWidth: 1,
-    borderColor: palette.stroke,
-    backgroundColor: 'rgba(17, 40, 38, 0.84)',
+    borderColor: palette.strokeGold,
+    backgroundColor: palette.panelWarm,
     paddingHorizontal: 8,
     paddingVertical: 7,
     flexDirection: 'row',
@@ -2112,7 +2276,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: palette.tealGlow,
   },
   infoIconBoxGold: {
     width: 26,
@@ -2120,7 +2284,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(216,177,83,0.12)',
+    backgroundColor: 'rgba(216, 167, 46, 0.18)',
   },
   infoCopy: {
     flex: 1,
@@ -2148,7 +2312,7 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.24)',
+    backgroundColor: 'rgba(104, 116, 110, 0.22)',
   },
   rewardDotActive: {
     backgroundColor: palette.gold,
@@ -2171,7 +2335,7 @@ const styles = StyleSheet.create({
   streakMiniTrack: {
     height: 2,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(216, 167, 46, 0.18)',
     overflow: 'hidden',
     marginTop: 1,
   },
@@ -2190,9 +2354,9 @@ const styles = StyleSheet.create({
     height: 252,
     borderRadius: 20,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(216,177,83,0.22)',
-    backgroundColor: palette.panel,
+    borderWidth: 1.5,
+    borderColor: 'rgba(216, 167, 46, 0.38)',
+    ...gameUi.shadow.hero,
   },
   heroImageFrame: {
     ...StyleSheet.absoluteFillObject,
@@ -2265,14 +2429,41 @@ const styles = StyleSheet.create({
     fontSize: 28,
     lineHeight: 31,
     fontWeight: '900',
-    color: palette.text,
+    color: palette.heroText,
   },
   heroBody: {
     maxWidth: '88%',
     fontSize: 11,
     lineHeight: 16,
     fontWeight: '600',
-    color: 'rgba(246,240,218,0.78)',
+    color: palette.heroMuted,
+  },
+  heroMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  heroMetaChip: {
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    gap: 1,
+    minWidth: 68,
+  },
+  heroMetaLabel: {
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '700',
+    color: palette.heroMuted,
+  },
+  heroMetaValue: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '900',
+    color: palette.heroText,
   },
   heroCta: {
     alignSelf: 'stretch',
@@ -2283,12 +2474,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: palette.gold,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
   },
   heroCtaText: {
     fontSize: 13,
     lineHeight: 16,
     fontWeight: '900',
-    color: '#151A12',
+    color: '#1A2818',
   },
   heroCtaIcon: {
     width: 28,
@@ -2296,7 +2489,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.28)',
+    backgroundColor: 'rgba(255, 255, 255, 0.32)',
   },
   heroStage: {
     display: 'none',
@@ -2613,8 +2806,8 @@ const styles = StyleSheet.create({
   operationFocusCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: palette.strokeStrong,
-    backgroundColor: palette.panelSoft,
+    borderColor: palette.strokeGold,
+    backgroundColor: palette.panelWarm,
     padding: 14,
     gap: 8,
   },
@@ -2666,7 +2859,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 5,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: palette.panelSoft,
     borderWidth: 1,
     borderColor: palette.stroke,
     gap: 1,
@@ -2692,7 +2885,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: palette.mint,
+    backgroundColor: palette.tealMid,
   },
   operationFocusCtaText: {
     flex: 1,
@@ -2700,17 +2893,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 14,
     fontWeight: '900',
-    color: '#101812',
+    color: '#FFFFFF',
   },
   progressionStrip: {
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: palette.stroke,
-    backgroundColor: palette.panel,
-    padding: 12,
+    borderColor: palette.strokeGold,
+    backgroundColor: palette.panelWarm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
+    minHeight: 44,
   },
   progressionCopy: {
     flex: 1,
@@ -2769,6 +2964,128 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: palette.red,
   },
+  compactPulseZone: {
+    gap: 8,
+  },
+  compactPulseCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(7, 86, 79, 0.16)',
+    backgroundColor: palette.panelSoft,
+    padding: 12,
+    gap: 8,
+    overflow: 'hidden',
+    ...gameUi.shadow.soft,
+  },
+  compactPulseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  compactPulseTitleRow: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  compactPulseTitle: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: '900',
+    color: palette.text,
+  },
+  compactPulseSignalRow: {
+    gap: 2,
+    minHeight: CENTER_MIN_TOUCH_TARGET - 8,
+    justifyContent: 'center',
+  },
+  compactPulseSignalText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '700',
+    color: palette.text,
+  },
+  compactPulseSignalDetail: {
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '600',
+    color: palette.muted,
+  },
+  compactImpactChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  compactImpactChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(74,222,128,0.22)',
+    backgroundColor: 'rgba(74,222,128,0.08)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    maxWidth: '100%',
+  },
+  compactImpactChipText: {
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: '700',
+    color: palette.mint,
+  },
+  compactAdvisorStrip: {
+    minHeight: CENTER_MIN_TOUCH_TARGET,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: palette.strokeGold,
+    backgroundColor: palette.panelWarm,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  compactAdvisorReasonChip: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.35)',
+    backgroundColor: 'rgba(251,191,36,0.12)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    marginTop: 2,
+  },
+  compactAdvisorReasonText: {
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '800',
+    color: palette.gold,
+  },
+  scrollDepthZone: {
+    gap: 12,
+    paddingTop: 2,
+  },
+  scrollDepthDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 2,
+  },
+  scrollDepthLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(216, 167, 46, 0.16)',
+  },
+  scrollDepthLabel: {
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    color: palette.faint,
+    textTransform: 'uppercase',
+  },
   commandLockReason: {
     fontSize: 8,
     lineHeight: 10,
@@ -2811,6 +3128,59 @@ const styles = StyleSheet.create({
     backgroundColor: palette.panel,
     padding: 13,
     gap: 12,
+  },
+  lightCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: palette.strokeGold,
+    backgroundColor: palette.panel,
+    padding: 12,
+    gap: 10,
+    ...gameUi.shadow.soft,
+  },
+  quickActionChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  quickActionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: palette.strokeGold,
+    backgroundColor: palette.panelWarm,
+    minHeight: 36,
+  },
+  quickActionChipText: {
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: '800',
+    color: palette.text,
+  },
+  quickActionOverflowChip: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: palette.panelLift,
+  },
+  quickActionOverflowText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: palette.muted,
+  },
+  compactPulseSignalList: {
+    gap: 4,
+  },
+  regionCardCompact: {
+    padding: 12,
+    gap: 6,
+  },
+  regionCtaCompact: {
+    minHeight: 36,
   },
   pulseHeader: {
     flexDirection: 'row',
@@ -3190,13 +3560,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: palette.gold,
+    backgroundColor: palette.tealMid,
   },
   regionCtaText: {
     fontSize: 13,
     lineHeight: 16,
     fontWeight: '900',
-    color: '#101812',
+    color: '#FFFFFF',
   },
   regionFooterStats: {
     flexDirection: 'row',

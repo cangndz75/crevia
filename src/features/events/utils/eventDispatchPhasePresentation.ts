@@ -11,6 +11,12 @@ import {
   buildMaintenanceDispatchHint,
   buildMaintenanceRuntimeDispatchHint,
 } from '@/core/maintenanceBacklog';
+import type { ReadinessDispatchFitPresentation, ReadinessPrioritySurfacePresentation } from '@/core/readinessStrategicPriority/readinessStrategicPriorityTypes';
+import {
+  buildReadinessDispatchFitPresentation,
+  buildReadinessInputFromContext,
+  buildReadinessPriorityFromInput,
+} from '@/core/readinessStrategicPriority/readinessSurfaceBridge';
 import type { MaintenanceActionPresentation } from '@/core/maintenanceBacklog/maintenanceActionTypes';
 import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
 import type {
@@ -43,6 +49,7 @@ import {
 import type { PlanOptionId } from '@/features/events/utils/eventWorkflowPlanPresentation';
 import {
   buildOperationPhaseTransitionPresentation,
+  OPERATION_PHASE_CTA_LABELS,
   type OperationPhaseTransitionPresentation,
 } from '@/features/events/utils/operationPhaseTransitionPresentation';
 import {
@@ -224,6 +231,8 @@ export type EventDispatchPhasePresentation = {
   dispatchFeedback: EventDispatchFeedback;
   accessibilityLabel: string;
   phaseTransition: OperationPhaseTransitionPresentation;
+  readinessPriority: ReadinessPrioritySurfacePresentation;
+  readinessDispatchFit: ReadinessDispatchFitPresentation;
 };
 
 export type BuildEventDispatchPhasePresentationInput = {
@@ -784,7 +793,7 @@ function buildDispatchCta(
   }
 
   return {
-    label: 'Ekibi Sahaya Çıkar',
+    label: OPERATION_PHASE_CTA_LABELS.dispatch,
     disabledLabel: 'Hazırlık Eksik',
     actionKey: 'send_to_field',
     enabled: true,
@@ -962,6 +971,26 @@ export function buildEventDispatchPhasePresentation(
     avoidSummaries: [advisorComment.text, selectedPlan.summary],
   });
 
+  const readinessInput = buildReadinessInputFromContext({
+    phase: 'dispatch',
+    day: input.day ?? input.event.day ?? 1,
+    assignmentStatus: assignmentSummary.status,
+    hasVehicle: Boolean(input.assignment?.vehicleType),
+    compatibilityBand: compatibility.scoreBand,
+    compatibilityTone: compatibility.tone,
+    planStrategyId: input.selectedPlanStrategyId,
+    publicSatisfactionPreview: input.event.previewEffects?.publicSatisfaction,
+    eventRiskLevel: input.event.riskLevel,
+    operationTitle: input.event.title,
+    maintenanceRuntime: input.maintenanceBacklogRuntime,
+    avoidLines: [advisorComment.text, readinessPanel.overallLabel],
+  });
+  const { surface: readinessPriority } = buildReadinessPriorityFromInput(readinessInput);
+  const readinessDispatchFit = buildReadinessDispatchFitPresentation({
+    ...readinessInput,
+    compatibilityBand: compatibility.scoreBand,
+  });
+
   return {
     title: phaseTransition.shell.title,
     subtitle: phaseTransition.shell.subtitle,
@@ -980,6 +1009,8 @@ export function buildEventDispatchPhasePresentation(
     primaryCta,
     dispatchFeedback: buildDispatchFeedback(dispatchState, reducedMotion),
     phaseTransition,
+    readinessPriority,
+    readinessDispatchFit,
     accessibilityLabel: `${input.event.title} yönlendirme, ${selectedPlan.label}, ${overallReadiness.label}`,
   };
 }

@@ -1,11 +1,31 @@
 import { lineDuplicatesAvoidLines, normalizePresentationText } from '@/core/presentationDedupe';
 import type { HubDisclosureBand } from './centerHubDensityPresentation';
+import {
+  HUB_DENSITY_LIMITS,
+  HUB_LIGHT_PREMIUM_THEME,
+  hubSectionIsHidden,
+  resolveHubFeedItemCap,
+  resolveHubNextMovesCap,
+  resolveHubQuickActionsCap,
+  type HubLayoutSectionKey,
+  type HubThemeTone,
+} from './centerHubDensityPolicy';
 import type { CenterHomePresentation } from './centerHomePresentation';
 import type {
   CenterHubAction,
   CenterNextActionCard,
 } from './centerHubGameplayPresentation';
 import type { MiniCityFeedItem } from './centerMiniCityFeedPresentation';
+import {
+  buildCenterHubFirstViewportPulseBundle,
+  buildCenterGameFirstCityPulseFromFeed,
+  type CenterHubFirstViewportPulseBundle,
+} from './centerHubPulsePresentation';
+import {
+  buildHubPrimaryCtaPresentation,
+  hubPrimaryCtaToHubAction,
+  type HubPrimaryCtaPresentation,
+} from './centerHubNextBestActionPresentation';
 
 export type CenterGameFirstHeader = {
   playerName: string;
@@ -17,6 +37,13 @@ export type CenterGameFirstHeader = {
   notificationRoute?: string;
 };
 
+export type CenterTodayFocusOperationMeta = {
+  districtLabel?: string;
+  phaseLabel?: string;
+  riskLabel?: string;
+  mode?: 'active';
+};
+
 export type CenterTodayFocusPresentation = {
   visibility: 'visible' | 'hidden';
   sectionTitle: string;
@@ -26,6 +53,7 @@ export type CenterTodayFocusPresentation = {
   cta: CenterHubAction;
   progressRatio?: number;
   stageLabel?: string;
+  operationMeta?: CenterTodayFocusOperationMeta;
 };
 
 export type CenterActiveOperationFocusMode =
@@ -107,6 +135,7 @@ export type CenterGameFirstAdvisorPresentation = {
 
 export type CenterGameFirstProgressionPresentation = {
   visibility: 'visible' | 'hidden';
+  sectionTitle: string;
   rankLabel: string;
   nextUnlockLabel: string;
   streakLabel?: string;
@@ -132,9 +161,22 @@ export type CenterGameFirstQuickActionsPresentation = {
   actions: CenterGameFirstQuickActionItem[];
 };
 
+export type CenterHubDensityLayout = {
+  themeTone: HubThemeTone;
+  mergedPrimaryFocus: boolean;
+  hiddenSections: HubLayoutSectionKey[];
+  densityReason?: string;
+  duplicateCityPulseSuppressed: boolean;
+  firstViewportPrimaryCtaCount: number;
+};
+
 export type CenterHubGameFirstPresentation = {
   densityBand: HubDisclosureBand;
   fallbackReason?: string;
+  themeTone: HubThemeTone;
+  densityLayout: CenterHubDensityLayout;
+  primaryCta: HubPrimaryCtaPresentation;
+  firstViewportPulse: CenterHubFirstViewportPulseBundle;
   header: CenterGameFirstHeader;
   todayFocus: CenterTodayFocusPresentation;
   activeOperationFocus: CenterActiveOperationFocusPresentation;
@@ -145,6 +187,23 @@ export type CenterHubGameFirstPresentation = {
   progression: CenterGameFirstProgressionPresentation;
   quickActions: CenterGameFirstQuickActionsPresentation;
 };
+
+export type {
+  CenterHubFirstViewportPulseBundle,
+  CenterHubCompactPulsePresentation,
+  CenterHubCompactAdvisorPresentation,
+} from './centerHubPulsePresentation';
+export type { HubPrimaryCtaPresentation, HubPrimaryCtaIntent } from './centerHubNextBestActionPresentation';
+export { HUB_PRIMARY_CTA_LABELS } from './centerHubNextBestActionPresentation';
+export {
+  HUB_DENSITY_LIMITS,
+  HUB_LIGHT_PREMIUM_THEME,
+  hubSectionLayoutZone,
+  hubSectionIsHidden,
+  resolveHubFeedItemCap,
+  resolveHubQuickActionsCap,
+} from './centerHubDensityPolicy';
+export type { HubLayoutSectionKey, HubThemeTone } from './centerHubDensityPolicy';
 
 const WEAK_CTA = /^(devam et|detay|işlem yap|detaya git|tümünü gör)$/i;
 
@@ -521,9 +580,10 @@ function buildNextMoves(presentation: Omit<CenterHomePresentation, 'gameFirst'>)
   const sourceActions = presentation.nextActions.actions;
   const usedTitles = new Set<string>();
 
+  const moveCap = resolveHubNextMovesCap(presentation.hubDensity.band);
   const moves: CenterNextMoveItem[] = [];
   for (const action of sourceActions) {
-    if (moves.length >= 3) break;
+    if (moves.length >= moveCap) break;
     const titleKey = normalizeLine(action.title);
     if (!titleKey || usedTitles.has(titleKey)) continue;
     usedTitles.add(titleKey);
@@ -573,7 +633,7 @@ function buildNextMoves(presentation: Omit<CenterHomePresentation, 'gameFirst'>)
       presentation.hubDensity.band === 'day1'
         ? 'Bugün için en doğru 1-2 adım.'
         : 'Her hamle şehir, kaynak veya güven üzerinde etki yaratır.',
-    moves: moves.slice(0, 3),
+    moves: moves.slice(0, moveCap),
   };
 }
 
@@ -581,50 +641,7 @@ function buildCityPulse(
   presentation: Omit<CenterHomePresentation, 'gameFirst'>,
   band: HubDisclosureBand,
 ): CenterGameFirstCityPulse {
-  const feed = presentation.miniCityFeed;
-  const maxItems = band === 'day1' ? 2 : Math.min(4, presentation.hubDensity.maxFeedItems + 1);
-  const seenTypes = new Set<string>();
-  const items: CenterGameFirstCityPulseItem[] = [];
-
-  for (const item of feed.items) {
-    if (items.length >= maxItems) break;
-    if (seenTypes.has(item.type)) continue;
-    seenTypes.add(item.type);
-    items.push({
-      id: item.id,
-      message: item.title,
-      detail: item.subtitle,
-      tone: item.tone,
-      sourceLabel: item.sourceLabel,
-      type: item.type,
-      routeKey: item.routeKey,
-      actionKey: item.actionKey,
-    });
-  }
-
-  if (items.length === 0 && feed.emptyFallback) {
-    items.push({
-      id: feed.emptyFallback.id,
-      message: feed.emptyFallback.title,
-      detail: feed.emptyFallback.subtitle,
-      tone: feed.emptyFallback.tone,
-      sourceLabel: feed.emptyFallback.sourceLabel,
-      type: feed.emptyFallback.type,
-      routeKey: feed.emptyFallback.routeKey,
-      actionKey: feed.emptyFallback.actionKey,
-    });
-  }
-
-  return {
-    visibility: items.length > 0 ? 'visible' : 'hidden',
-    title: band === 'day1' ? 'Şehirden Gelen' : 'Şehir Nabzı',
-    subtitle:
-      band === 'day1'
-        ? 'Mahallelerden kısa ve öğretici sinyaller.'
-        : feed.subtitle || 'Canlı gelişmeler ve sonuç bağlantıları.',
-    statusPill: items.length > 0 ? `${items.length} sinyal` : feed.statusPill,
-    items,
-  };
+  return buildCenterGameFirstCityPulseFromFeed(presentation, band);
 }
 
 function buildDistrictSpotlight(
@@ -723,6 +740,106 @@ function buildAdvisor(
   };
 }
 
+function shouldMergePrimaryFocus(
+  todayFocus: CenterTodayFocusPresentation,
+  activeOp: CenterActiveOperationFocusPresentation,
+): boolean {
+  if (todayFocus.visibility !== 'visible' || activeOp.visibility !== 'visible') return false;
+  if (activeOp.mode !== 'active') return false;
+
+  const goalNorm = normalizeLine(todayFocus.goalSentence);
+  const opNorm = normalizeLine(activeOp.operationName);
+  if (!goalNorm || !opNorm) return false;
+
+  return (
+    goalNorm === opNorm ||
+    goalNorm.includes(opNorm) ||
+    opNorm.includes(goalNorm) ||
+    linesAreDuplicate(todayFocus.goalSentence, activeOp.operationName)
+  );
+}
+
+function districtDuplicatesPrimaryFocus(
+  district: CenterDistrictSpotlightPresentation,
+  todayFocus: CenterTodayFocusPresentation,
+  activeOp: CenterActiveOperationFocusPresentation,
+): boolean {
+  const districtName = normalizeLine(district.districtName);
+  if (!districtName) return false;
+
+  const goal = normalizeLine(todayFocus.goalSentence);
+  const opDistrict = normalizeLine(activeOp.districtLabel);
+  return goal.includes(districtName) || opDistrict === districtName;
+}
+
+function applyPrimaryFocusMerge(
+  todayFocus: CenterTodayFocusPresentation,
+  activeOp: CenterActiveOperationFocusPresentation,
+): void {
+  todayFocus.operationMeta = {
+    districtLabel: activeOp.districtLabel,
+    phaseLabel: activeOp.phaseLabel,
+    riskLabel: activeOp.riskLabel,
+    mode: 'active',
+  };
+  if (activeOp.nextDecision && !linesAreDuplicate(todayFocus.whyImportant, activeOp.nextDecision)) {
+    todayFocus.nextActionSentence = clampText(activeOp.nextDecision, 88);
+  }
+  activeOp.visibility = 'hidden';
+}
+
+function buildDensityLayout(input: {
+  band: HubDisclosureBand;
+  todayFocus: CenterTodayFocusPresentation;
+  activeOperationFocus: CenterActiveOperationFocusPresentation;
+  firstViewportPulse: CenterHubFirstViewportPulseBundle;
+  districtSpotlight: CenterDistrictSpotlightPresentation;
+  mergedPrimaryFocus: boolean;
+}): CenterHubDensityLayout {
+  const hiddenSections: HubLayoutSectionKey[] = [];
+
+  if (input.mergedPrimaryFocus) {
+    hiddenSections.push('activeOperationFocus');
+  }
+
+  const duplicateCityPulseSuppressed = input.firstViewportPulse.pulse.visibility === 'visible';
+  if (duplicateCityPulseSuppressed) {
+    hiddenSections.push('miniCityFeed', 'strategicPulse');
+  }
+
+  if (input.band === 'day1') {
+    hiddenSections.push('districtSpotlight', 'progressImpact', 'strategicPulse', 'liveDevelopments');
+  }
+
+  if (
+    input.districtSpotlight.visibility === 'visible' &&
+    districtDuplicatesPrimaryFocus(
+      input.districtSpotlight,
+      input.todayFocus,
+      input.activeOperationFocus,
+    ) &&
+    (input.mergedPrimaryFocus || input.activeOperationFocus.mode === 'active')
+  ) {
+    hiddenSections.push('districtSpotlight');
+  }
+
+  let densityReason: string | undefined;
+  if (input.mergedPrimaryFocus) {
+    densityReason = 'merged-primary-focus';
+  } else if (duplicateCityPulseSuppressed) {
+    densityReason = 'single-city-pulse';
+  }
+
+  return {
+    themeTone: HUB_LIGHT_PREMIUM_THEME.themeTone,
+    mergedPrimaryFocus: input.mergedPrimaryFocus,
+    hiddenSections,
+    densityReason,
+    duplicateCityPulseSuppressed,
+    firstViewportPrimaryCtaCount: HUB_DENSITY_LIMITS.firstViewportPrimaryCtaMax,
+  };
+}
+
 function buildProgression(presentation: Omit<CenterHomePresentation, 'gameFirst'>): CenterGameFirstProgressionPresentation {
   const unlock = presentation.unlockPreviewMini;
   const agenda = presentation.cityAgenda;
@@ -733,6 +850,7 @@ function buildProgression(presentation: Omit<CenterHomePresentation, 'gameFirst'
   if (band === 'day1' && unlock.visibility !== 'visible') {
     return {
       visibility: 'hidden',
+      sectionTitle: 'Yaklaşan Açılım',
       rankLabel: header.levelLabel ?? 'Başlangıç',
       nextUnlockLabel: '',
     };
@@ -750,6 +868,7 @@ function buildProgression(presentation: Omit<CenterHomePresentation, 'gameFirst'
 
   return {
     visibility: 'visible',
+    sectionTitle: 'Yaklaşan Açılım',
     rankLabel: header.playerRoleLabel || header.levelLabel || 'Şehir Yöneticisi',
     nextUnlockLabel: clampText(nextUnlock, 88),
     streakLabel: `Seri ${streakCurrent}/${streakTotal}`,
@@ -776,15 +895,18 @@ function buildProgression(presentation: Omit<CenterHomePresentation, 'gameFirst'
   };
 }
 
-function buildQuickActions(presentation: Omit<CenterHomePresentation, 'gameFirst'>): CenterGameFirstQuickActionsPresentation {
+function buildQuickActions(
+  presentation: Omit<CenterHomePresentation, 'gameFirst'>,
+): CenterGameFirstQuickActionsPresentation {
   const commands = presentation.quickCommands.commands;
   const usedLabels = new Set(
     presentation.nextActions.actions.map((item) => normalizeLine(item.title)),
   );
+  const cap = resolveHubQuickActionsCap(presentation.hubDensity.band);
 
   const actions: CenterGameFirstQuickActionItem[] = [];
   for (const command of commands) {
-    if (actions.length >= 4) break;
+    if (actions.length >= cap) break;
     const key = normalizeLine(command.title);
     if (usedLabels.has(key)) continue;
     actions.push({
@@ -817,6 +939,7 @@ export function buildCenterHubGameFirstPresentation(
   const band = presentation.hubDensity.band;
   const day = resolveDay(presentation);
 
+  const primaryCta = buildHubPrimaryCtaPresentation(presentation);
   const todayFocus = buildTodayFocus(presentation, day, band);
   const activeOperationFocus = buildActiveOperationFocus(presentation, day);
   const nextMoves = buildNextMoves(presentation);
@@ -825,6 +948,40 @@ export function buildCenterHubGameFirstPresentation(
   const advisor = buildAdvisor(presentation, todayFocus);
   const progression = buildProgression(presentation);
   const quickActions = buildQuickActions(presentation);
+  const firstViewportPulse = buildCenterHubFirstViewportPulseBundle({
+    presentation,
+    cityPulse,
+    advisor,
+    todayFocus,
+    band,
+  });
+
+  const mergedPrimaryFocus = shouldMergePrimaryFocus(todayFocus, activeOperationFocus);
+  if (mergedPrimaryFocus) {
+    applyPrimaryFocusMerge(todayFocus, activeOperationFocus);
+  }
+
+  const densityLayout = buildDensityLayout({
+    band,
+    todayFocus,
+    activeOperationFocus,
+    firstViewportPulse,
+    districtSpotlight,
+    mergedPrimaryFocus,
+  });
+
+  if (hubSectionIsHidden(densityLayout.hiddenSections, 'districtSpotlight')) {
+    districtSpotlight.visibility = 'hidden';
+  }
+
+  // Primary CTA overrides weak labels on hero and active operation focus surfaces.
+  const primaryAction = hubPrimaryCtaToHubAction(primaryCta);
+  if (todayFocus.visibility === 'visible' && primaryAction.enabled) {
+    todayFocus.cta = primaryAction;
+  }
+  if (activeOperationFocus.visibility === 'visible' && primaryAction.enabled) {
+    activeOperationFocus.cta = primaryAction;
+  }
 
   let fallbackReason: string | undefined;
   if (activeOperationFocus.mode === 'fallback' && activeOperationFocus.visibility === 'visible') {
@@ -836,6 +993,10 @@ export function buildCenterHubGameFirstPresentation(
   return {
     densityBand: band,
     fallbackReason,
+    themeTone: densityLayout.themeTone,
+    densityLayout,
+    primaryCta,
+    firstViewportPulse,
     header: buildHeader(presentation),
     todayFocus,
     activeOperationFocus,

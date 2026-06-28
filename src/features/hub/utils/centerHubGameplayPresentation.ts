@@ -864,7 +864,11 @@ export function buildCenterHubGameplayPresentation(
     depth.advisorMiniDirective.directive,
     presentation.operationSignals.summaryLine ?? '',
     presentation.advisorSuggestion.recommendation,
-  ].filter((line): line is string => Boolean(line?.trim())));
+  ].filter((line): line is string => Boolean(line?.trim())), {
+    day: presentation.dailyReward.today.dayIndex,
+    runtime: maintenanceBacklogRuntime ?? undefined,
+    operationsToday: presentation.operationFocus.items.length || 1,
+  });
   const miniCityFeed = buildMiniCityFeedPresentation({
     presentation,
     recentImpactSummary: depth.recentImpactSummary,

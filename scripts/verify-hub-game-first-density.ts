@@ -3,9 +3,9 @@
  * Çalıştır: npm run verify:hub-game-first-density
  */
 
-import { verifyCenterHubGameFirstDensityScenario } from '../src/features/hub/verifyCenterHubGameFirstDensityScenario';
+import { verifyCenterHubGameFirstScenario } from '../src/features/hub/verifyCenterHubGameFirstScenario';
 
-const outcome = verifyCenterHubGameFirstDensityScenario();
+const outcome = verifyCenterHubGameFirstScenario();
 
 for (const line of outcome.checks) {
   // eslint-disable-next-line no-console

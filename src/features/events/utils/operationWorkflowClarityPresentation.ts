@@ -390,7 +390,7 @@ function buildPrimaryCta(input: {
   const missing = Math.max(0, input.requiredCount - input.verifiedCount);
   if (missing <= 0 || input.interactionState === 'revealed') {
     return {
-      label: 'Planlamaya geç',
+      label: 'Planı Oluştur',
       enabled: true,
       actionKey: 'go_to_plan',
     };
@@ -547,7 +547,7 @@ export function auditOperationWorkflowClarityPresentation(
   }
 
   if (!model.primaryCta.label.trim()) issues.push('primary CTA empty');
-  if (model.verifiedCount < model.requiredCount && model.primaryCta.label === 'Planlamaya geç') {
+  if (model.verifiedCount < model.requiredCount && model.primaryCta.label === 'Planı Oluştur') {
     issues.push('missing info allows planning CTA');
   }
   if (model.advisorHint.text.length > 170) issues.push('advisor hint too long');

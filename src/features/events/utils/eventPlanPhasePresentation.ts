@@ -1,3 +1,4 @@
+import type { DominantStrategyDetectorInput } from '@/core/dominantStrategyDetector/dominantStrategyDetectorTypes';
 import type { EventCard } from '@/core/models/EventCard';
 import {
   buildEceMemorySnapshot,
@@ -19,8 +20,25 @@ import {
 import {
   buildInspectToPlanBridge,
   buildOperationPhaseTransitionPresentation,
+  OPERATION_PHASE_CTA_LABELS,
   type OperationPhaseTransitionPresentation,
 } from '@/features/events/utils/operationPhaseTransitionPresentation';
+import {
+  auditEventPlanBriefingPresentation,
+  buildEventPlanBriefingPresentation,
+  type EventPlanBriefingPresentation,
+} from '@/features/events/utils/eventPlanBriefingPresentation';
+import {
+  auditEventPlanOptionsPresentation,
+  buildEventPlanOptionsPresentation,
+  type EventPlanOptionsPresentation,
+} from '@/features/events/utils/eventPlanOptionsPresentation';
+import {
+  buildReadinessInputFromContext,
+  buildReadinessPriorityFromInput,
+} from '@/core/readinessStrategicPriority/readinessSurfaceBridge';
+import type { ReadinessPrioritySurfacePresentation } from '@/core/readinessStrategicPriority/readinessStrategicPriorityTypes';
+import { buildOperationReadinessSnapshot } from '@/core/operationReadiness/operationReadinessModel';
 import type { PlanOptionId } from '@/features/events/utils/eventWorkflowPlanPresentation';
 
 export type EventPlanStrategyId = 'rapid_response' | 'balanced_plan' | 'long_term_fix';
@@ -182,6 +200,9 @@ export type EventPlanPhasePresentation = {
   primaryCta: EventPlanCta;
   accessibilityLabel: string;
   phaseTransition: OperationPhaseTransitionPresentation;
+  briefing: EventPlanBriefingPresentation;
+  options: EventPlanOptionsPresentation;
+  readinessPriority: ReadinessPrioritySurfacePresentation;
 };
 
 export type BuildEventPlanPhasePresentationInput = {
@@ -192,6 +213,8 @@ export type BuildEventPlanPhasePresentationInput = {
   recentVarietyProfiles?: import('@/core/eventVariety/eventGameplayVarietyTypes').BuildEventGameplayVarietyProfileInput['recentProfiles'];
   authorityGameplayContext?: import('@/core/authority/authorityGameplayUnlockTypes').AuthorityGameplayPresentationContext;
   eceMemoryContext?: EceMemoryContextInput;
+  operationsToday?: number;
+  dominantStrategyInput?: DominantStrategyDetectorInput | null;
 };
 
 const STRATEGY_ORDER: EventPlanStrategyId[] = [
@@ -1075,7 +1098,7 @@ function buildPlanCta(selectedStrategyId: EventPlanStrategyId | null | undefined
   }
 
   return {
-    label: 'Yönlendirmeye Geç',
+    label: OPERATION_PHASE_CTA_LABELS.plan,
     actionKey: 'go_to_dispatch',
     enabled: true,
   };
@@ -1140,6 +1163,45 @@ export function buildEventPlanPhasePresentation(
     ctaActionKey: primaryCta.actionKey,
     avoidSummaries: [advisorComment.text],
   });
+  const recommendedStrategy =
+    strategies.find((strategy) => strategy.id === recommendedStrategyId) ?? selectedStrategy;
+  const briefing = buildEventPlanBriefingPresentation({
+    event,
+    recommendedStrategy,
+    inspectSummary,
+  });
+  const options = buildEventPlanOptionsPresentation({
+    strategies,
+    selectedStrategyId,
+    recommendedStrategyId,
+    advisorComment,
+    event,
+    day: input.day,
+    isDay1LearningEvent: input.isDay1LearningEvent,
+    operationsToday: input.operationsToday,
+    dominantStrategyInput: input.dominantStrategyInput,
+  });
+
+  const readinessSnapshot = buildOperationReadinessSnapshot({
+    phase: 'dispatch',
+    day: input.day ?? event.day ?? 1,
+    planStrategyId: selectedStrategyId,
+    publicSatisfactionPreview: event.previewEffects?.publicSatisfaction,
+    eventRiskLevel: event.riskLevel,
+  });
+  const readinessInput = buildReadinessInputFromContext({
+    phase: 'dispatch',
+    day: input.day ?? event.day ?? 1,
+    planStrategyId: selectedStrategyId,
+    publicSatisfactionPreview: event.previewEffects?.publicSatisfaction,
+    eventRiskLevel: event.riskLevel,
+    operationsToday: input.operationsToday,
+    operationTitle: event.title,
+    socialPressure: (event.previewEffects?.publicSatisfaction ?? 0) <= -3,
+    avoidLines: [advisorComment.text],
+  });
+  readinessInput.readinessSnapshot = readinessSnapshot;
+  const { surface: readinessPriority } = buildReadinessPriorityFromInput(readinessInput);
 
   return {
     title: phaseTransition.shell.title,
@@ -1159,6 +1221,9 @@ export function buildEventPlanPhasePresentation(
     actions,
     primaryCta,
     phaseTransition,
+    briefing,
+    options,
+    readinessPriority,
     accessibilityLabel: `${event.title} planlama, ${selectedStrategy.title} seçili`,
   };
 }
@@ -1235,6 +1300,9 @@ export function auditEventPlanPhasePresentation(model: EventPlanPhasePresentatio
   if (model.primaryCta.actionKey !== 'go_to_dispatch' || !model.primaryCta.enabled) {
     issues.push('CTA should be go_to_dispatch enabled when strategy selected');
   }
+
+  issues.push(...auditEventPlanBriefingPresentation(model.briefing));
+  issues.push(...auditEventPlanOptionsPresentation(model.options));
 
   return issues;
 }

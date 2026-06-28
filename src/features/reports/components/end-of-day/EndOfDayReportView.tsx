@@ -54,13 +54,14 @@ import { buildSeasonEndEvaluationModel, buildSeasonEndReportCardModel } from '@/
 import type { DailyReport } from '@/core/models/DailyReport';
 import type { GameMetrics } from '@/core/models/GameMetrics';
 import type { DailyXpReport } from '@/core/xp/xpReport';
-import { EndOfDayReportHero } from '@/features/reports/components/end-of-day/EndOfDayReportHero';
-import { DayEndCriticalDecisionSection } from '@/features/reports/components/end-of-day/DayEndCriticalDecisionSection';
+import { EndOfDayClosurePrimaryFlow } from '@/features/reports/components/end-of-day/closure/EndOfDayClosurePrimaryFlow';
+import { ReportReplayMemoryPrimaryFlow } from '@/features/reports/components/memory/ReportReplayMemoryPrimaryFlow';
+import { buildEndOfDayReportClosurePresentation } from '@/features/reports/presentation/closure/endOfDayReportClosurePresentation';
+import { buildReportReplayMemoryPresentation } from '@/features/reports/presentation/memory/reportReplayMemoryPresentation';
 import { ReportPilotThemeSummary } from '@/features/reports/components/ReportPilotThemeSummary';
 import { EndOfDayReportMetaProgressSection } from '@/features/reports/components/end-of-day/EndOfDayReportMetaProgressSection';
 import { ReportAuthorityTrustCard } from '@/features/reports/components/end-of-day/premium/ReportAuthorityTrustCard';
 import { ReportPilotSummaryPremiumCard } from '@/features/reports/components/end-of-day/premium/ReportPilotSummaryPremiumCard';
-import { ReportPrimaryImpactSection } from '@/features/reports/components/end-of-day/premium/ReportPrimaryImpactSection';
 import { buildReportCarryOverPreview } from '@/core/carryOver';
 import {
   buildDistrictOperationActionDailySummary,
@@ -108,18 +109,15 @@ import { ReportPilotCompletionCard } from '@/features/reports/components/ReportP
 import {
   buildReportAuthorityTrustModel,
   buildReportPilotSummaryPremiumModel,
-  buildReportPrimaryImpactModel,
   buildReportTomorrowNotesModel,
 } from '@/features/reports/presentation/reportPremiumPresentation';
 import {
   buildReportHeaderModel,
 } from '@/features/reports/presentation/reportScreenPresentation';
-import { buildDayEndCriticalDecisionPresentation } from '@/features/reports/presentation/dayEndCriticalDecisionPresentation';
 import type { PilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
 import { buildEndOfDayReportViewModel } from '@/features/reports/utils/endOfDayReportPresentation';
 import { buildMemoryFollowUpPresentationContext } from '@/features/shared/utils/memoryFollowUpPresentationContext';
 import { buildPostDecisionCityReactionFromRecord } from '@/features/events/utils/postDecisionCityReactionPresentation';
-import { ReportDayFlowTimeline } from '@/features/reports/components/end-of-day/ReportDayFlowTimeline';
 import { buildReportReplayPresentation } from '@/core/reportReplay';
 import {
   buildAvoidLines,
@@ -207,6 +205,7 @@ export function EndOfDayReportView({
   const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
   const operationSignals = useGameStore((s) => s.operationSignals);
   const cityArchive = useGameStore((s) => s.cityArchive);
+  const snapshots = useGameStore((s) => s.snapshots);
   const vehicleMaintenance = useGameStore((s) => s.vehicleMaintenance);
   const teamSpecialization = useGameStore((s) => s.teamSpecialization);
   const crisisActionState = useGameStore((s) => s.crisisActionState);
@@ -219,7 +218,6 @@ export function EndOfDayReportView({
   const socialPulseState = useGameStore((s) => s.socialPulseState);
   const eventPool = useGameStore((s) => s.eventPool);
   const neighborhoods = useGameStore((s) => s.neighborhoods);
-  const playerProgress = useGameStore((s) => s.playerProgress);
   const reducedMotion = useCreviaReducedMotion();
 
   const reportGuard = useMemo(
@@ -297,17 +295,6 @@ export function EndOfDayReportView({
   );
 
   const headerModel = buildReportHeaderModel(gameStatus, report.day);
-
-  const impactModel = useMemo(
-    () =>
-      buildReportPrimaryImpactModel({
-        metrics,
-        decisionHistory,
-        day: report.day,
-        createdAt: report.createdAt,
-      }),
-    [metrics, decisionHistory, report.day, report.createdAt],
-  );
 
   const authorityModel = useMemo(
     () =>
@@ -1131,18 +1118,6 @@ export function EndOfDayReportView({
     ],
   );
 
-  const criticalDecisionModel = useMemo(
-    () =>
-      buildDayEndCriticalDecisionPresentation({
-        day: report.day,
-        metrics,
-        decisionsToday: decisionHistory.filter((record) => record.day === report.day),
-        criticalDecision: lastDecisionForDay ?? null,
-        playerProgress,
-      }),
-    [decisionHistory, lastDecisionForDay, metrics, playerProgress, report.day],
-  );
-
   const endDayCliffhanger = useMemo(() => {
     const fatigueLine = reportFatigueState
       ? buildResourceFatiguePanelLine(reportFatigueState)
@@ -1196,7 +1171,7 @@ export function EndOfDayReportView({
     tomorrowRiskPresentation.report,
   ]);
 
-  const dayFlowReplay = useMemo(() => {
+  const reportReplayContextInput = useMemo(() => {
     const activeMaintenance = selectActiveMaintenanceRuntimeItems(
       maintenanceBacklogRuntime ?? { items: [], attentionStreaks: {} },
     );
@@ -1246,7 +1221,7 @@ export function EndOfDayReportView({
       avoidLines: replayAvoidLines,
     };
 
-    return buildReportReplayPresentation({
+    return {
       day: report.day,
       decision: lastDecisionForDay
         ? {
@@ -1308,7 +1283,7 @@ export function EndOfDayReportView({
             })
           : null,
       avoidLines: replayAvoidLines,
-    });
+    };
   }, [
     cityEchoReportLine,
     decisionHistory,
@@ -1324,6 +1299,7 @@ export function EndOfDayReportView({
     model.managementStyleLine,
     model.operationalTempoLine,
     model.periodGoalImpactLine,
+    model.successScore,
     model.tomorrowPreparationLine,
     report.day,
     report.warnings,
@@ -1333,6 +1309,122 @@ export function EndOfDayReportView({
     socialEchoForReport?.mention,
     socialPulseState,
     tomorrowRiskPresentation.report,
+  ]);
+
+  const dayFlowReplay = useMemo(() => {
+    return buildReportReplayPresentation(reportReplayContextInput);
+  }, [reportReplayContextInput]);
+
+  const closurePresentation = useMemo(() => {
+    const decisionsToday = decisionHistory.filter((record) => record.day === report.day);
+    const activeMaintenance = selectActiveMaintenanceRuntimeItems(
+      maintenanceBacklogRuntime ?? { items: [], attentionStreaks: {} },
+    );
+    const maintenanceRiskHigh =
+      activeMaintenance.some((item) => item.severity === 'critical') ||
+      activeMaintenance.length >= 3;
+
+    return buildEndOfDayReportClosurePresentation({
+      day: report.day,
+      metrics,
+      successScore: model.successScore,
+      decisionsToday,
+      criticalDecision: lastDecisionForDay ?? null,
+      cityReaction: reportDecisionMemory,
+      socialPulseScore,
+      districtReportLine: reportArchiveContinuity.districtLine ?? districtReportCardLine,
+      socialEchoMessage: reportSocialEcho?.message ?? socialEchoForReport?.mention ?? null,
+      managementStyleLine: model.managementStyleLine,
+      decisionImpactLine: decisionImpactReportEcho ?? cityEchoReportLine ?? null,
+      tomorrowNotes: model.tomorrowNotes,
+      tomorrowPreparationLine: model.tomorrowPreparationLine,
+      tomorrowRisk: tomorrowRiskPresentation.report,
+      carryOverSummary: reportCarryOverMemory?.summary ?? null,
+      cliffhangerFocus: endDayCliffhanger.tomorrowRisk.suggestedFocus,
+      eceStrategyLine: model.eceStrategyLine?.text ?? null,
+      eceAdvisorLine: reportDecisionMemory?.advisorNote ?? null,
+      maintenanceRiskHigh,
+      resourcePressureHigh: metrics.budget < 45_000,
+      periodGoalProgress: Boolean(model.periodGoalImpactLine),
+      replayInput: reportReplayContextInput,
+      hideScoreRing: reportGuard.hideMetaProgressHeavy,
+      avoidLines: [
+        ...(model.tomorrowNotes ?? []),
+        model.oneMoreDayCard?.line ?? '',
+        model.eceStrategyLine?.text ?? '',
+      ].filter(Boolean),
+    });
+  }, [
+    cityEchoReportLine,
+    decisionHistory,
+    decisionImpactReportEcho,
+    districtReportCardLine,
+    endDayCliffhanger.tomorrowRisk.suggestedFocus,
+    lastDecisionForDay,
+    maintenanceBacklogRuntime,
+    metrics,
+    model.eceStrategyLine?.text,
+    model.managementStyleLine,
+    model.oneMoreDayCard?.line,
+    model.periodGoalImpactLine,
+    model.successScore,
+    model.tomorrowNotes,
+    model.tomorrowPreparationLine,
+    report.day,
+    reportArchiveContinuity.districtLine,
+    reportCarryOverMemory?.summary,
+    reportDecisionMemory,
+    reportGuard.hideMetaProgressHeavy,
+    reportReplayContextInput,
+    reportSocialEcho?.message,
+    socialEchoForReport?.mention,
+    socialPulseScore,
+    tomorrowRiskPresentation.report,
+  ]);
+
+  const replayMemoryPresentation = useMemo(() => {
+    const activeMaintenance = selectActiveMaintenanceRuntimeItems(
+      maintenanceBacklogRuntime ?? { items: [], attentionStreaks: {} },
+    );
+    const maintenanceRiskHigh =
+      activeMaintenance.some((item) => item.severity === 'critical') ||
+      activeMaintenance.length >= 3;
+
+    return buildReportReplayMemoryPresentation({
+      currentDay: report.day,
+      metrics,
+      snapshots,
+      cityArchive,
+      decisionHistory,
+      strategyHistory,
+      socialPulseScore,
+      maintenanceRiskHigh,
+      resourcePressureHigh: metrics.budget < 45_000,
+      playerStyleLabel: model.managementStyleLine?.split(' ').slice(-2).join(' ') ?? null,
+      hubRecentImpactLine: decisionImpactReportEcho ?? cityEchoReportLine ?? null,
+      avoidLines: [
+        closurePresentation.hero.closingSummary,
+        closurePresentation.hero.closingTitle,
+        ...(model.tomorrowNotes ?? []),
+        model.eceStrategyLine?.text ?? '',
+      ].filter(Boolean),
+    });
+  }, [
+    cityArchive,
+    cityEchoReportLine,
+    closurePresentation.hero.closingSummary,
+    closurePresentation.hero.closingTitle,
+    decisionHistory,
+    decisionImpactReportEcho,
+    maintenanceBacklogRuntime,
+    metrics,
+    model.eceStrategyLine?.text,
+    model.managementStyleLine,
+    model.tomorrowNotes,
+    report.day,
+    snapshots,
+    socialPulseScore,
+    strategyHistory,
   ]);
 
   const reportInsightAvoidLines = useMemo(
@@ -1680,15 +1772,19 @@ export function EndOfDayReportView({
         <ReportHeaderCard model={headerModel} />
       </Animated.View>
 
-      <Animated.View entering={ENTER.hero}>
-        <EndOfDayReportHero
-          day={model.day}
-          statusTitle={model.statusTitle}
-          successScore={reportGuard.hideMetaProgressHeavy ? 0 : model.successScore}
-          subtitle={model.heroSubtitle}
-          hideScoreRing={reportGuard.hideMetaProgressHeavy}
-        />
-      </Animated.View>
+      <EndOfDayClosurePrimaryFlow
+        closure={closurePresentation}
+        replayInput={reportReplayContextInput}
+        day={report.day}
+        reducedMotion={reducedMotion}
+        onDayFlowLayout={onDayFlowLayout}
+      />
+
+      <ReportReplayMemoryPrimaryFlow
+        model={replayMemoryPresentation}
+        day={report.day}
+        reducedMotion={reducedMotion}
+      />
 
       <ReportPilotThemeSummary day={report.day} />
 
@@ -1702,25 +1798,7 @@ export function EndOfDayReportView({
         </View>
       ) : null}
 
-      <Animated.View entering={ENTER.impact}>
-        <ReportPrimaryImpactSection model={impactModel} />
-      </Animated.View>
-
-      <DayEndCriticalDecisionSection
-        model={criticalDecisionModel}
-        reducedMotion={reducedMotion}
-        onShowDayFlow={onShowDayFlow}
-      />
-
-      <View onLayout={onDayFlowLayout}>
-        <ReportDayFlowTimeline
-          model={dayFlowReplay}
-          day={report.day}
-          reducedMotion={reducedMotion}
-        />
-      </View>
-
-      {cityEchoReportLine || decisionImpactReportEcho ? (
+      {closurePresentation.isRichDay && (cityEchoReportLine || decisionImpactReportEcho) ? (
         <CreviaAnimatedLine
           surface="report"
           index={0}
@@ -1745,7 +1823,7 @@ export function EndOfDayReportView({
         />
       ) : null}
 
-      {showReportSocialEcho && reportSocialEcho ? (
+      {showReportSocialEcho && reportSocialEcho && closurePresentation.isRichDay ? (
         <CompactInsightRow
           label={reportSocialEcho.title}
           line={reportSocialEcho.message}
@@ -1859,7 +1937,7 @@ export function EndOfDayReportView({
         </CreviaAnimatedLine>
       ) : null}
 
-      {model.eceStrategyLine?.text ? (
+      {model.eceStrategyLine?.text && closurePresentation.isRichDay ? (
         <View style={styles.districtReportCardRow}>
           <Text style={styles.districtReportCardLabel} numberOfLines={1}>
             Ece strateji notu

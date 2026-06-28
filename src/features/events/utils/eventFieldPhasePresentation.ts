@@ -22,6 +22,11 @@ import {
 } from '@/core/maintenanceBacklog';
 import type { MaintenanceActionPresentation } from '@/core/maintenanceBacklog/maintenanceActionTypes';
 import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
+import type { ReadinessFieldSignalPresentation } from '@/core/readinessStrategicPriority/readinessStrategicPriorityTypes';
+import {
+  buildFieldReadinessSignal,
+  buildReadinessInputFromContext,
+} from '@/core/readinessStrategicPriority/readinessSurfaceBridge';
 import {
   buildOperationReadinessSnapshot,
   mapReadinessToneToUiTone,
@@ -255,6 +260,7 @@ export type EventFieldPhasePresentation = {
   accessibilityLabel: string;
   phaseTransition: OperationPhaseTransitionPresentation;
   isDay1Simplified: boolean;
+  readinessLiveSignal: ReadinessFieldSignalPresentation;
 };
 
 export type BuildEventFieldPhasePresentationInput = {
@@ -1061,6 +1067,20 @@ export function buildEventFieldPhasePresentation(
     avoidSummaries: [advisorComment.text, statusHero.summary],
   });
 
+  const readinessInput = buildReadinessInputFromContext({
+    phase: 'field',
+    day: input.day ?? input.event.day ?? 1,
+    hasVehicle: Boolean(input.assignment?.vehicleType),
+    assignmentEffectBand: assignmentEffect.scoreBand,
+    planStrategyId: selectedPlan.strategyId,
+    eventRiskLevel: input.event.riskLevel,
+    publicSatisfactionPreview: input.event.previewEffects?.publicSatisfaction,
+    operationTitle: input.event.title,
+    maintenanceRuntime: input.maintenanceBacklogRuntime,
+    avoidLines: [statusHero.summary, liveOperation.summary],
+  });
+  const readinessLiveSignal = buildFieldReadinessSignal(readinessInput);
+
   return {
     title: phaseTransition.shell.title,
     subtitle: resolveFieldSubtitle(input, interactionState),
@@ -1090,6 +1110,7 @@ export function buildEventFieldPhasePresentation(
     },
     phaseTransition,
     isDay1Simplified,
+    readinessLiveSignal,
     accessibilityLabel: `${input.event.title} sahada operasyon, ${selectedPlan.label}, ${liveOperation.statusLabel}, ${timeline.helperText ?? ''}`,
   };
 }

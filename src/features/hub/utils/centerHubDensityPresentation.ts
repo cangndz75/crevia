@@ -54,8 +54,8 @@ const MAX_PRIMARY_BY_BAND: Record<HubDisclosureBand, number> = {
 const MAX_FEED_ITEMS_BY_BAND: Record<HubDisclosureBand, number> = {
   day1: 1,
   early: 2,
-  mid: 3,
-  openEnded: 3,
+  mid: 2,
+  openEnded: 2,
 };
 
 const SURFACE_ORDER: HubSurfaceKey[] = [

@@ -304,10 +304,22 @@ export function DecisionOptionCard({
         </View>
 
         <DecisionTradeoffLine
-          text={presentation.tradeoff}
+          text={presentation.depth.opportunityCost}
           numberOfLines={variantConfig.maxTradeoffLines}
           compact={variantConfig.compactPadding}
         />
+
+        {presentation.depth.contextFitBadge && variant !== 'quick' ? (
+          <Text style={styles.contextFitLine} numberOfLines={1}>
+            {presentation.depth.contextFitBadge.label}
+          </Text>
+        ) : null}
+
+        {presentation.depth.dominantStrategyWarning && variant === 'full' ? (
+          <Text style={styles.memoryWarning} numberOfLines={2}>
+            {presentation.depth.dominantStrategyWarning}
+          </Text>
+        ) : null}
 
         {!insufficient && presentation.primaryImpacts.length > 0 ? (
           <View style={styles.impactBlock}>
@@ -477,6 +489,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textSecondary,
     paddingLeft: 4,
+  },
+  contextFitLine: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.primary,
+    marginTop: 2,
+  },
+  memoryWarning: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.hubGoldDark,
+    lineHeight: 15,
+    marginTop: 2,
   },
   detailLinePositive: {
     fontSize: 11,

@@ -69,11 +69,11 @@ export type OperationPhaseTransitionPresentation = {
 };
 
 export const OPERATION_PHASE_CTA_LABELS: Record<OperationPhaseKey, string> = {
-  inspect: 'Planlamaya Geç',
-  plan: 'Yönlendirmeye Geç',
-  dispatch: 'Ekibi Sahaya Çıkar',
+  inspect: 'Planı Oluştur',
+  plan: 'Ekibi Yönlendir',
+  dispatch: 'Operasyonu Başlat',
   field: 'Sonucu Gör',
-  result: 'Raporu Gör',
+  result: 'Sonucu Özetle',
 };
 
 const PHASE_SHELL: Record<

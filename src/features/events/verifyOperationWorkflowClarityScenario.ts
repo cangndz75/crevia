@@ -133,9 +133,9 @@ export function verifyOperationWorkflowClarityScenario(): {
     '0 progress has no verified checks',
   );
   assert(checks, day1.primaryCta.label === 'İlk bilgiyi doğrula', 'day1 first CTA', day1.primaryCta.label);
-  assert(checks, day1.primaryCta.label !== 'Planlamaya geç', 'missing info blocks planning CTA');
-  assert(checks, day1OneSignal.primaryCta.label !== 'Planlamaya geç', 'partial info blocks planning CTA');
-  assert(checks, complete.primaryCta.label === 'Planlamaya geç', 'complete info allows planning CTA');
+  assert(checks, day1.primaryCta.label !== 'Planı Oluştur', 'missing info blocks planning CTA');
+  assert(checks, day1OneSignal.primaryCta.label !== 'Planı Oluştur', 'partial info blocks planning CTA');
+  assert(checks, complete.primaryCta.label === 'Planı Oluştur', 'complete info allows planning CTA');
   assert(checks, day1.densityBand === 'day1_simple', 'day1 simple density');
   assert(checks, day8.densityBand === 'strategic', 'day8 strategic density');
   assert(checks, day8.planningImpact.lines.length >= 1 && day8.planningImpact.lines.length <= 3, 'planning impact compact');

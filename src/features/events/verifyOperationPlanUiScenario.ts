@@ -8,6 +8,11 @@ import {
   resolveRecommendedPlanStrategyId,
   type EventPlanStrategyId,
 } from '@/features/events/utils/eventPlanPhasePresentation';
+import {
+  auditEventPlanTuningPresentation,
+  buildEventPlanTuningPresentation,
+  getTuningPresetForPlan,
+} from '@/features/events/utils/eventPlanTuningPresentation';
 
 export type VerifyOperationPlanUiOutcome = {
   ok: boolean;
@@ -157,6 +162,72 @@ export function verifyOperationPlanUiScenario(): VerifyOperationPlanUiOutcome {
     OPERATION_WORKFLOW_STEPS.some((s) => s.id === 'plan' && s.label === 'Planla'),
     'workflow plan step unchanged',
   );
+
+  assert(
+    checks,
+    defaultModel.briefing.header.title === 'Planla',
+    'briefing header title',
+  );
+  assert(
+    checks,
+    defaultModel.briefing.stepper.length === 4,
+    'briefing stepper has 4 steps',
+  );
+  assert(
+    checks,
+    defaultModel.briefing.signals.length === 3,
+    'briefing signals count',
+  );
+  assert(
+    checks,
+    defaultModel.briefing.recommendedPlan.title.trim().length > 0,
+    'briefing recommended plan title',
+  );
+  assert(
+    checks,
+    defaultModel.briefing.suitability.value >= 1 &&
+      defaultModel.briefing.suitability.value <= defaultModel.briefing.suitability.max,
+    'briefing suitability range',
+  );
+  assert(
+    checks,
+    defaultModel.options.sectionTitle === 'Plan Seçenekleri',
+    'options section title',
+  );
+  assert(checks, defaultModel.options.options.length === 3, 'options count 3');
+  assert(
+    checks,
+    defaultModel.options.options.some((option) => option.selected),
+    'options has selected plan',
+  );
+  assert(
+    checks,
+    defaultModel.options.options.some((option) => option.recommended),
+    'options has recommended plan',
+  );
+  assert(
+    checks,
+    defaultModel.options.compareCta.label === 'Seçenekleri karşılaştır',
+    'compare cta label',
+  );
+
+  const tuningModel = buildEventPlanTuningPresentation({
+    selectedStrategyId: defaultModel.selectedStrategyId,
+    tuningMode: 'standard',
+    tuningValues: getTuningPresetForPlan(defaultModel.selectedStrategyId),
+    isAccordionOpen: false,
+  });
+  assert(
+    checks,
+    auditEventPlanTuningPresentation(tuningModel).length === 0,
+    'tuning presentation audit clean',
+  );
+  assert(
+    checks,
+    tuningModel.refineCta.label === 'Planı Netleştir',
+    'refine cta label',
+  );
+  assert(checks, tuningModel.liveImpact.metrics.length === 4, 'live impact metrics');
 
   const criticalRapid = resolveRecommendedPlanStrategyId(
     sampleEvent({ riskLevel: 'critical', decisions: sampleEvent().decisions }),

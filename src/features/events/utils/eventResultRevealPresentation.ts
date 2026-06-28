@@ -22,6 +22,11 @@ import {
 } from '@/core/maintenanceBacklog';
 import type { MaintenanceActionPresentation } from '@/core/maintenanceBacklog/maintenanceActionTypes';
 import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
+import type { ReadinessResultBridgePresentation } from '@/core/readinessStrategicPriority/readinessStrategicPriorityTypes';
+import {
+  buildReadinessInputFromContext,
+  buildResultReadinessBridge,
+} from '@/core/readinessStrategicPriority/readinessSurfaceBridge';
 import { buildOperationReadinessSnapshot } from '@/core/operationReadiness/operationReadinessModel';
 import {
   buildOperationPhaseTransitionPresentation,
@@ -242,6 +247,7 @@ export type EventResultRevealPresentation = {
   revealTotalMs: number;
   phaseTransition: OperationPhaseTransitionPresentation;
   revealSections: OperationResultRevealSections;
+  readinessImpact: ReadinessResultBridgePresentation;
 };
 
 export type BuildEventResultRevealPresentationInput = {
@@ -1384,6 +1390,23 @@ export function buildEventResultRevealPresentation(
     reportSummary: reportBridge.summary,
   });
 
+  const readinessInput = buildReadinessInputFromContext({
+    phase: 'result',
+    day,
+    planStrategyId: input.selectedPlanStrategyId,
+    eventRiskLevel: input.event?.riskLevel,
+    moraleDelta: input.snapshot.metricChanges.find((metric) => metric.key === 'personnelMorale')?.delta,
+    budgetDelta: input.snapshot.metricChanges.find((metric) => metric.key === 'budget')?.delta,
+    outcomeTone: outcomeToneForBridge,
+    maintenanceRuntime: input.maintenanceBacklogRuntime,
+    operationTitle: input.snapshot.eventTitle,
+    avoidLines: [advisorComment.text, resourceCost.summary],
+  });
+  const readinessImpact = buildResultReadinessBridge({
+    ...readinessInput,
+    outcomePositive: outcome.outcomeBand === 'success',
+  });
+
   return {
     title: phaseTransition.shell.title,
     subtitle: phaseTransition.shell.subtitle,
@@ -1410,6 +1433,7 @@ export function buildEventResultRevealPresentation(
       : OPERATION_MOTION_RESULT_TOTAL_MS,
     phaseTransition,
     revealSections,
+    readinessImpact,
   };
 }
 

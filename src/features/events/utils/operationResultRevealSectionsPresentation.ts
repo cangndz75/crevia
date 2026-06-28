@@ -10,6 +10,8 @@ import type {
   EventResultResourceCostSection,
 } from './eventResultRevealPresentation';
 import { buildOperationNeighborhoodReactionPresentation } from './operationNeighborhoodReactionPresentation';
+import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
+import { buildMaintenanceEconomyResultRevealLine } from '@/core/maintenanceBacklog/maintenanceEconomySurfaceBridge';
 import {
   resolveOperationResultRevealTone,
   type OperationResultRevealTone,
@@ -169,6 +171,7 @@ export function buildOperationResultRevealSections(input: {
   socialEcho?: import('@/core/socialEcho').SocialEchoPresentation | null;
   advisorLine?: string;
   reportSummary?: string;
+  maintenanceBacklogRuntime?: MaintenanceBacklogRuntimeState | null;
 }): OperationResultRevealSections {
   const day = input.day ?? input.snapshot.day ?? 1;
   const densityBand: OperationResultRevealDensityBand = day <= 1 ? 'day1' : 'openEnded';
@@ -236,6 +239,33 @@ export function buildOperationResultRevealSections(input: {
       summaryLine: 'Verdiğin karar mahallede ilk izini bıraktı.',
       impactLines: ['Sonuç gün sonu raporuna işlenecek.'],
       tone: 'neutral',
+    };
+  }
+
+  const maintenanceRevealLine = buildMaintenanceEconomyResultRevealLine(
+    {
+      day,
+      runtime: input.maintenanceBacklogRuntime,
+    },
+    [
+      input.advisorLine ?? '',
+      input.reportSummary ?? '',
+      decisionImpact.summaryLine,
+      ...decisionImpact.impactLines,
+    ],
+  );
+  if (maintenanceRevealLine && decisionImpact.visibility === 'visible') {
+    decisionImpact = {
+      ...decisionImpact,
+      impactLines: [...decisionImpact.impactLines, maintenanceRevealLine].slice(0, 3),
+    };
+  } else if (maintenanceRevealLine && densityBand === 'openEnded') {
+    decisionImpact = {
+      visibility: 'visible',
+      headline: 'Kararın Etkisi',
+      summaryLine: maintenanceRevealLine,
+      impactLines: [],
+      tone: 'warning',
     };
   }
 

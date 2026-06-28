@@ -23,6 +23,11 @@ import type {
   MaintenanceRuntimeSeverity,
 } from './maintenanceBacklogRuntimeTypes';
 import { buildMaintenanceEconomyHubSummary, buildMaintenanceEconomyReportLine } from './maintenanceEconomyModel';
+import {
+  buildMaintenanceEconomyFeelPresentation,
+  maintenanceEconomyFeelHasDuplicateCopy,
+} from './maintenanceEconomyFeelPresentation';
+import { enrichMaintenanceRuntimeHubSignal, buildMaintenanceEconomyResultRevealLine } from './maintenanceEconomySurfaceBridge';
 
 export type MaintenanceBacklogRuntimePresentation = MaintenanceBacklogSnapshot & {
   hasRuntimeItems: boolean;
@@ -215,7 +220,19 @@ export function buildMaintenanceRuntimeFieldHint(
 export function buildMaintenanceRuntimeResultHint(
   presentation: MaintenanceBacklogRuntimePresentation,
   avoidLines: string[] = [],
+  options?: { day?: number; runtime?: MaintenanceBacklogRuntimeState },
 ): string | null {
+  const economyLine = buildMaintenanceEconomyResultRevealLine(
+    {
+      day: options?.day ?? 8,
+      runtime: options?.runtime,
+      backlogPresentation: presentation,
+      avoidLines,
+    },
+    avoidLines,
+  );
+  if (economyLine) return clamp(economyLine, 120);
+
   if (presentation.economySummary) {
     const text = clamp('Bu sinyali stabilize etmek 1 gün sürebilir.', 120);
     if (!isDuplicateLine(text, avoidLines)) return text;
@@ -254,25 +271,46 @@ export function buildMaintenanceRuntimeReportLine(
 export function buildMaintenanceRuntimeHubSignal(
   presentation: MaintenanceBacklogRuntimePresentation,
   avoidLines: string[] = [],
+  options?: {
+    day?: number;
+    runtime?: MaintenanceBacklogRuntimeState;
+    operationsToday?: number;
+  },
 ): MaintenanceHubSignal | null {
   if (!presentation.hasRuntimeItems && presentation.items.length === 0) return null;
 
-  const title = presentation.hasRuntimeItems ? 'Hazırlık Takibi' : presentation.topItem?.title ?? 'Hazırlık Takibi';
+  const day = options?.day ?? 8;
+  const feel = buildMaintenanceEconomyFeelPresentation({
+    day,
+    runtime: options?.runtime,
+    backlogPresentation: presentation,
+    operationsToday: options?.operationsToday,
+    avoidLines,
+  });
+
+  const baseTitle = presentation.hasRuntimeItems ? 'Hazırlık Takibi' : presentation.topItem?.title ?? 'Hazırlık Takibi';
   const economySummary = presentation.economySummary;
-  const subtitle = clamp(
+  const baseSubtitle = clamp(
     economySummary ? `${presentation.summary} · ${economySummary}` : presentation.summary,
     90,
   );
-  if (isDuplicateLine(title, avoidLines) || isDuplicateLine(subtitle, avoidLines)) {
-    return null;
-  }
 
-  return {
-    title,
-    subtitle,
+  const baseSignal: MaintenanceHubSignal = {
+    title: baseTitle,
+    subtitle: baseSubtitle,
     tone: presentation.overallTone,
     dedupeKey: presentation.topItem?.dedupeKey ?? 'runtime:hub',
   };
+
+  const enriched = enrichMaintenanceRuntimeHubSignal(baseSignal, feel);
+  if (!enriched) return null;
+  if (isDuplicateLine(enriched.title, avoidLines) || isDuplicateLine(enriched.subtitle, avoidLines)) {
+    return null;
+  }
+  if (maintenanceEconomyFeelHasDuplicateCopy(feel)) {
+    return enriched;
+  }
+  return enriched;
 }
 
 export function buildEceMaintenanceRuntimeHint(

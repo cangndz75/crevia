@@ -1,3 +1,4 @@
+import type { DominantStrategyDetectorInput } from '@/core/dominantStrategyDetector/dominantStrategyDetectorTypes';
 import type { DailyPriorityKey } from '@/core/dailyPriority/dailyPriorityTypes';
 import type { DecisionAffordabilityCheck } from '@/core/economy/economyAffordability';
 import type { EventCard, EventDecision } from '@/core/models/EventCard';
@@ -22,6 +23,10 @@ import {
   type DecisionStrategyTone,
   type PrimaryDecisionImpact,
 } from '@/features/events/utils/decisionTradeoffPresentation';
+import {
+  buildDecisionOptionDepthPresentation,
+} from '@/features/events/utils/decisionTradeoffDepthPresentation';
+import type { DecisionOptionDepthPresentation } from '@/features/events/utils/decisionTradeoffTypes';
 
 export type QuickDecisionCardItem = {
   decision: EventDecision;
@@ -76,6 +81,9 @@ export type BuildDecisionOptionCardPresentationInput = {
   personnelPreview?: PersonnelImpactPreview | null;
   vehiclePreview?: VehicleImpactPreview | null;
   affordability?: DecisionAffordabilityCheck;
+  day?: number;
+  isDay1LearningEvent?: boolean;
+  dominantStrategyInput?: DominantStrategyDetectorInput | null;
 };
 
 export type DecisionOptionCardPresentation = {
@@ -91,6 +99,7 @@ export type DecisionOptionCardPresentation = {
   unavailableReason: string | null;
   showPriorityChip: boolean;
   insufficient: boolean;
+  depth: DecisionOptionDepthPresentation;
 };
 
 /** Saf presentation builder — verify scriptleri ve kart UI aynı yolu paylaşır. */
@@ -143,6 +152,14 @@ export function buildDecisionOptionCardPresentation(
       affordability: input.affordability,
     });
 
+  const depth = buildDecisionOptionDepthPresentation({
+    event: input.event,
+    decision: input.decision,
+    day: input.day,
+    isDay1LearningEvent: input.isDay1LearningEvent,
+    dominantStrategyInput: input.dominantStrategyInput,
+  });
+
   return {
     strategyLabel,
     strategyTone,
@@ -156,5 +173,6 @@ export function buildDecisionOptionCardPresentation(
     unavailableReason: getUnavailableDecisionReason(input.affordability),
     showPriorityChip,
     insufficient,
+    depth,
   };
 }
