@@ -93,6 +93,8 @@ export const EVENT_SELECTION_PLAYER_STYLE_DOMAIN_AFFINITY: Record<string, readon
   resource_guardian: ['personnel', 'resource_recovery'],
   crisis_watcher: ['crisis_adjacent', 'resource_recovery'],
   balanced_operator: ['generic_operation', 'district_balance'],
+  route_focused: ['vehicle_route', 'personnel'],
+  district_loyalist: ['district_balance', 'social'],
   inconsistent_operator: ['generic_operation'],
   unknown: ['generic_operation'],
 };

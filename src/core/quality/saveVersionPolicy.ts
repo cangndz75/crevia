@@ -3,6 +3,9 @@ import { SAVE_VERSION } from '@/store/gamePersist';
 /** Current build persist version — single source for verify/quality scripts. */
 export const EXPECTED_SAVE_VERSION_FOR_VERIFY = SAVE_VERSION;
 
+/** Last migration source version before maintenanceBacklogRuntime persist (v27→v28). */
+export const MAINTENANCE_BACKLOG_RUNTIME_MIGRATION_FROM_VERSION = 27;
+
 /** Last migration source version before strategyHistory persist (v26→v27). */
 export const STRATEGY_HISTORY_MIGRATION_FROM_VERSION = 26;
 
@@ -37,6 +40,12 @@ export function assertVerifySaveVersionPolicy(
 }
 
 export function assertMigrationSupportsVersion(fromVersion: number, toVersion: number): boolean {
+  if (
+    fromVersion === MAINTENANCE_BACKLOG_RUNTIME_MIGRATION_FROM_VERSION &&
+    toVersion === SAVE_VERSION
+  ) {
+    return true;
+  }
   if (fromVersion === STRATEGY_HISTORY_MIGRATION_FROM_VERSION && toVersion === SAVE_VERSION) {
     return true;
   }
@@ -58,7 +67,10 @@ export function buildSaveVersionPolicyReport(input?: {
 }): SaveVersionPolicyReport {
   return {
     currentSaveVersion: SAVE_VERSION,
-    migrationCoverage: [`v${STRATEGY_HISTORY_MIGRATION_FROM_VERSION}→v${SAVE_VERSION} (strategyHistory)`],
+    migrationCoverage: [
+      `v${STRATEGY_HISTORY_MIGRATION_FROM_VERSION}→v${SAVE_VERSION} (strategyHistory)`,
+      `v${MAINTENANCE_BACKLOG_RUNTIME_MIGRATION_FROM_VERSION}→v${SAVE_VERSION} (maintenanceBacklogRuntime)`,
+    ],
     legacyVersionChecksFound: input?.legacyVersionChecksFound ?? 0,
     policyWarnings: input?.policyWarnings ?? [],
     blockingFailures: input?.blockingFailures ?? [],

@@ -32,6 +32,11 @@ import {
   type EceStrategyLineResult,
 } from '@/core/eceStrategyLines';
 import {
+  buildEceMemorySnapshot,
+  buildReportEceReflection,
+  type EceMemoryContextInput,
+} from '@/core/eceTone';
+import {
   buildReportCityMemoryNote,
   type CityMemoryTraceCardModel,
   type CityMemoryVisibilityResult,
@@ -48,6 +53,25 @@ import { buildPostPilotReportCopy } from '@/core/postPilot/postPilotOperationUxP
 import { POST_PILOT_FIRST_OPERATION_DAY } from '@/core/postPilot/postPilotEventConstants';
 import type { DailyReport } from '@/core/models/DailyReport';
 import type { GameMetrics } from '@/core/models/GameMetrics';
+import {
+  buildPlayerStyleFromStrategyContext,
+  buildPlayerStyleReportLine,
+} from '@/core/playerStyle';
+import {
+  buildPeriodGoalContextFromReport,
+  buildReportPeriodGoalInsight,
+} from '@/core/periodGoals';
+import {
+  buildMaintenanceBacklogFromReadiness,
+  buildMaintenanceBacklogRuntimePresentation,
+  buildMaintenanceReportInsight,
+  buildMaintenanceRuntimeReportLine,
+} from '@/core/maintenanceBacklog';
+import {
+  buildOperationReadinessSnapshot,
+  buildReportReadinessInsight,
+} from '@/core/operationReadiness';
+import type { StrategyHistoryStateV1 } from '@/core/strategyHistory/strategyHistoryTypes';
 import type { DailyXpReport } from '@/core/xp/xpReport';
 import { XP_CATEGORY_LABELS } from '@/core/xp/xpReport';
 import type { XpCategory } from '@/core/xp/types';
@@ -116,6 +140,10 @@ export type EndOfDayReportViewModel = {
   cityRhythmNote?: string | null;
   resourcePressureNote?: string | null;
   dominantStrategyNote?: string | null;
+  managementStyleLine?: string | null;
+  operationalTempoLine?: string | null;
+  tomorrowPreparationLine?: string | null;
+  periodGoalImpactLine?: string | null;
   showXpCard: boolean;
   showSystemSummaries: boolean;
   showTomorrowNotes: boolean;
@@ -526,6 +554,15 @@ export function buildEndOfDayReportViewModel(params: {
   dominantStrategyDetector?: DominantStrategyDetectorResult | null;
   positiveComeback?: PositiveComebackResult | null;
   memoryFollowUpContext?: MemoryFollowUpPresentationContext | null;
+  decisionHistory?: Array<{
+    day?: number;
+    decisionLabel?: string;
+    eventTitle?: string;
+  }>;
+  strategyHistory?: StrategyHistoryStateV1 | null;
+  maintenanceBacklogRuntime?: import('@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes').MaintenanceBacklogRuntimeState | null;
+  socialPulseState?: import('@/core/social/socialTypes').SocialPulseState | null;
+  tomorrowRisk?: import('@/core/tomorrowRisk/tomorrowRiskTypes').TomorrowRiskModel | null;
 }): EndOfDayReportViewModel {
   const {
     report,
@@ -543,6 +580,11 @@ export function buildEndOfDayReportViewModel(params: {
     dominantStrategyDetector,
     positiveComeback,
     memoryFollowUpContext,
+    decisionHistory,
+    strategyHistory,
+    maintenanceBacklogRuntime,
+    socialPulseState,
+    tomorrowRisk,
   } = params;
 
   const resolvedPortfolioDefer =
@@ -716,7 +758,7 @@ export function buildEndOfDayReportViewModel(params: {
           ...tomorrowNotes,
         ].filter((line): line is string => Boolean(line)));
 
-  const dominantStrategyNote =
+  const dominantStrategyNoteFromDetector =
     isDay1 || report.day < 4
       ? null
       : buildReportDominantStrategyNote(resolvedDominantStrategyDetector, [
@@ -733,6 +775,164 @@ export function buildEndOfDayReportViewModel(params: {
           resourcePressureNote,
           ...tomorrowNotes,
         ].filter((line): line is string => Boolean(line))) ?? null;
+
+  const eceMemoryContext: EceMemoryContextInput = {
+    day: report.day,
+    dominantStrategy: resolvedDominantStrategyDetector,
+  };
+  const eceToneReflection =
+    isDay1 || report.day < 2
+      ? null
+      : buildReportEceReflection({
+          memory: buildEceMemorySnapshot(eceMemoryContext),
+          context: eceMemoryContext,
+          seed: `report:${report.day}`,
+          avoidLines: [
+            oneMoreDayCard?.line,
+            oneMoreDayCard?.tomorrowLine,
+            eceStrategyLine?.text,
+            cityMemoryNote?.line,
+            followUpHintDeduped?.line,
+            followUpExecutionNote,
+            positiveComebackNote,
+            districtNeglectRecoveryNote,
+            day8StrategicContentNote,
+            cityRhythmNote,
+            resourcePressureNote,
+            dominantStrategyNoteFromDetector,
+            ...tomorrowNotes,
+          ].filter((line): line is string => Boolean(line)),
+        }) ?? null;
+
+  const dominantStrategyNote = dominantStrategyNoteFromDetector ?? eceToneReflection;
+
+  const playerStyleProfile = buildPlayerStyleFromStrategyContext({
+    day: report.day,
+    surface: 'report',
+    decisionHistory,
+    strategyHistory: strategyHistory ?? undefined,
+    dominantStrategy: resolvedDominantStrategyDetector,
+  });
+  const managementStyleLine =
+    isDay1 || report.day < 2
+      ? null
+      : buildPlayerStyleReportLine(playerStyleProfile, [
+          oneMoreDayCard?.line,
+          oneMoreDayCard?.tomorrowLine,
+          eceStrategyLine?.text,
+          cityMemoryNote?.line,
+          followUpHintDeduped?.line,
+          followUpExecutionNote,
+          positiveComebackNote,
+          districtNeglectRecoveryNote,
+          day8StrategicContentNote,
+          cityRhythmNote,
+          resourcePressureNote,
+          dominantStrategyNote,
+          ...tomorrowNotes,
+        ].filter((line): line is string => Boolean(line))) ?? null;
+
+  const readinessSnapshot = buildOperationReadinessSnapshot({
+    phase: 'report',
+    day: report.day,
+    moraleDelta: metrics.staffMorale < 50 ? -3 : metrics.staffMorale < 58 ? -1 : 0,
+    budgetDelta: metrics.budget < 65000 ? -3 : undefined,
+    publicSatisfactionPreview: metrics.publicSatisfaction - 60,
+    eventRiskLevel: warnings.length > 2 ? 'high' : warnings.length > 0 ? 'medium' : 'low',
+  });
+  const operationalTempoLine =
+    isDay1 || report.day < 2
+      ? null
+      : buildReportReadinessInsight(readinessSnapshot, [
+          oneMoreDayCard?.line,
+          oneMoreDayCard?.tomorrowLine,
+          eceStrategyLine?.text,
+          cityMemoryNote?.line,
+          followUpHintDeduped?.line,
+          followUpExecutionNote,
+          positiveComebackNote,
+          districtNeglectRecoveryNote,
+          day8StrategicContentNote,
+          cityRhythmNote,
+          resourcePressureNote,
+          dominantStrategyNote,
+          managementStyleLine,
+          ...tomorrowNotes,
+        ].filter((line): line is string => Boolean(line))) ?? null;
+
+  const runtimePresentation = maintenanceBacklogRuntime
+    ? buildMaintenanceBacklogRuntimePresentation(maintenanceBacklogRuntime, {
+        readinessSnapshot,
+      })
+    : null;
+  const tomorrowPreparationLine =
+    isDay1 || report.day < 2
+      ? null
+      : (runtimePresentation
+          ? buildMaintenanceRuntimeReportLine(runtimePresentation, [
+              operationalTempoLine ?? '',
+              oneMoreDayCard?.line,
+              oneMoreDayCard?.tomorrowLine,
+              eceStrategyLine?.text,
+              cityMemoryNote?.line,
+              followUpHintDeduped?.line,
+              followUpExecutionNote,
+              positiveComebackNote,
+              districtNeglectRecoveryNote,
+              day8StrategicContentNote,
+              cityRhythmNote,
+              resourcePressureNote,
+              dominantStrategyNote,
+              managementStyleLine,
+              readinessSnapshot.summary,
+              ...tomorrowNotes,
+            ].filter((line): line is string => Boolean(line)))
+          : null) ??
+        buildMaintenanceReportInsight(buildMaintenanceBacklogFromReadiness(readinessSnapshot), [
+          operationalTempoLine ?? '',
+          oneMoreDayCard?.line,
+          oneMoreDayCard?.tomorrowLine,
+          eceStrategyLine?.text,
+          cityMemoryNote?.line,
+          followUpHintDeduped?.line,
+          followUpExecutionNote,
+          positiveComebackNote,
+          districtNeglectRecoveryNote,
+          day8StrategicContentNote,
+          cityRhythmNote,
+          resourcePressureNote,
+          dominantStrategyNote,
+          managementStyleLine,
+          readinessSnapshot.summary,
+          ...tomorrowNotes,
+        ].filter((line): line is string => Boolean(line))) ??
+        null;
+
+  const periodGoalContext = buildPeriodGoalContextFromReport({
+    day: report.day,
+    metrics: {
+      publicSatisfaction: metrics.publicSatisfaction,
+      staffMorale: metrics.staffMorale,
+      budget: metrics.budget,
+    },
+    maintenanceBacklogRuntime,
+    socialPulseState,
+    tomorrowRisk,
+    playerStyleId: playerStyleProfile.styleId,
+    decisionHistory,
+    warnings,
+  });
+  const periodGoalInsight = buildReportPeriodGoalInsight(periodGoalContext, [
+    oneMoreDayCard?.line,
+    oneMoreDayCard?.tomorrowLine,
+    tomorrowPreparationLine ?? '',
+    operationalTempoLine ?? '',
+    managementStyleLine ?? '',
+    dominantStrategyNote ?? '',
+    resourcePressureNote ?? '',
+    ...tomorrowNotes,
+  ].filter((line): line is string => Boolean(line)));
+  const periodGoalImpactLine = periodGoalInsight?.line ?? null;
 
   return {
     day: report.day,
@@ -763,6 +963,10 @@ export function buildEndOfDayReportViewModel(params: {
     cityRhythmNote,
     resourcePressureNote,
     dominantStrategyNote,
+    managementStyleLine,
+    operationalTempoLine,
+    tomorrowPreparationLine,
+    periodGoalImpactLine,
     tomorrowNotes,
     showXpCard: !isDay1 && dailyXpReport.totalXp > 0,
     showSystemSummaries: !isDay1,

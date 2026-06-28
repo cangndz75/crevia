@@ -1,5 +1,12 @@
 import type { EventCard } from '@/core/models/EventCard';
 import {
+  buildEceMemorySnapshot,
+  buildPlanEceLine,
+  mapEceToneToPlanAdvisorTone,
+  mapEceToneToToneLabel,
+  type EceMemoryContextInput,
+} from '@/core/eceTone';
+import {
   getEventGameplayVarietyProfile,
   planStrategyVarietyNote,
 } from '@/core/eventVariety/eventGameplayVarietyPresentation';
@@ -9,6 +16,11 @@ import {
   type EventInspectFindingKind,
   type EventInspectFindingTone,
 } from '@/features/events/utils/eventInspectPhasePresentation';
+import {
+  buildInspectToPlanBridge,
+  buildOperationPhaseTransitionPresentation,
+  type OperationPhaseTransitionPresentation,
+} from '@/features/events/utils/operationPhaseTransitionPresentation';
 import type { PlanOptionId } from '@/features/events/utils/eventWorkflowPlanPresentation';
 
 export type EventPlanStrategyId = 'rapid_response' | 'balanced_plan' | 'long_term_fix';
@@ -66,11 +78,66 @@ export type EventPlanStrategyCard = {
   priority: 'low' | 'normal' | 'high';
   isRecommended?: boolean;
   isSelected: boolean;
+  pros: string[];
+  cons: string[];
+  costLabel: string;
+  riskLabel: string;
   tradeoffs: EventPlanTradeoff[];
   gameplayTradeoffs: EventPlanGameplayTradeoff[];
   expectedImpact: EventPlanExpectedImpact[];
   sourceLabel: string;
   sourceIds: string[];
+};
+
+export type EventPlanContextChip = {
+  label: string;
+  value: string;
+  tone: EventPlanInspectSummaryTone;
+};
+
+export type EventPlanContextSummary = {
+  title: string;
+  summary: string;
+  chips: EventPlanContextChip[];
+};
+
+export type EventPlanSelectedImpactItem = {
+  id: string;
+  label: string;
+  description: string;
+  deltaLabel: string;
+  tone: 'positive' | 'neutral' | 'warning';
+};
+
+export type EventPlanSelectedPreview = {
+  title: string;
+  items: EventPlanSelectedImpactItem[];
+};
+
+export type EventPlanResourceBalanceItem = {
+  label: string;
+  value: string;
+  tone: EventPlanInspectSummaryTone;
+};
+
+export type EventPlanResourceBalance = {
+  title: string;
+  items: EventPlanResourceBalanceItem[];
+};
+
+export type EventPlanActionKey = 'compare_risks' | 'view_resources' | 'view_map' | 'open_note';
+
+export type EventPlanAction = {
+  id: string;
+  label: string;
+  iconKey: string;
+  actionKey: EventPlanActionKey;
+};
+
+export type EventPlanPhaseContextChip = {
+  label: string;
+  value: string;
+  tone: EventPlanInspectSummaryTone;
 };
 
 export type EventPlanImpactPreview = {
@@ -85,6 +152,7 @@ export type EventPlanAdvisorComment = {
   title: string;
   text: string;
   tone: EventPlanAdvisorTone;
+  toneLabel: string;
 };
 
 export type EventPlanCtaActionKey = 'select_plan' | 'go_to_dispatch' | 'disabled';
@@ -98,14 +166,22 @@ export type EventPlanCta = {
 export type EventPlanPhasePresentation = {
   title: string;
   subtitle?: string;
+  phaseHeading: string;
+  phaseDescription: string;
+  phaseContextChips: EventPlanPhaseContextChip[];
+  contextSummary: EventPlanContextSummary;
   inspectSummary: EventPlanInspectSummaryItem[];
   strategies: EventPlanStrategyCard[];
   selectedStrategyId: EventPlanStrategyId;
   recommendedStrategyId: EventPlanStrategyId;
+  selectedPlanPreview: EventPlanSelectedPreview;
   impactPreview: EventPlanImpactPreview;
+  resourceBalance: EventPlanResourceBalance;
   advisorComment: EventPlanAdvisorComment;
+  actions: EventPlanAction[];
   primaryCta: EventPlanCta;
   accessibilityLabel: string;
+  phaseTransition: OperationPhaseTransitionPresentation;
 };
 
 export type BuildEventPlanPhasePresentationInput = {
@@ -115,6 +191,7 @@ export type BuildEventPlanPhasePresentationInput = {
   isDay1LearningEvent?: boolean;
   recentVarietyProfiles?: import('@/core/eventVariety/eventGameplayVarietyTypes').BuildEventGameplayVarietyProfileInput['recentProfiles'];
   authorityGameplayContext?: import('@/core/authority/authorityGameplayUnlockTypes').AuthorityGameplayPresentationContext;
+  eceMemoryContext?: EceMemoryContextInput;
 };
 
 const STRATEGY_ORDER: EventPlanStrategyId[] = [
@@ -269,6 +346,301 @@ type StrategyTemplate = Omit<
   'isRecommended' | 'isSelected' | 'gameplayTradeoffs'
 >;
 
+const STRATEGY_TRADEOFF_COPY: Record<
+  EventPlanStrategyId,
+  Pick<EventPlanStrategyCard, 'pros' | 'cons' | 'costLabel' | 'riskLabel'>
+> = {
+  rapid_response: {
+    pros: ['Güven hızlı toparlanır', 'Sosyal tepki düşebilir'],
+    cons: ['Ekip yorgunluğu artar'],
+    costLabel: 'Yüksek maliyet',
+    riskLabel: 'Orta risk',
+  },
+  balanced_plan: {
+    pros: ['Ekip temposu korunur', 'Risk kontrollü düşer'],
+    cons: ['Sosyal tepki yavaş toparlanır'],
+    costLabel: 'Dengeli maliyet',
+    riskLabel: 'Düşük risk',
+  },
+  long_term_fix: {
+    pros: ['Yarın riski azalır', 'Benzer olay tekrarı düşebilir'],
+    cons: ['Daha fazla kaynak ister'],
+    costLabel: 'Pahalı',
+    riskLabel: 'Stratejik',
+  },
+};
+
+function toneToBandLabel(tone: EventPlanInspectSummaryTone): string {
+  switch (tone) {
+    case 'urgent':
+    case 'warning':
+      return 'Yüksek';
+    case 'positive':
+      return 'Düşük';
+    default:
+      return 'Orta';
+  }
+}
+
+function resolveRiskContextLabel(riskLevel: EventCard['riskLevel']): string {
+  switch (riskLevel) {
+    case 'critical':
+    case 'high':
+      return 'Yüksek';
+    case 'low':
+      return 'Düşük';
+    default:
+      return 'Orta';
+  }
+}
+
+function resolveResourceContextLabel(event: EventCard): string {
+  if (hasResourcePressure(event)) return 'Sınırlı';
+  return 'Orta';
+}
+
+function buildPhaseContextChips(event: EventCard): EventPlanPhaseContextChip[] {
+  const district = event.district?.trim() || 'Mahalle';
+  return [
+    {
+      label: 'Risk',
+      value: resolveRiskContextLabel(event.riskLevel),
+      tone: event.riskLevel === 'low' ? 'positive' : event.riskLevel === 'critical' ? 'urgent' : 'warning',
+    },
+    {
+      label: 'Kaynak',
+      value: resolveResourceContextLabel(event),
+      tone: hasResourcePressure(event) ? 'warning' : 'neutral',
+    },
+    {
+      label: 'Mahalle',
+      value: district,
+      tone: 'neutral',
+    },
+  ];
+}
+
+function mapBridgeToneToPlanTone(
+  tone: import('@/features/events/utils/operationPhaseTransitionPresentation').OperationPhaseBridgeChipTone,
+): EventPlanInspectSummaryTone {
+  if (tone === 'positive') return 'positive';
+  if (tone === 'warning' || tone === 'critical') return 'warning';
+  if (tone === 'mixed') return 'neutral';
+  return 'neutral';
+}
+
+function buildContextSummary(
+  event: EventCard,
+  inspectSummary: EventPlanInspectSummaryItem[],
+): EventPlanContextSummary {
+  const bridge = buildInspectToPlanBridge(event);
+  const chips: EventPlanContextChip[] = bridge.chips.map((chip) => ({
+    label: chip.label,
+    value: chip.value,
+    tone: mapBridgeToneToPlanTone(chip.tone),
+  }));
+
+  if (chips.length === 0 && inspectSummary.length > 0) {
+    inspectSummary.slice(0, 3).forEach((item) => {
+      chips.push({
+        label: item.label,
+        value: toneToBandLabel(item.tone),
+        tone: item.tone,
+      });
+    });
+  }
+
+  return {
+    title: bridge.title,
+    summary: bridge.summary,
+    chips,
+  };
+}
+
+function buildSelectedPlanPreview(strategy: EventPlanStrategyCard): EventPlanSelectedPreview {
+  switch (strategy.id) {
+    case 'rapid_response':
+      return {
+        title: 'Tahmini Etki',
+        items: [
+          {
+            id: 'trust',
+            label: 'Güven',
+            description: 'Hızlı toparlanması beklenir.',
+            deltaLabel: '+ Güven',
+            tone: 'positive',
+          },
+          {
+            id: 'risk',
+            label: 'Risk',
+            description: 'Kısa vadede düşebilir.',
+            deltaLabel: '- Risk',
+            tone: 'positive',
+          },
+          {
+            id: 'resource',
+            label: 'Kaynak',
+            description: 'Baskı artabilir.',
+            deltaLabel: 'Kaynak baskısı',
+            tone: 'warning',
+          },
+          {
+            id: 'team',
+            label: 'Ekip',
+            description: 'Yorgunluk artabilir.',
+            deltaLabel: 'Ekip yorulur',
+            tone: 'warning',
+          },
+        ],
+      };
+    case 'long_term_fix':
+      return {
+        title: 'Tahmini Etki',
+        items: [
+          {
+            id: 'trust',
+            label: 'Güven',
+            description: 'Yavaş artış beklenir.',
+            deltaLabel: '+ Güven',
+            tone: 'neutral',
+          },
+          {
+            id: 'risk',
+            label: 'Risk',
+            description: 'Yarın azalabilir.',
+            deltaLabel: '- Risk',
+            tone: 'positive',
+          },
+          {
+            id: 'resource',
+            label: 'Kaynak',
+            description: 'Maliyetli olabilir.',
+            deltaLabel: 'Maliyetli',
+            tone: 'warning',
+          },
+          {
+            id: 'team',
+            label: 'Ekip',
+            description: 'Planlı yük oluşabilir.',
+            deltaLabel: 'Planlı yük',
+            tone: 'neutral',
+          },
+        ],
+      };
+    default:
+      return {
+        title: 'Tahmini Etki',
+        items: [
+          {
+            id: 'trust',
+            label: 'Güven',
+            description: 'Orta artış beklenir.',
+            deltaLabel: '+ Güven',
+            tone: 'positive',
+          },
+          {
+            id: 'risk',
+            label: 'Risk',
+            description: 'Kontrollü düşüş beklenir.',
+            deltaLabel: '- Risk',
+            tone: 'positive',
+          },
+          {
+            id: 'resource',
+            label: 'Kaynak',
+            description: 'Dengede kalabilir.',
+            deltaLabel: 'Dengede',
+            tone: 'neutral',
+          },
+          {
+            id: 'team',
+            label: 'Ekip',
+            description: 'Temposu korunabilir.',
+            deltaLabel: 'Tempo korunur',
+            tone: 'positive',
+          },
+        ],
+      };
+  }
+}
+
+function buildResourceBalance(event: EventCard): EventPlanResourceBalance {
+  const socialTone: EventPlanInspectSummaryTone = isSocialSensitive(event)
+    ? 'warning'
+    : 'neutral';
+  const socialValue = isSocialSensitive(event) ? 'Yüksek' : 'Orta';
+  const teamValue = hasResourcePressure(event) ? 'Sınırlı' : 'Hazır';
+  const budgetValue = hasResourcePressure(event) ? 'Orta' : 'Rahat';
+
+  return {
+    title: 'Kaynak Dengesi',
+    items: [
+      {
+        label: 'Ekip',
+        value: teamValue,
+        tone: teamValue === 'Sınırlı' ? 'warning' : 'positive',
+      },
+      {
+        label: 'Araç',
+        value: 'Hazır',
+        tone: 'positive',
+      },
+      {
+        label: 'Bütçe',
+        value: budgetValue,
+        tone: budgetValue === 'Orta' ? 'neutral' : 'positive',
+      },
+      {
+        label: 'Sosyal Tepki',
+        value: socialValue,
+        tone: socialTone,
+      },
+    ],
+  };
+}
+
+function buildPlanActions(): EventPlanAction[] {
+  return [
+    {
+      id: 'compare_risks',
+      label: 'Riskleri Karşılaştır',
+      iconKey: 'warning-outline',
+      actionKey: 'compare_risks',
+    },
+    {
+      id: 'view_resources',
+      label: 'Kaynakları Gör',
+      iconKey: 'briefcase-outline',
+      actionKey: 'view_resources',
+    },
+    {
+      id: 'view_map',
+      label: 'Haritada Kontrol Et',
+      iconKey: 'map-outline',
+      actionKey: 'view_map',
+    },
+    {
+      id: 'open_note',
+      label: 'Not Aç',
+      iconKey: 'create-outline',
+      actionKey: 'open_note',
+    },
+  ];
+}
+
+function resolveAdvisorToneLabel(tone: EventPlanAdvisorTone): string {
+  switch (tone) {
+    case 'warning':
+      return 'Uyarı';
+    case 'teaching':
+      return 'Öğretici';
+    case 'positive':
+      return 'Önerilir';
+    default:
+      return 'Dengeli';
+  }
+}
+
 function applyVarietyToStrategyTemplate(
   template: StrategyTemplate,
   event: EventCard,
@@ -336,9 +708,10 @@ function buildStrategyTemplates(
     rapid_response: {
       id: 'rapid_response',
       title: 'Hızlı Müdahale',
-      description: 'Kısa sürede sahaya müdahale; kaynak tüketimi artabilir.',
+      description: 'Görünür ekip etkisiyle güveni hızlı toparlar.',
       tone: 'teal',
       priority: 'high',
+      ...STRATEGY_TRADEOFF_COPY.rapid_response,
       tradeoffs: [
         {
           id: 'time',
@@ -380,10 +753,11 @@ function buildStrategyTemplates(
     },
     balanced_plan: {
       id: 'balanced_plan',
-      title: 'Dengeli Çözüm',
-      description: 'Kaynak ve sosyal etkiyi dengeleyen güvenli yaklaşım.',
+      title: 'Dengeli Plan',
+      description: 'Kaynakları kontrollü kullanır, riski kademeli azaltır.',
       tone: 'green',
       priority: 'normal',
+      ...STRATEGY_TRADEOFF_COPY.balanced_plan,
       tradeoffs: [
         {
           id: 'time',
@@ -425,10 +799,11 @@ function buildStrategyTemplates(
     },
     long_term_fix: {
       id: 'long_term_fix',
-      title: 'Kalıcı Yatırım',
-      description: 'Uzun vadeli güven için planlama; acil olayda yavaş kalabilir.',
+      title: 'Önleyici Plan',
+      description: 'Bugünkü müdahaleyi yarınki riski azaltacak şekilde genişletir.',
       tone: 'gold',
       priority: 'normal',
+      ...STRATEGY_TRADEOFF_COPY.long_term_fix,
       tradeoffs: [
         {
           id: 'time',
@@ -493,8 +868,8 @@ function buildImpactPreview(strategy: EventPlanStrategyCard): EventPlanImpactPre
   const summaryParts = impacts.map((impact) => `${impact.label}: ${bandLabel(impact.band)}`);
 
   return {
-    title: 'Beklenen etki',
-    summary: `Tahmini etki — ${summaryParts.join(' · ')}`,
+    title: 'Tahmini Etki',
+    summary: `Olası etki — ${summaryParts.join(' · ')}`,
     impacts,
   };
 }
@@ -606,51 +981,70 @@ function buildGameplayTradeoffs(template: StrategyTemplate): EventPlanGameplayTr
 }
 
 export function buildEventPlanAdvisorComment(
-  strategy: EventPlanStrategyCard,
-  input: Pick<BuildEventPlanPhasePresentationInput, 'event' | 'isDay1LearningEvent' | 'day' | 'recentVarietyProfiles'>,
+  strategy: EventPlanStrategyCard | null,
+  input: Pick<
+    BuildEventPlanPhasePresentationInput,
+    'event' | 'isDay1LearningEvent' | 'day' | 'recentVarietyProfiles' | 'eceMemoryContext'
+  >,
 ): EventPlanAdvisorComment {
-  if (input.isDay1LearningEvent || input.day === 1) {
-    return {
-      title: 'Ece',
-      text: 'Dengeli çözüm, kaynak baskısını büyütmeden sosyal tepkiyi kontrol etmeye yardımcı olur.',
-      tone: 'teaching',
-    };
+  const day = input.day ?? input.event.day ?? 1;
+  const memoryContext: EceMemoryContextInput = {
+    day,
+    event: input.event,
+    eventId: input.event.id,
+    districtName: input.event.district,
+    selectedPlanId: strategy?.id,
+    selectedPlanLabel: strategy?.title,
+    resourcePressure: hasResourcePressure(input.event),
+    socialPressure: (input.event.previewEffects?.publicSatisfaction ?? 0) <= -3,
+    ...input.eceMemoryContext,
+  };
+
+  if (strategy) {
+    const profile = getEventGameplayVarietyProfile(input.event, {
+      day: input.day,
+      isDay1LearningEvent: input.isDay1LearningEvent,
+      recentProfiles: input.recentVarietyProfiles,
+    });
+    const varietyNote = planStrategyVarietyNote(strategy.id, profile);
+    if (varietyNote && profile.planHintLine && day > 1 && !input.isDay1LearningEvent) {
+      const tone =
+        strategy.id === 'rapid_response' && profile.domain === 'maintenance' ? 'warning' : 'calm';
+      return {
+        title: 'Ece',
+        text: varietyNote,
+        tone,
+        toneLabel: resolveAdvisorToneLabel(tone),
+      };
+    }
   }
 
-  const profile = getEventGameplayVarietyProfile(input.event, {
-    day: input.day,
-    isDay1LearningEvent: input.isDay1LearningEvent,
-    recentProfiles: input.recentVarietyProfiles,
+  const memory = buildEceMemorySnapshot(memoryContext);
+  const inspectAvoid = input.eceMemoryContext?.avoidLines ?? [];
+  const line = buildPlanEceLine({
+    memory,
+    context: memoryContext,
+    seed: `${input.event.id}:plan:${strategy?.id ?? 'none'}:${day}`,
+    selectedPlanId: strategy?.id ?? null,
+    avoidLines: inspectAvoid,
   });
-  const varietyNote = planStrategyVarietyNote(strategy.id, profile);
-  if (varietyNote && profile.planHintLine) {
+
+  if (input.isDay1LearningEvent || day === 1) {
     return {
       title: 'Ece',
-      text: varietyNote,
-      tone: strategy.id === 'rapid_response' && profile.domain === 'maintenance' ? 'warning' : 'calm',
+      text: line.message,
+      tone: 'teaching',
+      toneLabel: 'Öğretici',
     };
   }
 
-  switch (strategy.id) {
-    case 'rapid_response':
-      return {
-        title: 'Ece',
-        text: 'Hızlı müdahale iyi görünse de araç yorgunluğu varsa sonraki görevi zorlayabilir.',
-        tone: 'warning',
-      };
-    case 'long_term_fix':
-      return {
-        title: 'Ece',
-        text: 'Kalıcı yatırım güveni artırabilir ama acil riskte yavaş kalabilir.',
-        tone: 'calm',
-      };
-    default:
-      return {
-        title: 'Ece',
-        text: 'Dengeli çözüm, kaynak baskısını büyütmeden sosyal tepkiyi kontrol etmeye yardımcı olur.',
-        tone: 'positive',
-      };
-  }
+  const tone = mapEceToneToPlanAdvisorTone(line.tone);
+  return {
+    title: 'Ece',
+    text: line.message,
+    tone,
+    toneLabel: mapEceToneToToneLabel(line.tone),
+  };
 }
 
 function buildStrategies(
@@ -674,7 +1068,7 @@ function buildStrategies(
 function buildPlanCta(selectedStrategyId: EventPlanStrategyId | null | undefined): EventPlanCta {
   if (!selectedStrategyId) {
     return {
-      label: 'Yaklaşım seç',
+      label: 'Önce Plan Seç',
       actionKey: 'select_plan',
       enabled: false,
     };
@@ -692,12 +1086,15 @@ export function buildEventPlanPhasePresentation(
 ): EventPlanPhasePresentation {
   const { event } = input;
   const recommendedStrategyId = resolveRecommendedPlanStrategyId(event, input);
-  const selectedStrategyId = input.selectedStrategyId ?? recommendedStrategyId;
+  const explicitSelection = input.selectedStrategyId ?? null;
+  const selectedStrategyId = explicitSelection ?? recommendedStrategyId;
   const inspectSummary = buildEventPlanInspectSummary(event, {
     day: input.day,
     isDay1LearningEvent: input.isDay1LearningEvent,
     recentVarietyProfiles: input.recentVarietyProfiles,
   });
+  const contextSummary = buildContextSummary(event, inspectSummary);
+  const phaseContextChips = buildPhaseContextChips(event);
   const strategiesRaw = buildStrategies(event, selectedStrategyId, recommendedStrategyId, {
     day: input.day,
     isDay1LearningEvent: input.isDay1LearningEvent,
@@ -715,24 +1112,53 @@ export function buildEventPlanPhasePresentation(
   );
   const selectedStrategy =
     strategies.find((strategy) => strategy.id === selectedStrategyId) ?? strategies[1]!;
+  const selectedPlanPreview = buildSelectedPlanPreview(selectedStrategy);
   const impactPreview = buildImpactPreview(selectedStrategy);
+  const resourceBalance = buildResourceBalance(event);
   const advisorComment = buildEventPlanAdvisorComment(selectedStrategy, {
+      event,
+      day: input.day,
+      isDay1LearningEvent: input.isDay1LearningEvent,
+      recentVarietyProfiles: input.recentVarietyProfiles,
+      eceMemoryContext: {
+        ...input.eceMemoryContext,
+        avoidLines: [
+          ...(input.eceMemoryContext?.avoidLines ?? []),
+        ],
+      },
+    });
+  const actions = buildPlanActions();
+  const primaryCta = buildPlanCta(explicitSelection ?? selectedStrategyId);
+  const phaseTransition = buildOperationPhaseTransitionPresentation({
+    phase: 'plan',
     event,
-    day: input.day,
-    isDay1LearningEvent: input.isDay1LearningEvent,
-    recentVarietyProfiles: input.recentVarietyProfiles,
+    planLabel: selectedStrategy.title,
+    planId: selectedStrategy.id,
+    planImpactLabel: selectedPlanPreview.items[0]?.label,
+    planCostLabel: selectedStrategy.costLabel,
+    ctaEnabled: primaryCta.enabled,
+    ctaActionKey: primaryCta.actionKey,
+    avoidSummaries: [advisorComment.text],
   });
 
   return {
-    title: 'Planla',
-    subtitle: 'İnceleme bulgularına göre bir yaklaşım seç.',
+    title: phaseTransition.shell.title,
+    subtitle: phaseTransition.shell.subtitle,
+    phaseHeading: 'Strateji Seçimi',
+    phaseDescription: 'İncelemede toplanan sinyallere göre bir müdahale yaklaşımı seç.',
+    phaseContextChips,
+    contextSummary,
     inspectSummary,
     strategies,
     selectedStrategyId,
     recommendedStrategyId,
+    selectedPlanPreview,
     impactPreview,
+    resourceBalance,
     advisorComment,
-    primaryCta: buildPlanCta(selectedStrategyId),
+    actions,
+    primaryCta,
+    phaseTransition,
     accessibilityLabel: `${event.title} planlama, ${selectedStrategy.title} seçili`,
   };
 }
@@ -795,6 +1221,16 @@ export function auditEventPlanPhasePresentation(model: EventPlanPhasePresentatio
   }
 
   if (!model.advisorComment.text.trim()) issues.push('advisorComment empty');
+  if (!model.advisorComment.toneLabel.trim()) issues.push('advisorComment toneLabel empty');
+  if (!model.contextSummary.summary.trim()) issues.push('contextSummary empty');
+  if (model.selectedPlanPreview.items.length !== 4) issues.push('selectedPlanPreview items count');
+  if (model.resourceBalance.items.length < 3) issues.push('resourceBalance incomplete');
+  if (model.actions.length < 2) issues.push('actions incomplete');
+
+  for (const strategy of model.strategies) {
+    if (strategy.pros.length < 1) issues.push(`pros empty for ${strategy.id}`);
+    if (strategy.cons.length < 1) issues.push(`cons empty for ${strategy.id}`);
+  }
 
   if (model.primaryCta.actionKey !== 'go_to_dispatch' || !model.primaryCta.enabled) {
     issues.push('CTA should be go_to_dispatch enabled when strategy selected');
@@ -808,8 +1244,8 @@ export function getPlanStrategyLabel(strategyId: EventPlanStrategyId): string {
     case 'rapid_response':
       return 'Hızlı Müdahale';
     case 'long_term_fix':
-      return 'Kalıcı Yatırım';
+      return 'Önleyici Plan';
     default:
-      return 'Dengeli Çözüm';
+      return 'Dengeli Plan';
   }
 }

@@ -12,6 +12,17 @@ import {
   operationMotionScanDurationMs,
 } from '@/core/motion/operationMotionTokens';
 import type { EventCard } from '@/core/models/EventCard';
+import {
+  buildOperationPhaseTransitionPresentation,
+  OPERATION_PHASE_CTA_LABELS,
+  type OperationPhaseTransitionPresentation,
+} from '@/features/events/utils/operationPhaseTransitionPresentation';
+import {
+  buildEceMemorySnapshot,
+  buildInspectEceLine,
+  mapEceToneToInspectAdvisorTone,
+  type EceMemoryContextInput,
+} from '@/core/eceTone';
 import { buildInspectHeroChips } from '@/features/events/utils/eventWorkflowPresentation';
 
 export type EventInspectInteractionState = 'idle' | 'analyzing' | 'revealed';
@@ -90,6 +101,7 @@ export type EventInspectPhasePresentation = {
   accessibilityLabel: string;
   showFindings: boolean;
   showAdvisorComment: boolean;
+  phaseTransition: OperationPhaseTransitionPresentation;
 };
 
 export type BuildEventInspectPhasePresentationInput = {
@@ -101,6 +113,7 @@ export type BuildEventInspectPhasePresentationInput = {
   /** Gameplay variety repetition hint — persist edilmez. */
   recentVarietyProfiles?: import('@/core/eventVariety/eventGameplayVarietyTypes').BuildEventGameplayVarietyProfileInput['recentProfiles'];
   authorityGameplayContext?: AuthorityGameplayPresentationContext;
+  eceMemoryContext?: EceMemoryContextInput;
 };
 
 const ALLOWED_FINDING_KINDS: EventInspectFindingKind[] = [
@@ -433,39 +446,51 @@ export function buildEventInspectFindings(
 
 export function buildEventInspectAdvisorComment(
   findings: EventInspectFinding[],
-  input: Pick<BuildEventInspectPhasePresentationInput, 'isDay1LearningEvent' | 'day'>,
+  input: Pick<
+    BuildEventInspectPhasePresentationInput,
+    'event' | 'isDay1LearningEvent' | 'day' | 'eceMemoryContext'
+  >,
 ): EventInspectAdvisorComment | undefined {
-  if (input.isDay1LearningEvent || input.day === 1) {
+  const day = input.day ?? input.event.day ?? 1;
+  const hasSocialFinding = findings.some((finding) => finding.kind === 'social');
+  const hasUrgent = findings.some((finding) => finding.priority === 'urgent');
+  const hasWarning = findings.some(
+    (finding) => finding.tone === 'warning' || finding.priority === 'high',
+  );
+  const evidenceSufficient = findings.length >= 2 && !hasUrgent;
+
+  const memoryContext: EceMemoryContextInput = {
+    day,
+    event: input.event,
+    eventId: input.event.id,
+    districtName: input.event.district,
+    evidenceSufficient,
+    socialSignalHeated: hasSocialFinding && (hasUrgent || hasWarning),
+    socialPressure: (input.event.previewEffects?.publicSatisfaction ?? 0) <= -3,
+    resourcePressure: hasResourcePressure(input.event),
+    ...input.eceMemoryContext,
+  };
+
+  const memory = buildEceMemorySnapshot(memoryContext);
+  const line = buildInspectEceLine({
+    memory,
+    context: memoryContext,
+    seed: `${input.event.id}:inspect:${day}`,
+    avoidLines: input.eceMemoryContext?.avoidLines,
+  });
+
+  if (input.isDay1LearningEvent || day === 1) {
     return {
       title: 'Ece',
-      text: 'Önce olayı inceliyoruz. Bulgular, planlama adımında hangi yaklaşımın daha güvenli olduğunu gösterecek.',
+      text: line.message,
       tone: 'teaching',
-    };
-  }
-
-  const hasUrgent = findings.some((f) => f.priority === 'urgent');
-  const hasWarning = findings.some((f) => f.tone === 'warning' || f.priority === 'high');
-
-  if (hasUrgent) {
-    return {
-      title: 'Ece',
-      text: 'Risk sinyali güçlü. Planlama adımında hızlı çözüm yerine dengeli yaklaşımı kontrol et.',
-      tone: 'warning',
-    };
-  }
-
-  if (hasWarning) {
-    return {
-      title: 'Ece',
-      text: 'Bu olayda risk sinyali var. Planlama adımında kaynak ve sosyal etkiyi birlikte değerlendir.',
-      tone: 'warning',
     };
   }
 
   return {
     title: 'Ece',
-    text: 'Bulgular net. Planlama adımında kaynak ve sosyal etkiyi karşılaştırabilirsin.',
-    tone: 'calm',
+    text: line.message,
+    tone: mapEceToneToInspectAdvisorTone(line.tone),
   };
 }
 
@@ -480,7 +505,7 @@ function buildInspectCta(interactionState: EventInspectInteractionState): EventI
 
   if (interactionState === 'revealed') {
     return {
-      label: 'Bulguları Planla',
+      label: OPERATION_PHASE_CTA_LABELS.inspect,
       actionKey: 'go_to_plan',
       enabled: true,
     };
@@ -570,19 +595,34 @@ export function buildEventInspectPhasePresentation(
 
   const showFindings = interactionState === 'revealed';
   const advisorComment = showFindings
-    ? buildEventInspectAdvisorComment(findings, input)
+    ? buildEventInspectAdvisorComment(findings, {
+        event,
+        day: input.day,
+        isDay1LearningEvent: input.isDay1LearningEvent,
+        eceMemoryContext: input.eceMemoryContext,
+      })
     : undefined;
 
+  const primaryCta = buildInspectCta(interactionState);
+  const phaseTransition = buildOperationPhaseTransitionPresentation({
+    phase: 'inspect',
+    event,
+    ctaEnabled: primaryCta.enabled,
+    ctaActionKey: primaryCta.actionKey,
+    ctaDisabledLabel: primaryCta.label,
+    avoidSummaries: advisorComment?.text ? [advisorComment.text] : [],
+  });
+
   return {
-    title: 'İncele',
-    subtitle: chips.remaining,
+    title: phaseTransition.shell.title,
+    subtitle: phaseTransition.shell.subtitle,
     summary: sanitizeText(event.description, `${event.title} — ${event.district} bölgesinde operasyon gerektiriyor.`),
     domainLabel,
     status,
     findings,
     revealItems: buildInspectRevealItems(findings),
     advisorComment,
-    primaryCta: buildInspectCta(interactionState),
+    primaryCta,
     footerHint: buildFooterHint(interactionState),
     scanHint: {
       shouldShowScanLine: interactionState === 'analyzing' && !reducedMotion,
@@ -592,6 +632,7 @@ export function buildEventInspectPhasePresentation(
     accessibilityLabel: buildAccessibilityLabel(event, interactionState, findings.length),
     showFindings,
     showAdvisorComment: showFindings && Boolean(advisorComment?.text),
+    phaseTransition,
   };
 }
 

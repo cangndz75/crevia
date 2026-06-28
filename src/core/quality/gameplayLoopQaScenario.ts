@@ -236,7 +236,7 @@ export function verifyGameplayLoopQaScenario(): GameplayLoopQaOutcome {
     if (!pass) ok = false;
   };
 
-  record(assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION, 'SAVE_VERSION 27'));
+  record(assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION, `SAVE_VERSION ${SAVE_VERSION}`));
   record(assert(checks, !readRepo('src/store/gamePersist.ts').includes('gameplayLoopQa'), 'persist shape unchanged'));
   record(assert(checks, !readRepo('src/core/game/applyDecision.ts').includes('gameplayLoopQa'), 'applyDecision unchanged'));
   record(
@@ -259,6 +259,22 @@ export function verifyGameplayLoopQaScenario(): GameplayLoopQaOutcome {
         migratedV26.strategyHistory.decisionHistory.length === 0,
       'v26 save migration includes strategyHistory',
       'v26 strategyHistory migration failed',
+    ),
+  );
+
+  const migratedV27 = normalizePersistedSave({
+    ...createDay1Seed(),
+    saveVersion: 27,
+    strategyHistory: migratedV26?.strategyHistory,
+    updatedAt: '2026-06-15T00:00:00.000Z',
+  });
+  record(
+    assert(
+      checks,
+      migratedV27?.saveVersion === SAVE_VERSION &&
+        migratedV27.maintenanceBacklogRuntime.items.length === 0,
+      'v27 save migration includes maintenanceBacklogRuntime',
+      'v27 maintenanceBacklogRuntime migration failed',
     ),
   );
 

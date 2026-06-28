@@ -10,6 +10,11 @@ import {
 } from '@/features/events/utils/postDecisionCityReactionPresentation';
 import { buildPostDecisionSocialEchoPresentation } from '@/core/socialEcho';
 import {
+  buildEceMemorySnapshot,
+  buildHubEceLine,
+  type EceMemoryContextInput,
+} from '@/core/eceTone';
+import {
   getCenterActionFamily,
   normalizeCenterActionKey,
 } from './centerActionDedupe';
@@ -242,10 +247,33 @@ function hiddenRecentImpactSummary(): CenterRecentImpactSummaryPresentation {
   };
 }
 
+function buildRecentImpactAdvisorLine(
+  reactionAdvisorNote: string | undefined,
+  eceMemoryContext: EceMemoryContextInput | undefined,
+  seed: string,
+  avoidLines: string[] = [],
+): string | undefined {
+  const memoryContext: EceMemoryContextInput = {
+    ...eceMemoryContext,
+    avoidLines: [...(eceMemoryContext?.avoidLines ?? []), ...avoidLines, reactionAdvisorNote ?? ''],
+  };
+  const memory = buildEceMemorySnapshot(memoryContext);
+  const hubLine = buildHubEceLine({
+    memory,
+    context: memoryContext,
+    seed,
+    avoidLines: memoryContext.avoidLines,
+  });
+  if (hubLine?.trim()) return clampText(hubLine, 92);
+  if (reactionAdvisorNote?.trim()) return clampText(reactionAdvisorNote, 92);
+  return undefined;
+}
+
 export function buildCenterRecentImpactSummary(
   presentation: CenterHomeCoreSections,
   recentDecision?: DecisionRecord | null,
   nextActions: CenterNextActionCard[] = [],
+  eceMemoryContext?: EceMemoryContextInput,
 ): CenterRecentImpactSummaryPresentation {
   const { activeTarget } = presentation;
   const reaction = recentDecision
@@ -284,7 +312,24 @@ export function buildCenterRecentImpactSummary(
       socialLine: socialEcho
         ? clampText(`${socialEcho.title}: ${socialEcho.message}`, 92)
         : undefined,
-      advisorLine: socialEcho ? undefined : clampText(reaction.advisorNote, 92),
+      advisorLine: socialEcho
+        ? undefined
+        : buildRecentImpactAdvisorLine(
+            reaction.advisorNote,
+            {
+              ...eceMemoryContext,
+              day: day ?? eceMemoryContext?.day,
+              districtName: reaction.districtName,
+              recentOutcomeTone:
+                tone === 'positive'
+                  ? 'positive'
+                  : tone === 'warning' || tone === 'critical'
+                    ? 'warning'
+                    : 'mixed',
+            },
+            `hub:${reaction.eventId}:${day ?? 0}`,
+            [reaction.shortSummary, reaction.headline],
+          ),
       statusLabel: statusLabelForTone(tone, day),
       tone,
       secondaryAction,

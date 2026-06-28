@@ -275,7 +275,9 @@ export function verifyOperationFieldLiveScenario(): VerifyOperationFieldLiveOutc
       summary: 'test',
       tone: 'green',
       sourceLabel: 'Planla',
+      chips: [],
     },
+    'ready',
   );
   assert(
     checks,

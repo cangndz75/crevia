@@ -8,6 +8,7 @@ import type { DecisionRecord } from '@/core/models/DecisionRecord';
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import type { OperationalResourcesState } from '@/core/operationalResources/operationalResourceTypes';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
+import type { MapReactionLiteModel } from '@/core/mapReactions/mapReactionTypes';
 import { CityMapCard } from '@/features/map/components/CityMapCard';
 import type { MapGameplayPresentation } from '@/features/map/utils/mapGameplayPresentation';
 import type { MapMotionPresentationResult } from '@/features/map/utils/mapMotionPresentation';
@@ -46,6 +47,7 @@ type Props = {
   mapGameplayPresentation?: MapGameplayPresentation | null;
   operationalResources?: OperationalResourcesState;
   mapMotionPresentation?: MapMotionPresentationResult | null;
+  mapReactionLiteModel?: MapReactionLiteModel | null;
   recentDecisionRecord?: DecisionRecord | null;
   onLayersPress: () => void;
   onDistrictSelect: (districtId: MapDistrictId) => void;

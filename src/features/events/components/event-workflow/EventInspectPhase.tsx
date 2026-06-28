@@ -50,6 +50,15 @@ import {
   type EventInspectInteractionState,
   type EventInspectRevealItem,
 } from "@/features/events/utils/eventInspectPhasePresentation";
+import { buildEventInspectLowerPresentation } from "@/features/events/utils/eventInspectLowerPresentation";
+import { EventInspectLowerSections } from "@/features/events/components/event-workflow/EventInspectLowerSections";
+import { OperationPhaseContentEnter } from "@/features/events/components/event-workflow/OperationPhaseContentEnter";
+import { OperationPhaseProgressRail } from "@/features/events/components/event-workflow/OperationPhaseProgressRail";
+import { OperationPhaseShellHeader } from "@/features/events/components/event-workflow/OperationPhaseShellHeader";
+import type {
+  InspectLowerActionKey,
+  InspectLowerPrimaryCta,
+} from "@/features/events/utils/eventInspectLowerPresentation";
 import { buildEventResultDistrictContextLine } from "@/features/events/utils/eventResultPresentation";
 import { buildInspectHeroChips } from "@/features/events/utils/eventWorkflowPresentation";
 import { OnboardingPhaseHint } from "@/features/onboarding/components/OnboardingPhaseHint";
@@ -258,6 +267,75 @@ export function EventInspectPhase({
   const planUnlocked =
     interactionState === "revealed" || confirmedCount >= SIGNALS.length;
 
+  const lowerPresentation = useMemo(
+    () =>
+      buildEventInspectLowerPresentation({
+        event,
+        day: gameDay,
+        interactionState,
+        confirmedSignalIds: confirmedSignals,
+        advisorComment: presentation.advisorComment,
+        signalsComplete: planUnlocked,
+      }),
+    [
+      confirmedSignals,
+      event,
+      gameDay,
+      interactionState,
+      planUnlocked,
+      presentation.advisorComment,
+    ],
+  );
+
+  const mapSignalIdToModal = useCallback((signalAnalysisId: string): SignalId | null => {
+    if (signalAnalysisId === 'social_pulse') return 'social';
+    if (signalAnalysisId === 'field_observations') return 'field';
+    if (signalAnalysisId === 'similar_cases') return 'citizen';
+    return null;
+  }, []);
+
+  const mapEvidenceIdToSignal = useCallback((evidenceId: string): SignalId | null => {
+    if (evidenceId === 'field_finding') return 'field';
+    if (evidenceId === 'citizen_report') return 'citizen';
+    if (evidenceId === 'social_echo') return 'social';
+    return null;
+  }, []);
+
+  const mapRiskIdToModal = useCallback((riskPreviewId: string): RiskId => {
+    if (riskPreviewId === 'operation_risk') return 'resource';
+    if (riskPreviewId === 'resource_pressure' || riskPreviewId === 'press_reflection') {
+      return 'reaction';
+    }
+    return 'trust';
+  }, []);
+
+  const handleLowerActionPress = useCallback(
+    (actionKey: InspectLowerActionKey) => {
+      playLightImpactHaptic();
+      switch (actionKey) {
+        case 'scan_signal':
+          if (interactionState === 'idle') {
+            setInteractionState('analyzing');
+          } else {
+            setActiveModal({ type: 'incident' });
+          }
+          return;
+        case 'view_risk':
+          setActiveModal({ type: 'risk', riskId: 'trust' });
+          return;
+        case 'view_map':
+          setActiveModal({ type: 'incident' });
+          return;
+        case 'open_note':
+          setActiveModal({ type: 'note' });
+          return;
+        default:
+          return;
+      }
+    },
+    [interactionState],
+  );
+
   const revealInspection = useCallback(() => {
     hasRevealedRef.current = true;
     setInteractionState("revealed");
@@ -306,36 +384,25 @@ export function EventInspectPhase({
     scanConfig.durationMs,
   ]);
 
-  const handleActionPress = useCallback(
-    (actionId: ActionId) => {
-      playLightImpactHaptic();
-      if (actionId === "note") {
-        setActiveModal({ type: "note" });
-        return;
-      }
-      if (actionId === "verify") {
-        confirmAllSignals();
-        return;
-      }
-      if (interactionState === "idle") {
-        setInteractionState("analyzing");
-      } else {
-        setActiveModal({ type: "incident" });
-      }
-    },
-    [confirmAllSignals, interactionState],
-  );
-
   const handleStickyPress = useCallback(() => {
     playLightImpactHaptic();
-    if (planUnlocked) {
+    if (lowerPresentation.primaryCta.actionKey === 'go_to_plan') {
       onOpenPlanning();
+      return;
+    }
+    if (lowerPresentation.primaryCta.actionKey === 'complete_signals') {
+      confirmAllSignals();
       return;
     }
     if (interactionState === "idle") {
       setInteractionState("analyzing");
     }
-  }, [interactionState, onOpenPlanning, planUnlocked]);
+  }, [
+    confirmAllSignals,
+    interactionState,
+    lowerPresentation.primaryCta.actionKey,
+    onOpenPlanning,
+  ]);
 
   return (
     <SafeAreaView
@@ -356,7 +423,16 @@ export function EventInspectPhase({
           },
         ]}
       >
-        <InspectHeader compact={compact} />
+        <OperationPhaseShellHeader
+          shell={presentation.phaseTransition.shell}
+          compact={compact}
+          reducedMotion={reducedMotion}
+        />
+        <OperationPhaseProgressRail
+          progress={presentation.phaseTransition.progress}
+          reducedMotion={reducedMotion}
+        />
+        <OperationPhaseContentEnter reducedMotion={reducedMotion} index={2}>
         <EventBriefCard
           event={event}
           categoryLabel={categoryLabel}
@@ -373,33 +449,34 @@ export function EventInspectPhase({
           reducedMotion={reducedMotion}
           onOpen={() => setActiveModal({ type: "incident" })}
         />
-        <InspectRevealFlow
-          items={presentation.revealItems}
-          revealed={presentation.showFindings}
+        <EventInspectLowerSections
+          lower={lowerPresentation}
           reducedMotion={reducedMotion}
+          onSignalPress={(signalId) => {
+            const mapped = mapSignalIdToModal(signalId);
+            if (mapped) {
+              setActiveModal({ type: "signal", signalId: mapped });
+            }
+          }}
+          onEvidencePress={(evidenceId) => {
+            const mapped = mapEvidenceIdToSignal(evidenceId);
+            if (mapped) {
+              setActiveModal({ type: "signal", signalId: mapped });
+            }
+          }}
+          onRiskPress={(riskId) => {
+            setActiveModal({ type: "risk", riskId: mapRiskIdToModal(riskId) });
+          }}
+          onActionPress={handleLowerActionPress}
         />
-        <SignalSourceRow
-          confirmedSignals={confirmedSignals}
-          onPressSignal={(signalId) =>
-            setActiveModal({ type: "signal", signalId })
-          }
-          reducedMotion={reducedMotion}
-        />
-        <RiskPreviewRow
-          onPressRisk={(riskId) => setActiveModal({ type: "risk", riskId })}
-        />
-        <AdvisorEceCard reducedMotion={reducedMotion} />
+        </OperationPhaseContentEnter>
         {phaseHint ? <OnboardingPhaseHint text={phaseHint} /> : null}
-        <InspectActionGrid
-          completed={planUnlocked}
-          onPressAction={handleActionPress}
-        />
       </ScrollView>
 
       <StickyUnlockBar
+        cta={lowerPresentation.primaryCta}
         confirmedCount={planUnlocked ? SIGNALS.length : confirmedCount}
         totalCount={SIGNALS.length}
-        unlocked={planUnlocked}
         loading={interactionState === "analyzing"}
         onPress={handleStickyPress}
       />
@@ -492,45 +569,6 @@ function InspectRevealFlow({
         </View>
       </View>
     </View>
-  );
-}
-
-function InspectHeader({ compact }: { compact: boolean }) {
-  return (
-    <CreviaMotionView
-      motionKind="card_enter"
-      surface="shared"
-      index={0}
-      style={styles.header}
-    >
-      <View style={styles.headerIconButton}>
-        <Ionicons name="chevron-back" size={21} color={eventDetail.tealDark} />
-      </View>
-      <View style={styles.headerTitleBlock}>
-        <Text
-          style={[styles.headerTitle, compact && styles.headerTitleCompact]}
-        >
-          İncele
-        </Text>
-        <View style={styles.headerAccent}>
-          <View style={styles.headerAccentLine} />
-          <Ionicons name="sparkles" size={10} color="#C58B18" />
-          <View style={styles.headerAccentLine} />
-        </View>
-      </View>
-      <View style={styles.resourceBadges}>
-        <View style={[styles.resourceBadge, styles.resourceBadgeMint]}>
-          <Ionicons name="diamond-outline" size={13} color={eventDetail.teal} />
-          <Text style={styles.resourceText}>1.250</Text>
-        </View>
-        <View style={[styles.resourceBadge, styles.resourceBadgeGold]}>
-          <Ionicons name="medal-outline" size={13} color="#B77713" />
-          <Text style={[styles.resourceText, styles.resourceTextGold]}>
-            860
-          </Text>
-        </View>
-      </View>
-    </CreviaMotionView>
   );
 }
 
@@ -1066,21 +1104,22 @@ function InspectActionCard({
 }
 
 function StickyUnlockBar({
+  cta,
   confirmedCount,
   totalCount,
-  unlocked,
   loading,
   onPress,
 }: {
+  cta: InspectLowerPrimaryCta;
   confirmedCount: number;
   totalCount: number;
-  unlocked: boolean;
   loading: boolean;
   onPress: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const progress = useSharedValue(0);
   const pct = Math.round((confirmedCount / totalCount) * 100);
+  const ready = cta.actionKey === "go_to_plan";
 
   useEffect(() => {
     progress.value = withTiming(pct, { duration: 360 });
@@ -1097,59 +1136,40 @@ function StickyUnlockBar({
         { paddingBottom: Math.max(insets.bottom, 10) },
       ]}
     >
-      <LinearGradient
-        colors={
-          unlocked
-            ? [eventDetail.tealDark, eventDetail.teal]
-            : ["#174B48", "#0B6B61"]
-        }
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={styles.stickyBar}
-      >
-        <View style={styles.stickySignalIcon}>
-          <Ionicons
-            name={unlocked ? "lock-open-outline" : "radio-outline"}
-            size={19}
-            color="#FFFFFF"
-          />
-        </View>
-        <View style={styles.stickyMiddle}>
-          <View style={styles.stickyTitleRow}>
-            <Text style={styles.stickyTitle}>
-              {unlocked ? "3/3 sinyal" : `${confirmedCount}/3 sinyal`}
-            </Text>
-            <Text style={styles.stickyState}>
-              {loading
-                ? "Taranıyor"
-                : unlocked
-                  ? "Planla açıldı"
-                  : "Planla açılıyor"}
-            </Text>
-          </View>
+      <View style={styles.stickyShell}>
+        <View style={styles.stickyProgressRow}>
+          <Text style={styles.stickyProgressLabel}>
+            {ready ? `${totalCount}/${totalCount} sinyal` : `${confirmedCount}/${totalCount} sinyal`}
+          </Text>
+          <Text style={styles.stickyProgressState}>
+            {loading ? "Taranıyor" : ready ? "Planlamaya hazır" : "Sinyaller toplanıyor"}
+          </Text>
           <View style={styles.stickyTrack}>
             <Animated.View style={[styles.stickyFill, fillStyle]} />
           </View>
         </View>
         <Pressable
           onPress={onPress}
+          disabled={!cta.enabled}
           style={({ pressed }) => [
-            styles.stickyCta,
-            pressed && styles.stickyCtaPressed,
+            styles.primaryCta,
+            ready && styles.primaryCtaReady,
+            !cta.enabled && styles.primaryCtaDisabled,
+            pressed && cta.enabled && styles.primaryCtaPressed,
           ]}
           accessibilityRole="button"
-          accessibilityLabel={unlocked ? "Planla'ya geç" : "İncelemeyi başlat"}
+          accessibilityLabel={cta.label}
         >
-          <Ionicons
-            name={unlocked ? "arrow-forward" : "lock-closed-outline"}
-            size={16}
-            color={eventDetail.tealDark}
-          />
-          <Text style={styles.stickyCtaText} numberOfLines={1}>
-            {unlocked ? "Planla" : "Açılıyor"}
+          <Text style={[styles.primaryCtaText, ready && styles.primaryCtaTextReady]} numberOfLines={1}>
+            {cta.label}
           </Text>
+          <Ionicons
+            name={ready ? "arrow-forward" : "scan-outline"}
+            size={18}
+            color={ready ? eventDetail.tealDark : "#FFFFFF"}
+          />
         </Pressable>
-      </LinearGradient>
+      </View>
     </View>
   );
 }
@@ -1451,78 +1471,6 @@ const styles = StyleSheet.create({
   },
   cardWrap: {
     marginHorizontal: eventDetail.screenPadding,
-  },
-  header: {
-    minHeight: 52,
-    paddingHorizontal: eventDetail.screenPadding,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  headerIconButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "rgba(6,63,59,0.08)",
-  },
-  headerTitleBlock: {
-    flex: 1,
-    alignItems: "center",
-    gap: 3,
-  },
-  headerTitle: {
-    fontSize: 24,
-    lineHeight: 29,
-    fontWeight: "900",
-    color: eventDetail.textDark,
-    letterSpacing: 0,
-  },
-  headerTitleCompact: {
-    fontSize: 22,
-  },
-  headerAccent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  headerAccentLine: {
-    width: 26,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: "#D9A646",
-  },
-  resourceBadges: {
-    flexDirection: "row",
-    gap: 5,
-  },
-  resourceBadge: {
-    height: 30,
-    minWidth: 38,
-    borderRadius: 15,
-    paddingHorizontal: 7,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 3,
-  },
-  resourceBadgeMint: {
-    backgroundColor: "#DDF4E8",
-  },
-  resourceBadgeGold: {
-    backgroundColor: "#FFF1C9",
-  },
-  resourceText: {
-    fontSize: 11,
-    fontWeight: "900",
-    color: eventDetail.tealDark,
-  },
-  resourceTextGold: {
-    color: "#9E6E0D",
   },
   briefCard: {
     minHeight: 124,
@@ -1932,6 +1880,52 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(6,63,59,0.08)",
   },
+  stickyShell: {
+    gap: 10,
+  },
+  stickyProgressRow: {
+    gap: 6,
+  },
+  stickyProgressLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: eventDetail.tealDark,
+  },
+  stickyProgressState: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: eventDetail.textMuted,
+  },
+  primaryCta: {
+    minHeight: 52,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: eventDetail.tealDark,
+  },
+  primaryCtaReady: {
+    backgroundColor: "#E8C36A",
+    borderWidth: 1,
+    borderColor: "#C58B18",
+  },
+  primaryCtaDisabled: {
+    opacity: 0.55,
+  },
+  primaryCtaPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.94,
+  },
+  primaryCtaText: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: "#FFFFFF",
+  },
+  primaryCtaTextReady: {
+    color: eventDetail.tealDark,
+  },
   stickyBar: {
     minHeight: 64,
     borderRadius: 20,
@@ -1971,15 +1965,15 @@ const styles = StyleSheet.create({
     color: "#DDF4E8",
   },
   stickyTrack: {
-    height: 7,
+    height: 6,
     borderRadius: 4,
     overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.22)",
+    backgroundColor: "rgba(11, 107, 97, 0.1)",
   },
   stickyFill: {
-    height: 7,
+    height: 6,
     borderRadius: 4,
-    backgroundColor: "#B9F2DB",
+    backgroundColor: eventDetail.teal,
   },
   stickyCta: {
     minWidth: 86,

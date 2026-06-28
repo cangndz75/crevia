@@ -90,6 +90,6 @@ export function validatePlayerStyleObservationWeights(observations: PlayerStyleO
 
 export function validatePlayerStyleIdCoverage(): string[] {
   const errors: string[] = [];
-  if (PLAYER_STYLE_IDS.length < 8) errors.push('style id coverage incomplete');
+  if (PLAYER_STYLE_IDS.length < 10) errors.push('style id coverage incomplete');
   return errors;
 }

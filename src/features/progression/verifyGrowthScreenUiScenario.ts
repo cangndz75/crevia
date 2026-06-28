@@ -23,7 +23,8 @@ export function verifyGrowthScreenUiScenario(): { ok: boolean; lines: string[] }
   const bottomNav = readRepo('src/components/navigation/CreviaBottomTabBar.tsx');
   const layout = readRepo('src/app/_layout.tsx');
 
-  lines.push(assert(screen.includes('GrowthScreenHeader'), 'GrowthScreenHeader wired'));
+  lines.push(assert(screen.includes('GrowthManagerStyleCard'), 'GrowthManagerStyleCard wired'));
+  lines.push(assert(screen.includes('GrowthPeriodFocusCard'), 'GrowthPeriodFocusCard wired'));
   lines.push(assert(screen.includes('buildGrowthScreenPresentation'), 'growth presentation wired'));
   lines.push(assert(screen.includes("useState<AuthorityTabKey>('authorities')"), 'default tab Yetkiler'));
   lines.push(assert(bottomNav.includes('label: "Gelişim"'), 'bottom nav Gelişim label'));
@@ -48,6 +49,9 @@ export function verifyGrowthScreenUiScenario(): { ok: boolean; lines: string[] }
   });
 
   lines.push(assert(presentation.header.title === 'Gelişim', 'header title Gelişim'));
+  lines.push(assert(presentation.managerStyle.sectionTitle === 'Yönetici Tarzı', 'manager style section'));
+  lines.push(assert(presentation.periodFocus.sectionTitle === 'Dönemsel Odak', 'period focus section'));
+  lines.push(assert(presentation.managerStyle.microcopy.includes('Son kararlarına'), 'manager style microcopy'));
   lines.push(
     assert(
       presentation.authoritiesTab.recentAuthorities.length >= 2,

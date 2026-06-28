@@ -6,9 +6,9 @@ import { REPORT_UI_BANNED_WORDS } from '@/features/reports/utils/endOfDayReportP
 export const WORKFLOW_CTA_LABELS = {
   inspect: 'Planlamaya Geç',
   plan: 'Yönlendirmeye Geç',
-  dispatch: 'Sahaya Yönlendir',
+  dispatch: 'Ekibi Sahaya Çıkar',
   field: 'Sonucu Gör',
-  reportContinue: 'Operasyon Merkezine Dön',
+  reportContinue: 'Yarına Hazırlan',
   reportDay7Continue: 'Ana Operasyona Göz At',
 } as const;
 

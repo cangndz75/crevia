@@ -485,7 +485,7 @@ export function verifyFullUxFlowScenario(): VerifyFullUxFlowOutcome {
   assert(
     checks,
     normalCta === WORKFLOW_CTA_LABELS.reportContinue,
-    'Normal gün CTA “Operasyon Merkezine Dön” üretir',
+    'Normal gün CTA “Yarına Hazırlan” üretir',
     normalCta,
   );
 
@@ -562,7 +562,7 @@ export function verifyFullUxFlowScenario(): VerifyFullUxFlowOutcome {
     checks,
     WORKFLOW_CTA_LABELS.inspect === 'Planlamaya Geç' &&
       WORKFLOW_CTA_LABELS.plan === 'Yönlendirmeye Geç' &&
-      WORKFLOW_CTA_LABELS.dispatch === 'Sahaya Yönlendir' &&
+      WORKFLOW_CTA_LABELS.dispatch === 'Ekibi Sahaya Çıkar' &&
       WORKFLOW_CTA_LABELS.field === 'Sonucu Gör',
     'Workflow ana CTA metinleri net ve tekil',
   );

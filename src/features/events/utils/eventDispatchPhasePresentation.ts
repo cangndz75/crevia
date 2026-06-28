@@ -1,3 +1,16 @@
+import {
+  buildDispatchReadinessFromContext,
+  buildEceReadinessHint,
+  buildOperationReadinessSnapshot,
+} from '@/core/operationReadiness';
+import {
+  buildEceMaintenanceHint,
+  buildMaintenanceBacklogFromReadiness,
+  buildMaintenanceBacklogRuntimePresentation,
+  buildMaintenanceDispatchHint,
+  buildMaintenanceRuntimeDispatchHint,
+} from '@/core/maintenanceBacklog';
+import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
 import type {
   AssignmentCompatibilityResult,
   CompatibilityLabel,
@@ -10,6 +23,13 @@ import {
 import { applyAuthorityToDispatchReasons } from '@/core/authority/authorityGameplayUnlockPresentation';
 import type { EventCard, EventDecision } from '@/core/models/EventCard';
 import {
+  buildDispatchEceLine,
+  buildEceMemorySnapshot,
+  mapEceToneToDispatchAdvisorTone,
+  mapEceToneToToneLabel,
+  type EceMemoryContextInput,
+} from '@/core/eceTone';
+import {
   operationMotionDispatchDurationMs,
   operationMotionDispatchSentDurationMs,
 } from '@/core/motion/operationMotionTokens';
@@ -20,11 +40,21 @@ import {
 } from '@/features/events/utils/eventPlanPhasePresentation';
 import type { PlanOptionId } from '@/features/events/utils/eventWorkflowPlanPresentation';
 import {
+  buildOperationPhaseTransitionPresentation,
+  type OperationPhaseTransitionPresentation,
+} from '@/features/events/utils/operationPhaseTransitionPresentation';
+import {
   getPersonnelAssignmentLabel,
   getVehicleAssignmentLabel,
 } from '@/core/assignments/assignmentPresentation';
 
 export type EventDispatchInteractionState = 'idle' | 'dispatching' | 'sent';
+
+export type EventDispatchPlanChip = {
+  label: string;
+  value: string;
+  tone: 'positive' | 'neutral' | 'warning';
+};
 
 export type EventDispatchSelectedPlanSummary = {
   strategyId?: EventPlanStrategyId;
@@ -32,6 +62,64 @@ export type EventDispatchSelectedPlanSummary = {
   summary: string;
   tone: 'teal' | 'green' | 'gold' | 'warning' | 'neutral';
   sourceLabel: string;
+  isDefaultPlan?: boolean;
+  chips: EventDispatchPlanChip[];
+};
+
+export type EventDispatchOverallReadinessStatus =
+  | 'ready'
+  | 'limited'
+  | 'strained'
+  | 'blocked';
+
+export type EventDispatchReadinessPanel = {
+  title: string;
+  overallStatus: EventDispatchOverallReadinessStatus;
+  overallLabel: string;
+  items: EventDispatchReadinessRow[];
+  maintenanceHint?: {
+    text: string;
+    tone: 'positive' | 'mixed' | 'warning' | 'critical' | 'neutral';
+    countLabel?: string;
+  };
+};
+
+export type EventDispatchResourceSummaryItem = {
+  id: string;
+  label: string;
+  value: string;
+  tone: 'positive' | 'neutral' | 'warning';
+  iconKey: string;
+};
+
+export type EventDispatchResourceSummary = {
+  title: string;
+  items: EventDispatchResourceSummaryItem[];
+};
+
+export type EventDispatchBlocker = {
+  id: string;
+  message: string;
+  tone: 'neutral' | 'warning' | 'critical';
+  iconKey: string;
+};
+
+export type EventDispatchBlockersPresentation = {
+  title: string;
+  items: EventDispatchBlocker[];
+};
+
+export type EventDispatchActionKey =
+  | 'view_readiness'
+  | 'check_route'
+  | 'compare_risks'
+  | 'open_note';
+
+export type EventDispatchAction = {
+  id: string;
+  label: string;
+  iconKey: string;
+  actionKey: EventDispatchActionKey;
 };
 
 export type EventDispatchAssignmentSummary = {
@@ -62,13 +150,13 @@ export type EventDispatchCompatibility = {
 export type EventDispatchReadinessRow = {
   id: 'team' | 'vehicle' | 'budget' | 'social';
   label: string;
-  statusLabel: 'Hazır' | 'Sınırlı' | 'Riskli';
+  statusLabel: string;
   reason: string;
   tone: 'positive' | 'neutral' | 'warning';
   iconKey: string;
 };
 
-export type EventDispatchRouteStepId = 'team' | 'vehicle' | 'route' | 'field';
+export type EventDispatchRouteStepId = 'center' | 'transit' | 'field';
 
 export type EventDispatchRouteStepState = 'ready' | 'current' | 'locked' | 'done';
 
@@ -83,6 +171,8 @@ export type EventDispatchRoutePreview = {
   title: string;
   steps: EventDispatchRouteStep[];
   pathLabels: string[];
+  districtName: string;
+  routeCopy: string;
   estimatedLabel?: string;
   tone: 'positive' | 'neutral' | 'warning';
 };
@@ -91,14 +181,17 @@ export type EventDispatchAdvisorComment = {
   title: string;
   text: string;
   tone: 'calm' | 'teaching' | 'warning' | 'positive';
+  toneLabel: string;
 };
 
 export type EventDispatchCtaActionKey = 'send_to_field' | 'complete_assignment' | 'disabled';
 
 export type EventDispatchCta = {
   label: string;
+  disabledLabel: string;
   actionKey: EventDispatchCtaActionKey;
   enabled: boolean;
+  warningSubline?: string;
 };
 
 export type EventDispatchFeedback = {
@@ -111,15 +204,23 @@ export type EventDispatchFeedback = {
 export type EventDispatchPhasePresentation = {
   title: string;
   subtitle?: string;
+  phaseHeading: string;
+  phaseDescription: string;
   selectedPlan: EventDispatchSelectedPlanSummary;
   assignmentSummary: EventDispatchAssignmentSummary;
+  readiness: EventDispatchReadinessPanel;
+  /** @deprecated use readiness.items */
   readinessRows: EventDispatchReadinessRow[];
+  resourceSummary: EventDispatchResourceSummary;
   compatibility: EventDispatchCompatibility;
   routePreview: EventDispatchRoutePreview;
+  blockers: EventDispatchBlockersPresentation;
   advisorComment: EventDispatchAdvisorComment;
+  actions: EventDispatchAction[];
   primaryCta: EventDispatchCta;
   dispatchFeedback: EventDispatchFeedback;
   accessibilityLabel: string;
+  phaseTransition: OperationPhaseTransitionPresentation;
 };
 
 export type BuildEventDispatchPhasePresentationInput = {
@@ -136,12 +237,35 @@ export type BuildEventDispatchPhasePresentationInput = {
   reducedMotion?: boolean;
   recentVarietyProfiles?: import('@/core/eventVariety/eventGameplayVarietyTypes').BuildEventGameplayVarietyProfileInput['recentProfiles'];
   authorityGameplayContext?: import('@/core/authority/authorityGameplayUnlockTypes').AuthorityGameplayPresentationContext;
+  eceMemoryContext?: EceMemoryContextInput;
+  maintenanceBacklogRuntime?: MaintenanceBacklogRuntimeState | null;
 };
 
 const PLAN_DISPATCH_SUMMARY: Record<EventPlanStrategyId, string> = {
-  rapid_response: 'Süre öncelikli, kaynak maliyeti artabilir.',
-  balanced_plan: 'Kaynak dengeli, sosyal tepki kontrol altında.',
-  long_term_fix: 'Güven odaklı, sahaya çıkış daha planlı.',
+  rapid_response: 'Görünür ekip etkisiyle güveni hızlı toparlamayı hedefler.',
+  balanced_plan: 'Riski büyütmeden ekip temposunu koruyarak ilerler.',
+  long_term_fix: 'Bugünkü müdahaleyi yarınki riski azaltacak şekilde genişletir.',
+};
+
+const PLAN_DISPATCH_CHIPS: Record<EventPlanStrategyId, EventDispatchPlanChip[]> = {
+  rapid_response: [
+    { label: 'Etki', value: 'Hızlı', tone: 'positive' },
+    { label: 'Bedel', value: 'Ekip baskısı', tone: 'warning' },
+  ],
+  balanced_plan: [
+    { label: 'Etki', value: 'Dengeli', tone: 'neutral' },
+    { label: 'Bedel', value: 'Orta', tone: 'neutral' },
+  ],
+  long_term_fix: [
+    { label: 'Etki', value: 'Uzun vadeli', tone: 'positive' },
+    { label: 'Bedel', value: 'Yüksek kaynak', tone: 'warning' },
+  ],
+};
+
+const PLAN_ESTIMATED_MINUTES: Record<EventPlanStrategyId, number> = {
+  rapid_response: 12,
+  balanced_plan: 18,
+  long_term_fix: 25,
 };
 
 const PLAN_DISPATCH_TONE: Record<EventPlanStrategyId, EventDispatchSelectedPlanSummary['tone']> = {
@@ -265,17 +389,20 @@ function buildCompatibilityReasons(
 function buildSelectedPlanSummary(
   input: BuildEventDispatchPhasePresentationInput,
 ): EventDispatchSelectedPlanSummary {
+  const hasExplicitPlan = Boolean(input.selectedPlanStrategyId);
   const strategyId = input.selectedPlanStrategyId ?? 'balanced_plan';
-  const label =
-    input.selectedPlanStrategyLabel?.trim() ||
-    getPlanStrategyLabel(strategyId);
+  const label = hasExplicitPlan
+    ? input.selectedPlanStrategyLabel?.trim() || getPlanStrategyLabel(strategyId)
+    : 'Varsayılan plan';
 
   return {
-    strategyId,
+    strategyId: hasExplicitPlan ? strategyId : undefined,
     label,
     summary: PLAN_DISPATCH_SUMMARY[strategyId],
     tone: PLAN_DISPATCH_TONE[strategyId],
-    sourceLabel: 'Planla fazı',
+    sourceLabel: hasExplicitPlan ? 'Plan Aktarımı' : 'Varsayılan plan',
+    isDefaultPlan: !hasExplicitPlan,
+    chips: PLAN_DISPATCH_CHIPS[strategyId],
   };
 }
 
@@ -326,40 +453,32 @@ function buildRoutePreview(
   event?: EventCard,
   varietyInput?: Pick<BuildEventDispatchPhasePresentationInput, 'day' | 'isDay1LearningEvent' | 'recentVarietyProfiles'>,
 ): EventDispatchRoutePreview {
-  const teamState: EventDispatchRouteStepState =
+  const districtName =
+    event?.district?.trim() || event?.neighborhoodId?.trim() || 'Mahalle';
+
+  const centerState: EventDispatchRouteStepState =
+    dispatchState === 'sent' ? 'done' : 'ready';
+
+  const transitState: EventDispatchRouteStepState =
     dispatchState === 'sent'
       ? 'done'
-      : assignment
-        ? 'ready'
-        : 'locked';
-
-  const vehicleState: EventDispatchRouteStepState =
-    dispatchState === 'sent'
-      ? 'done'
-      : assignment?.vehicleType
-        ? 'ready'
-        : 'locked';
-
-  const routeState: EventDispatchRouteStepState =
-    dispatchState === 'dispatching' || dispatchState === 'sent'
-      ? dispatchState === 'sent'
-        ? 'done'
-        : 'current'
-      : assignmentReady
+      : dispatchState === 'dispatching'
         ? 'current'
-        : assignment
-          ? 'ready'
-          : 'locked';
+        : assignmentReady
+          ? 'current'
+          : assignment
+            ? 'ready'
+            : 'locked';
 
   const fieldState: EventDispatchRouteStepState =
     dispatchState === 'sent' ? 'current' : dispatchState === 'dispatching' ? 'ready' : 'locked';
 
   let estimatedLabel =
     planStrategyId === 'rapid_response'
-      ? 'Rota süresi kritik'
+      ? `~${PLAN_ESTIMATED_MINUTES.rapid_response} dk`
       : planStrategyId === 'long_term_fix'
-        ? 'Planlı çıkış'
-        : 'Rota dengeli';
+        ? `~${PLAN_ESTIMATED_MINUTES.long_term_fix} dk`
+        : `~${PLAN_ESTIMATED_MINUTES.balanced_plan} dk`;
 
   if (event) {
     const profile = getEventGameplayVarietyProfile(event, {
@@ -373,150 +492,258 @@ function buildRoutePreview(
   }
 
   return {
-    title: 'Yönlendirme hattı',
-    pathLabels: [
-      'Merkez',
-      event?.district?.trim() || event?.neighborhoodId?.trim() || 'Mahalle',
-      'Olay noktası',
-    ],
+    title: 'Saha Rotası',
+    districtName,
+    routeCopy: `Ekip ${districtName} odağına yönlendirilecek.`,
+    pathLabels: ['Merkez', 'Ekip çıkışı', districtName],
     steps: [
-      { id: 'team', label: 'Ekip', state: teamState, iconKey: 'people-outline' },
-      { id: 'vehicle', label: 'Araç', state: vehicleState, iconKey: 'car-outline' },
-      { id: 'route', label: 'Rota', state: routeState, iconKey: 'git-network-outline' },
-      { id: 'field', label: 'Saha', state: fieldState, iconKey: 'location-outline' },
+      { id: 'center', label: 'Merkez', state: centerState, iconKey: 'business-outline' },
+      { id: 'transit', label: 'Çıkış', state: transitState, iconKey: 'navigate-outline' },
+      { id: 'field', label: districtName, state: fieldState, iconKey: 'location-outline' },
     ],
     estimatedLabel,
-    tone: routeState === 'current' ? 'positive' : 'neutral',
+    tone: transitState === 'current' ? 'positive' : 'neutral',
   };
 }
 
-function mapReadinessStatus(
-  tone: EventDispatchReadinessRow['tone'],
-): EventDispatchReadinessRow['statusLabel'] {
-  if (tone === 'positive') return 'Hazır';
-  if (tone === 'warning') return 'Riskli';
-  return 'Sınırlı';
-}
-
-function buildReadinessRows(
+function buildResourceSummary(
   input: BuildEventDispatchPhasePresentationInput,
   assignmentSummary: EventDispatchAssignmentSummary,
-  compatibility: EventDispatchCompatibility,
-): EventDispatchReadinessRow[] {
-  const teamTone: EventDispatchReadinessRow['tone'] =
-    assignmentSummary.status === 'ready'
-      ? compatibility.tone === 'warning'
-        ? 'neutral'
-        : 'positive'
-      : assignmentSummary.status === 'partial'
-        ? 'neutral'
-        : 'warning';
-  const vehicleTone: EventDispatchReadinessRow['tone'] =
-    input.assignment?.vehicleType
-      ? compatibility.scoreBand === 'low'
-        ? 'neutral'
-        : 'positive'
-      : 'warning';
-  const budgetTone: EventDispatchReadinessRow['tone'] =
-    input.selectedPlanStrategyId === 'rapid_response' ||
-    input.selectedPlanStrategyId === 'long_term_fix'
-      ? 'neutral'
-      : 'positive';
-  const socialTone: EventDispatchReadinessRow['tone'] =
-    (input.event.previewEffects?.publicSatisfaction ?? 0) < -4
-      ? 'warning'
-      : compatibility.tone === 'warning'
-        ? 'neutral'
-        : 'positive';
+  planStrategyId: EventPlanStrategyId,
+): EventDispatchResourceSummary {
+  const districtName =
+    input.event.district?.trim() || input.event.neighborhoodId?.trim() || 'Bölge';
+  const minutes = PLAN_ESTIMATED_MINUTES[planStrategyId];
+  const teamCount =
+    assignmentSummary.status === 'ready' || assignmentSummary.status === 'partial' ? 2 : 1;
+  const vehicleReady = Boolean(input.assignment?.vehicleType);
 
-  const rows: Array<Omit<EventDispatchReadinessRow, 'statusLabel'>> = [
+  return {
+    title: 'Saha Ekibi',
+    items: [
+      {
+        id: 'team',
+        label: 'Ekip',
+        value: `${teamCount} saha ekibi`,
+        tone: assignmentSummary.status === 'ready' ? 'positive' : 'neutral',
+        iconKey: 'people-outline',
+      },
+      {
+        id: 'vehicle',
+        label: 'Araç',
+        value: vehicleReady ? '1 araç hazır' : 'Araç bekleniyor',
+        tone: vehicleReady ? 'positive' : 'warning',
+        iconKey: 'car-outline',
+      },
+      {
+        id: 'duration',
+        label: 'Süre',
+        value: `~${minutes} dk`,
+        tone: 'neutral',
+        iconKey: 'time-outline',
+      },
+      {
+        id: 'district',
+        label: 'Bölge',
+        value: districtName,
+        tone: 'neutral',
+        iconKey: 'location-outline',
+      },
+    ],
+  };
+}
+
+function buildBlockers(
+  rows: EventDispatchReadinessRow[],
+  compatibility: EventDispatchCompatibility,
+  assignmentSummary: EventDispatchAssignmentSummary,
+  isDay1LearningEvent?: boolean,
+): EventDispatchBlockersPresentation {
+  const items: EventDispatchBlocker[] = [];
+
+  if (assignmentSummary.status === 'missing' || assignmentSummary.status === 'locked') {
+    items.push({
+      id: 'assignment-missing',
+      message: 'Ekip ve araç atamasını tamamla.',
+      tone: 'critical',
+      iconKey: 'alert-circle-outline',
+    });
+  }
+
+  for (const row of rows) {
+    if (items.length >= 3) break;
+    if (row.id === 'team' && row.tone === 'neutral') {
+      items.push({
+        id: 'team-strain',
+        message: 'Ekip temposu sınırlı. Uzun müdahale yarına baskı taşıyabilir.',
+        tone: 'warning',
+        iconKey: 'people-outline',
+      });
+      continue;
+    }
+    if (row.id === 'social' && (row.tone === 'warning' || row.tone === 'neutral')) {
+      items.push({
+        id: 'social-pressure',
+        message: row.reason,
+        tone: row.tone === 'warning' ? 'warning' : 'neutral',
+        iconKey: 'chatbubbles-outline',
+      });
+      continue;
+    }
+    if (row.id === 'budget' && (row.tone === 'warning' || row.tone === 'neutral')) {
+      items.push({
+        id: 'budget-pressure',
+        message: 'Bütçe baskısı orta seviyede. Kaynak kullanımını izle.',
+        tone: row.tone === 'warning' ? 'warning' : 'neutral',
+        iconKey: 'wallet-outline',
+      });
+    }
+  }
+
+  for (const reason of compatibility.reasons) {
+    if (items.length >= 3) break;
+    if (reason.tone !== 'warning') continue;
+    if (items.some((item) => item.message.includes(reason.label.slice(0, 12)))) continue;
+    items.push({
+      id: `compat-${reason.id}`,
+      message: reason.label,
+      tone: 'warning',
+      iconKey: reason.iconKey,
+    });
+  }
+
+  if (items.length === 0 && !isDay1LearningEvent) {
+    items.push({
+      id: 'all-clear',
+      message: 'Plan sahaya aktarılmaya hazır.',
+      tone: 'neutral',
+      iconKey: 'checkmark-circle-outline',
+    });
+  }
+
+  return {
+    title: 'Başlatmadan Önce',
+    items: items.slice(0, 3),
+  };
+}
+
+function buildDispatchActions(): EventDispatchAction[] {
+  return [
     {
-      id: 'team',
-      label: 'Ekip uygunluğu',
-      tone: teamTone,
-      reason:
-        assignmentSummary.personnelLabel ??
-        (teamTone === 'warning' ? 'Ekip seçimi tamamlanmadı.' : 'Ekip sahaya hazır.'),
-      iconKey: 'people-outline',
+      id: 'view-readiness',
+      label: 'Hazırlığı Gör',
+      iconKey: 'speedometer-outline',
+      actionKey: 'view_readiness',
     },
     {
-      id: 'vehicle',
-      label: 'Araç uygunluğu',
-      tone: vehicleTone,
-      reason:
-        assignmentSummary.vehicleLabel ??
-        (vehicleTone === 'warning' ? 'Araç seçimi bekleniyor.' : 'Araç sahaya uygun.'),
-      iconKey: 'car-outline',
+      id: 'check-route',
+      label: 'Rotayı Kontrol Et',
+      iconKey: 'map-outline',
+      actionKey: 'check_route',
     },
     {
-      id: 'budget',
-      label: 'Bütçe durumu',
-      tone: budgetTone,
-      reason:
-        budgetTone === 'positive'
-          ? 'Plan kaynak baskısını dengede tutuyor.'
-          : 'Plan ek kaynak baskısı yaratabilir.',
-      iconKey: 'wallet-outline',
+      id: 'compare-risks',
+      label: 'Riskleri Karşılaştır',
+      iconKey: 'git-compare-outline',
+      actionKey: 'compare_risks',
     },
     {
-      id: 'social',
-      label: 'Sosyal risk',
-      tone: socialTone,
-      reason:
-        socialTone === 'warning'
-          ? 'Mahalle tepkisi bu yönlendirmeye hassas.'
-          : 'Sosyal nabız yönetilebilir görünüyor.',
-      iconKey: 'chatbubbles-outline',
+      id: 'open-note',
+      label: 'Not Aç',
+      iconKey: 'document-text-outline',
+      actionKey: 'open_note',
     },
   ];
-
-  return rows.map((row) => ({
-    ...row,
-    statusLabel: mapReadinessStatus(row.tone),
-  }));
 }
 
 export function buildEventDispatchAdvisorComment(
   input: BuildEventDispatchPhasePresentationInput,
   compatibility: EventDispatchCompatibility,
   selectedPlan: EventDispatchSelectedPlanSummary,
+  overallStatus: EventDispatchOverallReadinessStatus,
 ): EventDispatchAdvisorComment {
-  if (input.isDay1LearningEvent || input.day === 1) {
-    return {
-      title: 'Ece',
-      text: 'Yönlendirme adımında ekibi sahaya çıkarıyoruz. Sonraki ekranda operasyonu takip edeceksin.',
-      tone: 'teaching',
-    };
-  }
+  const day = input.day ?? input.event.day ?? 1;
 
-  if (compatibility.scoreBand === 'low' || compatibility.tone === 'warning') {
+  if (overallStatus === 'blocked') {
     return {
-      title: 'Ece',
-      text: 'Ekip yorgunluğu var. Bu seçim süre riskini artırabilir.',
+      title: 'Ece Notu',
+      text: 'Atama tamamlanmadan sahaya çıkış riskli. Önce ekip ve araç hazırlığını kontrol et.',
       tone: 'warning',
+      toneLabel: 'Dikkat',
     };
   }
 
-  if (selectedPlan.strategyId === 'rapid_response') {
+  const memoryContext: EceMemoryContextInput = {
+    day,
+    event: input.event,
+    eventId: input.event.id,
+    districtName: input.event.district,
+    selectedPlanId: selectedPlan.strategyId,
+    selectedPlanLabel: selectedPlan.label,
+    socialPressure: (input.event.previewEffects?.publicSatisfaction ?? 0) < -3,
+    resourcePressure:
+      compatibility.scoreBand === 'low' ||
+      overallStatus === 'strained' ||
+      overallStatus === 'limited',
+    ...input.eceMemoryContext,
+  };
+
+  const readinessSnapshot = buildOperationReadinessSnapshot({
+    phase: 'dispatch',
+    assignmentStatus: input.assignment
+      ? input.assignmentReady
+        ? 'ready'
+        : 'partial'
+      : 'missing',
+    hasVehicle: Boolean(input.assignment?.vehicleType),
+    compatibilityBand: compatibility.scoreBand,
+    compatibilityTone: compatibility.tone,
+    planStrategyId: selectedPlan.strategyId,
+    publicSatisfactionPreview: input.event.previewEffects?.publicSatisfaction,
+  });
+  const readinessAvoid = [
+    ...(input.eceMemoryContext?.avoidLines ?? []),
+    readinessSnapshot.summary,
+    buildEceReadinessHint(readinessSnapshot, []) ?? '',
+    buildEceMaintenanceHint(
+      input.maintenanceBacklogRuntime
+        ? buildMaintenanceBacklogRuntimePresentation(input.maintenanceBacklogRuntime, {
+            readinessSnapshot,
+          })
+        : buildMaintenanceBacklogFromReadiness(readinessSnapshot),
+      [readinessSnapshot.summary],
+    ) ?? '',
+  ].filter((line): line is string => Boolean(line));
+
+  const memory = buildEceMemorySnapshot(memoryContext);
+  const line = buildDispatchEceLine({
+    memory,
+    context: memoryContext,
+    seed: `${input.event.id}:dispatch:${day}`,
+    readinessRisky:
+      compatibility.scoreBand === 'low' ||
+      compatibility.tone === 'warning' ||
+      overallStatus === 'strained' ||
+      overallStatus === 'limited',
+    planReady: overallStatus === 'ready',
+    avoidLines: readinessAvoid,
+  });
+
+  if (input.isDay1LearningEvent || day === 1) {
     return {
-      title: 'Ece',
-      text: 'Hızlı müdahale seçtin; rota süresi bu planda daha kritik.',
-      tone: 'calm',
+      title: 'Ece Notu',
+      text: line.message,
+      tone: 'teaching',
+      toneLabel: 'Hazır',
     };
   }
 
-  if (compatibility.scoreBand === 'high') {
-    return {
-      title: 'Ece',
-      text: 'Bu ekip seçilen plana uygun görünüyor. Sahaya gönderebilirsin.',
-      tone: 'positive',
-    };
-  }
-
+  const tone = mapEceToneToDispatchAdvisorTone(line.tone);
   return {
-    title: 'Ece',
-    text: 'Atama dengeli görünüyor. Onayladıktan sonra ekibi sahaya yönlendir.',
-    tone: 'calm',
+    title: 'Ece Notu',
+    text: line.message,
+    tone,
+    toneLabel: mapEceToneToToneLabel(line.tone),
   };
 }
 
@@ -524,10 +751,12 @@ function buildDispatchCta(
   assignmentReady: boolean,
   hasSelectedDecision: boolean,
   dispatchState: EventDispatchInteractionState,
+  overallStatus: EventDispatchOverallReadinessStatus,
 ): EventDispatchCta {
   if (dispatchState === 'dispatching') {
     return {
       label: 'Yönlendiriliyor…',
+      disabledLabel: 'Yönlendiriliyor…',
       actionKey: 'disabled',
       enabled: false,
     };
@@ -535,16 +764,31 @@ function buildDispatchCta(
 
   if (!assignmentReady || !hasSelectedDecision) {
     return {
-      label: 'Sahaya Gönder',
+      label: 'Hazırlık Eksik',
+      disabledLabel: 'Önce Kaynakları Kontrol Et',
       actionKey: 'disabled',
       enabled: false,
     };
   }
 
+  if (dispatchState === 'sent') {
+    return {
+      label: 'Ekip sahaya çıktı',
+      disabledLabel: 'Ekip sahaya çıktı',
+      actionKey: 'send_to_field',
+      enabled: false,
+    };
+  }
+
   return {
-    label: dispatchState === 'sent' ? 'Ekip sahaya çıktı' : 'Sahaya Gönder',
+    label: 'Ekibi Sahaya Çıkar',
+    disabledLabel: 'Hazırlık Eksik',
     actionKey: 'send_to_field',
-    enabled: dispatchState !== 'sent',
+    enabled: true,
+    warningSubline:
+      overallStatus === 'strained'
+        ? 'Riskleri kabul ederek sahaya çıkar'
+        : undefined,
   };
 }
 
@@ -609,12 +853,57 @@ export function buildEventDispatchPhasePresentation(
       },
     ),
   };
-  const readinessRows = buildReadinessRows(input, assignmentSummary, compatibility);
+  const readinessPanel = buildDispatchReadinessFromContext({
+    assignmentStatus: assignmentSummary.status,
+    hasVehicle: Boolean(input.assignment?.vehicleType),
+    compatibilityBand: compatibility.scoreBand,
+    compatibilityTone: compatibility.tone,
+    planStrategyId: input.selectedPlanStrategyId,
+    publicSatisfactionPreview: input.event.previewEffects?.publicSatisfaction,
+  });
+  const dispatchReadinessSnapshot = buildOperationReadinessSnapshot({
+    phase: 'dispatch',
+    assignmentStatus: assignmentSummary.status,
+    hasVehicle: Boolean(input.assignment?.vehicleType),
+    compatibilityBand: compatibility.scoreBand,
+    compatibilityTone: compatibility.tone,
+    planStrategyId: input.selectedPlanStrategyId,
+    publicSatisfactionPreview: input.event.previewEffects?.publicSatisfaction,
+  });
+  const maintenanceHint = input.maintenanceBacklogRuntime
+    ? buildMaintenanceRuntimeDispatchHint(
+        buildMaintenanceBacklogRuntimePresentation(input.maintenanceBacklogRuntime, {
+          readinessSnapshot: dispatchReadinessSnapshot,
+        }),
+        [readinessPanel.overallLabel, dispatchReadinessSnapshot.summary],
+      ) ??
+      buildMaintenanceDispatchHint(
+        buildMaintenanceBacklogFromReadiness(dispatchReadinessSnapshot),
+        [readinessPanel.overallLabel, dispatchReadinessSnapshot.summary],
+      )
+    : buildMaintenanceDispatchHint(
+        buildMaintenanceBacklogFromReadiness(dispatchReadinessSnapshot),
+        [readinessPanel.overallLabel, dispatchReadinessSnapshot.summary],
+      );
+  const readinessRows = readinessPanel.items as EventDispatchReadinessRow[];
+  const overallReadiness = {
+    status: readinessPanel.overallStatus as EventDispatchOverallReadinessStatus,
+    label: readinessPanel.overallLabel,
+  };
+  const readiness: EventDispatchReadinessPanel = {
+    title: readinessPanel.title,
+    overallStatus: overallReadiness.status,
+    overallLabel: overallReadiness.label,
+    items: readinessRows,
+    maintenanceHint: maintenanceHint ?? undefined,
+  };
+  const planStrategyId = selectedPlan.strategyId ?? 'balanced_plan';
+  const resourceSummary = buildResourceSummary(input, assignmentSummary, planStrategyId);
   const routePreview = buildRoutePreview(
     input.assignment,
     input.assignmentReady,
     dispatchState,
-    selectedPlan.strategyId ?? 'balanced_plan',
+    planStrategyId,
     input.event,
     {
       day: input.day,
@@ -622,29 +911,57 @@ export function buildEventDispatchPhasePresentation(
       recentVarietyProfiles: input.recentVarietyProfiles,
     },
   );
+  const blockers = buildBlockers(
+    readinessRows,
+    compatibility,
+    assignmentSummary,
+    input.isDay1LearningEvent,
+  );
   const advisorComment = buildEventDispatchAdvisorComment(
     input,
     compatibility,
     selectedPlan,
+    overallReadiness.status,
   );
   const primaryCta = buildDispatchCta(
     input.assignmentReady,
     input.hasSelectedDecision,
     dispatchState,
+    overallReadiness.status,
   );
+  const actions = buildDispatchActions();
+  const phaseTransition = buildOperationPhaseTransitionPresentation({
+    phase: 'dispatch',
+    event: input.event,
+    planLabel: selectedPlan.label,
+    planId: selectedPlan.strategyId,
+    planImpactLabel: selectedPlan.chips.find((chip) => chip.label === 'Etki')?.value,
+    planCostLabel: selectedPlan.chips.find((chip) => chip.label === 'Bedel')?.value,
+    ctaEnabled: primaryCta.enabled,
+    ctaDisabledLabel: primaryCta.disabledLabel,
+    ctaActionKey: primaryCta.actionKey,
+    avoidSummaries: [advisorComment.text, selectedPlan.summary],
+  });
 
   return {
-    title: 'Yönlendir',
-    subtitle: 'Ekibi seçilen plana göre sahaya yönlendir.',
+    title: phaseTransition.shell.title,
+    subtitle: phaseTransition.shell.subtitle,
+    phaseHeading: 'Operasyon Hazırlığı',
+    phaseDescription: 'Seçilen planı ekip, araç ve kaynak durumuna göre sahaya çıkar.',
     selectedPlan,
     assignmentSummary,
+    readiness,
     readinessRows,
+    resourceSummary,
     compatibility,
     routePreview,
+    blockers,
     advisorComment,
+    actions,
     primaryCta,
     dispatchFeedback: buildDispatchFeedback(dispatchState, reducedMotion),
-    accessibilityLabel: `${input.event.title} yönlendirme, ${selectedPlan.label}, ${compatibility.label}`,
+    phaseTransition,
+    accessibilityLabel: `${input.event.title} yönlendirme, ${selectedPlan.label}, ${overallReadiness.label}`,
   };
 }
 
@@ -704,6 +1021,11 @@ export function auditEventDispatchPhasePresentation(
   }
 
   if (!model.advisorComment.text.trim()) issues.push('advisorComment empty');
+  if (!model.advisorComment.toneLabel.trim()) issues.push('advisorComment toneLabel empty');
+  if (model.readiness.items.length !== 4) issues.push('readiness items count invalid');
+  if (model.blockers.items.length > 3) issues.push('blockers above max');
+  if (model.actions.length < 1) issues.push('actions empty');
+  if (!model.primaryCta.disabledLabel.trim()) issues.push('primaryCta disabledLabel empty');
 
   if (model.dispatchFeedback.durationMs < 0 || model.dispatchFeedback.durationMs > 900) {
     issues.push('dispatch feedback duration out of range');

@@ -13,6 +13,10 @@ import {
   isAllowedInspectFindingKind,
   type EventInspectFinding,
 } from '@/features/events/utils/eventInspectPhasePresentation';
+import {
+  auditEventInspectLowerPresentation,
+  buildEventInspectLowerPresentation,
+} from '@/features/events/utils/eventInspectLowerPresentation';
 
 export type VerifyOperationInspectUiOutcome = {
   ok: boolean;
@@ -214,6 +218,51 @@ export function verifyOperationInspectUiScenario(): VerifyOperationInspectUiOutc
     findingsCrash = true;
   }
   assert(checks, !findingsCrash, 'buildEventInspectFindings does not throw');
+
+  const lowerRevealed = buildEventInspectLowerPresentation({
+    event,
+    day: 2,
+    interactionState: 'revealed',
+    confirmedSignalIds: ['field', 'citizen', 'social'],
+    advisorComment: revealedModel.advisorComment,
+    signalsComplete: true,
+  });
+  const lowerIdle = buildEventInspectLowerPresentation({
+    event,
+    day: 2,
+    interactionState: 'idle',
+    confirmedSignalIds: [],
+  });
+  assert(
+    checks,
+    auditEventInspectLowerPresentation(lowerRevealed).length === 0,
+    'lower presentation audit revealed',
+  );
+  assert(
+    checks,
+    auditEventInspectLowerPresentation(lowerIdle).length === 0,
+    'lower presentation audit idle',
+  );
+  assert(
+    checks,
+    lowerRevealed.primaryCta.label === 'Planlamaya Geç',
+    'revealed lower CTA Planlamaya Geç',
+  );
+  assert(
+    checks,
+    lowerIdle.primaryCta.label === 'Sinyalleri Tamamla',
+    'idle lower CTA Sinyalleri Tamamla',
+  );
+  assert(
+    checks,
+    lowerRevealed.evidenceSources.items.every((item) => !item.title.toLowerCase().includes('dinleme')),
+    'no surveillance copy in evidence',
+  );
+  assert(
+    checks,
+    lowerRevealed.actions.every((action) => !['Paylaş', 'Arşivle'].includes(action.label)),
+    'no share/archive actions',
+  );
 
   const failCount = checks.filter((c) => !c.ok).length;
   return {

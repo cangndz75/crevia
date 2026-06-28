@@ -106,6 +106,8 @@ import {
   migrateStrategyHistoryState,
 } from '@/core/strategyHistory/strategyHistoryModel';
 import type { StrategyHistoryStateV1 } from '@/core/strategyHistory/strategyHistoryTypes';
+import { resolveMaintenanceBacklogRuntimeOnPersistLoad } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeMigration';
+import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
 
 import type { GameStore } from './useGameStore';
 
@@ -113,7 +115,8 @@ import type { GameStore } from './useGameStore';
 // Save version & storage key
 // ---------------------------------------------------------------------------
 
-export const SAVE_VERSION: number = 27;
+export const SAVE_VERSION: number = 28;
+const SAVE_VERSION_27 = 27;
 const SAVE_VERSION_26 = 26;
 const SAVE_VERSION_25 = 25;
 const SAVE_VERSION_24 = 24;
@@ -184,6 +187,7 @@ export type PersistedGameState = Pick<
   | 'vehicleMaintenance'
   | 'teamSpecialization'
   | 'strategyHistory'
+  | 'maintenanceBacklogRuntime'
   | 'tutorialState'
   | 'bestPilotScores'
   | 'lastPilotScore'
@@ -234,6 +238,7 @@ export function partialiseGameState(
     vehicleMaintenance: state.vehicleMaintenance,
     teamSpecialization: state.teamSpecialization,
     strategyHistory: state.strategyHistory,
+    maintenanceBacklogRuntime: state.maintenanceBacklogRuntime,
     tutorialState: state.tutorialState,
     bestPilotScores: state.bestPilotScores,
     lastPilotScore: state.lastPilotScore,
@@ -506,6 +511,7 @@ export function normalizePersistedSave(
     version !== SAVE_VERSION_24 &&
     version !== SAVE_VERSION_25 &&
     version !== SAVE_VERSION_26 &&
+    version !== SAVE_VERSION_27 &&
     version !== SAVE_VERSION
   ) {
     return null;
@@ -853,6 +859,13 @@ export function normalizePersistedSave(
         return migrateStrategyHistoryState(raw.strategyHistory, currentDay);
       }
       return createEmptyStrategyHistoryState();
+    })(),
+    maintenanceBacklogRuntime: ((): MaintenanceBacklogRuntimeState => {
+      return resolveMaintenanceBacklogRuntimeOnPersistLoad({
+        rawMaintenanceBacklogRuntime: raw.maintenanceBacklogRuntime,
+        saveVersion: typeof version === 'number' ? version : SAVE_VERSION,
+        currentDay,
+      });
     })(),
     tutorialState: isValidTutorialState(raw.tutorialState)
       ? raw.tutorialState

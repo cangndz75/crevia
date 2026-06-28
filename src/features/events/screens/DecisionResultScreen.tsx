@@ -1,8 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -51,53 +50,41 @@ import { buildEventResultViewModel } from '@/features/events/utils/eventResultPr
 import {
   buildEventResultRevealPresentation,
   type EventResultAction,
+  type EventResultSecondaryAction,
 } from '@/features/events/utils/eventResultRevealPresentation';
 import { buildPostDecisionCityReactionPresentation } from '@/features/events/utils/postDecisionCityReactionPresentation';
 import {
   ResultAdvisorCommentCard,
-  ResultCityReactionCard,
+  ResultCityImpactGrid,
+  ResultDistrictReactionCard,
   ResultFinalActions,
-  ResultImpactCardGrid,
   ResultOutcomeHero,
-  ResultPlanContextStrip,
+  ResultPhaseHeader,
+  ResultPhaseHeading,
+  ResultReportBridgeCard,
+  ResultResourceCostCard,
   ResultRevealItemCard,
+  ResultSecondaryActionsRow,
+  ResultSelectedPlanOutcomeCard,
 } from '@/features/events/components/result/ResultRevealMotionSections';
-import {
-  selectActiveTutorialStepForScreen,
-} from '@/features/tutorial/tutorialSelectors';
+import { OperationPhaseBridgeCard } from '@/features/events/components/event-workflow/OperationPhaseBridgeCard';
+import { OperationPhaseProgressRail } from '@/features/events/components/event-workflow/OperationPhaseProgressRail';
 import { selectLastDecisionResult, useGameStore } from '@/store/useGameStore';
 import { useGameStatus } from '@/store/gameSelectors';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
-import { HeaderAvatar } from '@/ui/components/game-header/HeaderAvatar';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
-import { getTimeGreeting } from '@/core/utils/timeGreeting';
 import {
   CreviaAnimatedCard,
   CreviaAnimatedChip,
   useCreviaReducedMotion,
 } from '@/shared/motion';
 import { TutorialCoachOverlay } from '@/features/tutorial/TutorialCoachOverlay';
+import {
+  selectActiveTutorialStepForScreen,
+} from '@/features/tutorial/tutorialSelectors';
 import { OnboardingCoachBubble } from '@/features/onboarding/components/OnboardingCoachBubble';
 import { useOnboardingHint } from '@/features/onboarding/hooks/useOnboardingHint';
-import { creviaAssets } from '@/core/assets/creviaAssets';
-
-const municipalImage = creviaAssets.buildings.municipalHall3d;
-
-const palette = {
-  background: '#F7F1E6',
-  card: '#FFFDF7',
-  cardSoft: '#FDF8ED',
-  tealDark: '#0E5F5B',
-  teal: '#0F8F86',
-  tealSoft: '#BDEFE7',
-  green: '#4F9653',
-  gold: '#D9AA2B',
-  goldSoft: '#F2D479',
-  textDark: '#183B3A',
-  textMuted: '#6C7A78',
-  border: 'rgba(20, 70, 66, 0.10)',
-  white: '#FFFFFF',
-} as const;
+import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 
 function resolveEventForResult(
   snapshot: DecisionResultSnapshot,
@@ -129,67 +116,14 @@ function resolveEventForResult(
   };
 }
 
-function PremiumResultHeader() {
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const status = useGameStatus();
-  const greeting = useMemo(() => getTimeGreeting(), []);
-
-  return (
-    <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-      <Image source={municipalImage} style={styles.headerBgImage} contentFit="cover" />
-      <View style={styles.headerShade} />
-      <Pressable
-        onPress={() => router.push('/profile' as Href)}
-        accessibilityRole="button"
-        accessibilityLabel="Profili aç">
-        <HeaderAvatar size={54} level={status.level} showLevelBadge />
-      </Pressable>
-      <View style={styles.headerCopy}>
-        <Text style={styles.headerGreeting} numberOfLines={1}>
-          {greeting.title}, {status.playerName} {greeting.emoji}
-        </Text>
-        <View style={styles.headerMetaRow}>
-          <Ionicons name="location" size={12} color="rgba(255,255,255,0.82)" />
-          <Text style={styles.headerMeta} numberOfLines={1}>
-            {status.currentDay}. Gün · Merkez · Sv.{status.level}
-          </Text>
-        </View>
-      </View>
-      <View style={styles.headerActions}>
-        <View style={styles.headerChipRow}>
-          <View style={styles.headerChip}>
-            <Ionicons name="ellipse" size={10} color={palette.gold} />
-            <Text style={styles.headerChipText} numberOfLines={1}>
-              {status.sourceShort}
-            </Text>
-          </View>
-          <View style={styles.headerChip}>
-            <Ionicons name="star" size={11} color={palette.gold} />
-            <Text style={styles.headerChipText} numberOfLines={1}>
-              {status.xp}/{status.xpTarget}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.headerButtonRow}>
-          <View style={[styles.headerRoundButton, styles.headerRoundActive]}>
-            <Ionicons name="bar-chart" size={17} color={palette.tealDark} />
-          </View>
-          <View style={[styles.headerRoundButton, styles.headerRoundGhost]}>
-            <Ionicons name="notifications-outline" size={17} color={palette.white} />
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-}
-
 export function DecisionResultScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useAppTabBarHeight();
+  const gameStatus = useGameStatus();
   const snapshot = useGameStore(selectLastDecisionResult);
   const lastOperationPlanStrategyId = useGameStore((s) => s.lastOperationPlanStrategyId);
+  const maintenanceBacklogRuntime = useGameStore((s) => s.maintenanceBacklogRuntime);
   const gameState = useGameStore((s) => s.gameState);
   const monetization = useGameStore((s) => s.monetization);
   const activeEvents = gameState.events;
@@ -563,34 +497,6 @@ export function DecisionResultScreen() {
     return highlight ?? null;
   }, [result.highlightLines]);
 
-  const revealPresentation = useMemo(
-    () =>
-      buildEventResultRevealPresentation({
-        snapshot: result,
-        event: relatedEvent,
-        isFallback: isMissing,
-        isDay1LearningEvent,
-        day: result.day ?? currentDay,
-        selectedPlanStrategyId: lastOperationPlanStrategyId,
-        carryOverSummary: resultCarryOver?.summary ?? null,
-        authorityProgressLine,
-        showNextDayAction: viewModel.actions.showSecondary,
-        reducedMotion,
-      }),
-    [
-      authorityProgressLine,
-      currentDay,
-      isDay1LearningEvent,
-      isMissing,
-      lastOperationPlanStrategyId,
-      reducedMotion,
-      relatedEvent,
-      result,
-      resultCarryOver?.summary,
-      viewModel.actions.showSecondary,
-    ],
-  );
-
   const cityReaction = useMemo(
     () => buildPostDecisionCityReactionPresentation(isMissing ? null : result),
     [isMissing, result],
@@ -605,6 +511,40 @@ export function DecisionResultScreen() {
         excludeMessages: [cityReaction?.shortSummary ?? ''],
       }),
     [cityReaction, currentDay, result.day],
+  );
+
+  const revealPresentation = useMemo(
+    () =>
+      buildEventResultRevealPresentation({
+        snapshot: result,
+        event: relatedEvent,
+        isFallback: isMissing,
+        isDay1LearningEvent,
+        day: result.day ?? currentDay,
+        selectedPlanStrategyId: lastOperationPlanStrategyId,
+        carryOverSummary: resultCarryOver?.summary ?? null,
+        authorityProgressLine,
+        showNextDayAction: viewModel.actions.showSecondary,
+        reducedMotion,
+        cityReaction,
+        socialEcho: resultSocialEcho,
+        maintenanceBacklogRuntime,
+      }),
+    [
+      authorityProgressLine,
+      cityReaction,
+      currentDay,
+      isDay1LearningEvent,
+      isMissing,
+      lastOperationPlanStrategyId,
+      maintenanceBacklogRuntime,
+      reducedMotion,
+      relatedEvent,
+      result,
+      resultCarryOver?.summary,
+      resultSocialEcho,
+      viewModel.actions.showSecondary,
+    ],
   );
 
   const [visibleRevealCount, setVisibleRevealCount] = useState(0);
@@ -668,6 +608,26 @@ export function DecisionResultScreen() {
     [goHub, goReports, router],
   );
 
+  const handleSecondaryAction = useCallback(
+    (action: EventResultSecondaryAction) => {
+      if (!action.enabled) return;
+      playLightImpactHaptic();
+      switch (action.id) {
+        case 'view_map':
+          router.push('/map' as Href);
+          break;
+        case 'view_recent_impact':
+          router.replace('/' as Href);
+          break;
+        case 'open_note':
+          break;
+        default:
+          break;
+      }
+    },
+    [router],
+  );
+
   const legacyTutorialStep = useGameStore((s) =>
     selectActiveTutorialStepForScreen(s, 'decision_result'),
   );
@@ -680,24 +640,33 @@ export function DecisionResultScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scroll,
-          { paddingBottom: scrollBottomPadding },
+          { paddingTop: insets.top + 4, paddingBottom: scrollBottomPadding },
         ]}>
-        <PremiumResultHeader />
+        <ResultPhaseHeader
+          title={revealPresentation.phaseTransition.shell.title}
+          subtitle={revealPresentation.phaseTransition.shell.subtitle}
+          sourceShort={gameStatus.sourceShort}
+          xpLabel={`${gameStatus.xp}/${gameStatus.xpTarget}`}
+        />
+
+        <OperationPhaseProgressRail
+          progress={revealPresentation.phaseTransition.progress}
+          reducedMotion={reducedMotion}
+        />
 
         <Animated.View entering={FadeInUp.duration(260)} style={styles.resultShell}>
-          <View style={styles.resultTop}>
-            <View style={styles.resultTitleBlock}>
-              <Text style={styles.pageTitle} numberOfLines={1}>
-                {revealPresentation.title}
-              </Text>
-              <Text style={styles.taskLine} numberOfLines={1}>
-                Görev: {revealPresentation.subtitle || result.eventTitle}
-              </Text>
-            </View>
-            <Text style={styles.completedAt} numberOfLines={1}>
-              Tamamlanma: 18:42
-            </Text>
-          </View>
+          <ResultPhaseHeading
+            heading={revealPresentation.phaseHeading}
+            description={revealPresentation.phaseDescription}
+          />
+
+          {revealPresentation.phaseTransition.bridge ? (
+            <OperationPhaseBridgeCard
+              bridge={revealPresentation.phaseTransition.bridge}
+              reducedMotion={reducedMotion}
+              index={1}
+            />
+          ) : null}
 
           <View
             style={styles.revealSection}
@@ -707,25 +676,29 @@ export function DecisionResultScreen() {
               reducedMotion={reducedMotion}
             />
 
-            {revealPresentation.selectedPlanContext ? (
-              <ResultPlanContextStrip
-                context={revealPresentation.selectedPlanContext}
-                reducedMotion={reducedMotion}
-              />
-            ) : null}
-
-            {cityReaction ? (
-              <ResultCityReactionCard
-                reaction={cityReaction}
-                socialEcho={resultSocialEcho}
-                reducedMotion={reducedMotion}
-              />
-            ) : null}
-
-            <ResultImpactCardGrid
-              cards={revealPresentation.impactCards}
+            <ResultCityImpactGrid
+              section={revealPresentation.cityImpact}
               reducedMotion={reducedMotion}
             />
+
+            {revealPresentation.districtReaction ? (
+              <ResultDistrictReactionCard
+                reaction={revealPresentation.districtReaction}
+                reducedMotion={reducedMotion}
+              />
+            ) : null}
+
+            <ResultResourceCostCard
+              section={revealPresentation.resourceCost}
+              reducedMotion={reducedMotion}
+            />
+
+            {revealPresentation.selectedPlanOutcome ? (
+              <ResultSelectedPlanOutcomeCard
+                outcome={revealPresentation.selectedPlanOutcome}
+                reducedMotion={reducedMotion}
+              />
+            ) : null}
 
             <View style={styles.revealList}>
               {revealPresentation.revealItems
@@ -746,8 +719,18 @@ export function DecisionResultScreen() {
                   comment={revealPresentation.advisorComment}
                   reducedMotion={reducedMotion}
                 />
+                <ResultReportBridgeCard
+                  bridge={revealPresentation.reportBridge}
+                  reducedMotion={reducedMotion}
+                />
+                <ResultSecondaryActionsRow
+                  actions={revealPresentation.secondaryActions}
+                  onAction={handleSecondaryAction}
+                  reducedMotion={reducedMotion}
+                />
                 <ResultFinalActions
-                  actions={revealPresentation.finalActions}
+                  primary={revealPresentation.primaryCta}
+                  secondary={revealPresentation.finalActions.slice(1)}
                   onAction={handleResultAction}
                   reducedMotion={reducedMotion}
                 />
@@ -846,139 +829,20 @@ const softShadow = {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: palette.background,
+    backgroundColor: eventDetail.bg,
   },
   scroll: {
-    paddingBottom: 18,
-  },
-  header: {
-    minHeight: 118,
-    paddingHorizontal: 18,
-    paddingBottom: 14,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    paddingHorizontal: 14,
     gap: 10,
-    backgroundColor: palette.tealDark,
-    overflow: 'hidden',
-  },
-  headerBgImage: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.12,
-  },
-  headerShade: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(6, 54, 51, 0.24)',
-  },
-  headerCopy: {
-    flex: 1,
-    minWidth: 0,
-    paddingTop: 10,
-    gap: 6,
-  },
-  headerGreeting: {
-    fontSize: 17,
-    fontWeight: '900',
-    color: palette.white,
-  },
-  headerMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    minWidth: 0,
-  },
-  headerMeta: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 12,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.80)',
-  },
-  headerActions: {
-    alignItems: 'flex-end',
-    gap: 8,
-    flexShrink: 0,
-  },
-  headerChipRow: {
-    flexDirection: 'row',
-    gap: 7,
-  },
-  headerChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    minWidth: 76,
-    maxWidth: 84,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.24)',
-  },
-  headerChipText: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 11,
-    fontWeight: '900',
-    color: palette.white,
-  },
-  headerButtonRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  headerRoundButton: {
-    width: 39,
-    height: 39,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerRoundActive: {
-    backgroundColor: '#FFF1B8',
-  },
-  headerRoundGhost: {
-    backgroundColor: 'rgba(255,255,255,0.10)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
   },
   resultShell: {
-    marginHorizontal: 14,
-    marginTop: -8,
-    backgroundColor: palette.card,
-    borderRadius: 28,
+    backgroundColor: eventDetail.card,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: palette.border,
+    borderColor: 'rgba(6, 63, 59, 0.08)',
     padding: 14,
     gap: 12,
     ...softShadow,
-  },
-  resultTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    minWidth: 0,
-  },
-  resultTitleBlock: {
-    flex: 1,
-    minWidth: 0,
-  },
-  pageTitle: {
-    fontSize: 25,
-    fontWeight: '900',
-    color: palette.textDark,
-  },
-  taskLine: {
-    marginTop: 3,
-    fontSize: 13,
-    fontWeight: '800',
-    color: palette.tealDark,
-  },
-  completedAt: {
-    paddingTop: 6,
-    fontSize: 11,
-    fontWeight: '700',
-    color: palette.textMuted,
-    flexShrink: 0,
   },
   revealSection: {
     gap: 12,

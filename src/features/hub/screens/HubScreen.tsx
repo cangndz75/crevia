@@ -90,6 +90,7 @@ export function HubScreen() {
   const crisisState = useGameStore((s) => s.crisisState);
   const operationalResources = useGameStore((s) => s.operationalResources);
   const operationSignals = useGameStore((s) => s.operationSignals);
+  const maintenanceBacklogRuntime = useGameStore((s) => s.maintenanceBacklogRuntime);
   const decisionHistory = useGameStore(selectDecisionHistory);
   const eventPool = useGameStore((s) => s.eventPool);
   const socialPulseState = useGameStore((s) => s.socialPulseState);
@@ -682,6 +683,7 @@ export function HubScreen() {
         playerLevel: gameStatus.level,
         selectedDistrictName: gameStatus.selectedDistrictName,
         recentDecisionRecord: decisionHistory.at(-1) ?? null,
+        maintenanceBacklogRuntime,
       }),
     [
       cityEchoHubLine,
@@ -692,6 +694,7 @@ export function HubScreen() {
       gameStatus.selectedDistrictName,
       gameStatus.source,
       hubCardVisibility,
+      maintenanceBacklogRuntime,
       hubCityJournalPresentation,
       hubDistrictReportContinuityLine,
       hubEceContextLine,

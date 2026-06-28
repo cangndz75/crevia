@@ -6,13 +6,18 @@ import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import type {
   EventResultAction,
   EventResultAdvisorComment,
+  EventResultCityImpactSection,
+  EventResultDistrictReaction,
   EventResultImpactCard,
   EventResultOutcomeSummary,
+  EventResultOutcomeTone,
+  EventResultReportBridge,
+  EventResultResourceCostSection,
   EventResultRevealItem,
+  EventResultSecondaryAction,
+  EventResultSelectedPlanOutcome,
   EventResultSelectedPlanContext,
 } from '@/features/events/utils/eventResultRevealPresentation';
-import type { PostDecisionCityReactionPresentation } from '@/features/events/utils/postDecisionCityReactionPresentation';
-import type { SocialEchoPresentation } from '@/core/socialEcho';
 import { CreviaMotionView } from '@/shared/motion';
 import { CreviaAnimatedPressable } from '@/core/animations/CreviaAnimatedPressable';
 import { shadows } from '@/ui/theme/shadows';
@@ -25,6 +30,43 @@ const OUTCOME_TONE: Record<EventResultOutcomeSummary['tone'], string> = {
   warning: eventDetail.orange,
 };
 
+const RESULT_TONE: Record<EventResultOutcomeTone, { color: string; bg: string; border: string }> =
+  {
+    positive: {
+      color: eventDetail.success,
+      bg: 'rgba(62, 158, 106, 0.12)',
+      border: 'rgba(62, 158, 106, 0.24)',
+    },
+    mixed: {
+      color: eventDetail.tealDark,
+      bg: 'rgba(11, 107, 97, 0.10)',
+      border: 'rgba(11, 107, 97, 0.20)',
+    },
+    warning: {
+      color: eventDetail.orange,
+      bg: 'rgba(199, 137, 37, 0.12)',
+      border: 'rgba(199, 137, 37, 0.28)',
+    },
+    critical: {
+      color: '#B84A35',
+      bg: 'rgba(184, 74, 53, 0.12)',
+      border: 'rgba(184, 74, 53, 0.28)',
+    },
+    neutral: {
+      color: eventDetail.teal,
+      bg: 'rgba(11, 107, 97, 0.08)',
+      border: 'rgba(11, 107, 97, 0.16)',
+    },
+  };
+
+const DISTRICT_TONE: Record<EventResultDistrictReaction['tone'], string> = {
+  positive: eventDetail.success,
+  mixed: eventDetail.tealDark,
+  warning: eventDetail.orange,
+  critical: '#B84A35',
+  neutral: eventDetail.teal,
+};
+
 const ITEM_TONE: Record<EventResultRevealItem['tone'], string> = {
   positive: eventDetail.success,
   neutral: eventDetail.teal,
@@ -34,47 +76,31 @@ const ITEM_TONE: Record<EventResultRevealItem['tone'], string> = {
 
 const ADVISOR_TONE: Record<
   EventResultAdvisorComment['tone'],
-  { border: string; icon: IconName }
+  { border: string; icon: IconName; pillBg: string; pillText: string }
 > = {
-  calm: { border: 'rgba(11, 107, 97, 0.18)', icon: 'leaf-outline' },
-  teaching: { border: 'rgba(216, 167, 46, 0.35)', icon: 'school-outline' },
-  warning: { border: 'rgba(199, 137, 37, 0.35)', icon: 'alert-circle-outline' },
-  positive: { border: 'rgba(62, 158, 106, 0.28)', icon: 'checkmark-circle-outline' },
-};
-
-const CITY_REACTION_TONE: Record<
-  PostDecisionCityReactionPresentation['tone'],
-  { color: string; bg: string; border: string; label: string }
-> = {
-  positive: {
-    color: eventDetail.success,
-    bg: 'rgba(62, 158, 106, 0.10)',
-    border: 'rgba(62, 158, 106, 0.24)',
-    label: 'Olumlu',
+  calm: {
+    border: 'rgba(11, 107, 97, 0.18)',
+    icon: 'leaf-outline',
+    pillBg: 'rgba(11, 107, 97, 0.1)',
+    pillText: eventDetail.tealDark,
   },
-  mixed: {
-    color: eventDetail.tealDark,
-    bg: 'rgba(11, 107, 97, 0.10)',
-    border: 'rgba(11, 107, 97, 0.20)',
-    label: 'Karma',
+  teaching: {
+    border: 'rgba(216, 167, 46, 0.35)',
+    icon: 'school-outline',
+    pillBg: 'rgba(216, 167, 46, 0.14)',
+    pillText: '#B77713',
   },
   warning: {
-    color: eventDetail.orange,
-    bg: 'rgba(199, 137, 37, 0.12)',
-    border: 'rgba(199, 137, 37, 0.28)',
-    label: 'İzle',
+    border: 'rgba(199, 137, 37, 0.35)',
+    icon: 'alert-circle-outline',
+    pillBg: 'rgba(199, 137, 37, 0.14)',
+    pillText: eventDetail.orange,
   },
-  critical: {
-    color: '#B84A35',
-    bg: 'rgba(184, 74, 53, 0.12)',
-    border: 'rgba(184, 74, 53, 0.28)',
-    label: 'Kritik',
-  },
-  neutral: {
-    color: eventDetail.teal,
-    bg: 'rgba(11, 107, 97, 0.08)',
-    border: 'rgba(11, 107, 97, 0.16)',
-    label: 'Dengeli',
+  positive: {
+    border: 'rgba(62, 158, 106, 0.28)',
+    icon: 'checkmark-circle-outline',
+    pillBg: 'rgba(62, 158, 106, 0.12)',
+    pillText: eventDetail.success,
   },
 };
 
@@ -97,47 +123,140 @@ function resolveIcon(iconKey: string): IconName {
     'git-branch-outline': 'git-branch-outline',
     'bookmark-outline': 'bookmark-outline',
     'library-outline': 'library-outline',
+    'shield-checkmark-outline': 'shield-checkmark-outline',
+    'chatbubble-ellipses-outline': 'chatbubble-ellipses-outline',
+    'map-outline': 'map-outline',
+    'arrow-forward': 'arrow-forward',
   };
   return known[iconKey] ?? 'ellipse-outline';
 }
 
-type ResultImpactCardGridProps = {
-  cards: EventResultImpactCard[];
+type ResultPhaseHeaderProps = {
+  title: string;
+  subtitle?: string;
+  sourceShort?: string;
+  xpLabel?: string;
+};
+
+export function ResultPhaseHeader({
+  title,
+  subtitle,
+  sourceShort,
+  xpLabel,
+}: ResultPhaseHeaderProps) {
+  return (
+    <CreviaMotionView motionKind="card_enter" surface="shared" index={0} style={styles.phaseHeader}>
+      <View style={styles.phaseHeaderSpacer} />
+      <View style={styles.phaseHeaderTitleBlock}>
+        <Text style={styles.phaseHeaderTitle}>{title}</Text>
+        {subtitle ? (
+          <Text style={styles.phaseHeaderSubtitle} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        ) : (
+          <View style={styles.phaseHeaderAccent}>
+            <View style={styles.phaseHeaderAccentLine} />
+            <Ionicons name="sparkles" size={10} color="#C58B18" />
+            <View style={styles.phaseHeaderAccentLine} />
+          </View>
+        )}
+      </View>
+      <View style={styles.resourceBadges}>
+        {sourceShort ? (
+          <View style={[styles.resourceBadge, styles.resourceBadgeMint]}>
+            <Ionicons name="diamond-outline" size={13} color={eventDetail.teal} />
+            <Text style={styles.resourceText}>{sourceShort}</Text>
+          </View>
+        ) : null}
+        {xpLabel ? (
+          <View style={[styles.resourceBadge, styles.resourceBadgeGold]}>
+            <Ionicons name="star-outline" size={13} color="#B77713" />
+            <Text style={[styles.resourceText, styles.resourceTextGold]}>{xpLabel}</Text>
+          </View>
+        ) : null}
+      </View>
+    </CreviaMotionView>
+  );
+}
+
+type ResultPhaseHeadingProps = {
+  heading: string;
+  description: string;
+};
+
+export function ResultPhaseHeading({ heading, description }: ResultPhaseHeadingProps) {
+  return (
+    <View style={styles.phaseHeadingWrap}>
+      <Text style={styles.phaseHeading}>{heading}</Text>
+      <Text style={styles.phaseDescription}>{description}</Text>
+    </View>
+  );
+}
+
+type ResultCityImpactGridProps = {
+  section: EventResultCityImpactSection;
   reducedMotion?: boolean;
 };
 
+export function ResultCityImpactGrid({
+  section,
+  reducedMotion = false,
+}: ResultCityImpactGridProps) {
+  return (
+    <View style={styles.sectionWrap}>
+      <Text style={styles.sectionTitle}>{section.title}</Text>
+      <CreviaMotionView
+        motionKind="card_enter"
+        surface="decision_result"
+        index={2}
+        reducedMotion={reducedMotion}
+        style={styles.impactGrid}>
+        {section.items.map((card, cardIndex) => (
+          <View
+            key={card.id}
+            style={[
+              styles.impactCard,
+              shadows.soft,
+              cardIndex % 2 === 0 && styles.impactCardLeft,
+            ]}>
+            <View style={styles.impactHeader}>
+              <Ionicons
+                name={resolveIcon(card.iconKey)}
+                size={15}
+                color={ITEM_TONE[card.tone]}
+              />
+              <Text
+                style={[styles.impactValueLabel, { color: ITEM_TONE[card.tone] }]}
+                numberOfLines={1}>
+                {card.valueLabel}
+              </Text>
+            </View>
+            <Text style={styles.impactTitle} numberOfLines={1}>
+              {card.title}
+            </Text>
+            <Text style={styles.impactBody} numberOfLines={2}>
+              {card.body}
+            </Text>
+          </View>
+        ))}
+      </CreviaMotionView>
+    </View>
+  );
+}
+
+/** @deprecated use ResultCityImpactGrid */
 export function ResultImpactCardGrid({
   cards,
   reducedMotion = false,
-}: ResultImpactCardGridProps) {
+}: {
+  cards: EventResultImpactCard[];
+  reducedMotion?: boolean;
+}) {
   return (
-    <CreviaMotionView
-      motionKind="card_enter"
-      surface="decision_result"
-      index={1}
+    <ResultCityImpactGrid
+      section={{ title: 'Şehir Etkisi', items: cards }}
       reducedMotion={reducedMotion}
-      style={styles.impactGrid}>
-      {cards.map((card) => (
-        <View key={card.id} style={[styles.impactCard, shadows.soft]}>
-          <View style={styles.impactHeader}>
-            <Ionicons
-              name={resolveIcon(card.iconKey)}
-              size={15}
-              color={ITEM_TONE[card.tone]}
-            />
-            <Text style={[styles.impactDelta, { color: ITEM_TONE[card.tone] }]} numberOfLines={1}>
-              {card.deltaText}
-            </Text>
-          </View>
-          <Text style={styles.impactTitle} numberOfLines={1}>
-            {card.title}
-          </Text>
-          <Text style={styles.impactBody} numberOfLines={2}>
-            {card.body}
-          </Text>
-        </View>
-      ))}
-    </CreviaMotionView>
+    />
   );
 }
 
@@ -150,6 +269,8 @@ export function ResultOutcomeHero({
   outcome,
   reducedMotion = false,
 }: ResultOutcomeHeroProps) {
+  const toneStyle = RESULT_TONE[outcome.resultTone];
+
   return (
     <CreviaMotionView
       motionKind="result_emphasis"
@@ -157,28 +278,233 @@ export function ResultOutcomeHero({
       index={0}
       reducedMotion={reducedMotion}
       intensity="highlighted"
-      style={[styles.outcomeCard, shadows.soft]}>
-      <View style={styles.outcomeHeader}>
-        <View
-          style={[
-            styles.outcomeIcon,
-            { borderColor: OUTCOME_TONE[outcome.tone] },
-          ]}>
-          <Ionicons
-            name={resolveIcon(outcome.iconKey)}
-            size={22}
-            color={OUTCOME_TONE[outcome.tone]}
-          />
-        </View>
-        <View style={styles.outcomeCopy}>
-          <Text style={styles.outcomeLabel} numberOfLines={1}>
-            {outcome.label}
-          </Text>
-          <Text style={styles.outcomeBody} numberOfLines={2}>
-            {outcome.body}
+      style={[
+        styles.outcomeCard,
+        shadows.soft,
+        { borderColor: toneStyle.border, backgroundColor: '#FFFDF7' },
+      ]}>
+      <View style={styles.outcomeTopRow}>
+        <Text style={styles.outcomeSectionTitle} numberOfLines={1}>
+          {outcome.label}
+        </Text>
+        <View style={[styles.outcomeStatusPill, { backgroundColor: toneStyle.bg }]}>
+          <Text style={[styles.outcomeStatusText, { color: toneStyle.color }]} numberOfLines={1}>
+            {outcome.statusLabel}
           </Text>
         </View>
       </View>
+      <Text style={styles.outcomeEventTitle} numberOfLines={2}>
+        {outcome.eventTitle}
+      </Text>
+      <View style={styles.outcomeMetaRow}>
+        <Ionicons name="location-outline" size={12} color={eventDetail.teal} />
+        <Text style={styles.outcomeMetaText} numberOfLines={1}>
+          {outcome.districtName}
+        </Text>
+      </View>
+      <Text style={styles.outcomeBody} numberOfLines={3}>
+        {outcome.body}
+      </Text>
+    </CreviaMotionView>
+  );
+}
+
+type ResultDistrictReactionCardProps = {
+  reaction: EventResultDistrictReaction;
+  reducedMotion?: boolean;
+};
+
+export function ResultDistrictReactionCard({
+  reaction,
+  reducedMotion = false,
+}: ResultDistrictReactionCardProps) {
+  const color = DISTRICT_TONE[reaction.tone];
+
+  return (
+    <CreviaMotionView
+      motionKind="card_enter"
+      surface="decision_result"
+      index={3}
+      reducedMotion={reducedMotion}
+      style={[styles.districtCard, shadows.soft]}>
+      <Text style={styles.sectionTitle}>{reaction.title}</Text>
+      <View style={styles.districtQuoteRow}>
+        <View style={[styles.districtSourcePill, { backgroundColor: `${color}18` }]}>
+          <Text style={[styles.districtSourceText, { color }]} numberOfLines={1}>
+            {reaction.sourceLabel}
+          </Text>
+        </View>
+        <Text style={styles.districtMessage} numberOfLines={2}>
+          {reaction.message}
+        </Text>
+      </View>
+    </CreviaMotionView>
+  );
+}
+
+type ResultResourceCostCardProps = {
+  section: EventResultResourceCostSection;
+  reducedMotion?: boolean;
+};
+
+export function ResultResourceCostCard({
+  section,
+  reducedMotion = false,
+}: ResultResourceCostCardProps) {
+  return (
+    <CreviaMotionView
+      motionKind="card_enter"
+      surface="decision_result"
+      index={4}
+      reducedMotion={reducedMotion}
+      style={[styles.resourceCostCard, shadows.soft]}>
+      <Text style={styles.sectionTitle}>{section.title}</Text>
+      <Text style={styles.resourceCostSummary} numberOfLines={2}>
+        {section.summary}
+      </Text>
+      {section.maintenanceHint ? (
+        <Text
+          style={[
+            styles.resourceCostMaintenanceHint,
+            {
+              color:
+                section.maintenanceHintTone === 'critical'
+                  ? '#C44B3F'
+                  : section.maintenanceHintTone === 'warning'
+                    ? eventDetail.orange
+                    : eventDetail.textMuted,
+            },
+          ]}
+          numberOfLines={2}>
+          {section.maintenanceHint}
+        </Text>
+      ) : null}
+      <View style={styles.resourceCostRow}>
+        {section.items.map((item) => (
+          <View key={item.id} style={styles.resourceCostChip}>
+            <Text style={styles.resourceCostChipLabel} numberOfLines={1}>
+              {item.label}
+            </Text>
+            <Text
+              style={[
+                styles.resourceCostChipValue,
+                { color: ITEM_TONE[item.tone === 'positive' ? 'positive' : item.tone] },
+              ]}
+              numberOfLines={1}>
+              {item.value}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </CreviaMotionView>
+  );
+}
+
+type ResultSelectedPlanOutcomeCardProps = {
+  outcome: EventResultSelectedPlanOutcome;
+  reducedMotion?: boolean;
+};
+
+export function ResultSelectedPlanOutcomeCard({
+  outcome,
+  reducedMotion = false,
+}: ResultSelectedPlanOutcomeCardProps) {
+  return (
+    <CreviaMotionView
+      motionKind="chip_appear"
+      surface="decision_result"
+      index={5}
+      reducedMotion={reducedMotion}
+      style={[styles.planOutcomeCard, shadows.soft]}>
+      <Text style={styles.sectionTitle}>{outcome.title}</Text>
+      <View style={styles.planOutcomeTagRow}>
+        <View style={styles.planOutcomeTag}>
+          <Text style={styles.planOutcomeTagText} numberOfLines={1}>
+            {outcome.planLabel}
+          </Text>
+        </View>
+      </View>
+      <Text style={styles.planOutcomeSummary} numberOfLines={2}>
+        {outcome.summary}
+      </Text>
+    </CreviaMotionView>
+  );
+}
+
+type ResultReportBridgeCardProps = {
+  bridge: EventResultReportBridge;
+  reducedMotion?: boolean;
+};
+
+export function ResultReportBridgeCard({
+  bridge,
+  reducedMotion = false,
+}: ResultReportBridgeCardProps) {
+  return (
+    <CreviaMotionView
+      motionKind="card_enter"
+      surface="decision_result"
+      index={7}
+      reducedMotion={reducedMotion}
+      style={[styles.reportBridgeCard, shadows.soft]}>
+      <Text style={styles.sectionTitle}>{bridge.title}</Text>
+      <Text style={styles.reportBridgeSummary} numberOfLines={2}>
+        {bridge.summary}
+      </Text>
+      <View style={styles.reportBridgeChipRow}>
+        {bridge.chips.map((chip) => (
+          <View key={chip.label} style={styles.reportBridgeChip}>
+            <Text style={styles.reportBridgeChipLabel} numberOfLines={1}>
+              {chip.label}
+            </Text>
+            <Text
+              style={[
+                styles.reportBridgeChipValue,
+                { color: ITEM_TONE[chip.tone === 'positive' ? 'positive' : chip.tone] },
+              ]}
+              numberOfLines={1}>
+              {chip.value}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </CreviaMotionView>
+  );
+}
+
+type ResultSecondaryActionsRowProps = {
+  actions: EventResultSecondaryAction[];
+  onAction: (action: EventResultSecondaryAction) => void;
+  reducedMotion?: boolean;
+};
+
+export function ResultSecondaryActionsRow({
+  actions,
+  onAction,
+  reducedMotion = false,
+}: ResultSecondaryActionsRowProps) {
+  return (
+    <CreviaMotionView
+      motionKind="card_enter"
+      surface="decision_result"
+      index={8}
+      reducedMotion={reducedMotion}
+      style={styles.secondaryActionsGrid}>
+      {actions.map((action) => (
+        <CreviaAnimatedPressable
+          key={action.id}
+          onPress={() => onAction(action)}
+          disabled={!action.enabled}
+          reduceMotion={reducedMotion}
+          accessibilityRole="button"
+          accessibilityLabel={action.label}
+          style={[styles.secondaryActionTile, !action.enabled && styles.ctaDisabled]}>
+          <Ionicons name={resolveIcon(action.iconKey)} size={16} color={eventDetail.tealDark} />
+          <Text style={styles.secondaryActionLabel} numberOfLines={2}>
+            {action.label}
+          </Text>
+        </CreviaAnimatedPressable>
+      ))}
     </CreviaMotionView>
   );
 }
@@ -257,113 +583,6 @@ export function ResultPlanContextStrip({
   );
 }
 
-type ResultCityReactionCardProps = {
-  reaction: PostDecisionCityReactionPresentation;
-  socialEcho?: SocialEchoPresentation | null;
-  reducedMotion?: boolean;
-};
-
-export function ResultCityReactionCard({
-  reaction,
-  socialEcho,
-  reducedMotion = false,
-}: ResultCityReactionCardProps) {
-  const tone = CITY_REACTION_TONE[reaction.tone];
-  const socialTone = socialEcho ? CITY_REACTION_TONE[socialEcho.tone] : tone;
-
-  return (
-    <CreviaMotionView
-      motionKind="card_enter"
-      surface="decision_result"
-      index={2}
-      reducedMotion={reducedMotion}
-      style={[styles.cityReactionCard, { borderColor: tone.border }, shadows.soft]}>
-      <View style={styles.cityReactionHeader}>
-        <View style={[styles.cityReactionIcon, { backgroundColor: tone.bg }]}>
-          <Ionicons name="pulse-outline" size={17} color={tone.color} />
-        </View>
-        <View style={styles.cityReactionTitleBlock}>
-          <Text style={styles.cityReactionEyebrow} numberOfLines={1}>
-            Şehir Tepkisi
-          </Text>
-          <Text style={styles.cityReactionTitle} numberOfLines={2}>
-            {reaction.headline}
-          </Text>
-        </View>
-        <View style={[styles.cityReactionToneChip, { backgroundColor: tone.bg }]}>
-          <Text style={[styles.cityReactionToneText, { color: tone.color }]} numberOfLines={1}>
-            {tone.label}
-          </Text>
-        </View>
-      </View>
-
-      <Text style={styles.cityReactionSummary} numberOfLines={2}>
-        {reaction.shortSummary}
-      </Text>
-
-      <View style={styles.cityReactionImpactGrid}>
-        {reaction.impactItems.map((item) => {
-          const itemTone = CITY_REACTION_TONE[item.tone];
-          return (
-            <View key={item.id} style={[styles.cityReactionImpact, { borderColor: itemTone.border }]}>
-              <Text style={styles.cityReactionImpactLabel} numberOfLines={1}>
-                {item.label}
-              </Text>
-              <Text style={[styles.cityReactionImpactValue, { color: itemTone.color }]} numberOfLines={1}>
-                {item.valueText}
-              </Text>
-              <Text style={styles.cityReactionImpactLine} numberOfLines={2}>
-                {item.line}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
-
-      <View style={styles.cityReactionEchoList}>
-        {reaction.resourceEchoes.slice(0, 4).map((echo) => {
-          const echoTone = CITY_REACTION_TONE[echo.tone];
-          return (
-            <View key={echo.id} style={styles.cityReactionEchoRow}>
-              <View style={styles.cityReactionEchoTitleWrap}>
-                <Text style={styles.cityReactionEchoTitle} numberOfLines={1}>
-                  {echo.title}
-                </Text>
-                <View style={[styles.cityReactionEchoStatus, { backgroundColor: echoTone.bg }]}>
-                  <Text style={[styles.cityReactionEchoStatusText, { color: echoTone.color }]} numberOfLines={1}>
-                    {echo.statusLabel}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.cityReactionEchoLine} numberOfLines={1}>
-                {echo.line}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
-
-      <View style={styles.cityReactionSocialRow}>
-        <Ionicons
-          name="chatbubble-ellipses-outline"
-          size={14}
-          color={socialTone.color}
-        />
-        <View style={[styles.cityReactionSocialSource, { backgroundColor: socialTone.bg }]}>
-          <Text
-            style={[styles.cityReactionSocialSourceText, { color: socialTone.color }]}
-            numberOfLines={1}>
-            {socialEcho?.title ?? reaction.socialEcho.sourceLabel}
-          </Text>
-        </View>
-        <Text style={styles.cityReactionSocialText} numberOfLines={2}>
-          {socialEcho?.message ?? reaction.socialEcho.line}
-        </Text>
-      </View>
-    </CreviaMotionView>
-  );
-}
-
 type ResultAdvisorCommentCardProps = {
   comment: EventResultAdvisorComment;
   reducedMotion?: boolean;
@@ -379,16 +598,23 @@ export function ResultAdvisorCommentCard({
     <CreviaMotionView
       motionKind="card_enter"
       surface="decision_result"
-      index={8}
+      index={6}
       reducedMotion={reducedMotion}
       style={[styles.advisorCard, { borderColor: tone.border }]}>
       <View style={styles.advisorHeader}>
-        <Ionicons name={tone.icon} size={16} color={eventDetail.tealDark} />
+        <View style={styles.advisorMonogram}>
+          <Text style={styles.advisorMonogramText}>E</Text>
+        </View>
         <Text style={styles.advisorTitle} numberOfLines={1}>
           {comment.title}
         </Text>
+        <View style={[styles.advisorTonePill, { backgroundColor: tone.pillBg }]}>
+          <Text style={[styles.advisorTonePillText, { color: tone.pillText }]} numberOfLines={1}>
+            {comment.toneLabel}
+          </Text>
+        </View>
       </View>
-      <Text style={styles.advisorText} numberOfLines={3}>
+      <Text style={styles.advisorText} numberOfLines={2}>
         {comment.text}
       </Text>
     </CreviaMotionView>
@@ -396,20 +622,19 @@ export function ResultAdvisorCommentCard({
 }
 
 type ResultFinalActionsProps = {
-  actions: EventResultAction[];
+  primary: EventResultAction;
+  secondary?: EventResultAction[];
   onAction: (action: EventResultAction) => void;
   reducedMotion?: boolean;
 };
 
 export function ResultFinalActions({
-  actions,
+  primary,
+  secondary = [],
   onAction,
   reducedMotion = false,
 }: ResultFinalActionsProps) {
-  const primary = actions[0];
-  const secondary = actions.slice(1).filter((action) => action.enabled);
-
-  if (!primary) return null;
+  const enabledSecondary = secondary.filter((action) => action.enabled);
 
   return (
     <CreviaMotionView
@@ -426,13 +651,13 @@ export function ResultFinalActions({
         accessibilityLabel={primary.label}
         accessibilityState={{ disabled: !primary.enabled }}
         style={[styles.primaryCta, !primary.enabled && styles.ctaDisabled]}>
-        <Ionicons name="home-outline" size={18} color="#FFFFFF" />
         <Text style={styles.primaryCtaText} numberOfLines={1}>
           {primary.label}
         </Text>
+        <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
       </CreviaAnimatedPressable>
 
-      {secondary.map((action) => (
+      {enabledSecondary.map((action) => (
         <CreviaAnimatedPressable
           key={action.id}
           onPress={() => onAction(action)}
@@ -452,41 +677,157 @@ export function ResultFinalActions({
 }
 
 const styles = StyleSheet.create({
+  phaseHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 4,
+    minWidth: 0,
+  },
+  phaseHeaderSpacer: {
+    width: 40,
+    flexShrink: 0,
+  },
+  phaseHeaderTitleBlock: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'center',
+    gap: 4,
+  },
+  phaseHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: eventDetail.textDark,
+  },
+  phaseHeaderSubtitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: eventDetail.textMuted,
+  },
+  phaseHeaderAccent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  phaseHeaderAccentLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(6, 63, 59, 0.10)',
+    maxWidth: 48,
+  },
+  resourceBadges: {
+    flexDirection: 'row',
+    gap: 6,
+    flexShrink: 0,
+  },
+  resourceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderWidth: 1,
+  },
+  resourceBadgeMint: {
+    backgroundColor: 'rgba(11, 107, 97, 0.08)',
+    borderColor: 'rgba(11, 107, 97, 0.14)',
+  },
+  resourceBadgeGold: {
+    backgroundColor: 'rgba(216, 167, 46, 0.12)',
+    borderColor: 'rgba(216, 167, 46, 0.22)',
+  },
+  resourceText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: eventDetail.tealDark,
+  },
+  resourceTextGold: {
+    color: '#B77713',
+  },
+  phaseHeadingWrap: {
+    gap: 4,
+    paddingHorizontal: 2,
+  },
+  phaseHeading: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: eventDetail.textDark,
+  },
+  phaseDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    color: eventDetail.textMuted,
+  },
+  sectionWrap: {
+    gap: 8,
+    minWidth: 0,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: eventDetail.tealDark,
+  },
   outcomeCard: {
     backgroundColor: eventDetail.card,
     borderRadius: eventDetail.smallRadius,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(6, 63, 59, 0.08)',
+    gap: 8,
+    minWidth: 0,
   },
-  outcomeHeader: {
+  outcomeTopRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  outcomeIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1.5,
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    flexShrink: 0,
+    justifyContent: 'space-between',
+    gap: 8,
+    minWidth: 0,
   },
-  outcomeCopy: {
+  outcomeSectionTitle: {
     flex: 1,
     minWidth: 0,
-    gap: 4,
-  },
-  outcomeLabel: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '800',
+    color: eventDetail.tealDark,
+    textTransform: 'uppercase',
+  },
+  outcomeStatusPill: {
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    flexShrink: 0,
+  },
+  outcomeStatusText: {
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  outcomeEventTitle: {
+    fontSize: 17,
+    fontWeight: '900',
     color: eventDetail.textDark,
+    lineHeight: 22,
+  },
+  outcomeMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minWidth: 0,
+  },
+  outcomeMetaText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 12,
+    fontWeight: '700',
+    color: eventDetail.teal,
   },
   outcomeBody: {
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: '600',
     color: eventDetail.textMuted,
   },
@@ -494,27 +835,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    minWidth: 0,
   },
   impactCard: {
-    flexBasis: '31%',
+    width: '48%',
     flexGrow: 1,
-    minHeight: 112,
+    minHeight: 108,
     borderRadius: eventDetail.smallRadius,
     backgroundColor: eventDetail.card,
     borderWidth: 1,
     borderColor: 'rgba(6, 63, 59, 0.06)',
     padding: 10,
-    gap: 6,
+    gap: 5,
+    minWidth: 0,
   },
+  impactCardLeft: {},
   impactHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 5,
   },
-  impactDelta: {
-    fontSize: 10,
+  impactValueLabel: {
+    fontSize: 11,
     fontWeight: '900',
+    flexShrink: 1,
   },
   impactTitle: {
     fontSize: 12,
@@ -584,196 +929,240 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: eventDetail.textMuted,
   },
+  districtCard: {
+    backgroundColor: eventDetail.card,
+    borderRadius: eventDetail.smallRadius,
+    padding: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(6, 63, 59, 0.06)',
+    minWidth: 0,
+  },
+  districtQuoteRow: {
+    gap: 6,
+    minWidth: 0,
+  },
+  districtSourcePill: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  districtSourceText: {
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  districtMessage: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
+    color: eventDetail.textDark,
+  },
+  resourceCostCard: {
+    backgroundColor: eventDetail.card,
+    borderRadius: eventDetail.smallRadius,
+    padding: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(6, 63, 59, 0.06)',
+    minWidth: 0,
+  },
+  resourceCostSummary: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '600',
+    color: eventDetail.textMuted,
+  },
+  resourceCostMaintenanceHint: {
+    marginTop: 6,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '600',
+  },
+  resourceCostRow: {
+    flexDirection: 'row',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  resourceCostChip: {
+    flex: 1,
+    minWidth: '30%',
+    borderRadius: 10,
+    backgroundColor: 'rgba(6, 63, 59, 0.04)',
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    gap: 2,
+  },
+  resourceCostChipLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: eventDetail.textMuted,
+  },
+  resourceCostChipValue: {
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  planOutcomeCard: {
+    backgroundColor: eventDetail.card,
+    borderRadius: eventDetail.smallRadius,
+    padding: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(6, 63, 59, 0.06)',
+    minWidth: 0,
+  },
+  planOutcomeTagRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  planOutcomeTag: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(11, 107, 97, 0.10)',
+  },
+  planOutcomeTagText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: eventDetail.tealDark,
+  },
+  planOutcomeSummary: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '600',
+    color: eventDetail.textDark,
+  },
+  reportBridgeCard: {
+    backgroundColor: '#F4FBF8',
+    borderRadius: eventDetail.smallRadius,
+    padding: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(31, 107, 94, 0.16)',
+    minWidth: 0,
+  },
+  reportBridgeSummary: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '600',
+    color: '#2A5C56',
+  },
+  reportBridgeChipRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  reportBridgeChip: {
+    flex: 1,
+    minWidth: 0,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    gap: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(31, 107, 94, 0.10)',
+  },
+  reportBridgeChipLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: eventDetail.textMuted,
+  },
+  reportBridgeChipValue: {
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  secondaryActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  secondaryActionTile: {
+    width: '31%',
+    flexGrow: 1,
+    minHeight: 64,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(6, 63, 59, 0.10)',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 8,
+    minWidth: 0,
+  },
+  secondaryActionLabel: {
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '800',
+    color: eventDetail.tealDark,
+    textAlign: 'center',
+  },
   advisorCard: {
     backgroundColor: eventDetail.card,
     borderRadius: eventDetail.smallRadius,
     padding: 12,
     gap: 6,
     borderWidth: 1,
+    minWidth: 0,
   },
   advisorHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+    minWidth: 0,
   },
-  advisorTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: eventDetail.tealDark,
-  },
-  advisorText: {
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '600',
-    color: eventDetail.textDark,
-  },
-  cityReactionCard: {
-    backgroundColor: eventDetail.card,
-    borderRadius: eventDetail.smallRadius,
-    padding: 12,
-    gap: 10,
-    borderWidth: 1,
-  },
-  cityReactionHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 9,
-  },
-  cityReactionIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  advisorMonogram: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(11, 107, 97, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  cityReactionTitleBlock: {
+  advisorMonogramText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: eventDetail.tealDark,
+  },
+  advisorTitle: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
-  },
-  cityReactionEyebrow: {
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 12,
     fontWeight: '800',
     color: eventDetail.tealDark,
-    textTransform: 'uppercase',
   },
-  cityReactionTitle: {
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: '900',
-    color: eventDetail.textDark,
-  },
-  cityReactionToneChip: {
+  advisorTonePill: {
     borderRadius: 999,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    flexShrink: 0,
-  },
-  cityReactionToneText: {
-    fontSize: 10,
-    lineHeight: 12,
-    fontWeight: '900',
-  },
-  cityReactionSummary: {
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '600',
-    color: eventDetail.textMuted,
-  },
-  cityReactionImpactGrid: {
-    flexDirection: 'row',
-    gap: 7,
-  },
-  cityReactionImpact: {
-    flex: 1,
-    minWidth: 0,
-    borderRadius: 12,
-    borderWidth: 1,
-    backgroundColor: '#FFFFFF',
-    padding: 8,
-    gap: 3,
-  },
-  cityReactionImpactLabel: {
-    fontSize: 10,
-    lineHeight: 13,
-    fontWeight: '800',
-    color: eventDetail.textMuted,
-  },
-  cityReactionImpactValue: {
-    fontSize: 14,
-    lineHeight: 17,
-    fontWeight: '900',
-    fontVariant: ['tabular-nums'],
-  },
-  cityReactionImpactLine: {
-    fontSize: 10,
-    lineHeight: 13,
-    fontWeight: '600',
-    color: eventDetail.textDark,
-  },
-  cityReactionEchoList: {
-    gap: 6,
-  },
-  cityReactionEchoRow: {
-    borderRadius: 11,
-    backgroundColor: 'rgba(6, 63, 59, 0.04)',
-    paddingHorizontal: 9,
-    paddingVertical: 7,
-    gap: 3,
-  },
-  cityReactionEchoTitleWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  cityReactionEchoTitle: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: '900',
-    color: eventDetail.textDark,
-  },
-  cityReactionEchoStatus: {
-    borderRadius: 999,
-    paddingHorizontal: 7,
     paddingVertical: 3,
     flexShrink: 0,
   },
-  cityReactionEchoStatusText: {
-    fontSize: 9,
-    lineHeight: 11,
-    fontWeight: '900',
-  },
-  cityReactionEchoLine: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: '600',
-    color: eventDetail.textMuted,
-  },
-  cityReactionSocialRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 7,
-    borderRadius: 12,
-    backgroundColor: 'rgba(11, 107, 97, 0.07)',
-    paddingHorizontal: 9,
-    paddingVertical: 8,
-  },
-  cityReactionSocialSource: {
-    maxWidth: 106,
-    borderRadius: 999,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    flexShrink: 0,
-  },
-  cityReactionSocialSourceText: {
+  advisorTonePillText: {
     fontSize: 10,
-    lineHeight: 12,
     fontWeight: '900',
   },
-  cityReactionSocialText: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: '700',
+  advisorText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
     color: eventDetail.textDark,
   },
   actionsWrap: {
     gap: 10,
   },
   primaryCta: {
-    minHeight: eventDetail.ctaHeight,
+    minHeight: 52,
     borderRadius: 999,
-    backgroundColor: eventDetail.teal,
+    backgroundColor: eventDetail.tealDark,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(217, 170, 43, 0.35)',
   },
   primaryCtaText: {
     fontSize: 16,

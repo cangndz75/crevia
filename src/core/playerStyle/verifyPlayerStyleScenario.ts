@@ -21,6 +21,13 @@ import {
   selectPrimaryPlayerStyle,
   shouldShowPlayerStyle,
 } from './playerStylePresentation';
+import {
+  buildPlayerStylePresentationCard,
+  buildPlayerStyleProfileCard,
+  buildPlayerStyleReportLine,
+  buildPlayerStyleEceHint,
+  buildConfidenceLabel,
+} from './playerStyleCardPresentation';
 import { PLAYER_STYLE_IDS, PLAYER_STYLE_SIGNAL_KINDS, type PlayerStyleInput } from './playerStyleTypes';
 import {
   validatePlayerStyleForbiddenWords,
@@ -440,6 +447,7 @@ export function verifyPlayerStyleScenario(): { ok: boolean; warn: boolean; check
     assert(
       checks,
       emptyProfile.advisorLine.toLowerCase().includes('gözlem') ||
+        emptyProfile.title.includes('Yeni') ||
         emptyProfile.title.includes('Gözlem'),
       'unknown observation language',
       'unknown lang',
@@ -486,8 +494,8 @@ export function verifyPlayerStyleScenario(): { ok: boolean; warn: boolean; check
   record(assert(checks, day7.advisorLine.length <= 180 + 40, 'day7 advisor length bounded', 'day7 len'));
 
   record(assert(checks, !readRepo('src/core/playerStyle/playerStyleRules.ts').includes('Math.random'), 'rules no random', 'rules random'));
-  record(assert(checks, PLAYER_STYLE_SIGNAL_KINDS.length === 9, 'signal kind count 9', 'signal count'));
-  record(assert(checks, PLAYER_STYLE_IDS.length === 8, 'style id count 8', 'style count'));
+  record(assert(checks, PLAYER_STYLE_SIGNAL_KINDS.length === 11, 'signal kind count 11', 'signal count'));
+  record(assert(checks, PLAYER_STYLE_IDS.length === 10, 'style id count 10', 'style count'));
   record(assert(checks, buildPlayerStyleProfile(baseInput({ day: 8, hasRealPostPilotData: false })).visible === false || buildPlayerStyleProfile(baseInput({ day: 8, hasRealPostPilotData: false })).styleId === 'unknown', 'day8 no data', 'day8'));
   record(assert(checks, crisisProfile.styleId === 'crisis_watcher' || crisisProfile.score > 0, 'crisis profile valid', 'crisis profile'));
   record(assert(checks, fastProfile.strengthLine.length > 0, 'strength line', 'strength'));
@@ -499,7 +507,7 @@ export function verifyPlayerStyleScenario(): { ok: boolean; warn: boolean; check
   record(assert(checks, inferDecisionKindFromText('Önleyici plan') === 'preventive_route', 'infer preventive', 'infer prev'));
   record(assert(checks, inferDecisionKindFromText('Rotasyon koru') === 'resource_heavy', 'infer resource', 'infer res'));
   record(assert(checks, inferDecisionKindFromText('Sosyal iletişim') === 'communication_first', 'infer social', 'infer soc'));
-  record(assert(checks, selectPrimaryPlayerStyle({ fast_responder: 10, preventive_planner: 1, public_focused: 0, resource_guardian: 0, crisis_watcher: 0, balanced_operator: 0, inconsistent_operator: 0, unknown: 0 }, 5, fastObs) === 'fast_responder', 'select fast primary', 'select fast'));
+  record(assert(checks, selectPrimaryPlayerStyle({ fast_responder: 10, preventive_planner: 1, public_focused: 0, resource_guardian: 0, crisis_watcher: 0, balanced_operator: 0, route_focused: 0, district_loyalist: 0, inconsistent_operator: 0, unknown: 0 }, 5, fastObs) === 'fast_responder', 'select fast primary', 'select fast'));
   record(assert(checks, scorePlayerStylesFromObservations([]).fast_responder === 0, 'empty scores zero', 'empty scores'));
   record(assert(checks, validatePlayerStyleForbiddenWords(fastProfile).length === 0, 'fast forbidden clean', 'fast forbidden'));
   record(assert(checks, validatePlayerStyleNoJudgementLanguage(inconsistentProfile).length === 0, 'inconsistent judgement clean', 'inc judgement'));
@@ -520,6 +528,63 @@ export function verifyPlayerStyleScenario(): { ok: boolean; warn: boolean; check
   record(assert(checks, heavyObs.some((o) => o.kind === 'resource_heavy'), 'heavy obs kind', 'heavy kind'));
   record(assert(checks, validatePlayerStyleTextLength(day7).length === 0, 'day7 text valid', 'day7 text'));
   record(assert(checks, checks.length >= 120, `at least 120 checks (${checks.length})`, `only ${checks.length}`));
+
+  const styleCard = buildPlayerStylePresentationCard(day4);
+  record(assert(checks, styleCard.sectionTitle === 'Yönetici Tarzı', 'card section title', 'card section title'));
+  record(assert(checks, styleCard.microcopy.includes('Son kararlarına'), 'card microcopy', 'card microcopy'));
+  record(assert(checks, styleCard.confidenceLabel.length > 0, 'card confidence label', 'card confidence label'));
+  record(assert(checks, styleCard.evidenceChips.length >= 1 && styleCard.evidenceChips.length <= 3, 'card evidence chips', 'card evidence chips'));
+  record(
+    assert(
+      checks,
+      new Set(styleCard.evidenceChips.map((chip) => chip.value)).size === styleCard.evidenceChips.length,
+      'card evidence chips deduped',
+      'card evidence chips deduped',
+    ),
+  );
+
+  const reportLine = buildPlayerStyleReportLine(fastProfile, []);
+  record(assert(checks, Boolean(reportLine && reportLine.length > 20), 'report line non-empty', 'report line'));
+  const eceHint = buildPlayerStyleEceHint(fastProfile, []);
+  record(assert(checks, Boolean(eceHint && eceHint.length <= 120), 'ece hint bounded', 'ece hint'));
+  record(assert(checks, buildConfidenceLabel('high') === 'Güçlü eğilim', 'confidence high label', 'confidence high'));
+
+  const growthCard = buildPlayerStyleProfileCard(
+    baseInput({
+      day: 4,
+      decisionHistory: [
+        { day: 3, decisionLabel: 'Hızlı müdahale', eventTitle: 'A' },
+        { day: 4, decisionLabel: 'Acil ekip', eventTitle: 'B' },
+      ],
+    }),
+  );
+  record(assert(checks, growthCard.label.length > 0, 'growth card label', 'growth card label'));
+
+  record(
+    assert(
+      checks,
+      readRepo('src/features/progression/screens/ProgressionScreen.tsx').includes('GrowthManagerStyleCard'),
+      'ProgressionScreen manager style card',
+      'progression card',
+    ),
+  );
+  record(
+    assert(
+      checks,
+      readRepo('src/features/progression/utils/growthScreenPresentation.ts').includes('managerStyle'),
+      'growth presentation managerStyle',
+      'growth managerStyle',
+    ),
+  );
+  record(
+    assert(
+      checks,
+      readRepo('src/features/reports/utils/endOfDayReportPresentation.ts').includes('managementStyleLine'),
+      'report managementStyleLine',
+      'report style line',
+    ),
+  );
+  record(assert(checks, existsSync(join(REPO_ROOT, 'src/core/playerStyle/playerStyleCardPresentation.ts')), 'card presentation file', 'card file'));
 
   return { ok: failCount === 0, warn: false, checks };
 }

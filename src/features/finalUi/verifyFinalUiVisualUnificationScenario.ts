@@ -241,7 +241,7 @@ export function verifyFinalUiVisualUnificationScenario(): {
     if (!pass) ok = false;
   };
 
-  record(assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION, 'SAVE_VERSION 27'));
+  record(assert(checks, SAVE_VERSION === EXPECTED_SAVE_VERSION, `SAVE_VERSION ${SAVE_VERSION}`));
   record(assert(checks, !readRepo('src/store/gamePersist.ts').includes('finalUiVisual'), 'persist shape unchanged'));
   record(assert(checks, !readRepo('src/core/game/applyDecision.ts').includes('finalUiVisual'), 'applyDecision unchanged'));
   record(assert(checks, !readRepo('src/core/dayPipeline/dayPipelineOrchestrator.ts').includes('finalUiVisual'), 'day pipeline unchanged'));

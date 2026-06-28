@@ -809,6 +809,7 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           selectedStrategyId={effectivePlanStrategyId}
           onSelectStrategy={setSelectedPlanStrategyId}
           onConfirmPlan={() => setOperationStep('assign')}
+          onBack={() => setOperationStep('inspect')}
           phaseHint={workflowPhaseHint}
           gameDay={currentDay}
           isDay1LearningEvent={isDay1LearningEvent}
@@ -828,7 +829,6 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
   if (showDispatchPhase) {
     return (
       <View style={styles.root}>
-        <EventHeader />
         <EventDispatchPhase
           event={event}
           bottomPadding={bottomPadding}
@@ -839,6 +839,7 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           onSelectDecision={setSelectedDecisionId}
           affordabilityByDecisionId={decisionAffordability}
           onDispatch={handleDispatchPress}
+          onBack={() => setOperationStep('plan')}
           dispatchDisabled={!effectiveSelectedId || !assignmentReady}
           decisionCardHint={decisionCardHint}
           onDismissHint={(id) => dismissHint(id)}
@@ -867,7 +868,6 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
   if (showFieldPhase) {
     return (
       <View style={styles.root}>
-        <EventHeader />
         <EventFieldPhase
           event={event}
           decision={selectedDecision}
@@ -876,6 +876,7 @@ export function EventDetailDecisionScreen({ eventId }: EventDetailDecisionScreen
           personnelPreview={fieldPersonnelPreview}
           vehiclePreview={fieldVehiclePreview}
           onComplete={handleApplyPress}
+          onBack={() => setOperationStep('assign')}
           completeDisabled={!effectiveSelectedId || applying}
           applying={applying}
           phaseHint={workflowPhaseHint}

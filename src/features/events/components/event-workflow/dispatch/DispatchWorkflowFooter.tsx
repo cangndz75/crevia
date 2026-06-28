@@ -15,6 +15,7 @@ type Props = {
   disabled?: boolean;
   loading?: boolean;
   ctaLabel?: string;
+  warningSubline?: string;
 };
 
 export function DispatchWorkflowFooter({
@@ -23,6 +24,7 @@ export function DispatchWorkflowFooter({
   disabled = false,
   loading = false,
   ctaLabel,
+  warningSubline,
 }: Props) {
   const insets = useSafeAreaInsets();
   const inactive = disabled && !loading;
@@ -36,6 +38,12 @@ export function DispatchWorkflowFooter({
           {summaryLine}
         </Text>
       </View>
+
+      {warningSubline && !inactive && !loading ? (
+        <Text style={styles.warningSubline} numberOfLines={1}>
+          {warningSubline}
+        </Text>
+      ) : null}
 
       <CreviaAnimatedPressable
         onPress={onPress}
@@ -53,10 +61,14 @@ export function DispatchWorkflowFooter({
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={styles.gradient}>
-          <Ionicons name="navigate-outline" size={22} color="#FFFFFF" />
           <Text style={styles.label} numberOfLines={1}>
             {loading ? 'Yönlendiriliyor…' : label}
           </Text>
+          {!loading && !inactive ? (
+            <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+          ) : (
+            <Ionicons name="navigate-outline" size={22} color="#FFFFFF" />
+          )}
         </LinearGradient>
       </CreviaAnimatedPressable>
     </View>
@@ -89,6 +101,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: eventDetail.tealDark,
+  },
+  warningSubline: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: eventDetail.orange,
+    textAlign: 'center',
+    marginTop: -4,
   },
   pressable: {
     borderRadius: 999,

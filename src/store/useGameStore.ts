@@ -433,6 +433,12 @@ import {
 } from '@/core/strategyHistory/strategyHistoryAdapters';
 import type { StrategyHistoryStateV1 } from '@/core/strategyHistory/strategyHistoryTypes';
 import {
+  buildMaintenanceBacklogDayCloseBundle,
+  buildMaintenanceBacklogDayCloseInput,
+  createEmptyMaintenanceBacklogRuntimeState,
+} from '@/core/maintenanceBacklog';
+import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
+import {
   appendVehicleMaintenanceDayCloseArchive,
   buildVehicleMaintenanceDayCloseBundle,
 } from '@/core/vehicleMaintenance/vehicleMaintenanceWiring';
@@ -500,6 +506,7 @@ type GameStoreState = {
   vehicleMaintenance: VehicleMaintenanceStateV1;
   teamSpecialization: TeamSpecializationStateV1;
   strategyHistory: StrategyHistoryStateV1;
+  maintenanceBacklogRuntime: MaintenanceBacklogRuntimeState;
   /** Oturum içi mahalle hamlesi seçimi — persist edilmez. */
   districtOperationActionState: CreviaDistrictOperationActionState;
   tutorialState: TutorialState;
@@ -862,6 +869,7 @@ function applySeedBundle(
   | 'vehicleMaintenance'
   | 'teamSpecialization'
   | 'strategyHistory'
+  | 'maintenanceBacklogRuntime'
   | 'districtOperationActionState'
   | 'tutorialState'
   | 'bestPilotScores'
@@ -931,6 +939,7 @@ function applySeedBundle(
     vehicleMaintenance: createInitialVehicleMaintenanceState(bundle.gameState.city.day),
     teamSpecialization: createInitialTeamSpecializationState(bundle.gameState.city.day),
     strategyHistory: createEmptyStrategyHistoryState(),
+    maintenanceBacklogRuntime: createEmptyMaintenanceBacklogRuntimeState(),
     districtOperationActionState: createInitialDistrictOperationActionState(),
     tutorialState: { ...INITIAL_TUTORIAL_STATE },
     bestPilotScores: [],
@@ -3736,6 +3745,29 @@ export const useGameStore = create<GameStore>()(
           teamSpecializationCloseInput,
         );
 
+        const closingDecision = current.decisionHistory.find((r) => r.day === closingDay);
+        const maintenanceBacklogBundle = buildMaintenanceBacklogDayCloseBundle(
+          current.maintenanceBacklogRuntime,
+          buildMaintenanceBacklogDayCloseInput({
+            day: closingDay,
+            staffMorale: current.gameState.city.morale,
+            budget: current.gameState.city.budget,
+            publicSatisfaction: current.gameState.city.publicSatisfaction,
+            warningsCount: dailyReport.warnings?.length ?? 0,
+            operationSignals: {
+              personnel: operationSignalsAfterDay.personnel,
+              vehicles: operationSignalsAfterDay.vehicles,
+              containers: operationSignalsAfterDay.containers,
+              districts: operationSignalsAfterDay.districts,
+            },
+            relatedEventId: closingDecision?.eventId,
+            districtId: focalNeighborhood ?? undefined,
+            districtName: focalNeighborhood
+              ? districtNames[focalNeighborhood]
+              : undefined,
+          }),
+        );
+
         set({
           gameState: withSyncedPulse({
             ...nextGameState,
@@ -3800,6 +3832,7 @@ export const useGameStore = create<GameStore>()(
           cityArchive: cityArchiveWithTeamSpecialization,
           vehicleMaintenance: vehicleMaintenanceBundle.vehicleMaintenance,
           teamSpecialization: teamSpecializationBundle.teamSpecialization,
+          maintenanceBacklogRuntime: maintenanceBacklogBundle.maintenanceBacklogRuntime,
         });
       },
 
@@ -4390,6 +4423,8 @@ export const useGameStore = create<GameStore>()(
             ),
           strategyHistory:
             saved.strategyHistory ?? createEmptyStrategyHistoryState(),
+          maintenanceBacklogRuntime:
+            saved.maintenanceBacklogRuntime ?? createEmptyMaintenanceBacklogRuntimeState(),
           districtOperationActionState: createInitialDistrictOperationActionState(),
           tutorialState: saved.tutorialState ?? { ...INITIAL_TUTORIAL_STATE },
           bestPilotScores: saved.bestPilotScores ?? [],

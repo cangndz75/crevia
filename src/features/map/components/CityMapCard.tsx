@@ -11,6 +11,7 @@ import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import type { ActiveOperationMapBinding } from '@/core/activeOperationMapBinding/activeOperationMapBindingTypes';
 import type { ActiveOperationMapCardModel } from '@/core/activeOperationMapBinding';
 import type { MapBubbleMotionCue, MapDistrictMotionCue, MapJournalMotionCue } from '@/core/mapReactionsMotion/mapReactionMotionTypes';
+import type { MapReactionLiteModel } from '@/core/mapReactions/mapReactionTypes';
 import { getNeighborhoodMapCharacterLine } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 import type { OperationalResourcesState } from '@/core/operationalResources/operationalResourceTypes';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
@@ -27,6 +28,10 @@ import {
 } from '@/features/map/utils/mapGameplayPresentation';
 import { createInitialOperationalResourcesState } from '@/core/operationalResources/operationalResourceState';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
+import {
+  applyTacticalMotionToMarkers,
+  buildMapTacticalMotionPresentation,
+} from '@/features/map/utils/mapTacticalMotionPresentation';
 import { mapUi } from '@/features/map/utils/mapUiTokens';
 
 import { type MapDistrictId } from '../data/mapAssets';
@@ -65,6 +70,7 @@ type Props = {
   mapGameplayPresentation?: MapGameplayPresentation | null;
   operationalResources?: OperationalResourcesState;
   mapMotionPresentation?: MapMotionPresentationResult | null;
+  mapReactionLiteModel?: MapReactionLiteModel | null;
   recentDecisionRecord?: DecisionRecord | null;
   onLayersPress: () => void;
   onDistrictSelect: (districtId: MapDistrictId) => void;
@@ -88,6 +94,7 @@ export function CityMapCard({
   operationalResources,
   activeEvents,
   mapMotionPresentation = null,
+  mapReactionLiteModel = null,
   recentDecisionRecord = null,
   onLayersPress,
   onDistrictSelect,
@@ -138,9 +145,38 @@ export function CityMapCard({
     return index >= 0 ? index : 0;
   }, [navigableMarkers, selectedMarkerId]);
 
+  const tacticalMotion = useMemo(
+    () =>
+      buildMapTacticalMotionPresentation({
+        day: gameDay,
+        reducedMotion: reducedMotionMode,
+        markers: mapGameplayPresentation?.markers ?? [],
+        layers: mapGameplayPresentation?.layers,
+        selectedMarkerId: selectedMarker?.id ?? null,
+        activeOperationBinding: activeOperationBinding ?? null,
+        mapReactionLiteModel,
+        recentDecisionRecord,
+      }),
+    [
+      activeOperationBinding,
+      gameDay,
+      mapGameplayPresentation?.layers,
+      mapGameplayPresentation?.markers,
+      mapReactionLiteModel,
+      recentDecisionRecord,
+      reducedMotionMode,
+      selectedMarker?.id,
+    ],
+  );
+
+  const displayMarkers = useMemo(
+    () => applyTacticalMotionToMarkers(mapGameplayPresentation?.markers ?? [], tacticalMotion),
+    [mapGameplayPresentation?.markers, tacticalMotion],
+  );
+
   const bottomPanel = useMemo(() => {
     if (!selectedMarker) return null;
-    return buildMapBottomPanelPresentation(selectedMarker, {
+    const panel = buildMapBottomPanelPresentation(selectedMarker, {
       activeOperationCard,
       activeOperationBinding: activeOperationBinding ?? null,
       activeEventCount: activeEvents.length,
@@ -152,6 +188,11 @@ export function CityMapCard({
       navIndex: selectedMarkerIndex,
       navTotal: navigableMarkers.length,
     });
+    return {
+      ...panel,
+      tacticalMicroLine: tacticalMotion.tacticalMicroLine,
+      layerHintLine: tacticalMotion.layerHints[0]?.label,
+    };
   }, [
     activeEvents,
     activeOperationBinding,
@@ -162,6 +203,8 @@ export function CityMapCard({
     recentDecisionRecord,
     selectedMarker,
     selectedMarkerIndex,
+    tacticalMotion.layerHints,
+    tacticalMotion.tacticalMicroLine,
   ]);
 
   const focusMarker = useCallback((markerId: string) => {
@@ -251,9 +294,10 @@ export function CityMapCard({
 
         {!isDetail && presentation ? (
           <MapGameplayMarkerLayer
-            markers={presentation.markers}
+            markers={displayMarkers}
             selectedMarkerId={selectedMarker?.id ?? null}
             reducedMotionMode={reducedMotionMode}
+            tacticalMotion={tacticalMotion}
             onMarkerPress={handleMarkerPress}
           />
         ) : null}

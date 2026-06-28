@@ -466,7 +466,7 @@ export const INTERACTION_CONTRACT_REGISTRY: InteractionContract[] = [
     id: 'event_dispatch_footer',
     componentName: 'DispatchWorkflowFooter',
     surface: 'event_dispatch',
-    label: 'Sahaya Yönlendir',
+    label: 'Ekibi Sahaya Çıkar',
     visualAffordance: 'primary_cta',
     expectedAction: 'state_update',
     target: {

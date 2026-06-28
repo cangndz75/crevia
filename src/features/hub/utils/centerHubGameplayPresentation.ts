@@ -1,9 +1,24 @@
 import type { CenterHomeCoreSections } from './centerHomePresentation';
 import type { DecisionRecord } from '@/core/models/DecisionRecord';
 import {
+  buildHubReadinessSnapshotFromPresentation,
+  buildMaintenanceBacklogRuntimePresentation,
+  buildMaintenanceRuntimeHubSignal,
+} from '@/core/maintenanceBacklog';
+import {
+  buildHubPeriodGoalCard,
+  buildPeriodGoalContextFromHub,
+  type HubPeriodGoalCardPresentation,
+} from '@/core/periodGoals';
+import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
+import {
   buildCenterHubDepthPresentation,
   type CenterHubDepthPresentation,
 } from './centerHubDepthPresentation';
+import {
+  buildMiniCityFeedPresentation,
+  type MiniCityFeedPresentation,
+} from './centerMiniCityFeedPresentation';
 import {
   centerHomeHasDuplicateVisibleActions,
   enrichCenterActionCandidate,
@@ -163,6 +178,8 @@ export type CenterHubGameplayPresentation = CenterHubDepthPresentation & {
   neighborhoodEvents: CenterNeighborhoodEventsPresentation;
   quickCommands: CenterQuickCommandsPresentation;
   dailyRewardMini?: CenterDailyRewardMiniStripModel;
+  miniCityFeed: MiniCityFeedPresentation;
+  cityAgenda: HubPeriodGoalCardPresentation;
 };
 
 export type {
@@ -172,6 +189,13 @@ export type {
   CenterUnlockPreviewMiniPresentation,
   CenterHubDepthPresentation,
 } from './centerHubDepthPresentation';
+
+export type {
+  MiniCityFeedPresentation,
+  MiniCityFeedItem,
+  MiniCityFeedItemType,
+  MiniCityFeedItemTone,
+} from './centerMiniCityFeedPresentation';
 
 const FALLBACK_QUICK_COMMANDS: {
   title: string;
@@ -809,6 +833,13 @@ function buildNextTargetHeroPresentation(
 export function buildCenterHubGameplayPresentation(
   presentation: CenterHomeCoreSections,
   recentDecision?: DecisionRecord | null,
+  maintenanceBacklogRuntime?: MaintenanceBacklogRuntimeState | null,
+  periodGoalOptions?: {
+    socialPulseState?: import('@/core/social/socialTypes').SocialPulseState | null;
+    tomorrowRisk?: import('@/core/tomorrowRisk/tomorrowRiskTypes').TomorrowRiskModel | null;
+    playerStyleId?: import('@/core/playerStyle/playerStyleTypes').PlayerStyleId | null;
+    selectedDistrictName?: string | null;
+  },
 ): CenterHubGameplayPresentation {
   const nextActions = buildNextActionsPresentation(presentation);
   const quickCommands = buildQuickCommandsPresentation(presentation, nextActions.actions);
@@ -820,14 +851,63 @@ export function buildCenterHubGameplayPresentation(
     recentDecision,
   );
 
+  const neighborhoodEvents = buildCenterNeighborhoodEventsPresentation(presentation);
+  const hubReadinessSnapshot = buildHubReadinessSnapshotFromPresentation(presentation);
+  const maintenancePresentation = buildMaintenanceBacklogRuntimePresentation(
+    maintenanceBacklogRuntime ?? { items: [], attentionStreaks: {} },
+    { readinessSnapshot: hubReadinessSnapshot },
+  );
+  const maintenanceHubSignal = buildMaintenanceRuntimeHubSignal(maintenancePresentation, [
+    strategicPulse.compact.advisorHint ?? '',
+    depth.advisorMiniDirective.directive,
+    presentation.operationSignals.summaryLine ?? '',
+    presentation.advisorSuggestion.recommendation,
+  ].filter((line): line is string => Boolean(line?.trim())));
+  const miniCityFeed = buildMiniCityFeedPresentation({
+    presentation,
+    recentImpactSummary: depth.recentImpactSummary,
+    advisorMiniDirective: depth.advisorMiniDirective,
+    districtFocus: depth.districtFocus,
+    strategicPulse,
+    neighborhoodEvents,
+    maintenanceHubSignal,
+  });
+
+  const periodGoalContext = buildPeriodGoalContextFromHub(presentation, {
+    maintenanceBacklogRuntime,
+    socialPulseState: periodGoalOptions?.socialPulseState,
+    tomorrowRisk: periodGoalOptions?.tomorrowRisk,
+    playerStyleId: periodGoalOptions?.playerStyleId,
+    selectedDistrictName: periodGoalOptions?.selectedDistrictName,
+    decisionHistory: recentDecision
+      ? [
+          {
+            day: recentDecision.day,
+            eventTitle: recentDecision.eventTitle,
+            decisionLabel: recentDecision.decisionLabel,
+          },
+        ]
+      : [],
+  });
+  const cityAgenda = buildHubPeriodGoalCard(periodGoalContext, [
+    strategicPulse.compact.advisorHint ?? '',
+    depth.advisorMiniDirective.directive,
+    maintenanceHubSignal?.title ?? '',
+    maintenanceHubSignal?.subtitle ?? '',
+    miniCityFeed.title,
+    miniCityFeed.subtitle,
+  ].filter((line): line is string => Boolean(line?.trim())));
+
   return {
     ...depth,
     nextTargetHero: buildNextTargetHeroPresentation(presentation, nextActions.actions),
     nextActions,
     strategicPulse,
-    neighborhoodEvents: buildCenterNeighborhoodEventsPresentation(presentation),
+    neighborhoodEvents,
     quickCommands,
     dailyRewardMini: buildCenterDailyRewardMiniStrip(presentation),
+    miniCityFeed,
+    cityAgenda,
   };
 }
 

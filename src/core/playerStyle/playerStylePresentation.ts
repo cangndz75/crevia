@@ -1,5 +1,8 @@
 import type { EventEchoDecisionKind } from '@/core/contentPacks/eventEchoTypes';
 
+import type { DominantStrategyDetectorResult } from '@/core/dominantStrategyDetector/dominantStrategyDetectorTypes';
+import type { StrategyHistoryStateV1 } from '@/core/strategyHistory/strategyHistoryTypes';
+
 import {
   BALANCED_GAP_THRESHOLD,
   DECISION_KIND_SIGNAL,
@@ -126,6 +129,83 @@ function observationFromSignal(
 }
 
 type EventResultLike = NonNullable<PlayerStyleInput['recentResults']>[number];
+
+export type { EventResultLike };
+
+function inferObservationsFromDominantStrategy(
+  dominant: DominantStrategyDetectorResult | null | undefined,
+  day: number,
+): PlayerStyleObservation[] {
+  if (!dominant?.isVisible || dominant.pattern === 'none') return [];
+  const patternMap: Partial<
+    Record<string, { kind: PlayerStyleSignalKind; weight: number }>
+  > = {
+    rapid_response_overuse: { kind: 'fast_response', weight: 2 },
+    preventive_overuse: { kind: 'preventive', weight: 2 },
+    balanced_default_overuse: { kind: 'district_balance', weight: 1.8 },
+    resource_saving_overuse: { kind: 'resource_saving', weight: 2 },
+    public_trust_overfocus: { kind: 'social_priority', weight: 2 },
+    crisis_priority_overfocus: { kind: 'crisis_prevention', weight: 2 },
+    district_repetition: { kind: 'district_focus', weight: 2.5 },
+    route_heavy_repetition: { kind: 'route_continuity', weight: 2.5 },
+    inconsistent_switching: { kind: 'mixed', weight: 2 },
+  };
+  const mapping = patternMap[dominant.pattern];
+  if (!mapping) return [];
+  return [
+    {
+      id: `pstyle-dominant-${dominant.pattern}`,
+      day,
+      kind: mapping.kind,
+      weight: mapping.weight,
+      source: 'fallback',
+      debugReason: `dominant:${dominant.pattern}`,
+    },
+  ];
+}
+
+function inferObservationsFromStrategyHistory(
+  strategyHistory: StrategyHistoryStateV1 | null | undefined,
+  day: number,
+): PlayerStyleObservation[] {
+  if (!strategyHistory) return [];
+  const observations: PlayerStyleObservation[] = [];
+  const recentDecisions = strategyHistory.decisionHistory.filter((r) => r.day <= day).slice(-8);
+  const districtCounts = new Map<string, number>();
+
+  for (const record of recentDecisions) {
+    if (record.districtId) {
+      districtCounts.set(record.districtId, (districtCounts.get(record.districtId) ?? 0) + 1);
+    }
+    const domainTags = record.domainTags ?? [];
+    if (domainTags.includes('vehicle_route') || domainTags.includes('personnel')) {
+      observations.push({
+        id: `pstyle-strategy-route-${record.id}`,
+        day,
+        kind: 'route_continuity',
+        weight: 1.2,
+        source: 'fallback',
+        domain: domainTags[0],
+        debugReason: 'strategy:route_domain',
+      });
+    }
+  }
+
+  const topDistrict = [...districtCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+  if (topDistrict && topDistrict[1] >= 3) {
+    observations.push({
+      id: `pstyle-strategy-district-${topDistrict[0]}`,
+      day,
+      kind: 'district_focus',
+      weight: 1.8,
+      source: 'fallback',
+      districtId: topDistrict[0],
+      debugReason: 'strategy:district_repeat',
+    });
+  }
+
+  return observations;
+}
 
 export function inferObservationFromEventResult(
   resultLike: EventResultLike | undefined,
@@ -324,6 +404,8 @@ export function buildPlayerStyleObservations(input: PlayerStyleInput): PlayerSty
   all.push(...inferObservationFromMapBeforeAfter(input.mapBeforeAfter, day));
   all.push(...inferObservationFromEventDomain(input.eventDomainFocus, day));
   all.push(...inferObservationFromDecisionHistory(input.decisionHistory, day));
+  all.push(...inferObservationsFromStrategyHistory(input.strategyHistory, day));
+  all.push(...inferObservationsFromDominantStrategy(input.dominantStrategy, day));
 
   for (const report of input.dailyReports ?? []) {
     const summary = report.summary?.toLowerCase() ?? '';
@@ -385,11 +467,6 @@ export function buildPlayerStyleAdvisorLine(profile: PlayerStyleProfile, day: nu
     line = `${line} Pilot tarzın şekilleniyor; kişisel özet yakında daha net görünecek.`;
   }
   return clamp(line, ADVISOR_LINE_LIMIT);
-}
-
-export function buildPlayerStyleReportLine(profile: PlayerStyleProfile): string | null {
-  if (!profile.visible || profile.confidence === 'none') return null;
-  return clamp(`Tarz gözlemi: ${profile.title} — ${profile.summary}`, SUMMARY_LIMIT);
 }
 
 export function buildPlayerStyleHubInsight(profile: PlayerStyleProfile): string | null {

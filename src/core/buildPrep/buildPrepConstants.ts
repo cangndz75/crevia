@@ -9,7 +9,7 @@ export const BUILD_PREP_PRIVACY_CHECKLIST =
 export const BUILD_PREP_VERSIONING_POLICY_SECTION = 'Versioning policy';
 
 /** Gameplay persist schema — must not be confused with app store version. */
-export const BUILD_PREP_EXPECTED_SAVE_VERSION = 27;
+export const BUILD_PREP_EXPECTED_SAVE_VERSION = 28;
 
 export const BUILD_PREP_APP_CONFIG_PATH = 'app.json';
 
@@ -50,5 +50,5 @@ export const BUILD_PREP_SAVE_VERSION_CONFUSION_PATTERNS: RegExp[] = [
   /SAVE_VERSION\s*=\s*app\s*version/i,
   /app\s*version\s*=\s*SAVE_VERSION/i,
   /SAVE_VERSION.*semver/i,
-  /store\s*version.*SAVE_VERSION\s*27/i,
+  /store\s*version.*SAVE_VERSION\s*28/i,
 ];

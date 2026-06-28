@@ -1,50 +1,44 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { buildAuthorityGameplayPresentationContext } from '@/core/authority/authorityGameplayUnlockModel';
 import { calculateAssignmentCompatibility } from '@/core/assignments/assignmentEngine';
-import {
-  buildAssignmentEngineInputFromGameStore,
-} from '@/core/assignments/assignmentPresentation';
+import { buildAssignmentEngineInputFromGameStore } from '@/core/assignments/assignmentPresentation';
 import type { DecisionAffordabilityCheck } from '@/core/economy/economyAffordability';
 import type { EventCard } from '@/core/models/EventCard';
-import {
-  operationMotionDispatchSentDurationMs,
-} from '@/core/motion/operationMotionTokens';
+import { operationMotionDispatchSentDurationMs } from '@/core/motion/operationMotionTokens';
 import type { EventAssignmentState } from '@/core/assignments/assignmentTypes';
 import { EventDecisionList } from '@/features/events/components/EventDecisionList';
 import { QuickDecisionActions } from '@/features/events/components/QuickDecisionActions';
 import { EventAssignmentPanel } from '@/features/events/components/assignment/EventAssignmentPanel';
-import { DispatchCommandCard } from '@/features/events/components/event-workflow/dispatch/DispatchCommandCard';
 import {
   DispatchAdvisorCommentCard,
-  DispatchCompatibilityStrip,
-  DispatchPhaseHeader,
+  DispatchBlockersList,
+  DispatchPhaseHeading,
   DispatchPlanSummaryStrip,
   DispatchReadinessPanel,
+  DispatchResourceSummaryCard,
   DispatchRouteStepStrip,
+  DispatchSecondaryActionsRow,
 } from '@/features/events/components/event-workflow/dispatch/DispatchMotionSections';
 import { DispatchWorkflowFooter } from '@/features/events/components/event-workflow/dispatch/DispatchWorkflowFooter';
-import { EventWorkflowStepper } from '@/features/events/components/event-workflow/EventWorkflowStepper';
-import { FieldResourcesCard } from '@/features/events/components/FieldResourcesCard';
-import { PlanEventSummaryCard } from '@/features/events/components/event-workflow/plan/PlanEventSummaryCard';
-import { OperationImpactPreviewStrip } from '@/features/events/components/OperationImpactPreviewStrip';
 import { OnboardingFocusHint } from '@/features/onboarding/components/OnboardingFocusHint';
 import type { OnboardingHint } from '@/core/onboarding/onboardingTypes';
 import { TutorialTarget } from '@/features/tutorial/TutorialTarget';
 import { OnboardingPhaseHint } from '@/features/onboarding/components/OnboardingPhaseHint';
+import { OperationPhaseBridgeCard } from '@/features/events/components/event-workflow/OperationPhaseBridgeCard';
+import { OperationPhaseContentEnter } from '@/features/events/components/event-workflow/OperationPhaseContentEnter';
+import { OperationPhaseProgressRail } from '@/features/events/components/event-workflow/OperationPhaseProgressRail';
+import { OperationPhaseShellHeader } from '@/features/events/components/event-workflow/OperationPhaseShellHeader';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import type { FieldResourceRow, ResolvedQuickAction } from '@/features/events/utils/eventDetailDecisionUtils';
 import {
   buildEventDispatchPhasePresentation,
+  type EventDispatchActionKey,
   type EventDispatchInteractionState,
 } from '@/features/events/utils/eventDispatchPhasePresentation';
 import type { EventPlanStrategyId } from '@/features/events/utils/eventPlanPhasePresentation';
-import { getInspectNeighborhoodHero } from '@/features/events/utils/eventWorkflowAssets';
-import {
-  buildDispatchScreenModel,
-} from '@/features/events/utils/eventWorkflowDispatchFieldPresentation';
-import { resolveInspectDistrictId } from '@/features/events/utils/eventWorkflowPresentation';
 import { useGameStore } from '@/store/useGameStore';
 import { useCreviaReducedMotion } from '@/shared/motion';
 
@@ -58,6 +52,7 @@ type Props = {
   onSelectDecision: (decisionId: string) => void;
   affordabilityByDecisionId: Record<string, DecisionAffordabilityCheck>;
   onDispatch: () => void;
+  onBack?: () => void;
   dispatchDisabled?: boolean;
   decisionCardHint?: OnboardingHint | null;
   onDismissHint?: (id: string) => void;
@@ -76,16 +71,17 @@ export function EventDispatchPhase({
   event,
   bottomPadding,
   quickActions,
-  fieldResources,
+  fieldResources: _fieldResources,
   selectedDecisionId,
   selectedDecisionTitle,
   onSelectDecision,
   affordabilityByDecisionId,
   onDispatch,
+  onBack,
   dispatchDisabled = false,
   decisionCardHint,
   onDismissHint,
-  resourcesHighlighted = false,
+  resourcesHighlighted: _resourcesHighlighted = false,
   decisionsHighlighted = false,
   compactTutorial = false,
   phaseHint = null,
@@ -95,15 +91,13 @@ export function EventDispatchPhase({
   selectedPlanStrategyLabel = null,
   isDay1LearningEvent = false,
 }: Props) {
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const reducedMotion = useCreviaReducedMotion();
   const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
+  const maintenanceBacklogRuntime = useGameStore((s) => s.maintenanceBacklogRuntime);
   const [dispatchInteractionState, setDispatchInteractionState] =
     useState<EventDispatchInteractionState>('idle');
-
-  const selectedDecision = useMemo(
-    () => event.decisions.find((d) => d.id === selectedDecisionId) ?? null,
-    [event.decisions, selectedDecisionId],
-  );
 
   const assignmentCompatibility = useMemo(() => {
     if (!assignment) return null;
@@ -142,6 +136,7 @@ export function EventDispatchPhase({
         isDay1LearningEvent,
         reducedMotion,
         authorityGameplayContext,
+        maintenanceBacklogRuntime,
       }),
     [
       assignment,
@@ -152,26 +147,12 @@ export function EventDispatchPhase({
       event,
       gameDay,
       isDay1LearningEvent,
+      maintenanceBacklogRuntime,
       reducedMotion,
       selectedDecisionId,
       selectedPlanStrategyId,
       selectedPlanStrategyLabel,
     ],
-  );
-
-  const legacyModel = useMemo(
-    () =>
-      buildDispatchScreenModel({
-        event,
-        selectedDecision,
-        selectedPlanStrategyLabel: presentation.selectedPlan.label,
-      }),
-    [event, presentation.selectedPlan.label, selectedDecision],
-  );
-
-  const thumbnail = useMemo(
-    () => getInspectNeighborhoodHero(resolveInspectDistrictId(event)),
-    [event],
   );
 
   const quickDecisionIds = useMemo(
@@ -189,12 +170,11 @@ export function EventDispatchPhase({
     if (dispatchInteractionState === 'sent') {
       return presentation.dispatchFeedback.label;
     }
-    const planPart = `Plan: ${presentation.selectedPlan.label}`;
-    const decisionPart = selectedDecisionTitle ?? legacyModel.footerSummaryLine;
+    const planPart = presentation.selectedPlan.label;
+    const decisionPart = selectedDecisionTitle ?? 'Operasyon hazır';
     return `${planPart} · ${decisionPart}`;
   }, [
     dispatchInteractionState,
-    legacyModel.footerSummaryLine,
     presentation.dispatchFeedback.helperText,
     presentation.dispatchFeedback.label,
     presentation.selectedPlan.label,
@@ -210,6 +190,10 @@ export function EventDispatchPhase({
     dispatchInteractionState,
     presentation.primaryCta.actionKey,
   ]);
+
+  const handleSecondaryAction = useCallback((_actionKey: EventDispatchActionKey) => {
+    // Presentation-only helpers; gameplay navigation intentionally deferred.
+  }, []);
 
   useEffect(() => {
     if (dispatchInteractionState !== 'dispatching') return;
@@ -234,57 +218,84 @@ export function EventDispatchPhase({
   }, [dispatchInteractionState, onDispatch, reducedMotion]);
 
   const footerDisabled =
-    dispatchDisabled || dispatchInteractionState !== 'idle';
+    dispatchDisabled || dispatchInteractionState !== 'idle' || !presentation.primaryCta.enabled;
   const footerLoading = dispatchInteractionState === 'dispatching';
+  const footerCtaLabel =
+    footerDisabled && !footerLoading
+      ? presentation.primaryCta.disabledLabel
+      : presentation.primaryCta.label;
+  const compact = width < 370;
 
   return (
-    <View
+    <SafeAreaView
+      edges={['top']}
       style={styles.root}
       accessibilityLabel={presentation.accessibilityLabel}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scroll, { paddingBottom: bottomPadding }]}>
-        <PlanEventSummaryCard
-          title={event.title}
-          location={event.district}
-          priorityLabel={legacyModel.priorityLabel}
-          remainingLabel={legacyModel.remainingLabel}
-          thumbnail={thumbnail}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingBottom: Math.max(
+              bottomPadding,
+              108 + Math.max(insets.bottom, 12),
+            ),
+          },
+        ]}>
+        <OperationPhaseShellHeader
+          shell={presentation.phaseTransition.shell}
+          compact={compact}
+          onBack={onBack}
+          reducedMotion={reducedMotion}
+        />
+
+        <OperationPhaseProgressRail
+          progress={presentation.phaseTransition.progress}
+          reducedMotion={reducedMotion}
+        />
+
+        <DispatchPhaseHeading
+          heading={presentation.phaseHeading}
+          description={presentation.phaseDescription}
         />
 
         {phaseHint ? <OnboardingPhaseHint text={phaseHint} /> : null}
 
-        <View style={styles.stepperGap}>
-          <EventWorkflowStepper activeStep="assign" compact />
-        </View>
+        {presentation.phaseTransition.bridge ? (
+          <OperationPhaseBridgeCard
+            bridge={presentation.phaseTransition.bridge}
+            reducedMotion={reducedMotion}
+            index={2}
+          />
+        ) : null}
 
-        <DispatchPhaseHeader
-          title={presentation.title}
-          subtitle={presentation.subtitle}
-        />
-
+        <OperationPhaseContentEnter reducedMotion={reducedMotion} index={3}>
         <DispatchPlanSummaryStrip
           plan={presentation.selectedPlan}
           reducedMotion={reducedMotion}
         />
 
         <DispatchReadinessPanel
-          rows={presentation.readinessRows}
+          readiness={presentation.readiness}
           reducedMotion={reducedMotion}
         />
 
-        <DispatchCommandCard model={legacyModel} />
+        <DispatchResourceSummaryCard
+          summary={presentation.resourceSummary}
+          reducedMotion={reducedMotion}
+        />
 
         <EventAssignmentPanel event={event} compactTutorial={compactTutorial} />
-
-        <DispatchCompatibilityStrip
-          compatibility={presentation.compatibility}
-          reducedMotion={reducedMotion}
-        />
 
         <DispatchRouteStepStrip
           route={presentation.routePreview}
           highlight={routeHighlight}
+          reducedMotion={reducedMotion}
+        />
+
+        <DispatchBlockersList
+          blockers={presentation.blockers}
           reducedMotion={reducedMotion}
         />
 
@@ -296,13 +307,16 @@ export function EventDispatchPhase({
           </View>
         ) : null}
 
-        <View style={styles.sectionGap}>
-          <TutorialTarget
-            targetKey="field_resources_card"
-            highlighted={resourcesHighlighted}>
-            <FieldResourcesCard rows={fieldResources} compact />
-          </TutorialTarget>
-        </View>
+        <DispatchAdvisorCommentCard
+          comment={presentation.advisorComment}
+          reducedMotion={reducedMotion}
+        />
+
+        <DispatchSecondaryActionsRow
+          actions={presentation.actions}
+          reducedMotion={reducedMotion}
+          onActionPress={handleSecondaryAction}
+        />
 
         {decisionCardHint && onDismissHint ? (
           <OnboardingFocusHint
@@ -311,30 +325,21 @@ export function EventDispatchPhase({
           />
         ) : null}
 
-        <DispatchAdvisorCommentCard
-          comment={presentation.advisorComment}
-          reducedMotion={reducedMotion}
-        />
+        {compactTutorial ? (
+          <TutorialTarget targetKey="quick_decisions" highlighted={decisionsHighlighted}>
+            <QuickDecisionActions
+              event={event}
+              actions={quickActions}
+              selectedDecisionId={selectedDecisionId}
+              onSelect={onSelectDecision}
+              affordabilityByDecisionId={affordabilityByDecisionId}
+              variant="compact"
+              sectionTitle="Kaynak seçimi"
+            />
+          </TutorialTarget>
+        ) : null}
 
-        {selectedDecision ? (
-          <OperationImpactPreviewStrip event={event} decision={selectedDecision} />
-        ) : (
-          <OperationImpactPreviewStrip event={event} />
-        )}
-
-        <TutorialTarget targetKey="quick_decisions" highlighted={decisionsHighlighted}>
-          <QuickDecisionActions
-            event={event}
-            actions={quickActions}
-            selectedDecisionId={selectedDecisionId}
-            onSelect={onSelectDecision}
-            affordabilityByDecisionId={affordabilityByDecisionId}
-            variant="compact"
-            sectionTitle="Kaynak seçimi"
-          />
-        </TutorialTarget>
-
-        {!compactTutorial ? (
+        {compactTutorial ? (
           <View style={styles.sectionGap}>
             <EventDecisionList
               event={event}
@@ -347,6 +352,7 @@ export function EventDispatchPhase({
             />
           </View>
         ) : null}
+        </OperationPhaseContentEnter>
       </ScrollView>
 
       <DispatchWorkflowFooter
@@ -354,24 +360,22 @@ export function EventDispatchPhase({
         onPress={handleFooterPress}
         disabled={footerDisabled}
         loading={footerLoading}
-        ctaLabel={presentation.primaryCta.label}
+        ctaLabel={footerCtaLabel}
+        warningSubline={presentation.primaryCta.warningSubline}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: eventDetail.bg,
   },
   scroll: {
-    gap: eventDetail.sectionGap,
-    paddingTop: 4,
+    gap: 12,
+    paddingTop: 8,
     minWidth: 0,
-  },
-  stepperGap: {
-    marginTop: -2,
-    marginBottom: -2,
   },
   sectionGap: {
     marginTop: -2,

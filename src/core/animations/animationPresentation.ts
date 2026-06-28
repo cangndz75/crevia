@@ -65,7 +65,7 @@ export function collectAnimationPresentationStrings(): string[] {
   return [
     ...STAGE1_ANIMATED_COMPONENTS,
     ...Object.keys(presets),
-    'Sahaya Yönlendir',
+    'Ekibi Sahaya Çıkar',
     'Sonucu Gör',
     'Operasyon Merkezine Dön',
     'Gündemi İncele',

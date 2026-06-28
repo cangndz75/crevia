@@ -14,6 +14,11 @@ import {
   reportPresentationContainsBannedWords,
   type EndOfDaySystemSummarySection,
 } from './utils/endOfDayReportPresentation';
+import {
+  auditEndDayCliffhangerPresentation,
+  buildEndDayCliffhangerPresentation,
+  cliffhangerStringsForAudit,
+} from './utils/endDayCliffhangerPresentation';
 
 export type VerifyReportUiOutcome = {
   ok: boolean;
@@ -212,6 +217,52 @@ export function verifyReportUiScenario(): VerifyReportUiOutcome {
         normalModel.tomorrowNotes.length <= 3,
       'Report ordering tutarlı kalır (impact + notes sınırları)',
       'Report ordering/limit hatalı',
+    ) && ok;
+
+  const cliffhangerDay3 = buildEndDayCliffhangerPresentation({
+    day: 3,
+    socialPulseScore: 62,
+    operationSignals: {
+      personnel: { status: 'watch', summary: 'Ekip temposu yüksek' },
+      overall: { status: 'watch' },
+    },
+    lastDistrictName: 'Cumhuriyet Mahallesi',
+    reportSummaryLines: normalReport.summaryLines,
+  });
+  const cliffhangerAudit = auditEndDayCliffhangerPresentation(cliffhangerDay3);
+
+  ok =
+    assert(
+      checks,
+      cliffhangerDay3.visible === true &&
+        cliffhangerDay3.closingBridge.title === 'Yarına Kalan İz' &&
+        cliffhangerDay3.tomorrowRisk.title.length > 0 &&
+        cliffhangerDay3.districtWatch.districts.length <= 2 &&
+        cliffhangerDay3.carriedPressures.items.length === 3 &&
+        cliffhangerAudit.length === 0,
+      'Gün sonu cliffhanger presentation derive edilir ve audit geçer',
+      `Cliffhanger audit: ${cliffhangerAudit.join(', ')}`,
+    ) && ok;
+
+  const cliffhangerBanned = cliffhangerStringsForAudit(cliffhangerDay3).flatMap((line) =>
+    reportPresentationContainsBannedWords(line),
+  );
+  ok =
+    assert(
+      checks,
+      cliffhangerBanned.length === 0,
+      'Cliffhanger metinleri yasaklı kelime içermez',
+      `Cliffhanger yasaklı: ${[...new Set(cliffhangerBanned)].join(', ')}`,
+    ) && ok;
+
+  const cliffhangerDay1 = buildEndDayCliffhangerPresentation({ day: 1 });
+  ok =
+    assert(
+      checks,
+      cliffhangerDay1.closingBridge.summary.length > 0 &&
+        cliffhangerDay1.primaryCta.label === 'Yarına Hazırlan',
+      'Gün 1 cliffhanger hafif fallback ve CTA üretir',
+      'Gün 1 cliffhanger hatalı',
     ) && ok;
 
   return { ok, checks };

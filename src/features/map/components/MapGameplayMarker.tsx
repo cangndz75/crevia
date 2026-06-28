@@ -13,12 +13,15 @@ import type {
   MapGameplayMarker as MapGameplayMarkerModel,
   MapGameplayMarkerType,
 } from '@/features/map/utils/mapGameplayPresentation';
+import type { MapTacticalMarkerMotionKind } from '@/features/map/utils/mapTacticalMotionPresentation';
 import { mapUi } from '@/features/map/utils/mapUiTokens';
 
 type MapGameplayMarkerProps = {
   marker: MapGameplayMarkerModel;
   selected?: boolean;
   reducedMotionMode?: boolean;
+  tacticalMotion?: MapTacticalMarkerMotionKind;
+  passive?: boolean;
   onPress?: (markerId: string) => void;
 };
 
@@ -35,15 +38,32 @@ const MARKER_STYLE: Record<
   operation: { color: mapUi.teal, bg: 'rgba(20,184,166,0.14)', icon: 'radio' },
 };
 
+function pulseRingColor(
+  motion: MapTacticalMarkerMotionKind | undefined,
+  markerType: MapGameplayMarkerType,
+): string {
+  if (motion === 'riskPulse') return 'rgba(245, 158, 11, 0.38)';
+  if (motion === 'softPulse') return 'rgba(20, 184, 166, 0.32)';
+  if (markerType === 'active_event') return 'rgba(239, 68, 68, 0.35)';
+  return 'rgba(20, 184, 166, 0.28)';
+}
+
 export const MapGameplayMarker = memo(function MapGameplayMarker({
   marker,
   selected = false,
   reducedMotionMode = false,
+  tacticalMotion = 'none',
+  passive = false,
   onPress,
 }: MapGameplayMarkerProps) {
   const pulse = useSharedValue(0);
   const style = MARKER_STYLE[marker.type];
-  const shouldPulse = marker.pulse === true && !reducedMotionMode;
+  const motion = selected ? 'selected' : tacticalMotion;
+  const shouldPulse =
+    !reducedMotionMode &&
+    marker.status !== 'resolved' &&
+    marker.type !== 'resolved' &&
+    (motion === 'softPulse' || motion === 'riskPulse' || (marker.pulse === true && motion === 'none'));
 
   useEffect(() => {
     if (!shouldPulse) {
@@ -51,16 +71,19 @@ export const MapGameplayMarker = memo(function MapGameplayMarker({
       pulse.value = 0;
       return;
     }
-    pulse.value = withRepeat(withTiming(1, { duration: 1400 }), -1, false);
+    const duration = motion === 'riskPulse' ? 1200 : 1400;
+    pulse.value = withRepeat(withTiming(1, { duration }), -1, false);
     return () => cancelAnimation(pulse);
-  }, [pulse, shouldPulse]);
+  }, [motion, pulse, shouldPulse]);
 
   const pulseStyle = useAnimatedStyle(() => ({
-    opacity: 0.28 * (1 - pulse.value),
-    transform: [{ scale: 1 + pulse.value * 1.1 }],
+    opacity: (motion === 'riskPulse' ? 0.34 : 0.28) * (1 - pulse.value),
+    transform: [{ scale: 1 + pulse.value * (motion === 'riskPulse' ? 1.2 : 1.05) }],
   }));
 
   const size = selected ? 42 : marker.type === 'active_event' ? 38 : 34;
+  const showCompletedEcho = motion === 'completedEcho';
+  const showSelectedRing = selected || motion === 'selected';
 
   return (
     <Pressable
@@ -70,6 +93,7 @@ export const MapGameplayMarker = memo(function MapGameplayMarker({
         {
           left: `${marker.coordinate.x}%`,
           top: `${marker.coordinate.y}%`,
+          opacity: passive ? 0.42 : 1,
         },
       ]}
       accessibilityRole="button"
@@ -79,8 +103,39 @@ export const MapGameplayMarker = memo(function MapGameplayMarker({
         <Animated.View
           style={[
             styles.pulseRing,
-            { width: size + 24, height: size + 24, borderRadius: (size + 24) / 2 },
+            {
+              width: size + 24,
+              height: size + 24,
+              borderRadius: (size + 24) / 2,
+              borderColor: pulseRingColor(motion, marker.type),
+            },
             pulseStyle,
+          ]}
+        />
+      ) : null}
+
+      {showCompletedEcho ? (
+        <View
+          style={[
+            styles.completedEcho,
+            {
+              width: size + 14,
+              height: size + 14,
+              borderRadius: (size + 14) / 2,
+            },
+          ]}
+        />
+      ) : null}
+
+      {showSelectedRing && reducedMotionMode ? (
+        <View
+          style={[
+            styles.staticSelectedRing,
+            {
+              width: size + 10,
+              height: size + 10,
+              borderRadius: (size + 10) / 2,
+            },
           ]}
         />
       ) : null}
@@ -93,10 +148,10 @@ export const MapGameplayMarker = memo(function MapGameplayMarker({
             height: size,
             borderRadius: size / 2,
             backgroundColor: style.color,
-            borderColor: selected ? mapUi.gold : 'rgba(255,255,255,0.9)',
-            borderWidth: selected ? 3 : 2,
+            borderColor: showSelectedRing ? mapUi.gold : 'rgba(255,255,255,0.9)',
+            borderWidth: showSelectedRing ? 3 : 2,
           },
-          selected && styles.selectedGlow,
+          showSelectedRing && styles.selectedGlow,
         ]}>
         <Ionicons
           name={style.icon}
@@ -120,8 +175,19 @@ const styles = StyleSheet.create({
   pulseRing: {
     position: 'absolute',
     borderWidth: 2,
-    borderColor: 'rgba(239, 68, 68, 0.35)',
     backgroundColor: 'rgba(239, 68, 68, 0.08)',
+  },
+  completedEcho: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderColor: 'rgba(34, 197, 94, 0.35)',
+    backgroundColor: 'rgba(34, 197, 94, 0.08)',
+  },
+  staticSelectedRing: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderColor: mapUi.gold,
+    opacity: 0.55,
   },
   dot: {
     alignItems: 'center',

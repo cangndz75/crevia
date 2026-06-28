@@ -295,6 +295,8 @@
     "verify:operation-inspect-ui": "npx tsx scripts/verify-operation-inspect-ui.ts",
     "verify:operation-plan-ui": "npx tsx scripts/verify-operation-plan-ui.ts",
     "verify:operation-dispatch-motion": "npx tsx scripts/verify-operation-dispatch-motion.ts",
+    "verify:maintenance-backlog-runtime": "npx tsx scripts/verify-maintenance-backlog-runtime.ts",
+    "verify:period-goals": "npx tsx scripts/verify-period-goals.ts",
     "verify:operation-field-live": "npx tsx scripts/verify-operation-field-live.ts",
     "verify:operation-result-reveal": "npx tsx scripts/verify-operation-result-reveal.ts",
     "verify:operation-flow-qa": "npx tsx scripts/verify-operation-flow-qa.ts",

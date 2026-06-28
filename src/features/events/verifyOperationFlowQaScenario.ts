@@ -50,6 +50,10 @@ import {
 } from '@/features/events/utils/eventResultRevealPresentation';
 import { createEmptyDecisionResultFallback } from '@/features/events/utils/decisionResultModel';
 import { OPERATION_WORKFLOW_STEPS } from '@/features/events/utils/eventWorkflowPresentation';
+import {
+  auditOperationPhaseTransitionPresentation,
+  OPERATION_PHASE_CTA_LABELS,
+} from '@/features/events/utils/operationPhaseTransitionPresentation';
 import { SAVE_VERSION } from '@/store/gamePersist';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
@@ -236,6 +240,7 @@ export function verifyOperationFlowQaScenario(): VerifyOperationFlowQaOutcome {
       day: 2,
       neighborhoodName: 'Cumhuriyet',
     },
+    event,
     selectedPlanStrategyId: strategyId,
     day: 2,
   });
@@ -248,6 +253,55 @@ export function verifyOperationFlowQaScenario(): VerifyOperationFlowQaOutcome {
   assert(checks, planModel.primaryCta.actionKey === 'go_to_dispatch', 'Planla → Yönlendir CTA', planModel.primaryCta.actionKey);
   assert(checks, dispatchModel.primaryCta.actionKey === 'send_to_field', 'Yönlendir → Sahada CTA', dispatchModel.primaryCta.actionKey);
   assert(checks, fieldCompleted.primaryCta.actionKey === 'view_result', 'Sahada completed Sonucu Gör', fieldCompleted.primaryCta.actionKey);
+
+  assert(
+    checks,
+    inspectRevealed.phaseTransition.primaryCta.label === OPERATION_PHASE_CTA_LABELS.inspect &&
+      planModel.phaseTransition.primaryCta.label === OPERATION_PHASE_CTA_LABELS.plan &&
+      dispatchModel.phaseTransition.primaryCta.label === OPERATION_PHASE_CTA_LABELS.dispatch &&
+      fieldCompleted.phaseTransition.primaryCta.label === OPERATION_PHASE_CTA_LABELS.field &&
+      resultModel.phaseTransition.primaryCta.label === OPERATION_PHASE_CTA_LABELS.result,
+    'Faz CTA zinciri tutarlı',
+    [
+      inspectRevealed.phaseTransition.primaryCta.label,
+      planModel.phaseTransition.primaryCta.label,
+      dispatchModel.phaseTransition.primaryCta.label,
+      fieldCompleted.phaseTransition.primaryCta.label,
+      resultModel.phaseTransition.primaryCta.label,
+    ].join(' | '),
+  );
+
+  const phaseTransitionModels = [
+    { name: 'inspect', model: inspectRevealed.phaseTransition },
+    { name: 'plan', model: planModel.phaseTransition },
+    { name: 'dispatch', model: dispatchModel.phaseTransition },
+    { name: 'field', model: fieldModel.phaseTransition },
+    { name: 'result', model: resultModel.phaseTransition },
+  ];
+  for (const entry of phaseTransitionModels) {
+    const issues = auditOperationPhaseTransitionPresentation(entry.model);
+    const activeItem = entry.model.progress.items.find((item) => item.status === 'active');
+    assert(
+      checks,
+      issues.length === 0,
+      `phaseTransition audit: ${entry.name}`,
+      issues.join(', ') || 'ok',
+    );
+    assert(
+      checks,
+      entry.model.progress.items.length === 5 && Boolean(activeItem),
+      `phase progress rail: ${entry.name}`,
+      activeItem?.id ?? 'missing active',
+    );
+    if (entry.name !== 'inspect') {
+      assert(
+        checks,
+        Boolean(entry.model.bridge?.summary.trim()),
+        `phase bridge summary: ${entry.name}`,
+        entry.model.bridge?.summary ?? 'missing',
+      );
+    }
+  }
 
   assert(
     checks,
@@ -349,6 +403,8 @@ export function verifyOperationFlowQaScenario(): VerifyOperationFlowQaOutcome {
   );
 
   const phaseSources = OPERATION_PHASE_FILES.map(readRepo).join('\n');
+  assert(checks, phaseSources.includes('OperationPhaseProgressRail'), 'phase progress rail bağlı', 'ok');
+  assert(checks, phaseSources.includes('OperationPhaseBridgeCard'), 'phase bridge card bağlı', 'ok');
   assert(checks, !phaseSources.includes('setInterval'), 'setInterval kullanılmıyor', 'ok');
   assert(checks, !/withRepeat\([^,]+,\s*-1/.test(phaseSources), 'withRepeat(-1) yok', 'ok');
   assert(checks, phaseSources.includes('clearTimeout'), 'timer cleanup pattern var', 'ok');

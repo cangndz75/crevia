@@ -114,8 +114,12 @@ import {
 } from '@/features/reports/presentation/reportScreenPresentation';
 import type { PilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
 import { buildEndOfDayReportViewModel } from '@/features/reports/utils/endOfDayReportPresentation';
-import { buildPostDecisionCityReactionFromRecord } from '@/features/events/utils/postDecisionCityReactionPresentation';
 import { buildMemoryFollowUpPresentationContext } from '@/features/shared/utils/memoryFollowUpPresentationContext';
+import { buildPostDecisionCityReactionFromRecord } from '@/features/events/utils/postDecisionCityReactionPresentation';
+import { ReportEndDayCliffhangerSection } from '@/features/reports/components/end-of-day/ReportEndDayCliffhangerSection';
+import {
+  buildEndDayCliffhangerPresentation,
+} from '@/features/reports/utils/endDayCliffhangerPresentation';
 import type { useReportPilotCompletionSummary } from '@/features/pilot/hooks/usePilotCompletionSummary';
 import {
   buildFirstTenMinutesReportGuard,
@@ -164,6 +168,8 @@ export function EndOfDayReportView({
   pilotCompletionSummary,
 }: Props) {
   const decisionHistory = useGameStore(selectDecisionHistory);
+  const strategyHistory = useGameStore((s) => s.strategyHistory);
+  const maintenanceBacklogRuntime = useGameStore((s) => s.maintenanceBacklogRuntime);
   const pilotAuthorityState = useGameStore(
     (s) => s.gameState.pilot.authorityState,
   );
@@ -190,6 +196,7 @@ export function EndOfDayReportView({
   const socialPulseScore = useGameStore((s) => s.socialPulseState.globalPulseScore);
   const socialPulseState = useGameStore((s) => s.socialPulseState);
   const eventPool = useGameStore((s) => s.eventPool);
+  const neighborhoods = useGameStore((s) => s.neighborhoods);
   const reducedMotion = useCreviaReducedMotion();
 
   const reportGuard = useMemo(
@@ -1071,6 +1078,15 @@ export function EndOfDayReportView({
         day1GoalsLine,
         postPilotLightDay,
         memoryFollowUpContext,
+        decisionHistory: decisionHistory.map((record) => ({
+          day: record.day,
+          decisionLabel: record.decisionLabel,
+          eventTitle: record.eventTitle,
+        })),
+        strategyHistory,
+        maintenanceBacklogRuntime,
+        socialPulseState,
+        tomorrowRisk: tomorrowRiskPresentation.report,
       }),
     [
       report,
@@ -1080,8 +1096,66 @@ export function EndOfDayReportView({
       day1GoalsLine,
       postPilotLightDay,
       memoryFollowUpContext,
+      decisionHistory,
+      strategyHistory,
+      maintenanceBacklogRuntime,
+      socialPulseState,
+      tomorrowRiskPresentation.report,
     ],
   );
+
+  const endDayCliffhanger = useMemo(() => {
+    const fatigueLine = reportFatigueState
+      ? buildResourceFatiguePanelLine(reportFatigueState)
+      : null;
+    const priorityDistrictId = operationSignals.priorityDistrictId;
+    const priorityDistrictName =
+      neighborhoods.find((n) => n.id === priorityDistrictId)?.name ?? null;
+
+    return buildEndDayCliffhangerPresentation({
+      day: report.day,
+      tomorrowRisk: tomorrowRiskPresentation.report,
+      cityReaction: reportDecisionMemory,
+      carryOverSummary: reportCarryOverMemory?.summary ?? null,
+      socialPulseScore,
+      operationSignals,
+      resourceFatigueLabel: fatigueLine,
+      lastDistrictName: lastDecisionForDay?.neighborhoodName ?? null,
+      lastDistrictId: lastDecisionForDay?.neighborhoodId ?? null,
+      priorityDistrictName,
+      dominantStrategyNote: model.dominantStrategyNote ?? null,
+      reportSummaryLines: report.summaryLines,
+      existingLines: [
+        ...(baseReportModel.tomorrowNotes ?? []),
+        cityEchoReportLine ?? '',
+        decisionImpactReportEcho ?? '',
+        socialEchoForReport?.mention ?? '',
+        tomorrowPreviewBundle.summary.preview?.summary ?? '',
+        tomorrowRiskPresentation.report?.mainLine ?? '',
+        tomorrowRiskPresentation.report?.supportLine ?? '',
+      ].filter(Boolean),
+      hasPilotCompletion: Boolean(pilotCompletionSummary),
+    });
+  }, [
+    baseReportModel.tomorrowNotes,
+    cityEchoReportLine,
+    decisionImpactReportEcho,
+    lastDecisionForDay?.neighborhoodId,
+    lastDecisionForDay?.neighborhoodName,
+    model.dominantStrategyNote,
+    neighborhoods,
+    operationSignals,
+    pilotCompletionSummary,
+    report.day,
+    report.summaryLines,
+    reportCarryOverMemory?.summary,
+    reportDecisionMemory,
+    reportFatigueState,
+    socialEchoForReport?.mention,
+    socialPulseScore,
+    tomorrowPreviewBundle.summary.preview?.summary,
+    tomorrowRiskPresentation.report,
+  ]);
 
   const reportSystemsIntegration = useMemo(() => {
     const existingEchoLines: string[] = [
@@ -1592,6 +1666,42 @@ export function EndOfDayReportView({
         />
       ) : null}
 
+      {model.operationalTempoLine ? (
+        <CompactInsightRow
+          label="Operasyonel Tempo"
+          line={model.operationalTempoLine}
+          tone="neutral"
+          icon="speedometer-outline"
+        />
+      ) : null}
+
+      {model.tomorrowPreparationLine ? (
+        <CompactInsightRow
+          label="Yarına Hazırlık"
+          line={model.tomorrowPreparationLine}
+          tone="warning"
+          icon="construct-outline"
+        />
+      ) : null}
+
+      {model.periodGoalImpactLine ? (
+        <CompactInsightRow
+          label="Şehir Gündemine Etki"
+          line={model.periodGoalImpactLine}
+          tone="teal"
+          icon="flag-outline"
+        />
+      ) : null}
+
+      {model.managementStyleLine ? (
+        <CompactInsightRow
+          label="Bugünkü Yönetim Tarzı"
+          line={model.managementStyleLine}
+          tone="teal"
+          icon="person-outline"
+        />
+      ) : null}
+
       {model.dominantStrategyNote ? (
         <CompactInsightRow
           label="Strateji notu"
@@ -1687,7 +1797,7 @@ export function EndOfDayReportView({
         />
       ) : null}
 
-      {tomorrowRiskPresentation.report ? (
+      {tomorrowRiskPresentation.report && !endDayCliffhanger.visible ? (
         <ReportTomorrowRiskCard
           model={tomorrowRiskPresentation.report}
           compact={tomorrowRiskPresentation.report.shouldShowAsCompact}
@@ -1763,6 +1873,13 @@ export function EndOfDayReportView({
         <Animated.View entering={ENTER.pilot}>
           <ReportPilotSummaryPremiumCard model={pilotPremiumModel} />
         </Animated.View>
+      ) : null}
+
+      {endDayCliffhanger.visible ? (
+        <ReportEndDayCliffhangerSection
+          model={endDayCliffhanger}
+          reducedMotion={reducedMotion}
+        />
       ) : null}
 
       {pilotCompletionSummary ? (

@@ -13,6 +13,21 @@ import { buildAuthorityPermissionsTabViewModel } from '@/features/progression/ut
 import { buildCollectionHeroModel } from '@/features/progression/utils/authorityCollectionPresentation';
 import { deriveAuthoritiesScreenModel } from '@/features/progression/utils/authoritiesScreenModel';
 import type { ProgressionIconName } from '@/core/content/progressionRoadmap';
+import type { PlayerStylePresentationCard } from '@/core/playerStyle/playerStyleTypes';
+import type { GrowthPeriodFocusCardPresentation } from '@/core/periodGoals';
+import {
+  buildPlayerStyleInputFromStrategyContext,
+  buildPlayerStylePresentationCard,
+  buildPlayerStyleProfile,
+} from '@/core/playerStyle';
+import {
+  buildGrowthPeriodFocusCard,
+  buildPeriodGoalContextFromReport,
+} from '@/core/periodGoals';
+import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
+import type { SocialPulseState } from '@/core/social/socialTypes';
+import type { StrategyHistoryStateV1 } from '@/core/strategyHistory/strategyHistoryTypes';
+import type { DominantStrategyDetectorResult } from '@/core/dominantStrategyDetector/dominantStrategyDetectorTypes';
 
 export type GrowthHeaderModel = {
   title: string;
@@ -116,6 +131,8 @@ export type GrowthExpansionsTabModel = {
 
 export type GrowthScreenPresentation = {
   header: GrowthHeaderModel;
+  managerStyle: PlayerStylePresentationCard;
+  periodFocus: GrowthPeriodFocusCardPresentation;
   authoritiesTab: GrowthAuthoritiesTabModel;
   badgesTab: GrowthBadgesTabModel;
   expansionsTab: GrowthExpansionsTabModel;
@@ -269,6 +286,15 @@ export type BuildGrowthScreenPresentationInput = {
   mainOperationSeason?: unknown;
   operationSignals?: unknown;
   socialPulse?: unknown;
+  decisionHistory?: Array<{
+    day?: number;
+    decisionLabel?: string;
+    eventTitle?: string;
+  }>;
+  strategyHistory?: StrategyHistoryStateV1 | null;
+  dominantStrategy?: DominantStrategyDetectorResult | null;
+  maintenanceBacklogRuntime?: MaintenanceBacklogRuntimeState | null;
+  socialPulseState?: SocialPulseState | null;
 };
 
 export function buildGrowthScreenPresentation(
@@ -352,6 +378,29 @@ export function buildGrowthScreenPresentation(
     ...districtSummary.allDistrictItems.filter((item) => item.state === 'locked').slice(0, 2),
   ].slice(0, 5);
 
+  const playerStyleProfile = buildPlayerStyleProfile(
+    buildPlayerStyleInputFromStrategyContext({
+      day: input.gameDay,
+      surface: 'debug',
+      decisionHistory: input.decisionHistory,
+      strategyHistory: input.strategyHistory,
+      dominantStrategy: input.dominantStrategy,
+    }),
+  );
+  const managerStyle = buildPlayerStylePresentationCard(playerStyleProfile);
+
+  const periodFocusContext = buildPeriodGoalContextFromReport({
+    day: input.gameDay,
+    maintenanceBacklogRuntime: input.maintenanceBacklogRuntime,
+    socialPulseState: input.socialPulseState,
+    playerStyleId: playerStyleProfile.styleId,
+    decisionHistory: input.decisionHistory,
+  });
+  const periodFocus = buildGrowthPeriodFocusCard(
+    periodFocusContext,
+    managerStyle.shortLabel || managerStyle.label,
+  );
+
   return {
     header: {
       title: 'Gelişim',
@@ -372,6 +421,8 @@ export function buildGrowthScreenPresentation(
         progress: input.xpProgress,
       },
     },
+    managerStyle,
+    periodFocus,
     authoritiesTab: {
       authorityProgress: {
         title: 'Yetki İlerlemesi',

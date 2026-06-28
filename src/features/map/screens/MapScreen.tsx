@@ -983,6 +983,7 @@ export function MapScreen() {
           mapGameplayPresentation={mapGameplayPresentation}
           operationalResources={operationalResources}
           mapMotionPresentation={mapMotionPresentation}
+          mapReactionLiteModel={mapReactionLiteModel}
           recentDecisionRecord={decisionHistory.at(-1) ?? null}
           onLayersPress={() => setLayerPanelOpen(true)}
           onDistrictSelect={handleDistrictSelect}

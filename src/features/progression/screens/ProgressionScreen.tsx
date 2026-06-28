@@ -13,10 +13,14 @@ import { BadgeShowcaseItemCard } from '@/features/progression/components/badgeSh
 import { DistrictExpansionItemCard } from '@/features/progression/components/districtExpansion/DistrictExpansionItemCard';
 import { GrowthBadgeCollectionHero } from '@/features/progression/components/growth/GrowthBadgeCollectionHero';
 import { GrowthNextUnlockCard } from '@/features/progression/components/growth/GrowthNextUnlockCard';
+import { GrowthManagerStyleCard } from '@/features/progression/components/growth/GrowthManagerStyleCard';
+import { GrowthPeriodFocusCard } from '@/features/progression/components/growth/GrowthPeriodFocusCard';
 import { GrowthScreenHeader } from '@/features/progression/components/growth/GrowthScreenHeader';
 import { GrowthSectionHeader } from '@/features/progression/components/growth/GrowthSectionHeader';
 import { GrowthUnlockNetworkHero } from '@/features/progression/components/growth/GrowthUnlockNetworkHero';
 import { growth } from '@/features/progression/theme/growthScreenTokens';
+import { buildDominantStrategyDetector } from '@/core/dominantStrategyDetector';
+import { buildDominantStrategyInputFromPersistedHistory } from '@/core/strategyHistory/strategyHistoryModel';
 import { buildGrowthScreenPresentation } from '@/features/progression/utils/growthScreenPresentation';
 import { useGameStatus } from '@/store/gameSelectors';
 import { useGameStore } from '@/store/useGameStore';
@@ -34,43 +38,59 @@ export function ProgressionScreen() {
   const operationSignals = useGameStore((s) => s.operationSignals);
   const socialPulse = useGameStore((s) => s.socialPulseState);
   const dailyGoalState = useGameStore((s) => s.dailyGoalState);
+  const decisionHistory = useGameStore((s) => s.decisionHistory);
+  const strategyHistory = useGameStore((s) => s.strategyHistory);
+  const maintenanceBacklogRuntime = useGameStore((s) => s.maintenanceBacklogRuntime);
   const [tab, setTab] = useState<AuthorityTabKey>('authorities');
   const [selectedBadge, setSelectedBadge] = useState<BadgeShowcaseItem | null>(null);
 
-  const presentation = useMemo(
-    () =>
-      buildGrowthScreenPresentation({
-        totalXp,
-        pilotDay,
-        gameDay,
-        playerName: status.playerName,
-        role: status.role,
-        level: status.level,
-        metaLine: `${status.currentDay}. Gün · ${status.selectedDistrictName}`,
-        resourceLabel: status.budgetFormatted,
-        xp: status.xp,
-        xpTarget: status.xpTarget,
-        xpProgress: status.xpProgress,
-        authorityState,
-        badgeState,
-        dailyGoalState,
-        mainOperationSeason,
-        operationSignals,
-        socialPulse,
-      }),
-    [
+  const presentation = useMemo(() => {
+    const dominantStrategy = buildDominantStrategyDetector(
+      buildDominantStrategyInputFromPersistedHistory(strategyHistory, gameDay),
+    );
+    return buildGrowthScreenPresentation({
+      totalXp,
+      pilotDay,
+      gameDay,
+      playerName: status.playerName,
+      role: status.role,
+      level: status.level,
+      metaLine: `${status.currentDay}. Gün · ${status.selectedDistrictName}`,
+      resourceLabel: status.budgetFormatted,
+      xp: status.xp,
+      xpTarget: status.xpTarget,
+      xpProgress: status.xpProgress,
       authorityState,
       badgeState,
       dailyGoalState,
-      gameDay,
       mainOperationSeason,
       operationSignals,
-      pilotDay,
       socialPulse,
-      status,
-      totalXp,
-    ],
-  );
+      decisionHistory: decisionHistory.map((record) => ({
+        day: record.day,
+        decisionLabel: record.decisionLabel,
+        eventTitle: record.eventTitle,
+      })),
+      strategyHistory,
+      dominantStrategy,
+      maintenanceBacklogRuntime,
+      socialPulseState: socialPulse,
+    });
+  }, [
+    authorityState,
+    badgeState,
+    dailyGoalState,
+    decisionHistory,
+    gameDay,
+    maintenanceBacklogRuntime,
+    mainOperationSeason,
+    operationSignals,
+    pilotDay,
+    socialPulse,
+    status,
+    strategyHistory,
+    totalXp,
+  ]);
 
   return (
     <GameScreenShell
@@ -79,6 +99,12 @@ export function ProgressionScreen() {
       contentStyle={styles.content}
       reserveTabBarInset>
       <GrowthScreenHeader model={presentation.header} />
+
+      {presentation.managerStyle.visible ? (
+        <GrowthManagerStyleCard model={presentation.managerStyle} />
+      ) : null}
+
+      <GrowthPeriodFocusCard model={presentation.periodFocus} />
 
       <View style={styles.tabBarSlot}>
         <AuthorityTabsPill active={tab} onChange={setTab} />

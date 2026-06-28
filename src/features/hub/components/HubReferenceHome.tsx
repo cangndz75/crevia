@@ -63,6 +63,8 @@ type NextAction = CenterHomePresentation['nextActions']['actions'][number];
 type EventCardModel = CenterHomePresentation['neighborhoodEvents']['events'][number];
 type QuickCommand = CenterHomePresentation['quickCommands']['commands'][number];
 type RecentImpactTone = CenterHomePresentation['recentImpactSummary']['tone'];
+type MiniCityFeedItem = CenterHomePresentation['miniCityFeed']['items'][number];
+type MiniCityFeedTone = MiniCityFeedItem['tone'];
 type IconName = keyof typeof Ionicons.glyphMap;
 
 type HubReferenceHomeProps = {
@@ -142,6 +144,52 @@ function completedHeroFallback(presentation: CenterHomePresentation) {
     progress: 0.2,
     stageText: 'AŞAMA 1/5',
   };
+}
+
+function feedTonePalette(tone: MiniCityFeedTone): {
+  borderColor: string;
+  backgroundColor: string;
+  textColor: string;
+  iconColor: string;
+} {
+  switch (tone) {
+    case 'positive':
+      return {
+        borderColor: 'rgba(143,225,166,0.35)',
+        backgroundColor: 'rgba(143,225,166,0.16)',
+        textColor: palette.green,
+        iconColor: palette.green,
+      };
+    case 'active':
+      return {
+        borderColor: 'rgba(134,169,255,0.34)',
+        backgroundColor: 'rgba(134,169,255,0.12)',
+        textColor: palette.blue,
+        iconColor: palette.blue,
+      };
+    case 'mixed':
+      return {
+        borderColor: 'rgba(216,177,83,0.34)',
+        backgroundColor: 'rgba(216,177,83,0.14)',
+        textColor: palette.gold,
+        iconColor: palette.gold,
+      };
+    case 'warning':
+    case 'critical':
+      return {
+        borderColor: 'rgba(217,117,93,0.38)',
+        backgroundColor: 'rgba(217,117,93,0.14)',
+        textColor: palette.red,
+        iconColor: palette.red,
+      };
+    default:
+      return {
+        borderColor: 'rgba(147,232,189,0.25)',
+        backgroundColor: 'rgba(147,232,189,0.10)',
+        textColor: palette.mint,
+        iconColor: palette.mint,
+      };
+  }
 }
 
 function recentTonePalette(tone: RecentImpactTone): {
@@ -858,6 +906,163 @@ function NextActionsRail({
   );
 }
 
+function MiniCityFeedRow({
+  item,
+  reducedMotion,
+}: {
+  item: MiniCityFeedItem;
+  reducedMotion: boolean;
+}) {
+  const tone = feedTonePalette(item.tone);
+  const iconName = resolveIconName(item.iconKey, 'ellipse-outline');
+  const pressable = Boolean(item.routeKey);
+
+  const content = (
+    <>
+      <View style={[styles.feedItemIconWrap, { borderColor: tone.borderColor, backgroundColor: tone.backgroundColor }]}>
+        <Ionicons name={iconName} size={14} color={tone.iconColor} />
+      </View>
+      <View style={styles.feedItemCopy}>
+        <Text style={styles.feedItemTitle} numberOfLines={2}>
+          {item.title}
+        </Text>
+        {item.subtitle ? (
+          <Text style={styles.feedItemSubtitle} numberOfLines={2}>
+            {item.subtitle}
+          </Text>
+        ) : null}
+      </View>
+      <View style={[styles.feedItemSourcePill, { borderColor: tone.borderColor, backgroundColor: tone.backgroundColor }]}>
+        <Text style={[styles.feedItemSourceText, { color: tone.textColor }]} numberOfLines={1}>
+          {item.sourceLabel}
+        </Text>
+        {pressable ? <Ionicons name="chevron-forward" size={10} color={tone.textColor} /> : null}
+      </View>
+    </>
+  );
+
+  if (!pressable) {
+    return <View style={styles.feedItemRow}>{content}</View>;
+  }
+
+  return (
+    <RoutePressable
+      route={item.routeKey}
+      reducedMotion={reducedMotion}
+      accessibilityLabel={item.title}
+      style={styles.feedItemRow}>
+      {content}
+    </RoutePressable>
+  );
+}
+
+function MiniCityFeedSection({
+  presentation,
+  reducedMotion,
+}: {
+  presentation: CenterHomePresentation;
+  reducedMotion: boolean;
+}) {
+  const feed = presentation.miniCityFeed;
+  if (feed.visibility !== 'visible') return null;
+
+  const items = feed.items.slice(0, 3);
+  if (items.length === 0) return null;
+
+  return (
+    <View style={styles.feedCard}>
+      <LinearGradient
+        colors={['rgba(16,40,38,0.92)', 'rgba(8,22,24,0.96)', 'rgba(5,13,14,1)']}
+        style={styles.feedCardGradient}
+      />
+      <View style={styles.feedHeader}>
+        <View style={styles.feedHeaderCopy}>
+          <Text style={styles.largeSectionTitle} numberOfLines={1}>
+            {feed.title}
+          </Text>
+          <Text style={styles.cardSubtitle} numberOfLines={2}>
+            {feed.subtitle}
+          </Text>
+        </View>
+        <View style={styles.feedStatusPill}>
+          <LiveDot reducedMotion={reducedMotion} />
+          <Text style={styles.feedStatusText} numberOfLines={1}>
+            {feed.statusPill}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.feedItemList}>
+        {items.map((item) => (
+          <MiniCityFeedRow key={item.id} item={item} reducedMotion={reducedMotion} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function CityAgendaSection({ presentation }: { presentation: CenterHomePresentation }) {
+  const agenda = presentation.cityAgenda;
+  if (agenda.visibility !== 'visible') return null;
+
+  const progressToneColor =
+    agenda.progressTone === 'critical'
+      ? '#FF6B6B'
+      : agenda.progressTone === 'warning'
+        ? '#E8A84A'
+        : agenda.progressTone === 'positive'
+          ? palette.green
+          : palette.mint;
+
+  return (
+    <View style={styles.agendaCard}>
+      <LinearGradient
+        colors={['rgba(16,40,38,0.9)', 'rgba(8,22,24,0.96)', 'rgba(5,13,14,1)']}
+        style={styles.feedCardGradient}
+      />
+      <View style={styles.agendaHeader}>
+        <View style={styles.agendaTitleBlock}>
+          <Text style={styles.agendaSectionTitle} numberOfLines={1}>
+            {agenda.sectionTitle}
+          </Text>
+          <Text style={styles.agendaGoalTitle} numberOfLines={2}>
+            {agenda.goalTitle}
+          </Text>
+        </View>
+        <View style={[styles.agendaProgressPill, { borderColor: `${progressToneColor}55` }]}>
+          <Text style={[styles.agendaProgressText, { color: progressToneColor }]} numberOfLines={1}>
+            {agenda.progressLabel}
+          </Text>
+        </View>
+      </View>
+      <Text style={styles.agendaSummary} numberOfLines={2}>
+        {agenda.summary}
+      </Text>
+      <View style={styles.agendaChipRow}>
+        {agenda.chips.map((chip) => (
+          <View key={`${chip.label}-${chip.value}`} style={styles.agendaChip}>
+            <Text style={styles.agendaChipLabel} numberOfLines={1}>
+              {chip.label}
+            </Text>
+            <Text style={styles.agendaChipValue} numberOfLines={1}>
+              {chip.value}
+            </Text>
+          </View>
+        ))}
+        {agenda.secondaryChip ? (
+          <View style={styles.agendaSecondaryChip}>
+            <Text style={styles.agendaSecondaryChipText} numberOfLines={1}>
+              {agenda.secondaryChip}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+      <Text style={styles.agendaHint} numberOfLines={2}>
+        {agenda.nextHint}
+      </Text>
+    </View>
+  );
+}
+
 function EmptyPanel({ text }: { text: string }) {
   return (
     <View style={styles.emptyPanel}>
@@ -1471,16 +1676,22 @@ export function HubReferenceHome({ presentation, scrollFooter }: HubReferenceHom
           <NextActionsRail presentation={presentation} reducedMotion={reducedMotion} />
         </CenterMotionEnter>
         <CenterMotionEnter index={4} {...motionProps}>
-          <CityPulseCard presentation={presentation} reducedMotion={reducedMotion} />
+          <MiniCityFeedSection presentation={presentation} reducedMotion={reducedMotion} />
         </CenterMotionEnter>
         <CenterMotionEnter index={5} {...motionProps}>
-          <DistrictFocusCard presentation={presentation} reducedMotion={reducedMotion} />
+          <CityAgendaSection presentation={presentation} />
         </CenterMotionEnter>
         <CenterMotionEnter index={6} {...motionProps}>
+          <CityPulseCard presentation={presentation} reducedMotion={reducedMotion} />
+        </CenterMotionEnter>
+        <CenterMotionEnter index={7} {...motionProps}>
+          <DistrictFocusCard presentation={presentation} reducedMotion={reducedMotion} />
+        </CenterMotionEnter>
+        <CenterMotionEnter index={8} {...motionProps}>
           <LiveDevelopments presentation={presentation} reducedMotion={reducedMotion} />
         </CenterMotionEnter>
         <UnlockPreviewStrip presentation={presentation} reducedMotion={reducedMotion} />
-        <CenterMotionEnter index={7} {...motionProps}>
+        <CenterMotionEnter index={9} {...motionProps}>
           <QuickCommandsGrid presentation={presentation} reducedMotion={reducedMotion} />
         </CenterMotionEnter>
         {scrollFooter ? <View style={styles.scrollFooter}>{scrollFooter}</View> : null}
@@ -2236,6 +2447,105 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: palette.green,
   },
+  feedCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: palette.stroke,
+    backgroundColor: palette.panel,
+    padding: 12,
+    gap: 10,
+  },
+  feedCardGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  feedHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  feedHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  feedStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(143,225,166,0.28)',
+    backgroundColor: 'rgba(143,225,166,0.10)',
+  },
+  feedStatusText: {
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: '800',
+    color: palette.green,
+    letterSpacing: 0.2,
+  },
+  feedItemList: {
+    gap: 8,
+  },
+  feedItemRow: {
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(160,206,185,0.10)',
+    backgroundColor: 'rgba(11,25,25,0.72)',
+  },
+  feedItemIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    flexShrink: 0,
+  },
+  feedItemCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  feedItemTitle: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '800',
+    color: palette.text,
+  },
+  feedItemSubtitle: {
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: '600',
+    color: palette.muted,
+  },
+  feedItemSourcePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    maxWidth: 78,
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    borderWidth: 1,
+    flexShrink: 0,
+  },
+  feedItemSourceText: {
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '800',
+    flexShrink: 1,
+  },
   pulseCard: {
     borderRadius: 18,
     borderWidth: 1,
@@ -2646,5 +2956,106 @@ const styles = StyleSheet.create({
   },
   scrollFooter: {
     paddingTop: 4,
+  },
+  agendaCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: palette.stroke,
+    backgroundColor: palette.panel,
+    padding: 12,
+    gap: 8,
+  },
+  agendaHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  agendaTitleBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: 3,
+  },
+  agendaSectionTitle: {
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: '800',
+    color: palette.muted,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  agendaGoalTitle: {
+    fontSize: 17,
+    lineHeight: 21,
+    fontWeight: '800',
+    color: palette.text,
+  },
+  agendaProgressPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(16,40,38,0.55)',
+  },
+  agendaProgressText: {
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: '800',
+  },
+  agendaSummary: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '500',
+    color: palette.muted,
+  },
+  agendaChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  agendaChip: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: palette.stroke,
+    backgroundColor: palette.panelSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    gap: 1,
+    maxWidth: '48%',
+  },
+  agendaChipLabel: {
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: '700',
+    color: palette.faint,
+    textTransform: 'uppercase',
+  },
+  agendaChipValue: {
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: '800',
+    color: palette.text,
+  },
+  agendaSecondaryChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(216,177,83,0.24)',
+    backgroundColor: 'rgba(216,177,83,0.08)',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    justifyContent: 'center',
+  },
+  agendaSecondaryChipText: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '700',
+    color: palette.gold,
+  },
+  agendaHint: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+    color: palette.faint,
   },
 });

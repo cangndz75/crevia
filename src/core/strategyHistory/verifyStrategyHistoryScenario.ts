@@ -63,7 +63,7 @@ export function verifyStrategyHistoryScenario(): VerifyStrategyHistoryOutcome {
     if (!pass) ok = false;
   };
 
-  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 27', `SAVE_VERSION ${SAVE_VERSION}`));
+  record(assert(checks, isCurrentSaveVersion(SAVE_VERSION), `SAVE_VERSION ${SAVE_VERSION}`, `SAVE_VERSION ${SAVE_VERSION}`));
 
   let state = createEmptyStrategyHistoryState();
   const decisionRecord = buildStrategyDecisionRecordFromDecisionRecord(
@@ -204,7 +204,7 @@ export function verifyStrategyHistoryScenario(): VerifyStrategyHistoryOutcome {
   record(
     assert(
       checks,
-      migrated?.saveVersion === 27 &&
+      migrated?.saveVersion === SAVE_VERSION &&
         migrated.strategyHistory.decisionHistory.length === 0,
       'v26 save migrates with empty strategyHistory',
     ),

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { buildAuthorityGameplayPresentationContext } from '@/core/authority/authorityGameplayUnlockModel';
 import type { EventCard, EventDecision } from '@/core/models/EventCard';
@@ -12,33 +13,35 @@ import {
 } from '@/core/microDecisions';
 import { shouldHideAdvancedSystemForFirstTenMinutes } from '@/core/onboarding/firstTenMinutesPresentation';
 import { getActiveMicroDecisions } from '@/core/microDecisions/microDecisionState';
-import { operationMotionFieldCompleteHighlightMs, operationMotionFieldStepDurationMs } from '@/core/motion/operationMotionTokens';
-import { EventFieldAssignmentSummary } from '@/features/events/components/assignment/EventFieldAssignmentSummary';
-import { FieldNoteCard } from '@/features/events/components/FieldNoteCard';
-import { EventWorkflowStepper } from '@/features/events/components/event-workflow/EventWorkflowStepper';
-import { FieldImpactMetricsRow } from '@/features/events/components/event-workflow/field/FieldImpactMetricsRow';
+import {
+  operationMotionFieldCompleteHighlightMs,
+  operationMotionFieldStepDurationMs,
+} from '@/core/motion/operationMotionTokens';
 import { FieldWorkflowFooter } from '@/features/events/components/event-workflow/field/FieldWorkflowFooter';
 import { EventFieldMicroDecisionCard } from '@/features/events/components/event-workflow/field/EventFieldMicroDecisionCard';
 import {
   FieldAdvisorCommentCard,
-  FieldAssignmentEffectStrip,
-  FieldPhaseHeader,
-  FieldPlanSummaryStrip,
-  FieldResourceSnapshotCard,
-  FieldTimelineList,
+  FieldFeedbackList,
+  FieldFirstImpactPanel,
+  FieldPhaseHeading,
+  FieldProgressStepper,
+  FieldResourcePulsePanel,
+  FieldSecondaryActionsRow,
+  FieldStatusHeroCard,
 } from '@/features/events/components/event-workflow/field/FieldMotionSections';
-import { PlanEventSummaryCard } from '@/features/events/components/event-workflow/plan/PlanEventSummaryCard';
 import { OnboardingPhaseHint } from '@/features/onboarding/components/OnboardingPhaseHint';
+import { OperationPhaseBridgeCard } from '@/features/events/components/event-workflow/OperationPhaseBridgeCard';
+import { OperationPhaseContentEnter } from '@/features/events/components/event-workflow/OperationPhaseContentEnter';
+import { OperationPhaseProgressRail } from '@/features/events/components/event-workflow/OperationPhaseProgressRail';
+import { OperationPhaseShellHeader } from '@/features/events/components/event-workflow/OperationPhaseShellHeader';
 import { eventDetail } from '@/features/events/theme/eventDetailTokens';
 import {
   buildEventFieldPhasePresentation,
   mapMicroDecisionCardToFieldPresentation,
+  type EventFieldActionKey,
   type EventFieldInteractionState,
 } from '@/features/events/utils/eventFieldPhasePresentation';
 import type { EventPlanStrategyId } from '@/features/events/utils/eventPlanPhasePresentation';
-import { getInspectNeighborhoodHero } from '@/features/events/utils/eventWorkflowAssets';
-import { buildFieldScreenModel } from '@/features/events/utils/eventWorkflowDispatchFieldPresentation';
-import { resolveInspectDistrictId } from '@/features/events/utils/eventWorkflowPresentation';
 import { useGameStore } from '@/store/useGameStore';
 import { useCreviaReducedMotion } from '@/shared/motion';
 
@@ -52,6 +55,7 @@ type Props = {
   personnelPreview?: PersonnelImpactPreview | null;
   vehiclePreview?: VehicleImpactPreview | null;
   onComplete: () => void;
+  onBack?: () => void;
   completeDisabled?: boolean;
   applying?: boolean;
   phaseHint?: string | null;
@@ -64,12 +68,13 @@ type Props = {
 
 export function EventFieldPhase({
   event,
-  decision,
-  fieldNote,
+  decision: _decision,
+  fieldNote: _fieldNote,
   bottomPadding,
-  personnelPreview = null,
-  vehiclePreview = null,
+  personnelPreview: _personnelPreview = null,
+  vehiclePreview: _vehiclePreview = null,
   onComplete,
+  onBack,
   completeDisabled = false,
   applying = false,
   phaseHint = null,
@@ -79,6 +84,8 @@ export function EventFieldPhase({
   selectedPlanStrategyLabel = null,
   isDay1LearningEvent = false,
 }: Props) {
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const reducedMotion = useCreviaReducedMotion();
   const gameState = useGameStore((s) => s.gameState);
   const monetization = useGameStore((s) => s.monetization);
@@ -89,22 +96,11 @@ export function EventFieldPhase({
   const mainOperationSeason = useGameStore((s) => s.mainOperationSeason);
   const advisorState = useGameStore((s) => s.advisorState);
   const microDecisionState = useGameStore((s) => s.microDecisionState);
+  const maintenanceBacklogRuntime = useGameStore((s) => s.maintenanceBacklogRuntime);
 
   const [interactionState, setInteractionState] =
     useState<EventFieldInteractionState>('running');
   const [timelineStepIndex, setTimelineStepIndex] = useState(0);
-
-  const legacyModel = useMemo(
-    () =>
-      buildFieldScreenModel({
-        event,
-        decision,
-        fieldNote,
-        personnelPreview,
-        vehiclePreview,
-      }),
-    [decision, event, fieldNote, personnelPreview, vehiclePreview],
-  );
 
   const microDecisionCardModel = useMemo(() => {
     if (shouldHideAdvancedSystemForFirstTenMinutes(gameState, 'live_micro_decisions')) {
@@ -174,6 +170,7 @@ export function EventFieldPhase({
         isDay1LearningEvent,
         reducedMotion,
         authorityGameplayContext,
+        maintenanceBacklogRuntime,
       }),
     [
       assignment,
@@ -182,6 +179,7 @@ export function EventFieldPhase({
       gameDay,
       interactionState,
       isDay1LearningEvent,
+      maintenanceBacklogRuntime,
       microDecisionPresentation,
       reducedMotion,
       selectedPlanStrategyId,
@@ -231,20 +229,23 @@ export function EventFieldPhase({
     timelineStepIndex,
   ]);
 
-  const thumbnail = useMemo(
-    () => getInspectNeighborhoodHero(resolveInspectDistrictId(event)),
-    [event],
-  );
-
   const handleComplete = useCallback(() => {
     if (interactionState !== 'completed') return;
     if (presentation.primaryCta.actionKey !== 'view_result') return;
     onComplete();
   }, [interactionState, onComplete, presentation.primaryCta.actionKey]);
 
+  const handleSecondaryAction = useCallback((_actionKey: EventFieldActionKey) => {
+    // Presentation-only helpers; gameplay navigation intentionally deferred.
+  }, []);
+
   const footerDisabled =
     interactionState !== 'completed' || completeDisabled || applying;
   const footerLoading = applying;
+  const footerCtaLabel =
+    footerDisabled && !footerLoading
+      ? presentation.primaryCta.disabledLabel
+      : presentation.primaryCta.label;
 
   const footerSummary = useMemo(() => {
     if (interactionState === 'completed') {
@@ -253,54 +254,84 @@ export function EventFieldPhase({
     if (interactionState === 'paused_for_decision') {
       return 'Mikro karar bekleniyor';
     }
-    return `${presentation.selectedPlan.label} · ${presentation.timeline.helperText ?? 'Takip ediliyor'}`;
-  }, [interactionState, presentation.selectedPlan.label, presentation.timeline.helperText]);
+    return `${presentation.selectedPlan.label} · ${presentation.timeline.helperText ?? 'Saha sinyali izleniyor'}`;
+  }, [
+    interactionState,
+    presentation.selectedPlan.label,
+    presentation.timeline.helperText,
+  ]);
+
+  const compact = width < 370;
 
   return (
-    <View
+    <SafeAreaView
+      edges={['top']}
       style={styles.root}
       accessibilityLabel={presentation.accessibilityLabel}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scroll, { paddingBottom: bottomPadding }]}>
-        <PlanEventSummaryCard
-          title={event.title}
-          location={event.district}
-          priorityLabel={`Sahada · ${event.district}`}
-          remainingLabel={legacyModel.progressLabel}
-          thumbnail={thumbnail}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingBottom: Math.max(
+              bottomPadding,
+              108 + Math.max(insets.bottom, 12),
+            ),
+          },
+        ]}>
+        <OperationPhaseShellHeader
+          shell={{
+            ...presentation.phaseTransition.shell,
+            subtitle:
+              presentation.subtitle ?? presentation.phaseTransition.shell.subtitle,
+          }}
+          compact={compact}
+          onBack={onBack}
+          reducedMotion={reducedMotion}
+        />
+
+        <OperationPhaseProgressRail
+          progress={presentation.phaseTransition.progress}
+          reducedMotion={reducedMotion}
+        />
+
+        <FieldPhaseHeading
+          heading={presentation.phaseHeading}
+          description={presentation.phaseDescription}
         />
 
         {phaseHint ? <OnboardingPhaseHint text={phaseHint} /> : null}
 
-        <View style={styles.stepperGap}>
-          <EventWorkflowStepper activeStep="field" compact />
-        </View>
+        {presentation.phaseTransition.bridge ? (
+          <OperationPhaseBridgeCard
+            bridge={presentation.phaseTransition.bridge}
+            reducedMotion={reducedMotion}
+            index={2}
+          />
+        ) : null}
 
-        <FieldPhaseHeader
-          title={presentation.title}
-          subtitle={presentation.subtitle}
-          liveLabel="Ekip yönlendirildi"
-        />
+        <OperationPhaseContentEnter reducedMotion={reducedMotion} index={3}>
+        <FieldStatusHeroCard hero={presentation.statusHero} reducedMotion={reducedMotion} />
 
-        <FieldPlanSummaryStrip
-          plan={presentation.selectedPlan}
-          reducedMotion={reducedMotion}
-        />
-
-        <FieldAssignmentEffectStrip
-          effect={presentation.assignmentEffect}
-          reducedMotion={reducedMotion}
-        />
-
-        <FieldTimelineList
+        <FieldProgressStepper
           timeline={presentation.timeline}
           operationStatus={presentation.operationStatus}
           reducedMotion={reducedMotion}
         />
 
-        <FieldResourceSnapshotCard
-          rows={presentation.resourceRows}
+        <FieldFeedbackList
+          feedback={presentation.fieldFeedback}
+          reducedMotion={reducedMotion}
+        />
+
+        <FieldFirstImpactPanel
+          impact={presentation.firstImpact}
+          reducedMotion={reducedMotion}
+        />
+
+        <FieldResourcePulsePanel
+          pulse={presentation.resourcePulse}
           reducedMotion={reducedMotion}
         />
 
@@ -310,16 +341,17 @@ export function EventFieldPhase({
           cardModel={microDecisionCardModel}
         />
 
-        <EventFieldAssignmentSummary event={event} />
-
-        <FieldImpactMetricsRow metrics={legacyModel.impactMetrics} />
-
         <FieldAdvisorCommentCard
           comment={presentation.advisorComment}
           reducedMotion={reducedMotion}
         />
 
-        <FieldNoteCard body={legacyModel.fieldNote} compact />
+        <FieldSecondaryActionsRow
+          actions={presentation.actions}
+          reducedMotion={reducedMotion}
+          onActionPress={handleSecondaryAction}
+        />
+        </OperationPhaseContentEnter>
       </ScrollView>
 
       <FieldWorkflowFooter
@@ -327,23 +359,20 @@ export function EventFieldPhase({
         onPress={handleComplete}
         disabled={footerDisabled}
         loading={footerLoading}
-        ctaLabel={presentation.primaryCta.label}
+        ctaLabel={footerCtaLabel}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: eventDetail.bg,
   },
   scroll: {
-    gap: eventDetail.sectionGap,
-    paddingTop: 4,
+    gap: 12,
+    paddingTop: 8,
     minWidth: 0,
-  },
-  stepperGap: {
-    marginTop: -2,
-    marginBottom: -2,
   },
 });

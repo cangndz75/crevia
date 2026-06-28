@@ -12,6 +12,9 @@ import {
   dispatchAdvisorDiffersFromPlanAdvisor,
   suggestDecisionIdForPlanStrategy,
 } from '@/features/events/utils/eventDispatchPhasePresentation';
+import { verifyOperationReadinessScenario } from '@/core/operationReadiness/verifyOperationReadinessScenario';
+import { verifyMaintenanceBacklogRuntimeScenario } from '@/core/maintenanceBacklog/verifyMaintenanceBacklogRuntimeScenario';
+import { verifyMaintenanceBacklogScenario } from '@/core/maintenanceBacklog/verifyMaintenanceBacklogScenario';
 import {
   buildEventPlanPhasePresentation,
   getPlanStrategyLabel,
@@ -329,6 +332,15 @@ export function verifyOperationDispatchMotionScenario(): VerifyOperationDispatch
       issues.join(', ') || 'ok',
     );
   }
+
+  const readinessVerify = verifyOperationReadinessScenario();
+  assert(checks, readinessVerify.ok, 'operation readiness scenario', readinessVerify.checks.filter((c) => c.startsWith('FAIL')).join('; '));
+
+  const maintenanceVerify = verifyMaintenanceBacklogScenario();
+  assert(checks, maintenanceVerify.ok, 'maintenance backlog scenario', maintenanceVerify.checks.filter((c) => c.startsWith('FAIL')).join('; '));
+
+  const maintenanceRuntimeVerify = verifyMaintenanceBacklogRuntimeScenario();
+  assert(checks, maintenanceRuntimeVerify.ok, 'maintenance backlog runtime scenario', maintenanceRuntimeVerify.checks.filter((c) => c.startsWith('FAIL')).join('; '));
 
   const failCount = checks.filter((c) => !c.ok).length;
   return {

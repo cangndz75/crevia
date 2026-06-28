@@ -1,5 +1,25 @@
 import type { EventCard } from '@/core/models/EventCard';
 import {
+  buildEceMemorySnapshot,
+  buildResultEceLine,
+  mapEceToneToResultAdvisorTone,
+  type EceMemoryContextInput,
+  type EceOutcomeTone,
+} from '@/core/eceTone';
+import { buildResultResourceCostFromContext } from '@/core/operationReadiness';
+import {
+  buildMaintenanceBacklogFromReadiness,
+  buildMaintenanceBacklogRuntimePresentation,
+  buildMaintenanceResultHint,
+  buildMaintenanceRuntimeResultHint,
+} from '@/core/maintenanceBacklog';
+import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
+import { buildOperationReadinessSnapshot } from '@/core/operationReadiness/operationReadinessModel';
+import {
+  buildOperationPhaseTransitionPresentation,
+  type OperationPhaseTransitionPresentation,
+} from '@/features/events/utils/operationPhaseTransitionPresentation';
+import {
   buildDecisionConsequenceThreadsFromResult,
   mapDecisionConsequenceToneToSurface,
 } from '@/core/decisionConsequence';
@@ -13,16 +33,29 @@ import type {
   DecisionResultSnapshot,
   DecisionResultSummaryTone,
 } from '@/features/events/types/decisionResultTypes';
+import type { SocialEchoPresentation } from '@/core/socialEcho';
 import {
   getPlanStrategyLabel,
   type EventPlanStrategyId,
 } from '@/features/events/utils/eventPlanPhasePresentation';
+import type { PostDecisionCityReactionPresentation } from '@/features/events/utils/postDecisionCityReactionPresentation';
 
 export type EventResultOutcomeBand = 'success' | 'partial' | 'mixed' | 'risk' | 'unknown';
+
+export type EventResultOutcomeTone =
+  | 'positive'
+  | 'mixed'
+  | 'warning'
+  | 'critical'
+  | 'neutral';
 
 export type EventResultOutcomeSummary = {
   label: string;
   body: string;
+  eventTitle: string;
+  districtName: string;
+  statusLabel: string;
+  resultTone: EventResultOutcomeTone;
   outcomeBand: EventResultOutcomeBand;
   tone: 'positive' | 'neutral' | 'warning';
   iconKey: string;
@@ -56,13 +89,83 @@ export type EventResultRevealItem = {
   revealOrder: number;
 };
 
+export type EventResultImpactCardId =
+  | 'district_trust'
+  | 'operation_risk'
+  | 'resource_pressure'
+  | 'social_pulse';
+
 export type EventResultImpactCard = {
-  id: 'social_trust' | 'budget_resource' | 'operation_risk';
+  id: EventResultImpactCardId;
   title: string;
   body: string;
+  valueLabel: string;
   deltaText: string;
   tone: 'positive' | 'neutral' | 'warning';
   iconKey: string;
+  indicator?: 'up' | 'down' | 'neutral';
+};
+
+export type EventResultCityImpactSection = {
+  title: string;
+  items: EventResultImpactCard[];
+};
+
+export type EventResultDistrictReaction = {
+  title: string;
+  sourceLabel: string;
+  message: string;
+  tone: 'positive' | 'mixed' | 'warning' | 'critical' | 'neutral';
+  iconKey: string;
+};
+
+export type EventResultResourceCostItem = {
+  id: string;
+  label: string;
+  value: string;
+  description?: string;
+  tone: 'positive' | 'neutral' | 'warning';
+};
+
+export type EventResultResourceCostSection = {
+  title: string;
+  summary: string;
+  items: EventResultResourceCostItem[];
+  tone: 'positive' | 'neutral' | 'warning' | 'mixed';
+  maintenanceHint?: string;
+  maintenanceHintTone?: 'positive' | 'mixed' | 'warning' | 'critical' | 'neutral';
+};
+
+export type EventResultSelectedPlanOutcome = {
+  title: string;
+  planLabel: string;
+  summary: string;
+  tone: 'positive' | 'neutral' | 'warning';
+};
+
+export type EventResultReportBridgeChip = {
+  label: string;
+  value: string;
+  tone: 'positive' | 'neutral' | 'warning';
+};
+
+export type EventResultReportBridge = {
+  title: string;
+  summary: string;
+  chips: EventResultReportBridgeChip[];
+};
+
+export type EventResultSecondaryActionId =
+  | 'view_map'
+  | 'view_recent_impact'
+  | 'open_note';
+
+export type EventResultSecondaryAction = {
+  id: EventResultSecondaryActionId;
+  label: string;
+  iconKey: string;
+  actionKey: string;
+  enabled: boolean;
 };
 
 export type EventResultRecentImpactPreview = {
@@ -78,6 +181,7 @@ export type EventResultAdvisorComment = {
   title: string;
   text: string;
   tone: 'calm' | 'positive' | 'warning' | 'teaching';
+  toneLabel: string;
 };
 
 export type EventResultActionId =
@@ -104,16 +208,26 @@ export type EventResultSelectedPlanContext = {
 export type EventResultRevealPresentation = {
   title: string;
   subtitle?: string;
+  phaseHeading: string;
+  phaseDescription: string;
   outcome: EventResultOutcomeSummary;
+  cityImpact: EventResultCityImpactSection;
   impactCards: EventResultImpactCard[];
+  districtReaction?: EventResultDistrictReaction;
+  resourceCost: EventResultResourceCostSection;
+  selectedPlanOutcome?: EventResultSelectedPlanOutcome;
   recentImpact: EventResultRecentImpactPreview;
   revealItems: EventResultRevealItem[];
   advisorComment: EventResultAdvisorComment;
+  reportBridge: EventResultReportBridge;
+  secondaryActions: EventResultSecondaryAction[];
   finalActions: EventResultAction[];
+  primaryCta: EventResultAction;
   selectedPlanContext?: EventResultSelectedPlanContext;
   accessibilityLabel: string;
   revealStaggerMs: number;
   revealTotalMs: number;
+  phaseTransition: OperationPhaseTransitionPresentation;
 };
 
 export type BuildEventResultRevealPresentationInput = {
@@ -127,12 +241,24 @@ export type BuildEventResultRevealPresentationInput = {
   authorityProgressLine?: string | null;
   showNextDayAction?: boolean;
   reducedMotion?: boolean;
+  eceMemoryContext?: EceMemoryContextInput;
+  cityReaction?: PostDecisionCityReactionPresentation | null;
+  socialEcho?: SocialEchoPresentation | null;
+  maintenanceBacklogRuntime?: MaintenanceBacklogRuntimeState | null;
 };
 
 const PLAN_RESULT_LINE: Record<EventPlanStrategyId, string> = {
-  rapid_response: 'Hızlı müdahale sonucu süreyi öne aldı.',
-  balanced_plan: 'Seçtiğin plan kaynak etkisini dengede tuttu.',
-  long_term_fix: 'Kalıcı yatırım odağı güven etkisini güçlendirdi.',
+  rapid_response:
+    'Hızlı müdahale güveni hızla toparladı, ekip baskısını artırdı.',
+  balanced_plan: 'Dengeli plan riski büyütmeden kontrol sağladı.',
+  long_term_fix: 'Önleyici plan yarınki baskıyı azaltacak bir zemin oluşturdu.',
+};
+
+const ADVISOR_TONE_LABEL: Record<EventResultAdvisorComment['tone'], string> = {
+  calm: 'Stratejik',
+  positive: 'Olumlu',
+  warning: 'Dikkat',
+  teaching: 'Öğretici',
 };
 
 const KIND_ORDER: EventResultRevealItemKind[] = [
@@ -164,14 +290,47 @@ function mapSummaryToneToOutcomeBand(
   }
 }
 
+function mapSummaryToneToResultTone(
+  tone: DecisionResultSummaryTone,
+  band: EventResultOutcomeBand,
+): EventResultOutcomeTone {
+  if (band === 'risk') return 'critical';
+  if (tone === 'positive') return 'positive';
+  if (tone === 'mixed' || band === 'partial') return 'mixed';
+  if (tone === 'negative') return 'warning';
+  return 'neutral';
+}
+
+function buildStatusLabel(resultTone: EventResultOutcomeTone): string {
+  switch (resultTone) {
+    case 'positive':
+      return 'Olumlu Etki';
+    case 'mixed':
+      return 'Karışık Etki';
+    case 'warning':
+      return 'Dikkat';
+    case 'critical':
+      return 'Kritik İz';
+    default:
+      return 'Tamamlandı';
+  }
+}
+
 function buildOutcomeSummary(
   snapshot: DecisionResultSnapshot,
   isFallback: boolean,
 ): EventResultOutcomeSummary {
+  const eventTitle = snapshot.eventTitle?.trim() || snapshot.summaryTitle?.trim() || 'Operasyon';
+  const districtName = snapshot.neighborhoodName?.trim() || 'Merkez';
+
   if (isFallback) {
     return {
-      label: 'Sonuç kayda alındı',
-      body: 'Operasyon sonucu güvenli şekilde görüntüleniyor.',
+      label: 'Operasyon Tamamlandı',
+      body: 'Kararın şehirdeki ilk etkisi kayda alındı.',
+      eventTitle,
+      districtName,
+      statusLabel: 'Tamamlandı',
+      resultTone: 'neutral',
       outcomeBand: 'unknown',
       tone: 'neutral',
       iconKey: 'document-text-outline',
@@ -179,26 +338,34 @@ function buildOutcomeSummary(
   }
 
   const band = mapSummaryToneToOutcomeBand(snapshot.resultTone);
-  const label =
-    band === 'success'
-      ? 'Operasyon tamamlandı'
-      : band === 'partial'
-        ? 'Operasyon kısmen tamamlandı'
-        : band === 'risk'
-          ? 'Risk kontrol altına alındı'
-          : 'Sonuç kayda alındı';
+  const resultTone = mapSummaryToneToResultTone(snapshot.resultTone, band);
+  const statusLabel = buildStatusLabel(resultTone);
 
-  const body = snapshot.summaryText?.trim() || snapshot.summaryTitle?.trim() || label;
+  const label = 'Operasyon Tamamlandı';
+  const rawBody =
+    snapshot.summaryText?.trim() ||
+    snapshot.summaryTitle?.trim() ||
+    'Operasyon tamamlandı. Şehirde oluşan ilk etki ve kalan baskıyı değerlendir.';
+  const body = rawBody.length > 120 ? `${rawBody.slice(0, 118)}…` : rawBody;
 
   return {
     label,
-    body: body.length > 120 ? `${body.slice(0, 118)}…` : body,
+    body,
+    eventTitle,
+    districtName,
+    statusLabel,
+    resultTone,
     outcomeBand: band,
-    tone: band === 'success' ? 'positive' : band === 'risk' ? 'warning' : 'neutral',
+    tone:
+      resultTone === 'positive'
+        ? 'positive'
+        : resultTone === 'warning' || resultTone === 'critical'
+          ? 'warning'
+          : 'neutral',
     iconKey:
-      band === 'success'
+      resultTone === 'positive'
         ? 'checkmark-circle-outline'
-        : band === 'risk'
+        : resultTone === 'warning' || resultTone === 'critical'
           ? 'alert-circle-outline'
           : 'pulse-outline',
   };
@@ -232,52 +399,115 @@ function impactTone(metric?: DecisionMetricChange): EventResultImpactCard['tone'
   return 'warning';
 }
 
+function qualitativeTrustLabel(metric?: DecisionMetricChange): string {
+  const tone = impactTone(metric);
+  if (tone === 'positive') return 'Toparlanıyor';
+  if (tone === 'warning') return 'Kısmi artış';
+  return 'Dengede';
+}
+
+function qualitativeRiskLabel(metric?: DecisionMetricChange): string {
+  const tone = impactTone(metric);
+  if (tone === 'positive') return 'Azaldı';
+  if (tone === 'warning') return 'İzleniyor';
+  return 'Kontrol altında';
+}
+
+function qualitativeResourceLabel(
+  budgetMetric?: DecisionMetricChange,
+  personnelMetric?: DecisionMetricChange,
+): string {
+  const budgetTone = impactTone(budgetMetric);
+  const moraleTone = impactTone(personnelMetric);
+  if (budgetTone === 'warning' || moraleTone === 'warning') return 'Arttı';
+  if (budgetTone === 'positive') return 'Dengede';
+  return 'İzlenmeli';
+}
+
+function qualitativeSocialLabel(snapshot: DecisionResultSnapshot): string {
+  const social = snapshot.subsystemOutcomes.find((o) => o.key === 'social');
+  if (social?.status === 'good') return 'Sakinleşiyor';
+  if (social?.status === 'warning' || social?.status === 'critical') return 'Hâlâ yüksek';
+  return 'İzleniyor';
+}
+
 function buildResultImpactCards(snapshot: DecisionResultSnapshot): EventResultImpactCard[] {
   const publicMetric = findMetric(snapshot.metricChanges, 'publicSatisfaction');
   const budgetMetric = findMetric(snapshot.metricChanges, 'budget');
   const riskMetric = findMetric(snapshot.metricChanges, 'operationRisk');
   const personnelMetric = findMetric(snapshot.metricChanges, 'personnelMorale');
+  const publicTone = impactTone(publicMetric);
+  const riskTone = impactTone(riskMetric);
+  const resourceTone =
+    impactTone(budgetMetric) === 'warning' || impactTone(personnelMetric) === 'warning'
+      ? 'warning'
+      : impactTone(budgetMetric);
+  const socialSubsystem = snapshot.subsystemOutcomes.find((o) => o.key === 'social');
+  const socialTone =
+    socialSubsystem?.status === 'good'
+      ? 'positive'
+      : socialSubsystem?.status === 'warning' || socialSubsystem?.status === 'critical'
+        ? 'warning'
+        : 'neutral';
 
   return [
     {
-      id: 'social_trust',
-      title: 'Sosyal güven',
+      id: 'district_trust',
+      title: 'Mahalle Güveni',
       body:
-        impactTone(publicMetric) === 'positive'
-          ? 'Mahalle güveni kararın ardından toparlandı.'
-          : impactTone(publicMetric) === 'warning'
-            ? 'Mahalle güveni sınırlı tepki verdi.'
-            : 'Mahalle güveni dengede kaldı.',
+        publicTone === 'positive'
+          ? 'Görünür müdahale güven algısını toparladı.'
+          : publicTone === 'warning'
+            ? 'Güven artışı sınırlı kaldı, mahalle izleniyor.'
+            : 'Mahalle güveni dengede seyrediyor.',
+      valueLabel: qualitativeTrustLabel(publicMetric),
       deltaText: formatImpactDelta(publicMetric),
-      tone: impactTone(publicMetric),
-      iconKey: 'people-outline',
-    },
-    {
-      id: 'budget_resource',
-      title: 'Bütçe / kaynak',
-      body:
-        impactTone(budgetMetric) === 'warning' || impactTone(personnelMetric) === 'warning'
-          ? 'Kaynak baskısı yarına iz bırakabilir.'
-          : 'Kaynak kullanımı kontrol altında kaldı.',
-      deltaText: formatImpactDelta(budgetMetric),
-      tone:
-        impactTone(budgetMetric) === 'warning' || impactTone(personnelMetric) === 'warning'
-          ? 'warning'
-          : impactTone(budgetMetric),
-      iconKey: 'wallet-outline',
+      tone: publicTone,
+      iconKey: 'shield-checkmark-outline',
+      indicator: publicTone === 'positive' ? 'up' : publicTone === 'warning' ? 'down' : 'neutral',
     },
     {
       id: 'operation_risk',
-      title: 'Risk baskısı',
+      title: 'Operasyon Riski',
       body:
-        impactTone(riskMetric) === 'positive'
-          ? 'Operasyon riski geriye çekildi.'
-          : impactTone(riskMetric) === 'warning'
+        riskTone === 'positive'
+          ? 'Saha müdahalesi kısa vadeli riski baskıladı.'
+          : riskTone === 'warning'
             ? 'Risk baskısı tamamen sönmedi.'
             : 'Risk seviyesi izlemeye alındı.',
+      valueLabel: qualitativeRiskLabel(riskMetric),
       deltaText: formatImpactDelta(riskMetric),
-      tone: impactTone(riskMetric),
+      tone: riskTone,
       iconKey: 'pulse-outline',
+      indicator: riskTone === 'positive' ? 'down' : riskTone === 'warning' ? 'up' : 'neutral',
+    },
+    {
+      id: 'resource_pressure',
+      title: 'Kaynak Baskısı',
+      body:
+        resourceTone === 'warning'
+          ? 'Ekip ve kaynak temposu yarına taşınabilir.'
+          : 'Kaynak kullanımı kontrol altında kaldı.',
+      valueLabel: qualitativeResourceLabel(budgetMetric, personnelMetric),
+      deltaText: formatImpactDelta(budgetMetric),
+      tone: resourceTone,
+      iconKey: 'wallet-outline',
+      indicator: resourceTone === 'warning' ? 'up' : 'neutral',
+    },
+    {
+      id: 'social_pulse',
+      title: 'Sosyal Nabız',
+      body:
+        socialTone === 'positive'
+          ? 'Mahalledeki görünür tepki düşmeye başladı.'
+          : socialTone === 'warning'
+            ? 'Sosyal beklenti tamamen kapanmadı.'
+            : 'Sosyal nabız dengeli görünüyor.',
+      valueLabel: qualitativeSocialLabel(snapshot),
+      deltaText: '—',
+      tone: socialTone,
+      iconKey: 'chatbubbles-outline',
+      indicator: socialTone === 'positive' ? 'down' : socialTone === 'warning' ? 'up' : 'neutral',
     },
   ];
 }
@@ -607,6 +837,197 @@ function buildDecisionConsequenceItem(
   };
 }
 
+const REVEAL_KINDS_COVERED_BY_CITY_IMPACT: EventResultRevealItemKind[] = [
+  'district_trust',
+  'social_pulse',
+  'resource',
+];
+
+function buildDistrictReaction(
+  input: BuildEventResultRevealPresentationInput,
+  advisorText: string,
+): EventResultDistrictReaction | undefined {
+  const socialEcho = input.socialEcho;
+  const cityReaction = input.cityReaction;
+  const message =
+    socialEcho?.message?.trim() ||
+    cityReaction?.socialEcho.line?.trim() ||
+    cityReaction?.shortSummary?.trim();
+
+  if (!message) return undefined;
+
+  const normalizedAdvisor = advisorText.trim().toLowerCase();
+  if (normalizedAdvisor && message.toLowerCase().includes(normalizedAdvisor.slice(0, 24))) {
+    return undefined;
+  }
+
+  const sourceLabel =
+    socialEcho?.title?.trim() ||
+    cityReaction?.socialEcho.sourceLabel?.trim() ||
+    'Mahalle';
+  const tone =
+    socialEcho?.tone ??
+    cityReaction?.socialEcho.tone ??
+    cityReaction?.tone ??
+    'neutral';
+
+  return {
+    title: 'Mahalle Tepkisi',
+    sourceLabel,
+    message: message.length > 140 ? `${message.slice(0, 138)}…` : message,
+    tone,
+    iconKey: 'chatbubble-ellipses-outline',
+  };
+}
+
+function buildResourceCostSection(
+  snapshot: DecisionResultSnapshot,
+  strategyId?: EventPlanStrategyId | null,
+  outcomeTone?: EventResultOutcomeTone,
+  maintenanceBacklogRuntime?: MaintenanceBacklogRuntimeState | null,
+): EventResultResourceCostSection {
+  const budgetMetric = findMetric(snapshot.metricChanges, 'budget');
+  const moraleMetric = findMetric(snapshot.metricChanges, 'personnelMorale');
+  const vehicle = snapshot.subsystemOutcomes.find((o) => o.key === 'vehicle');
+  const personnel = snapshot.subsystemOutcomes.find((o) => o.key === 'personnel');
+
+  const cost = buildResultResourceCostFromContext(
+    {
+      phase: 'result',
+      planStrategyId: strategyId,
+      moraleDelta: moraleMetric?.delta,
+      budgetDelta: budgetMetric?.delta,
+      outcomeTone,
+    },
+    {
+      personnelDescription: personnel?.primaryText,
+      vehicleDescription: vehicle?.primaryText,
+    },
+  );
+
+  const readinessSnapshot = buildOperationReadinessSnapshot({
+    phase: 'result',
+    planStrategyId: strategyId,
+    moraleDelta: moraleMetric?.delta,
+    budgetDelta: budgetMetric?.delta,
+    outcomeTone,
+  });
+  const maintenancePresentation = maintenanceBacklogRuntime
+    ? buildMaintenanceBacklogRuntimePresentation(maintenanceBacklogRuntime, {
+        readinessSnapshot,
+      })
+    : null;
+  const maintenanceHint = maintenancePresentation
+    ? buildMaintenanceRuntimeResultHint(maintenancePresentation, [
+        cost.summary,
+        personnel?.primaryText ?? '',
+        vehicle?.primaryText ?? '',
+      ]) ??
+      buildMaintenanceResultHint(buildMaintenanceBacklogFromReadiness(readinessSnapshot), [
+        cost.summary,
+        personnel?.primaryText ?? '',
+        vehicle?.primaryText ?? '',
+      ])
+    : buildMaintenanceResultHint(buildMaintenanceBacklogFromReadiness(readinessSnapshot), [
+        cost.summary,
+        personnel?.primaryText ?? '',
+        vehicle?.primaryText ?? '',
+      ]);
+
+  return {
+    title: cost.title,
+    summary: cost.summary,
+    tone: cost.tone,
+    items: cost.items,
+    maintenanceHint: maintenanceHint ?? undefined,
+    maintenanceHintTone:
+      maintenancePresentation?.overallTone ??
+      buildMaintenanceBacklogFromReadiness(readinessSnapshot).overallTone,
+  };
+}
+
+function buildSelectedPlanOutcome(
+  strategyId: EventPlanStrategyId | null | undefined,
+): EventResultSelectedPlanOutcome | undefined {
+  if (!strategyId) return undefined;
+  const tone: EventResultSelectedPlanOutcome['tone'] =
+    strategyId === 'rapid_response'
+      ? 'warning'
+      : strategyId === 'long_term_fix'
+        ? 'positive'
+        : 'neutral';
+  return {
+    title: 'Seçilen Planın İzi',
+    planLabel: getPlanStrategyLabel(strategyId),
+    summary: PLAN_RESULT_LINE[strategyId],
+    tone,
+  };
+}
+
+function buildReportBridge(
+  input: BuildEventResultRevealPresentationInput,
+  outcome: EventResultOutcomeSummary,
+  resourceCost: EventResultResourceCostSection,
+): EventResultReportBridge {
+  const day = input.day ?? input.snapshot.day ?? 1;
+  const cityReaction = input.cityReaction;
+  const memoryLine = cityReaction?.reportMemoryLine?.trim();
+  const riskHint = cityReaction?.nextRiskHint?.trim();
+
+  const summary =
+    memoryLine ||
+    (day <= 1
+      ? 'Bu karar gün sonu raporunda mahalle güveni ve kaynak etkisiyle görünecek.'
+      : resourceCost.tone === 'warning' || resourceCost.tone === 'mixed'
+        ? 'Günün izine eklendi: Güven toparlandı, kaynak baskısı izlenmeli.'
+        : 'Bu karar gün sonu raporunda mahalle güveni, kaynak baskısı ve sosyal nabız etkisiyle görünecek.');
+
+  const chips: EventResultReportBridgeChip[] = [
+    {
+      label: 'Rapor',
+      value: outcome.resultTone === 'positive' ? 'Eklendi' : 'Kayıtta',
+      tone: 'neutral',
+    },
+    {
+      label: 'Yarın Riski',
+      value: riskHint ? 'Taşınır' : resourceCost.tone === 'warning' ? 'İzlenir' : 'Düşük',
+      tone: riskHint || resourceCost.tone === 'warning' ? 'warning' : 'positive',
+    },
+  ];
+
+  return {
+    title: day <= 1 ? 'Günün İzine Eklendi' : 'Rapora Yansıyacak',
+    summary: summary.length > 150 ? `${summary.slice(0, 148)}…` : summary,
+    chips,
+  };
+}
+
+function buildSecondaryActions(): EventResultSecondaryAction[] {
+  return [
+    {
+      id: 'view_map',
+      label: 'Haritada Gör',
+      iconKey: 'map-outline',
+      actionKey: 'view_map',
+      enabled: true,
+    },
+    {
+      id: 'view_recent_impact',
+      label: 'Son Etkiyi Gör',
+      iconKey: 'pulse-outline',
+      actionKey: 'view_recent_impact',
+      enabled: true,
+    },
+    {
+      id: 'open_note',
+      label: 'Not Aç',
+      iconKey: 'document-text-outline',
+      actionKey: 'open_note',
+      enabled: true,
+    },
+  ];
+}
+
 function buildRevealItems(
   snapshot: DecisionResultSnapshot,
   input: BuildEventResultRevealPresentationInput,
@@ -639,9 +1060,13 @@ function buildRevealItems(
     (item): item is EventResultRevealItem => Boolean(item),
   );
 
-  while (ordered.length < 3) {
+  const filtered = ordered.filter(
+    (item) => !REVEAL_KINDS_COVERED_BY_CITY_IMPACT.includes(item.kind),
+  );
+
+  while (filtered.length < 3) {
     if (!byKind.has('city_memory')) {
-      ordered.push({
+      filtered.push({
         id: 'reveal-city-memory-fallback',
         kind: 'city_memory',
         title: 'Sonuç kaydı',
@@ -658,7 +1083,7 @@ function buildRevealItems(
     break;
   }
 
-  return ordered.slice(0, 7).map((item, index) => ({
+  return filtered.slice(0, 7).map((item, index) => ({
     ...item,
     revealOrder: index + 1,
   }));
@@ -684,52 +1109,65 @@ function isGenuineTomorrowRiskWarning(item: EventResultRevealItem): boolean {
   );
 }
 
+function mapOutcomeBandToEceTone(
+  outcome: EventResultOutcomeSummary,
+  hasRisk: boolean,
+  hasCarryOver: boolean,
+): EceOutcomeTone {
+  if (hasCarryOver && outcome.outcomeBand === 'risk') return 'warning';
+  if (hasRisk || outcome.outcomeBand === 'risk') return 'warning';
+  if (outcome.outcomeBand === 'success') return 'positive';
+  if (outcome.outcomeBand === 'mixed' || outcome.outcomeBand === 'partial') return 'mixed';
+  if (outcome.tone === 'warning') return 'warning';
+  return 'neutral';
+}
+
 export function buildEventResultAdvisorComment(
   input: BuildEventResultRevealPresentationInput,
   outcome: EventResultOutcomeSummary,
   revealItems: EventResultRevealItem[],
 ): EventResultAdvisorComment {
-  if (input.isDay1LearningEvent || input.day === 1) {
-    return {
-      title: 'Ece',
-      text: 'İlk operasyon tamamlandı. Sonuç kartları, kararının şehir üzerindeki etkisini gösterir.',
-      tone: 'teaching',
-    };
-  }
-
+  const day = input.day ?? input.event?.day ?? 1;
   const hasCarryOver = revealItems.some(
-    (item) => item.kind === 'carry_over' || item.kind === 'butterfly',
+    (item) => item.kind === 'carry_over' || item.kind === 'butterfly' || item.kind === 'city_memory',
   );
   const hasRisk = revealItems.some(isGenuineTomorrowRiskWarning);
+  const outcomeTone = mapOutcomeBandToEceTone(outcome, hasRisk, hasCarryOver);
 
-  if (hasCarryOver) {
+  const memoryContext: EceMemoryContextInput = {
+    day,
+    event: input.event ?? null,
+    eventId: input.event?.id ?? input.snapshot.eventId,
+    districtName: input.event?.district ?? input.snapshot.neighborhoodName,
+    selectedPlanId: input.selectedPlanStrategyId ?? undefined,
+    recentOutcomeTone: outcomeTone,
+    ...input.eceMemoryContext,
+  };
+
+  const memory = buildEceMemorySnapshot(memoryContext);
+  const line = buildResultEceLine({
+    memory,
+    context: memoryContext,
+    seed: `${input.snapshot.eventId}:result:${day}`,
+    outcomeTone,
+    avoidLines: input.eceMemoryContext?.avoidLines,
+  });
+
+  if (input.isDay1LearningEvent || day === 1) {
     return {
-      title: 'Ece',
-      text: 'Bu karar şehir hafızasına işlendi. Sonraki günlerde küçük bir iz bırakabilir.',
-      tone: 'calm',
+      title: 'Ece Değerlendirmesi',
+      text: line.message,
+      tone: 'teaching',
+      toneLabel: ADVISOR_TONE_LABEL.teaching,
     };
   }
 
-  if (hasRisk || outcome.outcomeBand === 'risk') {
-    return {
-      title: 'Ece',
-      text: 'Operasyon tamamlandı ama bazı etkiler yarına taşınabilir. Raporu kontrol etmek iyi olur.',
-      tone: 'warning',
-    };
-  }
-
-  if (outcome.outcomeBand === 'success') {
-    return {
-      title: 'Ece',
-      text: 'Kararın sahada karşılık buldu. Şimdi bu etkinin rapora nasıl yansıdığını izleyebilirsin.',
-      tone: 'positive',
-    };
-  }
-
+  const tone = mapEceToneToResultAdvisorTone(line.tone);
   return {
-    title: 'Ece',
-    text: 'Sonuç kayda alındı. Merkez ve rapor ekranından etkiyi takip edebilirsin.',
-    tone: 'calm',
+    title: 'Ece Değerlendirmesi',
+    text: line.message,
+    tone,
+    toneLabel: ADVISOR_TONE_LABEL[tone],
   };
 }
 
@@ -739,17 +1177,17 @@ function buildFinalActions(
 ): EventResultAction[] {
   const actions: EventResultAction[] = [
     {
-      id: 'back_to_hub',
-      label: "Merkez'e Dön",
-      route: '/',
-      actionKey: 'back_to_hub',
+      id: 'open_report',
+      label: 'Raporu Gör',
+      route: '/reports',
+      actionKey: 'open_report',
       enabled: true,
     },
     {
-      id: 'open_report',
-      label: 'Raporu Aç',
-      route: '/reports',
-      actionKey: 'open_report',
+      id: 'back_to_hub',
+      label: 'Merkeze Dön',
+      route: '/',
+      actionKey: 'back_to_hub',
       enabled: true,
     },
   ];
@@ -781,30 +1219,88 @@ export function buildEventResultRevealPresentation(
 ): EventResultRevealPresentation {
   const isFallback = input.isFallback ?? false;
   const reducedMotion = input.reducedMotion ?? false;
+  const day = input.day ?? input.snapshot.day ?? 1;
   const outcome = buildOutcomeSummary(input.snapshot, isFallback);
   const impactCards = buildResultImpactCards(input.snapshot);
+  const cityImpact: EventResultCityImpactSection = {
+    title: 'Şehir Etkisi',
+    items: impactCards,
+  };
   const recentImpact = buildRecentImpactPreview(input.snapshot, outcome, impactCards);
   const revealItems = buildRevealItems(input.snapshot, input);
   const selectedPlanContext = buildSelectedPlanContext(input.selectedPlanStrategyId);
+  const selectedPlanOutcome = buildSelectedPlanOutcome(input.selectedPlanStrategyId);
   const advisorComment = buildEventResultAdvisorComment(input, outcome, revealItems);
+  const districtReaction = buildDistrictReaction(input, advisorComment.text);
+  const resourceCost = buildResourceCostSection(
+    input.snapshot,
+    input.selectedPlanStrategyId,
+    outcome.resultTone,
+    input.maintenanceBacklogRuntime,
+  );
+  const reportBridge = buildReportBridge(input, outcome, resourceCost);
+  const secondaryActions = buildSecondaryActions();
   const showAuthority = Boolean(input.authorityProgressLine?.trim());
   const finalActions = buildFinalActions(input.showNextDayAction ?? false, showAuthority);
+  const primaryCta = finalActions[0] ?? {
+    id: 'open_report',
+    label: 'Raporu Gör',
+    route: '/reports',
+    actionKey: 'open_report',
+    enabled: true,
+  };
+
+  const phaseDescription =
+    day <= 1
+      ? 'Operasyon tamamlandı. Kararının şehirde bıraktığı ilk etkiyi oku.'
+      : 'Operasyon tamamlandı. Şehirde oluşan ilk etki ve kalan baskıyı değerlendir.';
+
+  const outcomeToneForBridge: EceOutcomeTone =
+    outcome.outcomeBand === 'success'
+      ? 'positive'
+      : outcome.outcomeBand === 'mixed' || outcome.outcomeBand === 'partial'
+        ? 'mixed'
+        : outcome.outcomeBand === 'risk'
+          ? 'warning'
+          : 'neutral';
+
+  const phaseTransition = buildOperationPhaseTransitionPresentation({
+    phase: 'result',
+    event: input.event ?? null,
+    outcomeTone: outcomeToneForBridge,
+    trustLabel: impactCards.find((card) => card.id === 'district_trust')?.valueLabel,
+    riskLabel: impactCards.find((card) => card.id === 'operation_risk')?.valueLabel,
+    resourceLabel: resourceCost.items[0]?.value,
+    ctaEnabled: primaryCta.enabled,
+    ctaActionKey: primaryCta.actionKey,
+    avoidSummaries: [advisorComment.text, reportBridge.summary, districtReaction?.message ?? ''],
+  });
 
   return {
-    title: 'Operasyon Sonucu',
-    subtitle: input.snapshot.eventTitle,
+    title: phaseTransition.shell.title,
+    subtitle: phaseTransition.shell.subtitle,
+    phaseHeading: 'Operasyon Sonucu',
+    phaseDescription,
     outcome,
+    cityImpact,
     impactCards,
+    districtReaction,
+    resourceCost,
+    selectedPlanOutcome,
     recentImpact,
     revealItems,
     advisorComment,
+    reportBridge,
+    secondaryActions,
     finalActions,
+    primaryCta,
     selectedPlanContext,
-    accessibilityLabel: `${input.snapshot.eventTitle} operasyon sonucu, ${outcome.label}`,
+    accessibilityLabel: `${input.snapshot.eventTitle} operasyon sonucu, ${outcome.statusLabel}`,
     revealStaggerMs: operationMotionResultRevealStaggerMs(reducedMotion),
     revealTotalMs: reducedMotion
       ? OPERATION_MOTION_RESULT_REDUCED_MS
       : OPERATION_MOTION_RESULT_TOTAL_MS,
+    phaseTransition,
   };
 }
 
@@ -818,8 +1314,29 @@ export function auditEventResultRevealPresentation(
   if (!model.outcome.label.trim() || !model.outcome.body.trim()) {
     issues.push('outcome incomplete');
   }
-  if (model.impactCards.length !== 3) {
-    issues.push('impactCards count should be 3');
+  if (model.impactCards.length !== 4) {
+    issues.push('impactCards count should be 4');
+  }
+  if (!model.cityImpact.title.trim() || model.cityImpact.items.length !== 4) {
+    issues.push('cityImpact incomplete');
+  }
+  if (!model.phaseHeading.trim() || !model.phaseDescription.trim()) {
+    issues.push('phase heading/description empty');
+  }
+  if (!model.resourceCost.summary.trim() || model.resourceCost.items.length < 3) {
+    issues.push('resourceCost incomplete');
+  }
+  if (!model.reportBridge.summary.trim() || model.reportBridge.chips.length < 2) {
+    issues.push('reportBridge incomplete');
+  }
+  if (!model.advisorComment.toneLabel.trim()) {
+    issues.push('advisorComment toneLabel empty');
+  }
+  if (!model.primaryCta.label.trim() || model.primaryCta.id !== 'open_report') {
+    issues.push('primaryCta should be open_report');
+  }
+  if (model.secondaryActions.length < 3) {
+    issues.push('secondaryActions incomplete');
   }
   if (!model.recentImpact.eventId.trim() || !model.recentImpact.summary.trim()) {
     issues.push('recentImpact incomplete');

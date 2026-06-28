@@ -175,6 +175,16 @@ export function MapCompactBottomPanel({
           <Text style={styles.contextLine} numberOfLines={1}>
             {panel.contextLine}
           </Text>
+          {panel.tacticalMicroLine ? (
+            <Text style={styles.tacticalMicroLine} numberOfLines={1}>
+              {panel.tacticalMicroLine}
+            </Text>
+          ) : null}
+          {panel.layerHintLine ? (
+            <Text style={styles.layerHintLine} numberOfLines={1}>
+              {panel.layerHintLine}
+            </Text>
+          ) : null}
           <Text style={styles.summary} numberOfLines={expanded ? 3 : 2}>
             {panel.summaryLine}
           </Text>
@@ -359,6 +369,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: mapUi.teal,
     lineHeight: 17,
+  },
+  tacticalMicroLine: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: mapUi.gold,
+    lineHeight: 16,
+  },
+  layerHintLine: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: mapUi.textSoft,
+    lineHeight: 16,
   },
   summary: {
     fontSize: 13,

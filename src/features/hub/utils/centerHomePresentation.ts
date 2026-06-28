@@ -72,6 +72,7 @@ import {
   type CenterRecentImpactSummaryPresentation,
   type CenterStrategicPulsePresentation,
   type CenterUnlockPreviewMiniPresentation,
+  type MiniCityFeedPresentation,
 } from './centerHubGameplayPresentation';
 import {
   buildMemoryFollowUpPresentationContext,
@@ -163,6 +164,8 @@ export type CenterHomePresentation = CenterHomeCoreSections & {
   advisorMiniDirective: CenterAdvisorMiniDirectivePresentation;
   districtFocus: CenterDistrictFocusPresentation;
   unlockPreviewMini: CenterUnlockPreviewMiniPresentation;
+  miniCityFeed: MiniCityFeedPresentation;
+  cityAgenda: import('@/core/periodGoals').HubPeriodGoalCardPresentation;
   hubGameplay: CenterHubGameplayPresentation;
 };
 
@@ -177,6 +180,7 @@ export type {
   CenterAdvisorMiniDirectivePresentation,
   CenterDistrictFocusPresentation,
   CenterUnlockPreviewMiniPresentation,
+  MiniCityFeedPresentation,
 } from './centerHubGameplayPresentation';
 
 export type BuildCenterHomePresentationInput = {
@@ -195,6 +199,7 @@ export type BuildCenterHomePresentationInput = {
   hubStoryChainLine?: string | null;
   hubVehicleMaintenanceLine?: string | null;
   hubTeamSpecializationLine?: string | null;
+  maintenanceBacklogRuntime?: import('@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes').MaintenanceBacklogRuntimeState | null;
   cardVisibility?: HubCardVisibilityModel;
   economySource?: number;
   budgetDeltaLabel?: string | null;
@@ -700,6 +705,12 @@ export function buildCenterHomePresentation(
   const hubGameplay = buildCenterHubGameplayPresentation(
     withCommandPanel,
     input.recentDecisionRecord,
+    input.maintenanceBacklogRuntime,
+    {
+      socialPulseState: input.socialPulseState,
+      tomorrowRisk: input.hubTomorrowRisk,
+      selectedDistrictName: input.selectedDistrictName,
+    },
   );
 
   return {
@@ -713,6 +724,8 @@ export function buildCenterHomePresentation(
     advisorMiniDirective: hubGameplay.advisorMiniDirective,
     districtFocus: hubGameplay.districtFocus,
     unlockPreviewMini: hubGameplay.unlockPreviewMini,
+    miniCityFeed: hubGameplay.miniCityFeed,
+    cityAgenda: hubGameplay.cityAgenda,
     hubGameplay,
   };
 }

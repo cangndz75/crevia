@@ -7,10 +7,37 @@ export type PlayerStyleId =
   | 'resource_guardian'
   | 'crisis_watcher'
   | 'balanced_operator'
+  | 'route_focused'
+  | 'district_loyalist'
   | 'inconsistent_operator'
   | 'unknown';
 
 export type PlayerStyleConfidence = 'none' | 'low' | 'medium' | 'high';
+
+export type PlayerStyleEvidenceTone = 'positive' | 'mixed' | 'warning' | 'neutral';
+
+export type PlayerStyleEvidenceChip = {
+  label: string;
+  value: string;
+  tone: PlayerStyleEvidenceTone;
+};
+
+export type PlayerStylePresentationCard = {
+  visible: boolean;
+  sectionTitle: string;
+  microcopy: string;
+  label: string;
+  shortLabel: string;
+  description: string;
+  strengths: string[];
+  watchouts: string[];
+  currentSignal: string;
+  confidence: PlayerStyleConfidence;
+  confidenceLabel: string;
+  tone: PlayerStyleTone;
+  evidenceChips: PlayerStyleEvidenceChip[];
+  styleId: PlayerStyleId;
+};
 
 export type PlayerStyleSignalKind =
   | 'fast_response'
@@ -20,6 +47,8 @@ export type PlayerStyleSignalKind =
   | 'social_priority'
   | 'crisis_prevention'
   | 'district_balance'
+  | 'route_continuity'
+  | 'district_focus'
   | 'delayed_response'
   | 'mixed';
 
@@ -68,6 +97,8 @@ export type PlayerStyleSurface = 'hub' | 'report' | 'event' | 'debug';
 export type PlayerStyleInput = {
   day: number;
   surface?: PlayerStyleSurface;
+  strategyHistory?: import('@/core/strategyHistory/strategyHistoryTypes').StrategyHistoryStateV1;
+  dominantStrategy?: import('@/core/dominantStrategyDetector/dominantStrategyDetectorTypes').DominantStrategyDetectorResult | null;
   recentEvents?: Array<{ id?: string; title?: string; decisionLabel?: string }>;
   recentResults?: Array<{
     summaryText?: string;
@@ -98,6 +129,8 @@ export const PLAYER_STYLE_IDS: PlayerStyleId[] = [
   'resource_guardian',
   'crisis_watcher',
   'balanced_operator',
+  'route_focused',
+  'district_loyalist',
   'inconsistent_operator',
   'unknown',
 ];
@@ -110,6 +143,8 @@ export const PLAYER_STYLE_SIGNAL_KINDS: PlayerStyleSignalKind[] = [
   'social_priority',
   'crisis_prevention',
   'district_balance',
+  'route_continuity',
+  'district_focus',
   'delayed_response',
   'mixed',
 ];

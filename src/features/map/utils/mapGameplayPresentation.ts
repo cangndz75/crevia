@@ -89,6 +89,8 @@ export type MapBottomPanelPresentation = {
   expandedLines: string[];
   footerContextLabel: string;
   footerContextValue: string;
+  tacticalMicroLine?: string;
+  layerHintLine?: string;
   primaryActionLabel: string;
   secondaryActionLabel?: string;
   primaryRoute?: string;

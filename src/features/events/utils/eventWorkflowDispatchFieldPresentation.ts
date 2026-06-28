@@ -202,7 +202,7 @@ export function collectDispatchFieldPresentationStrings(
     'Sonuç',
     'Planlamaya Geç',
     'Yönlendirmeye Geç',
-    'Sahaya Yönlendir',
+    'Ekibi Sahaya Çıkar',
     'Sonucu Gör',
     dispatch.commandGoalLine,
     dispatch.footerSummaryLine,

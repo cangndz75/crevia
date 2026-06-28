@@ -158,7 +158,7 @@ export function verifyDispatchFieldUiScenario(): VerifyDispatchFieldUiOutcome {
     checks,
     dispatchModel.commandGoalLine.includes('sahaya'),
     'CTA callback’leri korunur',
-    'Sahaya Yönlendir / Sonucu Gör labels',
+    'Ekibi Sahaya Çıkar / Sonucu Gör labels',
   );
 
   const strings = collectDispatchFieldPresentationStrings(

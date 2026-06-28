@@ -35,7 +35,11 @@ import {
   buildAdvisorSeniorityModel,
   shouldSuppressPlayerStyleForSeniority,
 } from '@/core/advisors/advisorSeniorityPresentation';
-import { buildPlayerStyleProfile } from '@/core/playerStyle';
+import {
+  buildPlayerStyleFromStrategyContext,
+} from '@/core/playerStyle';
+import { buildDominantStrategyDetector } from '@/core/dominantStrategyDetector';
+import { buildDominantStrategyInputFromPersistedHistory } from '@/core/strategyHistory/strategyHistoryModel';
 import { AdvisorDepthInsightBlock } from '@/features/advisor/components/AdvisorDepthInsightBlock';
 import { AdvisorSeniorityBadge } from '@/features/advisor/components/AdvisorSeniorityBadge';
 import { buildPilotThemeAdvisorLine } from '@/core/pilotRhythm';
@@ -77,6 +81,7 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
   const crisisActionState = useGameStore((s) => s.crisisActionState);
   const operationalResources = useGameStore((s) => s.operationalResources);
   const decisionHistory = useGameStore(selectDecisionHistory);
+  const strategyHistory = useGameStore((s) => s.strategyHistory);
   const cityArchive = useGameStore((s) => s.cityArchive);
   const isDay1 = useGameStore(selectIsDay1TutorialEligible);
   const advisorShortMode = shouldUseFirstTenMinutesAdvisorShortMode(gameState);
@@ -187,13 +192,21 @@ export function HubAdvisorCard({ compact = false }: HubAdvisorCardProps) {
   const playerStyleProfile = useMemo(() => {
     if (isDay1 || advisorShortMode) return null;
     const day = gameState.city.day;
-    return buildPlayerStyleProfile({
+    const dominantStrategy = buildDominantStrategyDetector(
+      buildDominantStrategyInputFromPersistedHistory(strategyHistory, day),
+    );
+    return buildPlayerStyleFromStrategyContext({
       day,
       surface: 'hub',
-      decisionHistory,
-      advisorState,
+      decisionHistory: decisionHistory.map((record) => ({
+        day: record.day,
+        decisionLabel: record.decisionLabel,
+        eventTitle: record.eventTitle,
+      })),
+      strategyHistory,
+      dominantStrategy,
     });
-  }, [advisorShortMode, advisorState, decisionHistory, gameState.city.day, isDay1]);
+  }, [advisorShortMode, decisionHistory, gameState.city.day, isDay1, strategyHistory]);
 
   const seniorityModel = useMemo(() => {
     if (advisorShortMode) return null;
