@@ -235,13 +235,18 @@ export function DispatchPlanSummaryStrip({
 type DispatchReadinessPanelProps = {
   readiness: EventDispatchReadinessPanel;
   reducedMotion?: boolean;
+  maintenanceActionFeedback?: string | null;
+  onMaintenanceAction?: () => void;
 };
 
 export function DispatchReadinessPanel({
   readiness,
   reducedMotion = false,
+  maintenanceActionFeedback,
+  onMaintenanceAction,
 }: DispatchReadinessPanelProps) {
   const overallColor = OVERALL_READINESS_COLOR[readiness.overallStatus];
+  const maintenanceAction = readiness.maintenanceAction;
 
   return (
     <CreviaMotionView
@@ -309,6 +314,41 @@ export function DispatchReadinessPanel({
             numberOfLines={2}>
             {readiness.maintenanceHint.text}
           </Text>
+        </View>
+      ) : null}
+      {maintenanceAction ? (
+        <View style={styles.maintenanceActionBlock}>
+          <Pressable
+            accessibilityRole="button"
+            disabled={!maintenanceAction.enabled || !onMaintenanceAction}
+            onPress={() => {
+              if (!maintenanceAction.enabled || !onMaintenanceAction) return;
+              void playLightImpactHaptic();
+              onMaintenanceAction();
+            }}
+            style={({ pressed }) => [
+              styles.maintenanceActionButton,
+              !maintenanceAction.enabled && styles.maintenanceActionButtonDisabled,
+              pressed && maintenanceAction.enabled && styles.maintenanceActionButtonPressed,
+            ]}>
+            <Text style={styles.maintenanceActionLabel} numberOfLines={1}>
+              {maintenanceAction.label}
+              {maintenanceAction.compactPreview
+                ? ` · ${maintenanceAction.compactPreview}`
+                : ''}
+            </Text>
+          </Pressable>
+          {maintenanceActionFeedback ? (
+            <Text style={styles.maintenanceActionFeedback} numberOfLines={2}>
+              {maintenanceActionFeedback}
+            </Text>
+          ) : (
+            <Text style={styles.maintenanceActionDescription} numberOfLines={3}>
+              {maintenanceAction.effectPreview
+                ? `${maintenanceAction.effectPreview} ${maintenanceAction.costPreview ?? ''}`.trim()
+                : maintenanceAction.description}
+            </Text>
+          )}
         </View>
       ) : null}
     </CreviaMotionView>
@@ -833,6 +873,43 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     fontWeight: '600',
+  },
+  maintenanceActionBlock: {
+    marginTop: 10,
+    gap: 6,
+  },
+  maintenanceActionButton: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(6, 63, 59, 0.14)',
+    backgroundColor: 'rgba(6, 63, 59, 0.04)',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  maintenanceActionButtonPressed: {
+    opacity: 0.88,
+  },
+  maintenanceActionButtonDisabled: {
+    opacity: 0.45,
+  },
+  maintenanceActionLabel: {
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: '800',
+    color: eventDetail.tealDark,
+  },
+  maintenanceActionDescription: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '500',
+    color: eventDetail.textMuted,
+  },
+  maintenanceActionFeedback: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '700',
+    color: eventDetail.success,
   },
   resourceCard: {
     marginHorizontal: eventDetail.screenPadding,

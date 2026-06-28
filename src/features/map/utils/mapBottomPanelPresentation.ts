@@ -17,6 +17,10 @@ import type {
   MapBottomPanelPresentation,
   MapGameplayMarker,
 } from './mapGameplayPresentation';
+import {
+  resolveMapPanelMarkerTitle,
+  resolveMapPanelSourcePill,
+} from './mapMarkerFeedbackPresentation';
 
 export type MapBottomPanelStatusTone =
   | 'active'
@@ -479,12 +483,23 @@ export function composeMapBottomPanelPresentation(
       ? `Olay ${input.navIndex + 1}/${input.navTotal}`
       : 'Seçili Olay';
 
+  const sourcePillLabel = resolveMapPanelSourcePill(
+    input.marker,
+    input.activeOperationBinding,
+  );
+  const markerTitle = resolveMapPanelMarkerTitle(input.marker);
+  const panelTitle =
+    bindingMatches && input.activeOperationCard?.title
+      ? input.activeOperationCard.title
+      : markerTitle;
+
   return {
     markerId: input.marker.id,
     navLabel,
+    sourcePillLabel,
     statusLabel: status.label,
     statusTone: status.tone,
-    title: input.activeOperationCard?.title ?? input.marker.title,
+    title: panelTitle,
     contextLine,
     summaryLine,
     socialEcho,

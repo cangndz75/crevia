@@ -1,6 +1,7 @@
 import { buildOperationReadinessSnapshot } from '@/core/operationReadiness/operationReadinessModel';
 
 import { buildMaintenanceBacklogSnapshot } from './maintenanceBacklogModel';
+import { processMaintenanceEconomyDayClose, sanitizeMaintenanceEconomyFields } from './maintenanceEconomyModel';
 import type { MaintenanceBacklogItem, MaintenanceBacklogSeverity } from './maintenanceBacklogTypes';
 import {
   MAINTENANCE_RUNTIME_ATTENTION_PROMOTE_STREAK,
@@ -125,7 +126,7 @@ export function sanitizeMaintenanceRuntimeItem(raw: unknown): MaintenanceRuntime
         .slice(0, 4)
     : [];
 
-  return {
+  return sanitizeMaintenanceEconomyFields({
     id,
     domain,
     severity,
@@ -139,7 +140,13 @@ export function sanitizeMaintenanceRuntimeItem(raw: unknown): MaintenanceRuntime
     districtId: asString(raw.districtId),
     districtName: asString(raw.districtName),
     relatedEventId: asString(raw.relatedEventId),
-  };
+    economyStatus: asString(raw.economyStatus) as MaintenanceRuntimeItem['economyStatus'],
+    estimatedCost: asNumber(raw.estimatedCost),
+    estimatedDays: asNumber(raw.estimatedDays),
+    startedDay: asNumber(raw.startedDay),
+    dueDay: asNumber(raw.dueDay),
+    paidCost: asNumber(raw.paidCost),
+  });
 }
 
 export function migrateMaintenanceBacklogRuntime(
@@ -235,6 +242,7 @@ function createRuntimeItem(
     districtId: input.districtId,
     districtName: input.districtName,
     relatedEventId: input.relatedEventId,
+    economyStatus: 'none',
   };
 }
 
@@ -340,6 +348,8 @@ export function updateMaintenanceBacklogForDay(
 ): MaintenanceBacklogRuntimeState {
   if (state.lastProcessedDay === input.day) return state;
 
+  const economyProcessed = processMaintenanceEconomyDayClose(state, input.day);
+
   const readinessSnapshot = buildOperationReadinessSnapshot(
     buildDayCloseReadinessInput(input),
   );
@@ -355,8 +365,8 @@ export function updateMaintenanceBacklogForDay(
       ? 'Sosyal tepki yüksek'
       : undefined;
 
-  let items = [...state.items];
-  const attentionStreaks = { ...state.attentionStreaks };
+  let items = [...economyProcessed.items];
+  const attentionStreaks = { ...economyProcessed.attentionStreaks };
 
   items = items.map((item) => {
     if (item.status === 'resolved') return item;
@@ -387,7 +397,7 @@ export function updateMaintenanceBacklogForDay(
   const workingState: MaintenanceBacklogRuntimeState = {
     items,
     attentionStreaks,
-    lastProcessedDay: state.lastProcessedDay,
+    lastProcessedDay: economyProcessed.lastProcessedDay,
   };
 
   const todayAttentionKeys = new Set<string>();

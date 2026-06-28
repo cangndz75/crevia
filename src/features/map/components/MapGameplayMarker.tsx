@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { memo, useEffect } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
@@ -9,61 +9,29 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import type {
-  MapGameplayMarker as MapGameplayMarkerModel,
-  MapGameplayMarkerType,
-} from '@/features/map/utils/mapGameplayPresentation';
-import type { MapTacticalMarkerMotionKind } from '@/features/map/utils/mapTacticalMotionPresentation';
+import { playSelectionHaptic } from '@/core/feedback/hapticFeedback';
+import type { MapMarkerFeedbackPresentation } from '@/features/map/utils/mapMarkerFeedbackPresentation';
+import type { MapGameplayMarker as MapGameplayMarkerModel } from '@/features/map/utils/mapGameplayPresentation';
 import { mapUi } from '@/features/map/utils/mapUiTokens';
+import { CreviaAnimatedPressable } from '@/shared/motion';
 
 type MapGameplayMarkerProps = {
   marker: MapGameplayMarkerModel;
-  selected?: boolean;
+  feedback: MapMarkerFeedbackPresentation;
   reducedMotionMode?: boolean;
-  tacticalMotion?: MapTacticalMarkerMotionKind;
   passive?: boolean;
   onPress?: (markerId: string) => void;
 };
 
-const MARKER_STYLE: Record<
-  MapGameplayMarkerType,
-  { color: string; bg: string; icon: keyof typeof Ionicons.glyphMap }
-> = {
-  active_event: { color: '#EF4444', bg: 'rgba(239,68,68,0.18)', icon: 'alert-circle' },
-  urgent_signal: { color: '#F59E0B', bg: 'rgba(245,158,11,0.18)', icon: 'notifications' },
-  resolved: { color: '#22C55E', bg: 'rgba(34,197,94,0.16)', icon: 'checkmark-circle' },
-  opportunity: { color: '#14B8A6', bg: 'rgba(20,184,166,0.16)', icon: 'sparkles' },
-  resource: { color: mapUi.gold, bg: 'rgba(216,167,46,0.16)', icon: 'layers' },
-  district: { color: mapUi.teal, bg: 'rgba(20,184,166,0.14)', icon: 'business' },
-  operation: { color: mapUi.teal, bg: 'rgba(20,184,166,0.14)', icon: 'radio' },
-};
-
-function pulseRingColor(
-  motion: MapTacticalMarkerMotionKind | undefined,
-  markerType: MapGameplayMarkerType,
-): string {
-  if (motion === 'riskPulse') return 'rgba(245, 158, 11, 0.38)';
-  if (motion === 'softPulse') return 'rgba(20, 184, 166, 0.32)';
-  if (markerType === 'active_event') return 'rgba(239, 68, 68, 0.35)';
-  return 'rgba(20, 184, 166, 0.28)';
-}
-
 export const MapGameplayMarker = memo(function MapGameplayMarker({
   marker,
-  selected = false,
+  feedback,
   reducedMotionMode = false,
-  tacticalMotion = 'none',
   passive = false,
   onPress,
 }: MapGameplayMarkerProps) {
   const pulse = useSharedValue(0);
-  const style = MARKER_STYLE[marker.type];
-  const motion = selected ? 'selected' : tacticalMotion;
-  const shouldPulse =
-    !reducedMotionMode &&
-    marker.status !== 'resolved' &&
-    marker.type !== 'resolved' &&
-    (motion === 'softPulse' || motion === 'riskPulse' || (marker.pulse === true && motion === 'none'));
+  const shouldPulse = feedback.showPulse && !reducedMotionMode;
 
   useEffect(() => {
     if (!shouldPulse) {
@@ -71,70 +39,82 @@ export const MapGameplayMarker = memo(function MapGameplayMarker({
       pulse.value = 0;
       return;
     }
-    const duration = motion === 'riskPulse' ? 1200 : 1400;
+    const duration = feedback.tone === 'critical' || feedback.tone === 'warning' ? 1200 : 1400;
     pulse.value = withRepeat(withTiming(1, { duration }), -1, false);
     return () => cancelAnimation(pulse);
-  }, [motion, pulse, shouldPulse]);
+  }, [feedback.tone, pulse, shouldPulse]);
 
   const pulseStyle = useAnimatedStyle(() => ({
-    opacity: (motion === 'riskPulse' ? 0.34 : 0.28) * (1 - pulse.value),
-    transform: [{ scale: 1 + pulse.value * (motion === 'riskPulse' ? 1.2 : 1.05) }],
+    opacity: (feedback.tone === 'critical' ? 0.34 : 0.28) * (1 - pulse.value),
+    transform: [{ scale: 1 + pulse.value * (feedback.tone === 'critical' ? 1.15 : 1.05) }],
   }));
 
-  const size = selected ? 42 : marker.type === 'active_event' ? 38 : 34;
-  const showCompletedEcho = motion === 'completedEcho';
-  const showSelectedRing = selected || motion === 'selected';
+  const { size, iconSize } = feedback;
+  const opacity = passive ? 0.42 : feedback.state === 'disabled' ? 0.55 : 1;
+  const dotSize = feedback.showLift ? Math.round(size * 1.06) : size;
+
+  const handlePress = () => {
+    if (!feedback.pressable) return;
+    playSelectionHaptic();
+    onPress?.(marker.id);
+  };
 
   return (
-    <Pressable
-      onPress={() => onPress?.(marker.id)}
+    <CreviaAnimatedPressable
+      onPress={handlePress}
+      disabled={!feedback.pressable}
+      reducedMotion={reducedMotionMode}
+      pressScale={0.94}
       style={[
         styles.wrap,
         {
           left: `${marker.coordinate.x}%`,
           top: `${marker.coordinate.y}%`,
-          opacity: passive ? 0.42 : 1,
+          opacity,
         },
       ]}
       accessibilityRole="button"
-      accessibilityLabel={marker.title}
+      accessibilityLabel={feedback.accessibilityLabel}
+      accessibilityState={{ selected: feedback.state === 'selected', disabled: !feedback.pressable }}
       hitSlop={8}>
       {shouldPulse ? (
         <Animated.View
           style={[
             styles.pulseRing,
             {
-              width: size + 24,
-              height: size + 24,
-              borderRadius: (size + 24) / 2,
-              borderColor: pulseRingColor(motion, marker.type),
+              width: size + 22,
+              height: size + 22,
+              borderRadius: (size + 22) / 2,
+              borderColor: feedback.ringColor,
             },
             pulseStyle,
           ]}
         />
       ) : null}
 
-      {showCompletedEcho ? (
+      {feedback.showRing ? (
         <View
           style={[
-            styles.completedEcho,
+            styles.selectedRing,
             {
-              width: size + 14,
-              height: size + 14,
-              borderRadius: (size + 14) / 2,
+              width: size + 10,
+              height: size + 10,
+              borderRadius: (size + 10) / 2,
+              borderColor: feedback.ringColor,
+              opacity: reducedMotionMode ? 0.65 : 0.85,
             },
           ]}
         />
       ) : null}
 
-      {showSelectedRing && reducedMotionMode ? (
+      {feedback.state === 'completed' ? (
         <View
           style={[
-            styles.staticSelectedRing,
+            styles.completedEcho,
             {
-              width: size + 10,
-              height: size + 10,
-              borderRadius: (size + 10) / 2,
+              width: size + 12,
+              height: size + 12,
+              borderRadius: (size + 12) / 2,
             },
           ]}
         />
@@ -144,22 +124,31 @@ export const MapGameplayMarker = memo(function MapGameplayMarker({
         style={[
           styles.dot,
           {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            backgroundColor: style.color,
-            borderColor: showSelectedRing ? mapUi.gold : 'rgba(255,255,255,0.9)',
-            borderWidth: showSelectedRing ? 3 : 2,
+            width: dotSize,
+            height: dotSize,
+            borderRadius: dotSize / 2,
+            backgroundColor: feedback.accentColor,
+            borderColor: feedback.showRing ? mapUi.gold : 'rgba(255,255,255,0.9)',
+            borderWidth: feedback.showRing ? 2.5 : 2,
           },
-          showSelectedRing && styles.selectedGlow,
+          feedback.showRing && styles.selectedGlow,
+          feedback.state === 'active' && styles.activeGlow,
         ]}>
-        <Ionicons
-          name={style.icon}
-          size={selected ? 18 : marker.type === 'active_event' ? 16 : 14}
-          color="#FFFFFF"
-        />
+        <Ionicons name={feedback.icon} size={iconSize} color="#FFFFFF" />
       </View>
-    </Pressable>
+
+      {feedback.showAlertDot ? (
+        <View style={styles.alertDot} />
+      ) : null}
+
+      {feedback.label ? (
+        <View style={styles.labelChip}>
+          <Text style={styles.labelText} numberOfLines={1}>
+            {feedback.label}
+          </Text>
+        </View>
+      ) : null}
+    </CreviaAnimatedPressable>
   );
 });
 
@@ -175,19 +164,17 @@ const styles = StyleSheet.create({
   pulseRing: {
     position: 'absolute',
     borderWidth: 2,
-    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    backgroundColor: 'rgba(20, 184, 166, 0.06)',
+  },
+  selectedRing: {
+    position: 'absolute',
+    borderWidth: 2,
   },
   completedEcho: {
     position: 'absolute',
     borderWidth: 2,
-    borderColor: 'rgba(34, 197, 94, 0.35)',
-    backgroundColor: 'rgba(34, 197, 94, 0.08)',
-  },
-  staticSelectedRing: {
-    position: 'absolute',
-    borderWidth: 2,
-    borderColor: mapUi.gold,
-    opacity: 0.55,
+    borderColor: 'rgba(20, 184, 166, 0.32)',
+    backgroundColor: 'rgba(20, 184, 166, 0.08)',
   },
   dot: {
     alignItems: 'center',
@@ -196,9 +183,45 @@ const styles = StyleSheet.create({
   },
   selectedGlow: {
     shadowColor: mapUi.gold,
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 0 },
-    elevation: 6,
+    elevation: 5,
+  },
+  activeGlow: {
+    shadowColor: mapUi.teal,
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 4,
+  },
+  alertDot: {
+    position: 'absolute',
+    top: -1,
+    right: -1,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: mapUi.gold,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  labelChip: {
+    position: 'absolute',
+    top: '100%',
+    marginTop: 4,
+    maxWidth: 108,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: 'rgba(6, 22, 20, 0.88)',
+    borderWidth: 1,
+    borderColor: mapUi.goldBorder,
+  },
+  labelText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: mapUi.goldSoft,
+    letterSpacing: 0.15,
   },
 });

@@ -1,4 +1,5 @@
 import { SAVE_VERSION } from '@/store/gamePersist';
+import { isCurrentSaveVersion } from '@/core/quality/saveVersionPolicy';
 
 import {
   buildEcePeriodGoalHint,
@@ -137,7 +138,7 @@ export function verifyPeriodGoalScenario(): {
   ]);
   assert(checks, eceHint === null, 'ece hint dedupes', String(Boolean(eceHint)));
 
-  assert(checks, SAVE_VERSION === 28, 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`);
+  assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION unchanged', `SAVE_VERSION=${SAVE_VERSION}`);
 
   assert(
     checks,

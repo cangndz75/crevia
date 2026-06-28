@@ -1,4 +1,5 @@
 import type { PlayerStyleId } from '@/core/playerStyle/playerStyleTypes';
+import { lineDuplicatesAvoidLines } from '@/core/presentationDedupe';
 
 import { buildMaintenanceBacklogSnapshot } from './maintenanceBacklogModel';
 import type {
@@ -21,27 +22,17 @@ import type {
   MaintenanceRuntimeItem,
   MaintenanceRuntimeSeverity,
 } from './maintenanceBacklogRuntimeTypes';
+import { buildMaintenanceEconomyHubSummary, buildMaintenanceEconomyReportLine } from './maintenanceEconomyModel';
 
 export type MaintenanceBacklogRuntimePresentation = MaintenanceBacklogSnapshot & {
   hasRuntimeItems: boolean;
   runtimeItemCount: number;
   carriedItemCount: number;
+  economySummary?: string | null;
 };
 
-function normalizeLine(value: string): string {
-  return value.toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ').trim();
-}
-
 function isDuplicateLine(line: string, avoidLines: string[]): boolean {
-  const normalized = normalizeLine(line);
-  return avoidLines.some((avoid) => {
-    const other = normalizeLine(avoid);
-    if (!other) return false;
-    if (other === normalized) return true;
-    if (normalized.length >= 18 && other.includes(normalized.slice(0, 18))) return true;
-    if (other.length >= 18 && normalized.includes(other.slice(0, 18))) return true;
-    return false;
-  });
+  return lineDuplicatesAvoidLines(line, avoidLines);
 }
 
 function clamp(text: string, max: number): string {
@@ -178,6 +169,7 @@ export function buildMaintenanceBacklogRuntimePresentation(
     hasRuntimeItems: activeRuntime.length > 0,
     runtimeItemCount: activeRuntime.length,
     carriedItemCount: carriedCount,
+    economySummary: runtimeState ? buildMaintenanceEconomyHubSummary(runtimeState) : null,
   };
 }
 
@@ -224,6 +216,10 @@ export function buildMaintenanceRuntimeResultHint(
   presentation: MaintenanceBacklogRuntimePresentation,
   avoidLines: string[] = [],
 ): string | null {
+  if (presentation.economySummary) {
+    const text = clamp('Bu sinyali stabilize etmek 1 gün sürebilir.', 120);
+    if (!isDuplicateLine(text, avoidLines)) return text;
+  }
   if (presentation.items.length === 0) return null;
   const text = clamp(
     'Bu karar bakım kuyruğuna yeni takip sinyali bırakabilir.',
@@ -236,8 +232,15 @@ export function buildMaintenanceRuntimeResultHint(
 export function buildMaintenanceRuntimeReportLine(
   presentation: MaintenanceBacklogRuntimePresentation,
   avoidLines: string[] = [],
+  runtime?: MaintenanceBacklogRuntimeState,
 ): string | null {
   if (!presentation.hasRuntimeItems) return null;
+
+  if (runtime) {
+    const economyLine = buildMaintenanceEconomyReportLine(runtime, avoidLines);
+    if (economyLine) return economyLine;
+  }
+
   const carried = presentation.carriedItemCount > 0;
   let line = presentation.summary;
   if (carried && presentation.topItem?.domain === 'personnel') {
@@ -255,7 +258,11 @@ export function buildMaintenanceRuntimeHubSignal(
   if (!presentation.hasRuntimeItems && presentation.items.length === 0) return null;
 
   const title = presentation.hasRuntimeItems ? 'Hazırlık Takibi' : presentation.topItem?.title ?? 'Hazırlık Takibi';
-  const subtitle = clamp(presentation.summary, 90);
+  const economySummary = presentation.economySummary;
+  const subtitle = clamp(
+    economySummary ? `${presentation.summary} · ${economySummary}` : presentation.summary,
+    90,
+  );
   if (isDuplicateLine(title, avoidLines) || isDuplicateLine(subtitle, avoidLines)) {
     return null;
   }

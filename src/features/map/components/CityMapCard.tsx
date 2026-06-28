@@ -8,25 +8,37 @@ import type { ContainerState } from '@/core/containers/containerTypes';
 import type { DecisionRecord } from '@/core/models/DecisionRecord';
 import type { EventCard } from '@/core/models/EventCard';
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
-import type { ActiveOperationMapBinding } from '@/core/activeOperationMapBinding/activeOperationMapBindingTypes';
-import type { ActiveOperationMapCardModel } from '@/core/activeOperationMapBinding';
+import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
+import {
+  buildActiveOperationCardActionBundle,
+  buildHeroMapActionBundle,
+  buildMarkerMapActionBundle,
+  type MapDirectActionPresentation,
+} from '@/core/mapDirectAction';
 import type { MapBubbleMotionCue, MapDistrictMotionCue, MapJournalMotionCue } from '@/core/mapReactionsMotion/mapReactionMotionTypes';
 import type { MapReactionLiteModel } from '@/core/mapReactions/mapReactionTypes';
 import { getNeighborhoodMapCharacterLine } from '@/core/neighborhoodIdentity/neighborhoodIdentityModel';
 import type { OperationalResourcesState } from '@/core/operationalResources/operationalResourceTypes';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
+import { MapActiveOperationActionCard } from '@/features/map/components/MapActiveOperationActionCard';
 import { MapCompactBottomPanel } from '@/features/map/components/MapCompactBottomPanel';
 import { MapControlStack } from '@/features/map/components/MapControlStack';
+import { MapDirectActionRow } from '@/features/map/components/MapDirectActionRow';
 import { MapGameplayMarkerLayer } from '@/features/map/components/MapGameplayMarkerLayer';
 import type { MapActiveOperationOverlayModel } from '@/features/map/utils/mapUiPresentation';
 import type { MapMotionPresentationResult } from '@/features/map/utils/mapMotionPresentation';
+import { handleMapDirectAction } from '@/features/map/utils/mapDirectActionHandler';
+import { buildMarkerActionBundleInput } from '@/features/map/utils/mapDirectActionContext';
 import {
   buildMapBottomPanelPresentation,
   findMapGameplayMarker,
   mapMarkerCoordinateToPoint,
   type MapGameplayPresentation,
 } from '@/features/map/utils/mapGameplayPresentation';
-import { createInitialOperationalResourcesState } from '@/core/operationalResources/operationalResourceState';
+import {
+  buildDistrictTraitLabelMap,
+  resolveCreviaDistrictIdFromMarker,
+} from '@/features/map/utils/mapMarkerFeedbackPresentation';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
 import {
   applyTacticalMotionToMarkers,
@@ -34,6 +46,9 @@ import {
 } from '@/features/map/utils/mapTacticalMotionPresentation';
 import { mapUi } from '@/features/map/utils/mapUiTokens';
 
+import { createInitialOperationalResourcesState } from '@/core/operationalResources/operationalResourceState';
+import type { ActiveOperationMapBinding } from '@/core/activeOperationMapBinding/activeOperationMapBindingTypes';
+import type { ActiveOperationMapCardModel } from '@/core/activeOperationMapBinding';
 import { type MapDistrictId } from '../data/mapAssets';
 import type { MapPresenceViewModel } from '@/core/mapPresence/mapPresenceTypes';
 import type { ActiveLayers, MapFilterId, MapViewMode, PilotAreaId } from '../types/map';
@@ -72,6 +87,9 @@ type Props = {
   mapMotionPresentation?: MapMotionPresentationResult | null;
   mapReactionLiteModel?: MapReactionLiteModel | null;
   recentDecisionRecord?: DecisionRecord | null;
+  maintenanceBacklogRuntime?: MaintenanceBacklogRuntimeState | null;
+  periodGoalShortTitle?: string;
+  districtPersonalitySignalLine?: string;
   onLayersPress: () => void;
   onDistrictSelect: (districtId: MapDistrictId) => void;
   onBackToOverview: () => void;
@@ -96,6 +114,9 @@ export function CityMapCard({
   mapMotionPresentation = null,
   mapReactionLiteModel = null,
   recentDecisionRecord = null,
+  maintenanceBacklogRuntime = null,
+  periodGoalShortTitle,
+  districtPersonalitySignalLine,
   onLayersPress,
   onDistrictSelect,
   onBackToOverview,
@@ -174,12 +195,104 @@ export function CityMapCard({
     [mapGameplayPresentation?.markers, tacticalMotion],
   );
 
+  const activeOperationActionBundle = useMemo(() => {
+    if (!activeOperationCard || !activeOperationBinding) return null;
+    const marker =
+      selectedMarker ??
+      findMapGameplayMarker(
+        mapGameplayPresentation?.markers ?? [],
+        mapGameplayPresentation?.defaultSelectedMarkerId ?? null,
+        null,
+      );
+    if (!marker) return null;
+    return buildActiveOperationCardActionBundle(
+      buildMarkerActionBundleInput({
+        marker,
+        binding: activeOperationBinding,
+        card: activeOperationCard,
+        maintenanceRuntime: maintenanceBacklogRuntime,
+        personalitySignalLine: districtPersonalitySignalLine,
+        periodGoalShortTitle,
+        layerToggleAvailable: true,
+      }),
+    );
+  }, [
+    activeOperationBinding,
+    activeOperationCard,
+    districtPersonalitySignalLine,
+    maintenanceBacklogRuntime,
+    mapGameplayPresentation?.defaultSelectedMarkerId,
+    mapGameplayPresentation?.markers,
+    periodGoalShortTitle,
+    selectedMarker,
+  ]);
+
+  const heroActionBundle = useMemo(() => {
+    if (!activeOperationCard || !activeOperationBinding) return null;
+    const marker =
+      selectedMarker ??
+      findMapGameplayMarker(
+        mapGameplayPresentation?.markers ?? [],
+        mapGameplayPresentation?.defaultSelectedMarkerId ?? null,
+        null,
+      );
+    if (!marker) return null;
+    const excludeKeys = activeOperationActionBundle?.primaryAction?.dedupeKey
+      ? [activeOperationActionBundle.primaryAction.dedupeKey]
+      : undefined;
+    return buildHeroMapActionBundle({
+      ...buildMarkerActionBundleInput({
+        marker,
+        binding: activeOperationBinding,
+        card: activeOperationCard,
+        maintenanceRuntime: maintenanceBacklogRuntime,
+        personalitySignalLine: districtPersonalitySignalLine,
+        periodGoalShortTitle,
+        layerToggleAvailable: true,
+        excludeDedupeKeys: excludeKeys,
+      }),
+    });
+  }, [
+    activeOperationActionBundle?.primaryAction?.dedupeKey,
+    activeOperationBinding,
+    activeOperationCard,
+    districtPersonalitySignalLine,
+    maintenanceBacklogRuntime,
+    mapGameplayPresentation?.defaultSelectedMarkerId,
+    mapGameplayPresentation?.markers,
+    periodGoalShortTitle,
+    selectedMarker,
+  ]);
+
+  const mapActionCallbacks = useMemo(
+    () => ({
+      onOpenDistrictDetail: (districtId: string) => {
+        onDistrictSelect(districtId as MapDistrictId);
+      },
+      onToggleLayers: onLayersPress,
+    }),
+    [onDistrictSelect, onLayersPress],
+  );
+
+  const handleDirectAction = useCallback(
+    (action: MapDirectActionPresentation) => {
+      const handled = handleMapDirectAction(action, router, mapActionCallbacks);
+      if (!handled && selectedMarker) {
+        mapControlsRef.current?.focusOnPoint(
+          mapMarkerCoordinateToPoint(selectedMarker.coordinate),
+          2,
+        );
+      }
+    },
+    [mapActionCallbacks, router, selectedMarker],
+  );
+
   const bottomPanel = useMemo(() => {
     if (!selectedMarker) return null;
     const panel = buildMapBottomPanelPresentation(selectedMarker, {
       activeOperationCard,
       activeOperationBinding: activeOperationBinding ?? null,
-      activeEventCount: activeEvents.length,
+      activeEventCount: activeEvents?.length ?? 0,
       operationalResources:
         operationalResources ?? createInitialOperationalResourcesState(1),
       activeEvents,
@@ -188,18 +301,51 @@ export function CityMapCard({
       navIndex: selectedMarkerIndex,
       navTotal: navigableMarkers.length,
     });
+    const excludeKeys = [
+      ...(activeOperationActionBundle?.primaryAction?.dedupeKey
+        ? [activeOperationActionBundle.primaryAction.dedupeKey]
+        : []),
+      ...(heroActionBundle?.primaryAction?.dedupeKey
+        ? [heroActionBundle.primaryAction.dedupeKey]
+        : []),
+    ];
+    const actionBundle = buildMarkerMapActionBundle(
+      buildMarkerActionBundleInput({
+        marker: selectedMarker,
+        binding: activeOperationBinding ?? null,
+        card: activeOperationCard,
+        maintenanceRuntime: maintenanceBacklogRuntime,
+        personalitySignalLine: districtPersonalitySignalLine,
+        periodGoalShortTitle,
+        layerToggleAvailable: true,
+        excludeDedupeKeys: excludeKeys.length > 0 ? excludeKeys : undefined,
+      }),
+    );
+    const primaryActionLabel =
+      actionBundle.primaryAction?.label ?? panel.primaryActionLabel;
     return {
       ...panel,
       tacticalMicroLine: tacticalMotion.tacticalMicroLine,
       layerHintLine: tacticalMotion.layerHints[0]?.label,
+      primaryActionLabel,
+      primaryRoute:
+        actionBundle.primaryAction?.targetRouteKey?.startsWith('/')
+          ? actionBundle.primaryAction.targetRouteKey
+          : panel.primaryRoute,
+      actionBundle,
     };
   }, [
     activeEvents,
+    activeOperationActionBundle?.primaryAction?.dedupeKey,
     activeOperationBinding,
     activeOperationCard,
+    districtPersonalitySignalLine,
     gameDay,
+    heroActionBundle?.primaryAction?.dedupeKey,
+    maintenanceBacklogRuntime,
     navigableMarkers.length,
     operationalResources,
+    periodGoalShortTitle,
     recentDecisionRecord,
     selectedMarker,
     selectedMarkerIndex,
@@ -231,6 +377,24 @@ export function CityMapCard({
     focusMarker(navigableMarkers[nextIndex]!.id);
   }, [focusMarker, navigableMarkers, selectedMarkerIndex]);
 
+  const selectedDistrictOnMap = useMemo(
+    () => resolveCreviaDistrictIdFromMarker(selectedMarker),
+    [selectedMarker],
+  );
+
+  const districtTraitLabels = useMemo(
+    () => buildDistrictTraitLabelMap(displayMarkers),
+    [displayMarkers],
+  );
+
+  const activeOpMarkerSelected = useMemo(() => {
+    if (!selectedMarker || !activeOperationBinding?.eventId) return false;
+    return selectedMarker.eventId === activeOperationBinding.eventId;
+  }, [activeOperationBinding?.eventId, selectedMarker]);
+
+  const hideActiveCardPrimaryCta =
+    activeOpMarkerSelected && Boolean(bottomPanel?.actionBundle?.primaryAction);
+
   const handleMarkerPress = useCallback(
     (markerId: string) => {
       focusMarker(markerId);
@@ -240,6 +404,11 @@ export function CityMapCard({
 
   const handlePrimaryAction = useCallback(() => {
     if (!selectedMarker) return;
+    const primary = bottomPanel?.actionBundle?.primaryAction;
+    if (primary) {
+      handleDirectAction(primary);
+      return;
+    }
     const route =
       selectedMarker.eventDetailRoute ??
       activeOperationBinding?.eventDetailRoute ??
@@ -252,7 +421,14 @@ export function CityMapCard({
       mapMarkerCoordinateToPoint(selectedMarker.coordinate),
       2,
     );
-  }, [activeOperationBinding?.eventDetailRoute, activeOperationCard?.ctaRoute, router, selectedMarker]);
+  }, [
+    activeOperationBinding?.eventDetailRoute,
+    activeOperationCard?.ctaRoute,
+    bottomPanel?.actionBundle?.primaryAction,
+    handleDirectAction,
+    router,
+    selectedMarker,
+  ]);
 
   const handleDistrictPress = useCallback(
     (districtId: MapDistrictId) => {
@@ -270,7 +446,7 @@ export function CityMapCard({
           <Text style={styles.headerTitle} numberOfLines={1}>
             {presentation?.title ?? 'Şehir Haritası'}
           </Text>
-          <Text style={styles.headerSubtitle} numberOfLines={1}>
+          <Text style={styles.headerSubtitle} numberOfLines={2}>
             {presentation?.subtitle ?? 'Canlı taktik görünüm'}
           </Text>
         </View>
@@ -289,6 +465,8 @@ export function CityMapCard({
           contentFit="cover"
           districtMotionMarkers={mapMotionPresentation?.markers}
           reducedMotionMode={reducedMotionMode}
+          selectedDistrictId={selectedDistrictOnMap}
+          districtTraitLabels={districtTraitLabels}
           onDistrictPress={handleDistrictPress}
         />
 
@@ -298,6 +476,11 @@ export function CityMapCard({
             selectedMarkerId={selectedMarker?.id ?? null}
             reducedMotionMode={reducedMotionMode}
             tacticalMotion={tacticalMotion}
+            activeOperationBinding={activeOperationBinding}
+            activeOperationCard={activeOperationCard}
+            maintenanceBacklogRuntime={maintenanceBacklogRuntime}
+            districtPersonalitySignalLine={districtPersonalitySignalLine}
+            periodGoalShortTitle={periodGoalShortTitle}
             onMarkerPress={handleMarkerPress}
           />
         ) : null}
@@ -337,6 +520,29 @@ export function CityMapCard({
           onLayersPress={onLayersPress}
         />
 
+        {!isDetail && activeOperationActionBundle && activeOperationCard ? (
+          <MapActiveOperationActionCard
+            phaseLabel={activeOperationCard.phaseLabel}
+            title={activeOperationCard.title}
+            bundle={activeOperationActionBundle}
+            reducedMotion={reducedMotionMode}
+            isMarkerSelectedOnMap={activeOpMarkerSelected}
+            hidePrimaryWhenPanelShowsSame={hideActiveCardPrimaryCta}
+            onActionPress={handleDirectAction}
+          />
+        ) : null}
+
+        {!isDetail && !activeOperationActionBundle?.primaryAction && heroActionBundle?.primaryAction ? (
+          <View style={[styles.heroActionBar, { top: headerTop + 52 }]}>
+            <MapDirectActionRow
+              bundle={heroActionBundle}
+              compact
+              reducedMotion={reducedMotionMode}
+              onActionPress={handleDirectAction}
+            />
+          </View>
+        ) : null}
+
         {!isDetail && bottomPanel ? (
           <MapCompactBottomPanel
             panel={bottomPanel}
@@ -346,6 +552,7 @@ export function CityMapCard({
             onToggleExpand={() => setPanelExpanded((value) => !value)}
             onPrimaryPress={handlePrimaryAction}
             onSecondaryPress={onLayersPress}
+            onDirectActionPress={handleDirectAction}
             onPrevious={handlePreviousMarker}
             onNext={handleNextMarker}
           />
@@ -397,6 +604,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: mapUi.textMuted,
+  },
+  heroActionBar: {
+    position: 'absolute',
+    right: 14,
+    left: 14,
+    zIndex: 13,
+    maxWidth: 360,
+    alignSelf: 'flex-end',
   },
   headerCircle: {
     width: 40,

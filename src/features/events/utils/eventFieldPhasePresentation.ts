@@ -14,11 +14,13 @@ import {
 } from '@/core/eventVariety/eventGameplayVarietyPresentation';
 import { applyAuthorityToFieldAssignmentEffect } from '@/core/authority/authorityGameplayUnlockPresentation';
 import {
+  buildMaintenanceActionUiBundle,
   buildMaintenanceBacklogFromReadiness,
   buildMaintenanceBacklogRuntimePresentation,
   buildMaintenanceFieldHint,
   buildMaintenanceRuntimeFieldHint,
 } from '@/core/maintenanceBacklog';
+import type { MaintenanceActionPresentation } from '@/core/maintenanceBacklog/maintenanceActionTypes';
 import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
 import {
   buildOperationReadinessSnapshot,
@@ -159,6 +161,7 @@ export type EventFieldResourcePulsePresentation = {
     text: string;
     tone: 'positive' | 'mixed' | 'warning' | 'critical' | 'neutral';
   };
+  maintenanceAction?: MaintenanceActionPresentation | null;
 };
 
 export type EventFieldActionKey =
@@ -772,6 +775,16 @@ function buildResourcePulse(
         snapshot.summary,
       ]);
 
+  const maintenanceActionBundle = input.maintenanceBacklogRuntime
+    ? buildMaintenanceActionUiBundle({
+        runtime: input.maintenanceBacklogRuntime,
+        currentDay: input.day ?? 1,
+        surface: 'field',
+        readinessSnapshot: snapshot,
+        avoidLines: [personnel?.description ?? '', route?.description ?? '', snapshot.summary],
+      })
+    : null;
+
   return {
     title: 'Ekip Nabzı',
     items: [
@@ -780,7 +793,13 @@ function buildResourcePulse(
       itemFor('resource', 'budget', 'wallet-outline', budget),
       itemFor('duration', 'social', 'chatbubbles-outline', social),
     ],
-    maintenanceHint: maintenanceHint ?? undefined,
+    maintenanceHint: maintenanceActionBundle?.hintText
+      ? {
+          text: maintenanceActionBundle.hintText,
+          tone: maintenanceActionBundle.hintTone ?? maintenanceHint?.tone ?? 'neutral',
+        }
+      : maintenanceHint ?? undefined,
+    maintenanceAction: maintenanceActionBundle?.action ?? null,
   };
 }
 

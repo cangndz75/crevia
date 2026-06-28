@@ -10,6 +10,7 @@ import {
   buildPeriodGoalContextFromHub,
   type HubPeriodGoalCardPresentation,
 } from '@/core/periodGoals';
+import type { MaintenanceHubSignal } from '@/core/maintenanceBacklog';
 import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
 import {
   buildCenterHubDepthPresentation,
@@ -180,6 +181,7 @@ export type CenterHubGameplayPresentation = CenterHubDepthPresentation & {
   dailyRewardMini?: CenterDailyRewardMiniStripModel;
   miniCityFeed: MiniCityFeedPresentation;
   cityAgenda: HubPeriodGoalCardPresentation;
+  maintenanceHubSignal: MaintenanceHubSignal | null;
 };
 
 export type {
@@ -908,6 +910,7 @@ export function buildCenterHubGameplayPresentation(
     dailyRewardMini: buildCenterDailyRewardMiniStrip(presentation),
     miniCityFeed,
     cityAgenda,
+    maintenanceHubSignal,
   };
 }
 

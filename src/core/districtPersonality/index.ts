@@ -3,3 +3,7 @@ export * from './districtPersonalityContentLines';
 export * from './districtPersonalityModel';
 export * from './districtPersonalityPresentation';
 export * from './districtPersonalityTypes';
+export * from './districtPersonalityBindingTypes';
+export * from './districtPersonalityBindingConstants';
+export * from './districtPersonalityBindingModel';
+export * from './districtPersonalityBindingPresentation';

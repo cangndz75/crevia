@@ -1,3 +1,7 @@
+import {
+  buildDistrictMemoryReportInsight,
+  mapResultToneToPersonalityOutcome,
+} from '@/core/districtPersonality';
 import { formatSourceWithLabel } from '@/core/economy/economyFormatter';
 import {
   buildDecisionConsequenceThreadsFromReport,
@@ -144,6 +148,7 @@ export type EndOfDayReportViewModel = {
   operationalTempoLine?: string | null;
   tomorrowPreparationLine?: string | null;
   periodGoalImpactLine?: string | null;
+  districtMemoryInsightLine?: string | null;
   showXpCard: boolean;
   showSystemSummaries: boolean;
   showTomorrowNotes: boolean;
@@ -563,6 +568,8 @@ export function buildEndOfDayReportViewModel(params: {
   maintenanceBacklogRuntime?: import('@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes').MaintenanceBacklogRuntimeState | null;
   socialPulseState?: import('@/core/social/socialTypes').SocialPulseState | null;
   tomorrowRisk?: import('@/core/tomorrowRisk/tomorrowRiskTypes').TomorrowRiskModel | null;
+  lastDecisionDistrictId?: string | null;
+  lastDecisionDistrictName?: string | null;
 }): EndOfDayReportViewModel {
   const {
     report,
@@ -585,6 +592,8 @@ export function buildEndOfDayReportViewModel(params: {
     maintenanceBacklogRuntime,
     socialPulseState,
     tomorrowRisk,
+    lastDecisionDistrictId,
+    lastDecisionDistrictName,
   } = params;
 
   const resolvedPortfolioDefer =
@@ -869,7 +878,9 @@ export function buildEndOfDayReportViewModel(params: {
     isDay1 || report.day < 2
       ? null
       : (runtimePresentation
-          ? buildMaintenanceRuntimeReportLine(runtimePresentation, [
+          ? buildMaintenanceRuntimeReportLine(
+              runtimePresentation,
+              [
               operationalTempoLine ?? '',
               oneMoreDayCard?.line,
               oneMoreDayCard?.tomorrowLine,
@@ -886,7 +897,9 @@ export function buildEndOfDayReportViewModel(params: {
               managementStyleLine,
               readinessSnapshot.summary,
               ...tomorrowNotes,
-            ].filter((line): line is string => Boolean(line)))
+            ].filter((line): line is string => Boolean(line)),
+              maintenanceBacklogRuntime ?? undefined,
+            )
           : null) ??
         buildMaintenanceReportInsight(buildMaintenanceBacklogFromReadiness(readinessSnapshot), [
           operationalTempoLine ?? '',
@@ -921,6 +934,8 @@ export function buildEndOfDayReportViewModel(params: {
     playerStyleId: playerStyleProfile.styleId,
     decisionHistory,
     warnings,
+    selectedDistrictName: lastDecisionDistrictName,
+    selectedDistrictId: lastDecisionDistrictId,
   });
   const periodGoalInsight = buildReportPeriodGoalInsight(periodGoalContext, [
     oneMoreDayCard?.line,
@@ -933,6 +948,25 @@ export function buildEndOfDayReportViewModel(params: {
     ...tomorrowNotes,
   ].filter((line): line is string => Boolean(line)));
   const periodGoalImpactLine = periodGoalInsight?.line ?? null;
+
+  const districtMemoryInsight = buildDistrictMemoryReportInsight({
+    districtId: lastDecisionDistrictId,
+    districtName: lastDecisionDistrictName,
+    day: report.day,
+    publicSatisfaction: metrics.publicSatisfaction,
+    outcomeBand: mapResultToneToPersonalityOutcome(
+      successScore >= 70 ? 'positive' : successScore < 50 ? 'warning' : 'neutral',
+    ),
+    avoidLines: [
+      periodGoalImpactLine ?? '',
+      tomorrowPreparationLine ?? '',
+      operationalTempoLine ?? '',
+      managementStyleLine ?? '',
+      cityMemoryNote?.line ?? '',
+      ...tomorrowNotes,
+    ].filter((line): line is string => Boolean(line)),
+  });
+  const districtMemoryInsightLine = districtMemoryInsight?.line ?? null;
 
   return {
     day: report.day,
@@ -967,6 +1001,7 @@ export function buildEndOfDayReportViewModel(params: {
     operationalTempoLine,
     tomorrowPreparationLine,
     periodGoalImpactLine,
+    districtMemoryInsightLine,
     tomorrowNotes,
     showXpCard: !isDay1 && dailyXpReport.totalXp > 0,
     showSystemSummaries: !isDay1,

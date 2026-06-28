@@ -25,6 +25,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import type { CenterHomePresentation } from '@/features/hub/utils/centerHomePresentation';
+import {
+  hubSurfaceCollapseMode,
+  hubSurfaceIsRenderable,
+} from '@/features/hub/utils/centerHomePresentation';
 import { CenterMotionEnter } from '@/features/hub/components/CenterMotionEnter';
 import { CENTER_COMPACT_BREAKPOINT, CENTER_MIN_TOUCH_TARGET } from '@/features/hub/utils/centerLayoutTokens';
 import { hubAssets } from '@/features/hub/utils/hubAssets';
@@ -666,6 +670,7 @@ function RecentImpactCard({
   reducedMotion: boolean;
 }) {
   const recent = presentation.recentImpactSummary;
+  if (!hubSurfaceIsRenderable(presentation.hubDensity, 'recentImpact')) return null;
   const visible = recent.visibility === 'visible' && recent.chips.length > 0;
 
   if (!visible) return null;
@@ -861,7 +866,11 @@ function NextActionsRail({
   presentation: CenterHomePresentation;
   reducedMotion: boolean;
 }) {
+  if (!hubSurfaceIsRenderable(presentation.hubDensity, 'quickActions')) return null;
+  if (presentation.nextActions.visibility !== 'visible') return null;
+
   const actions = presentation.nextActions.actions.slice(0, 3);
+  if (actions.length === 0) return null;
 
   return (
     <View style={styles.sectionBlock}>
@@ -899,9 +908,7 @@ function NextActionsRail({
             />
           ))}
         </ScrollView>
-      ) : (
-        <EmptyPanel text="Sıradaki hamle verisi bekleniyor." />
-      )}
+      ) : null}
     </View>
   );
 }
@@ -965,12 +972,16 @@ function MiniCityFeedSection({
 }) {
   const feed = presentation.miniCityFeed;
   if (feed.visibility !== 'visible') return null;
+  if (!hubSurfaceIsRenderable(presentation.hubDensity, 'miniCityFeed')) return null;
 
-  const items = feed.items.slice(0, 3);
+  const maxItems = presentation.hubDensity?.maxFeedItems ?? 3;
+  const items = feed.items.slice(0, maxItems);
   if (items.length === 0) return null;
 
+  const compact = hubSurfaceCollapseMode(presentation.hubDensity, 'miniCityFeed') === 'compact';
+
   return (
-    <View style={styles.feedCard}>
+    <View style={[styles.feedCard, compact ? styles.feedCardCompact : undefined]}>
       <LinearGradient
         colors={['rgba(16,40,38,0.92)', 'rgba(8,22,24,0.96)', 'rgba(5,13,14,1)']}
         style={styles.feedCardGradient}
@@ -980,9 +991,11 @@ function MiniCityFeedSection({
           <Text style={styles.largeSectionTitle} numberOfLines={1}>
             {feed.title}
           </Text>
-          <Text style={styles.cardSubtitle} numberOfLines={2}>
-            {feed.subtitle}
-          </Text>
+          {!compact ? (
+            <Text style={styles.cardSubtitle} numberOfLines={2}>
+              {feed.subtitle}
+            </Text>
+          ) : null}
         </View>
         <View style={styles.feedStatusPill}>
           <LiveDot reducedMotion={reducedMotion} />
@@ -991,7 +1004,7 @@ function MiniCityFeedSection({
           </Text>
         </View>
       </View>
-      <View style={styles.feedItemList}>
+      <View style={[styles.feedItemList, compact ? styles.feedItemListCompact : undefined]}>
         {items.map((item) => (
           <MiniCityFeedRow key={item.id} item={item} reducedMotion={reducedMotion} />
         ))}
@@ -1000,15 +1013,80 @@ function MiniCityFeedSection({
   );
 }
 
+function CityAgendaChip({ presentation }: { presentation: CenterHomePresentation }) {
+  const agenda = presentation.cityAgenda;
+  const progressToneColor =
+    agenda.progressTone === 'critical'
+      ? '#FF6B6B'
+      : agenda.progressTone === 'warning'
+        ? palette.gold
+        : agenda.progressTone === 'positive'
+          ? palette.green
+          : palette.mint;
+
+  return (
+    <View style={styles.agendaChipCard}>
+      <View style={styles.agendaChipHeader}>
+        <Text style={styles.agendaChipTitle} numberOfLines={1}>
+          {agenda.sectionTitle}
+        </Text>
+        <View style={[styles.agendaProgressPill, { borderColor: `${progressToneColor}55` }]}>
+          <Text style={[styles.agendaProgressText, { color: progressToneColor }]} numberOfLines={1}>
+            {agenda.progressLabel}
+          </Text>
+        </View>
+      </View>
+      <Text style={styles.agendaChipGoal} numberOfLines={1}>
+        {agenda.goalTitle}
+      </Text>
+    </View>
+  );
+}
+
+function MaintenanceSignalStrip({ presentation }: { presentation: CenterHomePresentation }) {
+  const signal = presentation.hubDensity?.maintenanceSignal;
+  if (!signal) return null;
+  if (!hubSurfaceIsRenderable(presentation.hubDensity, 'maintenanceSignal')) return null;
+
+  const compact = hubSurfaceCollapseMode(presentation.hubDensity, 'maintenanceSignal') === 'chip';
+  const toneColor =
+    signal.tone === 'critical' ? '#FF6B6B' : signal.tone === 'warning' ? palette.gold : palette.mint;
+
+  return (
+    <View style={styles.maintenanceStrip}>
+      <View style={[styles.maintenanceStripIcon, { borderColor: `${toneColor}55` }]}>
+        <Ionicons name="construct-outline" size={14} color={toneColor} />
+      </View>
+      <View style={styles.maintenanceStripCopy}>
+        <Text style={styles.maintenanceStripTitle} numberOfLines={1}>
+          {signal.title}
+        </Text>
+        {!compact && signal.subtitle ? (
+          <Text style={styles.maintenanceStripSubtitle} numberOfLines={2}>
+            {signal.subtitle}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 function CityAgendaSection({ presentation }: { presentation: CenterHomePresentation }) {
   const agenda = presentation.cityAgenda;
   if (agenda.visibility !== 'visible') return null;
+  if (!hubSurfaceIsRenderable(presentation.hubDensity, 'cityAgenda')) return null;
+
+  if (hubSurfaceCollapseMode(presentation.hubDensity, 'cityAgenda') === 'chip') {
+    return <CityAgendaChip presentation={presentation} />;
+  }
+
+  const compact = hubSurfaceCollapseMode(presentation.hubDensity, 'cityAgenda') === 'compact';
 
   const progressToneColor =
     agenda.progressTone === 'critical'
       ? '#FF6B6B'
       : agenda.progressTone === 'warning'
-        ? '#E8A84A'
+        ? palette.gold
         : agenda.progressTone === 'positive'
           ? palette.green
           : palette.mint;
@@ -1034,31 +1112,35 @@ function CityAgendaSection({ presentation }: { presentation: CenterHomePresentat
           </Text>
         </View>
       </View>
-      <Text style={styles.agendaSummary} numberOfLines={2}>
+      <Text style={styles.agendaSummary} numberOfLines={compact ? 1 : 2}>
         {agenda.summary}
       </Text>
-      <View style={styles.agendaChipRow}>
-        {agenda.chips.map((chip) => (
-          <View key={`${chip.label}-${chip.value}`} style={styles.agendaChip}>
-            <Text style={styles.agendaChipLabel} numberOfLines={1}>
-              {chip.label}
-            </Text>
-            <Text style={styles.agendaChipValue} numberOfLines={1}>
-              {chip.value}
-            </Text>
-          </View>
-        ))}
-        {agenda.secondaryChip ? (
-          <View style={styles.agendaSecondaryChip}>
-            <Text style={styles.agendaSecondaryChipText} numberOfLines={1}>
-              {agenda.secondaryChip}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-      <Text style={styles.agendaHint} numberOfLines={2}>
-        {agenda.nextHint}
-      </Text>
+      {!compact ? (
+        <View style={styles.agendaChipRow}>
+          {agenda.chips.map((chip) => (
+            <View key={`${chip.label}-${chip.value}`} style={styles.agendaChip}>
+              <Text style={styles.agendaChipLabel} numberOfLines={1}>
+                {chip.label}
+              </Text>
+              <Text style={styles.agendaChipValue} numberOfLines={1}>
+                {chip.value}
+              </Text>
+            </View>
+          ))}
+          {agenda.secondaryChip ? (
+            <View style={styles.agendaSecondaryChip}>
+              <Text style={styles.agendaSecondaryChipText} numberOfLines={1}>
+                {agenda.secondaryChip}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+      {!compact ? (
+        <Text style={styles.agendaHint} numberOfLines={2}>
+          {agenda.nextHint}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -1336,7 +1418,10 @@ function CityPulseCard({
   presentation: CenterHomePresentation;
   reducedMotion: boolean;
 }) {
+  if (!hubSurfaceIsRenderable(presentation.hubDensity, 'strategicPulse')) return null;
+
   const metrics = buildPulseSparkMetrics(presentation);
+  const compact = hubSurfaceCollapseMode(presentation.hubDensity, 'strategicPulse') !== 'full';
 
   return (
     <View style={styles.pulseCard}>
@@ -1364,11 +1449,13 @@ function CityPulseCard({
         </View>
       </View>
       <View style={styles.pulseSparkGrid}>
-        {metrics.map((metric) => (
+        {metrics.slice(0, compact ? 2 : 3).map((metric) => (
           <PulseSparkCard key={metric.id} metric={metric} />
         ))}
       </View>
-      <CityPulseAdvisorStrip presentation={presentation} reducedMotion={reducedMotion} />
+      {!compact ? (
+        <CityPulseAdvisorStrip presentation={presentation} reducedMotion={reducedMotion} />
+      ) : null}
     </View>
   );
 }
@@ -1381,6 +1468,16 @@ function DistrictFocusCard({
   reducedMotion: boolean;
 }) {
   const district = presentation.districtFocus;
+  if (district.visibility !== 'visible') return null;
+  if (presentation.hubDensity?.band === 'day1') return null;
+  if (
+    presentation.hubDensity &&
+    !hubSurfaceIsRenderable(presentation.hubDensity, 'lowerDashboard') &&
+    presentation.hubDensity.band !== 'early' &&
+    presentation.hubDensity.band !== 'mid'
+  ) {
+    return null;
+  }
   const level = presentation.headerSummary.levelLabel?.replace('Sv. ', '') ?? '18';
   const footerStats = [
     { label: 'Nüfus', value: district.populationLabel, icon: 'people-outline' as IconName },
@@ -1512,7 +1609,18 @@ function LiveDevelopments({
   presentation: CenterHomePresentation;
   reducedMotion: boolean;
 }) {
+  if (presentation.neighborhoodEvents.visibility !== 'visible') return null;
+  if (
+    presentation.hubDensity &&
+    !hubSurfaceIsRenderable(presentation.hubDensity, 'lowerDashboard') &&
+    presentation.hubDensity.band !== 'early' &&
+    presentation.hubDensity.band !== 'mid'
+  ) {
+    return null;
+  }
+
   const events = presentation.neighborhoodEvents.events.slice(0, 4);
+  if (events.length === 0) return null;
 
   return (
     <View style={styles.sectionBlock}>
@@ -1529,18 +1637,14 @@ function LiveDevelopments({
           <Ionicons name="chevron-forward" size={12} color={palette.gold} />
         </RoutePressable>
       </View>
-      {events.length > 0 ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.developmentsScroller}>
-          {events.map((event) => (
-            <LiveDevelopmentCard key={event.id} event={event} reducedMotion={reducedMotion} />
-          ))}
-        </ScrollView>
-      ) : (
-        <EmptyPanel text="Canlı gelişme verisi yok." />
-      )}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.developmentsScroller}>
+        {events.map((event) => (
+          <LiveDevelopmentCard key={event.id} event={event} reducedMotion={reducedMotion} />
+        ))}
+      </ScrollView>
     </View>
   );
 }
@@ -1613,7 +1717,11 @@ function QuickCommandsGrid({
   presentation: CenterHomePresentation;
   reducedMotion: boolean;
 }) {
+  if (presentation.quickCommands.visibility !== 'visible') return null;
+  if (!hubSurfaceIsRenderable(presentation.hubDensity, 'quickActions')) return null;
+
   const commands = presentation.quickCommands.commands.slice(0, 4);
+  if (commands.length === 0) return null;
 
   return (
     <View style={styles.darkCard}>
@@ -1626,9 +1734,7 @@ function QuickCommandsGrid({
             <QuickCommandTile key={command.id} command={command} reducedMotion={reducedMotion} />
           ))}
         </View>
-      ) : (
-        <EmptyPanel text="Hızlı komut verisi yok." />
-      )}
+      ) : null}
     </View>
   );
 }
@@ -1640,6 +1746,8 @@ export function HubReferenceHome({ presentation, scrollFooter }: HubReferenceHom
     presentation.headerSummary.resourceChips.find((chip) => chip.id === 'day')?.valueText ?? '1';
   const hubDay = Number(dayText.match(/\d+/)?.[0] ?? '1');
   const hubMotionEnabled = hubDay >= 8;
+  const densityBand = presentation.hubDensity?.band ?? 'day1';
+  const sectionGap = densityBand === 'day1' ? 12 : compact ? 10 : gameUi.spacing.cardGap;
   const motionProps = {
     day: hubDay,
     reducedMotion,
@@ -1661,7 +1769,7 @@ export function HubReferenceHome({ presentation, scrollFooter }: HubReferenceHom
             paddingTop: topPadding,
             paddingBottom: bottomPadding,
             paddingHorizontal: horizontalPadding,
-            gap: compact ? 10 : gameUi.spacing.cardGap,
+            gap: sectionGap,
           },
         ]}>
         <HeaderBar presentation={presentation} reducedMotion={reducedMotion} />
@@ -1681,6 +1789,7 @@ export function HubReferenceHome({ presentation, scrollFooter }: HubReferenceHom
         <CenterMotionEnter index={5} {...motionProps}>
           <CityAgendaSection presentation={presentation} />
         </CenterMotionEnter>
+        <MaintenanceSignalStrip presentation={presentation} />
         <CenterMotionEnter index={6} {...motionProps}>
           <CityPulseCard presentation={presentation} reducedMotion={reducedMotion} />
         </CenterMotionEnter>
@@ -3057,5 +3166,78 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: '600',
     color: palette.faint,
+  },
+  feedCardCompact: {
+    paddingVertical: 10,
+  },
+  feedItemListCompact: {
+    gap: 6,
+  },
+  agendaChipCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: palette.stroke,
+    backgroundColor: palette.panelSoft,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  agendaChipHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  agendaChipTitle: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '800',
+    color: palette.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  agendaChipGoal: {
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '800',
+    color: palette.text,
+  },
+  maintenanceStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: palette.stroke,
+    backgroundColor: palette.panelSoft,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  maintenanceStripIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  maintenanceStripCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  maintenanceStripTitle: {
+    fontSize: 13,
+    lineHeight: 16,
+    fontWeight: '800',
+    color: palette.text,
+  },
+  maintenanceStripSubtitle: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '600',
+    color: palette.muted,
   },
 });

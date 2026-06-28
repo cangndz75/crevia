@@ -1,5 +1,11 @@
 import type { EventCard } from '@/core/models/EventCard';
 import {
+  buildDistrictReactionFlavor,
+  buildDistrictPersonalityEceHint,
+  dedupeDistrictPersonalityCopy,
+  mapResultToneToPersonalityOutcome,
+} from '@/core/districtPersonality';
+import {
   buildEceMemorySnapshot,
   buildResultEceLine,
   mapEceToneToResultAdvisorTone,
@@ -8,11 +14,13 @@ import {
 } from '@/core/eceTone';
 import { buildResultResourceCostFromContext } from '@/core/operationReadiness';
 import {
+  buildMaintenanceActionUiBundle,
   buildMaintenanceBacklogFromReadiness,
   buildMaintenanceBacklogRuntimePresentation,
   buildMaintenanceResultHint,
   buildMaintenanceRuntimeResultHint,
 } from '@/core/maintenanceBacklog';
+import type { MaintenanceActionPresentation } from '@/core/maintenanceBacklog/maintenanceActionTypes';
 import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
 import { buildOperationReadinessSnapshot } from '@/core/operationReadiness/operationReadinessModel';
 import {
@@ -134,6 +142,7 @@ export type EventResultResourceCostSection = {
   tone: 'positive' | 'neutral' | 'warning' | 'mixed';
   maintenanceHint?: string;
   maintenanceHintTone?: 'positive' | 'mixed' | 'warning' | 'critical' | 'neutral';
+  maintenanceAction?: MaintenanceActionPresentation | null;
 };
 
 export type EventResultSelectedPlanOutcome = {
@@ -846,35 +855,71 @@ const REVEAL_KINDS_COVERED_BY_CITY_IMPACT: EventResultRevealItemKind[] = [
 function buildDistrictReaction(
   input: BuildEventResultRevealPresentationInput,
   advisorText: string,
+  outcomeBand: EventResultOutcomeBand,
 ): EventResultDistrictReaction | undefined {
   const socialEcho = input.socialEcho;
   const cityReaction = input.cityReaction;
+  const districtId = input.snapshot.neighborhoodId ?? input.event?.neighborhoodId;
+  const districtName =
+    input.snapshot.neighborhoodName ??
+    input.event?.district ??
+    'Bölge';
+  const personalityOutcome = mapResultToneToPersonalityOutcome(
+    outcomeBand === 'success'
+      ? 'positive'
+      : outcomeBand === 'partial' || outcomeBand === 'mixed'
+        ? 'mixed'
+        : outcomeBand === 'risk'
+          ? 'warning'
+          : 'neutral',
+  );
+  const flavor = buildDistrictReactionFlavor({
+    districtId,
+    districtName,
+    day: input.day ?? input.snapshot.day,
+    outcomeBand: personalityOutcome,
+    avoidLines: [advisorText, socialEcho?.message ?? '', cityReaction?.shortSummary ?? ''],
+  });
+
   const message =
     socialEcho?.message?.trim() ||
-    cityReaction?.socialEcho.line?.trim() ||
-    cityReaction?.shortSummary?.trim();
+    cityReaction?.socialEcho?.line?.trim() ||
+    cityReaction?.shortSummary?.trim() ||
+    flavor.description;
 
   if (!message) return undefined;
 
   const normalizedAdvisor = advisorText.trim().toLowerCase();
   if (normalizedAdvisor && message.toLowerCase().includes(normalizedAdvisor.slice(0, 24))) {
-    return undefined;
+    if (dedupeDistrictPersonalityCopy(flavor.description, [message])) {
+      return undefined;
+    }
   }
 
   const sourceLabel =
     socialEcho?.title?.trim() ||
-    cityReaction?.socialEcho.sourceLabel?.trim() ||
-    'Mahalle';
+    cityReaction?.socialEcho?.sourceLabel?.trim() ||
+    districtName;
   const tone =
-    socialEcho?.tone ??
-    cityReaction?.socialEcho.tone ??
-    cityReaction?.tone ??
-    'neutral';
+    flavor.tone === 'positive'
+      ? 'positive'
+      : flavor.tone === 'warning'
+        ? 'warning'
+        : socialEcho?.tone ??
+          cityReaction?.socialEcho?.tone ??
+          cityReaction?.tone ??
+          'neutral';
+
+  const combinedMessage =
+    message !== flavor.description &&
+    !dedupeDistrictPersonalityCopy(flavor.description, [message])
+      ? `${message} ${flavor.description}`
+      : message;
 
   return {
-    title: 'Mahalle Tepkisi',
+    title: flavor.title,
     sourceLabel,
-    message: message.length > 140 ? `${message.slice(0, 138)}…` : message,
+    message: combinedMessage.length > 140 ? `${combinedMessage.slice(0, 138)}…` : combinedMessage,
     tone,
     iconKey: 'chatbubble-ellipses-outline',
   };
@@ -885,6 +930,7 @@ function buildResourceCostSection(
   strategyId?: EventPlanStrategyId | null,
   outcomeTone?: EventResultOutcomeTone,
   maintenanceBacklogRuntime?: MaintenanceBacklogRuntimeState | null,
+  currentDay = 1,
 ): EventResultResourceCostSection {
   const budgetMetric = findMetric(snapshot.metricChanges, 'budget');
   const moraleMetric = findMetric(snapshot.metricChanges, 'personnelMorale');
@@ -934,15 +980,27 @@ function buildResourceCostSection(
         vehicle?.primaryText ?? '',
       ]);
 
+  const maintenanceActionBundle = maintenanceBacklogRuntime
+    ? buildMaintenanceActionUiBundle({
+        runtime: maintenanceBacklogRuntime,
+        currentDay,
+        surface: 'result',
+        readinessSnapshot,
+        avoidLines: [cost.summary, personnel?.primaryText ?? '', vehicle?.primaryText ?? ''],
+      })
+    : null;
+
   return {
     title: cost.title,
     summary: cost.summary,
     tone: cost.tone,
     items: cost.items,
-    maintenanceHint: maintenanceHint ?? undefined,
+    maintenanceHint: maintenanceActionBundle?.hintText ?? maintenanceHint ?? undefined,
     maintenanceHintTone:
+      maintenanceActionBundle?.hintTone ??
       maintenancePresentation?.overallTone ??
       buildMaintenanceBacklogFromReadiness(readinessSnapshot).overallTone,
+    maintenanceAction: maintenanceActionBundle?.action ?? null,
   };
 }
 
@@ -1144,13 +1202,27 @@ export function buildEventResultAdvisorComment(
     ...input.eceMemoryContext,
   };
 
+  const districtEceHint = buildDistrictPersonalityEceHint(
+    {
+      districtId: input.snapshot.neighborhoodId ?? input.event?.neighborhoodId,
+      districtName: memoryContext.districtName,
+      day,
+      outcomeBand: mapResultToneToPersonalityOutcome(outcome.outcomeBand),
+      avoidLines: input.eceMemoryContext?.avoidLines,
+    },
+    'result',
+  );
+
   const memory = buildEceMemorySnapshot(memoryContext);
   const line = buildResultEceLine({
     memory,
     context: memoryContext,
     seed: `${input.snapshot.eventId}:result:${day}`,
     outcomeTone,
-    avoidLines: input.eceMemoryContext?.avoidLines,
+    avoidLines: [
+      ...(input.eceMemoryContext?.avoidLines ?? []),
+      districtEceHint ?? '',
+    ].filter((entry) => Boolean(entry)),
   });
 
   if (input.isDay1LearningEvent || day === 1) {
@@ -1231,12 +1303,17 @@ export function buildEventResultRevealPresentation(
   const selectedPlanContext = buildSelectedPlanContext(input.selectedPlanStrategyId);
   const selectedPlanOutcome = buildSelectedPlanOutcome(input.selectedPlanStrategyId);
   const advisorComment = buildEventResultAdvisorComment(input, outcome, revealItems);
-  const districtReaction = buildDistrictReaction(input, advisorComment.text);
+  const districtReaction = buildDistrictReaction(
+    input,
+    advisorComment.text,
+    outcome.outcomeBand,
+  );
   const resourceCost = buildResourceCostSection(
     input.snapshot,
     input.selectedPlanStrategyId,
     outcome.resultTone,
     input.maintenanceBacklogRuntime,
+    day,
   );
   const reportBridge = buildReportBridge(input, outcome, resourceCost);
   const secondaryActions = buildSecondaryActions();

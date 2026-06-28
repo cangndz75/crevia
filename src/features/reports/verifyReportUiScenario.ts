@@ -19,6 +19,7 @@ import {
   buildEndDayCliffhangerPresentation,
   cliffhangerStringsForAudit,
 } from './utils/endDayCliffhangerPresentation';
+import { buildReportReplayPresentation } from '@/core/reportReplay';
 
 export type VerifyReportUiOutcome = {
   ok: boolean;
@@ -263,6 +264,15 @@ export function verifyReportUiScenario(): VerifyReportUiOutcome {
         cliffhangerDay1.primaryCta.label === 'Yarına Hazırlan',
       'Gün 1 cliffhanger hafif fallback ve CTA üretir',
       'Gün 1 cliffhanger hatalı',
+    ) && ok;
+
+  const replayEmpty = buildReportReplayPresentation({ day: 1 });
+  ok =
+    assert(
+      checks,
+      replayEmpty.items.length >= 3 && replayEmpty.title === 'Gün Akışı',
+      'Gün akışı replay fallback üretir',
+      `${replayEmpty.items.length} item`,
     ) && ok;
 
   return { ok, checks };

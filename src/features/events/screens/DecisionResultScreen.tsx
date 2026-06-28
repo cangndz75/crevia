@@ -72,6 +72,7 @@ import { OperationPhaseProgressRail } from '@/features/events/components/event-w
 import { selectLastDecisionResult, useGameStore } from '@/store/useGameStore';
 import { useGameStatus } from '@/store/gameSelectors';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
+import { buildMaintenanceActionResultPresentation } from '@/core/maintenanceBacklog';
 import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 import {
   CreviaAnimatedCard,
@@ -124,6 +125,7 @@ export function DecisionResultScreen() {
   const snapshot = useGameStore(selectLastDecisionResult);
   const lastOperationPlanStrategyId = useGameStore((s) => s.lastOperationPlanStrategyId);
   const maintenanceBacklogRuntime = useGameStore((s) => s.maintenanceBacklogRuntime);
+  const applyMaintenanceAction = useGameStore((s) => s.applyMaintenanceAction);
   const gameState = useGameStore((s) => s.gameState);
   const monetization = useGameStore((s) => s.monetization);
   const activeEvents = gameState.events;
@@ -548,6 +550,7 @@ export function DecisionResultScreen() {
   );
 
   const [visibleRevealCount, setVisibleRevealCount] = useState(0);
+  const [maintenanceActionFeedback, setMaintenanceActionFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     const itemCount = revealPresentation.revealItems.length;
@@ -628,6 +631,18 @@ export function DecisionResultScreen() {
     [router],
   );
 
+  const handleMaintenanceAction = useCallback(() => {
+    const action = revealPresentation.resourceCost.maintenanceAction;
+    if (!action?.enabled) return;
+    const applied = applyMaintenanceAction(action.itemId, action.actionKind);
+    if (!applied) return;
+    const updatedRuntime = useGameStore.getState().maintenanceBacklogRuntime;
+    const item = updatedRuntime.items.find((entry) => entry.id === action.itemId);
+    if (!item) return;
+    const result = buildMaintenanceActionResultPresentation(item, action.actionKind);
+    setMaintenanceActionFeedback(result.description);
+  }, [applyMaintenanceAction, revealPresentation.resourceCost.maintenanceAction]);
+
   const legacyTutorialStep = useGameStore((s) =>
     selectActiveTutorialStepForScreen(s, 'decision_result'),
   );
@@ -691,6 +706,8 @@ export function DecisionResultScreen() {
             <ResultResourceCostCard
               section={revealPresentation.resourceCost}
               reducedMotion={reducedMotion}
+              onMaintenanceAction={handleMaintenanceAction}
+              maintenanceActionFeedback={maintenanceActionFeedback}
             />
 
             {revealPresentation.selectedPlanOutcome ? (

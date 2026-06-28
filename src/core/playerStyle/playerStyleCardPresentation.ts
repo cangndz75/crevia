@@ -17,6 +17,7 @@ import type {
   PlayerStyleProfile,
   PlayerStyleSurface,
 } from './playerStyleTypes';
+import { lineDuplicatesAvoidLines } from '@/core/presentationDedupe';
 
 export const PLAYER_STYLE_REPORT_LINE_MAX = 160;
 export const PLAYER_STYLE_ECE_HINT_MAX = 120;
@@ -71,20 +72,8 @@ function clamp(text: string, limit: number): string {
   return `${t.slice(0, limit - 1).trimEnd()}…`;
 }
 
-function normalizeLine(value: string): string {
-  return value.toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ').trim();
-}
-
 function isDuplicateLine(line: string, avoidLines: string[]): boolean {
-  const normalized = normalizeLine(line);
-  return avoidLines.some((avoid) => {
-    const other = normalizeLine(avoid);
-    if (!other) return false;
-    if (other === normalized) return true;
-    if (normalized.length >= 18 && other.includes(normalized.slice(0, 18))) return true;
-    if (other.length >= 18 && normalized.includes(other.slice(0, 18))) return true;
-    return false;
-  });
+  return lineDuplicatesAvoidLines(line, avoidLines);
 }
 
 export function buildConfidenceLabel(confidence: PlayerStyleConfidence): string {

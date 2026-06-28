@@ -5,11 +5,13 @@ import {
 } from '@/core/operationReadiness';
 import {
   buildEceMaintenanceHint,
+  buildMaintenanceActionUiBundle,
   buildMaintenanceBacklogFromReadiness,
   buildMaintenanceBacklogRuntimePresentation,
   buildMaintenanceDispatchHint,
   buildMaintenanceRuntimeDispatchHint,
 } from '@/core/maintenanceBacklog';
+import type { MaintenanceActionPresentation } from '@/core/maintenanceBacklog/maintenanceActionTypes';
 import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
 import type {
   AssignmentCompatibilityResult,
@@ -82,6 +84,7 @@ export type EventDispatchReadinessPanel = {
     tone: 'positive' | 'mixed' | 'warning' | 'critical' | 'neutral';
     countLabel?: string;
   };
+  maintenanceAction?: MaintenanceActionPresentation | null;
 };
 
 export type EventDispatchResourceSummaryItem = {
@@ -885,6 +888,15 @@ export function buildEventDispatchPhasePresentation(
         buildMaintenanceBacklogFromReadiness(dispatchReadinessSnapshot),
         [readinessPanel.overallLabel, dispatchReadinessSnapshot.summary],
       );
+  const maintenanceActionBundle = input.maintenanceBacklogRuntime
+    ? buildMaintenanceActionUiBundle({
+        runtime: input.maintenanceBacklogRuntime,
+        currentDay: input.day ?? 1,
+        surface: 'dispatch',
+        readinessSnapshot: dispatchReadinessSnapshot,
+        avoidLines: [readinessPanel.overallLabel, dispatchReadinessSnapshot.summary],
+      })
+    : null;
   const readinessRows = readinessPanel.items as EventDispatchReadinessRow[];
   const overallReadiness = {
     status: readinessPanel.overallStatus as EventDispatchOverallReadinessStatus,
@@ -895,7 +907,14 @@ export function buildEventDispatchPhasePresentation(
     overallStatus: overallReadiness.status,
     overallLabel: overallReadiness.label,
     items: readinessRows,
-    maintenanceHint: maintenanceHint ?? undefined,
+    maintenanceHint: maintenanceActionBundle?.hintText
+      ? {
+          text: maintenanceActionBundle.hintText,
+          tone: maintenanceActionBundle.hintTone ?? maintenanceHint?.tone ?? 'neutral',
+          countLabel: maintenanceActionBundle.countLabel ?? maintenanceHint?.countLabel,
+        }
+      : maintenanceHint ?? undefined,
+    maintenanceAction: maintenanceActionBundle?.action ?? null,
   };
   const planStrategyId = selectedPlan.strategyId ?? 'balanced_plan';
   const resourceSummary = buildResourceSummary(input, assignmentSummary, planStrategyId);

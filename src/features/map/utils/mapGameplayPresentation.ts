@@ -5,6 +5,8 @@ import type { EventCard, EventRiskLevel } from '@/core/models/EventCard';
 import type { OperationalResourcesState } from '@/core/operationalResources/operationalResourceTypes';
 import type { SocialEchoPresentation } from '@/core/socialEcho';
 
+import { buildDistrictMapPersonalityLabel } from '@/core/districtPersonality';
+
 import { composeMapBottomPanelPresentation } from './mapBottomPanelPresentation';
 
 export type MapGameplayMarkerType =
@@ -36,6 +38,7 @@ export type MapGameplayMarker = {
   ctaLabel?: string;
   eventId?: string;
   eventDetailRoute?: string;
+  traitLabel?: string;
 };
 
 export type MapGameplayLayer = {
@@ -73,9 +76,12 @@ export type MapBottomPanelStatusTone =
   | 'opportunity'
   | 'neutral';
 
+import type { MapActionBundlePresentation } from '@/core/mapDirectAction';
+
 export type MapBottomPanelPresentation = {
   markerId: string;
   navLabel: string;
+  sourcePillLabel: string;
   statusLabel: string;
   statusTone: MapBottomPanelStatusTone;
   title: string;
@@ -94,6 +100,7 @@ export type MapBottomPanelPresentation = {
   primaryActionLabel: string;
   secondaryActionLabel?: string;
   primaryRoute?: string;
+  actionBundle?: MapActionBundlePresentation;
 };
 
 export type BuildMapGameplayPresentationInput = {
@@ -286,6 +293,11 @@ function buildMarkersFromGameState(input: BuildMapGameplayPresentationInput): Ma
     title: 'Merkez',
     subtitle: 'Ekip ve kaynak noktası',
     districtName: 'Merkez',
+    traitLabel:
+      buildDistrictMapPersonalityLabel({
+        districtId: 'merkez',
+        districtName: 'Merkez',
+      }) ?? undefined,
     severity: 'low',
     status: 'active',
     coordinate: MARKER_COORDINATES.merkez,

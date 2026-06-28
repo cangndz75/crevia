@@ -1,3 +1,5 @@
+import { buildDistrictPersonalityEceHint } from '@/core/districtPersonality';
+import { lineDuplicatesAvoidLines } from '@/core/presentationDedupe';
 import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
 import { selectActiveMaintenanceRuntimeItems } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeModel';
 import type { PlayerStyleId } from '@/core/playerStyle/playerStyleTypes';
@@ -25,20 +27,8 @@ import type {
   ReportPeriodGoalInsight,
 } from './periodGoalTypes';
 
-function normalizeLine(value: string): string {
-  return value.toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ').trim();
-}
-
 export function dedupePeriodGoalCopy(line: string, avoidLines: string[] = []): boolean {
-  const normalized = normalizeLine(line);
-  return avoidLines.some((avoid) => {
-    const other = normalizeLine(avoid);
-    if (!other) return false;
-    if (other === normalized) return true;
-    if (normalized.length >= 18 && other.includes(normalized.slice(0, 18))) return true;
-    if (other.length >= 18 && normalized.includes(other.slice(0, 18))) return true;
-    return false;
-  });
+  return lineDuplicatesAvoidLines(line, avoidLines);
 }
 
 function clamp(text: string, max: number): string {
@@ -176,6 +166,17 @@ export function buildHubPeriodGoalCard(
   }
 
   const eceHint = buildEcePeriodGoalHint(goal.id, avoidLines);
+  const districtEceHint =
+    context.selectedDistrictName?.trim() && context.day >= 2
+      ? buildDistrictPersonalityEceHint(
+          {
+            districtName: context.selectedDistrictName,
+            day: context.day,
+            avoidLines: [...avoidLines, eceHint ?? ''],
+          },
+          'periodGoal',
+        )
+      : null;
   const secondaryChip = dashboard.secondaryGoals[0]?.shortTitle ?? null;
 
   return {
@@ -188,7 +189,7 @@ export function buildHubPeriodGoalCard(
     chips: pickHubChips(goal, maintenanceActive),
     nextHint: clamp(goal.nextHint, 100),
     secondaryChip,
-    eceHint,
+    eceHint: districtEceHint ?? eceHint,
   };
 }
 
@@ -309,6 +310,8 @@ export function buildPeriodGoalContextFromReport(params: {
   playerStyleId?: PlayerStyleId | null;
   decisionHistory?: Array<{ day?: number; eventTitle?: string; decisionLabel?: string }>;
   warnings?: string[];
+  selectedDistrictName?: string | null;
+  selectedDistrictId?: string | null;
 }): PeriodGoalContextInput {
   const maintenance = countMaintenanceRuntime(params.maintenanceBacklogRuntime);
   const satisfaction = params.metrics?.publicSatisfaction ?? 60;
@@ -333,6 +336,10 @@ export function buildPeriodGoalContextFromReport(params: {
     tomorrowRiskLine: params.tomorrowRisk?.mainLine ?? null,
     playerStyleId: params.playerStyleId ?? null,
     publicSatisfactionLow: satisfaction < 55,
+    selectedDistrictName: params.selectedDistrictName ?? null,
+    serviceSensitive: maintenance.activeCount > 0 && satisfaction < 58,
+    routeSensitive: maintenance.strainedCount > 0,
+    marketPressure: satisfaction < 55 && (params.socialPulseState?.globalRiskLevel === 'high'),
   };
 
   return enrichPeriodGoalContext(base, params.decisionHistory ?? []);

@@ -1,3 +1,5 @@
+import type { MaintenanceEconomyStatus } from './maintenanceEconomyTypes';
+
 export type MaintenanceRuntimeDomain =
   | 'personnel'
   | 'vehicle'
@@ -25,6 +27,12 @@ export type MaintenanceRuntimeItem = {
   districtId?: string;
   districtName?: string;
   relatedEventId?: string;
+  economyStatus?: MaintenanceEconomyStatus;
+  estimatedCost?: number;
+  estimatedDays?: number;
+  startedDay?: number;
+  dueDay?: number;
+  paidCost?: number;
 };
 
 export type MaintenanceBacklogRuntimeState = {

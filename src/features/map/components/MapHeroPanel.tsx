@@ -4,6 +4,7 @@ import type { ActiveOperationMapBinding } from '@/core/activeOperationMapBinding
 import type { ActiveOperationMapCardModel } from '@/core/activeOperationMapBinding';
 import type { ContainerState } from '@/core/containers/containerTypes';
 import type { EventCard } from '@/core/models/EventCard';
+import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
 import type { DecisionRecord } from '@/core/models/DecisionRecord';
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import type { OperationalResourcesState } from '@/core/operationalResources/operationalResourceTypes';
@@ -49,6 +50,9 @@ type Props = {
   mapMotionPresentation?: MapMotionPresentationResult | null;
   mapReactionLiteModel?: MapReactionLiteModel | null;
   recentDecisionRecord?: DecisionRecord | null;
+  maintenanceBacklogRuntime?: MaintenanceBacklogRuntimeState | null;
+  periodGoalShortTitle?: string;
+  districtPersonalitySignalLine?: string;
   onLayersPress: () => void;
   onDistrictSelect: (districtId: MapDistrictId) => void;
   onBackToOverview: () => void;

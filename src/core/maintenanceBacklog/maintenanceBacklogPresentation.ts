@@ -1,4 +1,5 @@
 import { buildOperationReadinessSnapshot } from '@/core/operationReadiness/operationReadinessModel';
+import { lineDuplicatesAvoidLines } from '@/core/presentationDedupe';
 import type { OperationReadinessSnapshot } from '@/core/operationReadiness/operationReadinessTypes';
 import type { CenterHomeCoreSections } from '@/features/hub/utils/centerHomePresentation';
 import type { CenterOperationSignalSeverity } from '@/features/hub/utils/centerOperationSignalsPresentation';
@@ -11,20 +12,8 @@ import type {
   MaintenanceSurfaceHint,
 } from './maintenanceBacklogTypes';
 
-function normalizeLine(value: string): string {
-  return value.toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ').trim();
-}
-
 function isDuplicateLine(line: string, avoidLines: string[]): boolean {
-  const normalized = normalizeLine(line);
-  return avoidLines.some((avoid) => {
-    const other = normalizeLine(avoid);
-    if (!other) return false;
-    if (other === normalized) return true;
-    if (normalized.length >= 18 && other.includes(normalized.slice(0, 18))) return true;
-    if (other.length >= 18 && normalized.includes(other.slice(0, 18))) return true;
-    return false;
-  });
+  return lineDuplicatesAvoidLines(line, avoidLines);
 }
 
 function clamp(text: string, max: number): string {

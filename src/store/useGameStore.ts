@@ -436,7 +436,9 @@ import {
   buildMaintenanceBacklogDayCloseBundle,
   buildMaintenanceBacklogDayCloseInput,
   createEmptyMaintenanceBacklogRuntimeState,
+  applyMaintenanceActionToRuntimeState,
 } from '@/core/maintenanceBacklog';
+import type { MaintenanceActionKind } from '@/core/maintenanceBacklog/maintenanceActionTypes';
 import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
 import {
   appendVehicleMaintenanceDayCloseArchive,
@@ -663,6 +665,7 @@ type GameStoreActions = {
   advanceTutorial: () => void;
   skipTutorial: () => void;
   dismissOnboardingHint: (hintId: string) => void;
+  applyMaintenanceAction: (itemId: string, actionKind: MaintenanceActionKind) => boolean;
 };
 
 export type GameStore = GameStoreState & GameStoreActions;
@@ -1234,6 +1237,20 @@ export const useGameStore = create<GameStore>()(
       clearLastDecisionResult: () => set({ lastDecisionResult: null }),
       setLastOperationPlanStrategyId: (strategyId) =>
         set({ lastOperationPlanStrategyId: strategyId }),
+
+      applyMaintenanceAction: (itemId, actionKind) => {
+        const current = get();
+        const currentDay = current.gameState.city.day;
+        const nextRuntime = applyMaintenanceActionToRuntimeState(
+          current.maintenanceBacklogRuntime,
+          itemId,
+          actionKind,
+          currentDay,
+        );
+        if (nextRuntime === current.maintenanceBacklogRuntime) return false;
+        set({ maintenanceBacklogRuntime: nextRuntime });
+        return true;
+      },
 
       ensureDailyGoalsForDay: (day) => {
         const current = get();

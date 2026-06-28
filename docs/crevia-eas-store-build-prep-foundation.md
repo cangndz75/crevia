@@ -52,9 +52,9 @@ CLI: `eas-cli/20.1.0+` — `npm install -g eas-cli` veya `npx eas`.
 | **App version** | `app.json` → `expo.version` | Mağazada görünen semver | `1.0.0` veya soft launch `0.1.0` |
 | **iOS buildNumber** | `app.json` → `ios.buildNumber` | TestFlight / internal build sayacı | `"1"`, `"2"`, … |
 | **Android versionCode** | `app.json` → `android.versionCode` | Play internal build sayacı | `1`, `2`, … |
-| **SAVE_VERSION** | `src/store/gamePersist.ts` | Oyun save şema versiyonu | **27** |
+| **SAVE_VERSION** | `src/store/gamePersist.ts` | Oyun save şema versiyonu | **28** |
 
-- `SAVE_VERSION` **27** app version ile aynı şey **değildir**.
+- `SAVE_VERSION` **28** app version ile aynı şey **değildir**.
 - Build number artışı persist migration **değildir**.
 - Store release semver `0.1.0` soft launch için uygun; mevcut `1.0.0` korunabilir — karar product pass’inde.
 

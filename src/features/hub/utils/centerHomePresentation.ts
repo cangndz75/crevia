@@ -78,8 +78,27 @@ import {
   buildMemoryFollowUpPresentationContext,
   type MemoryFollowUpPresentationContext,
 } from '@/features/shared/utils/memoryFollowUpPresentationContext';
+import {
+  applyHubDensityToPresentation,
+  buildHubDensityPresentation,
+  type HubDensityPresentation,
+} from './centerHubDensityPresentation';
 
 export { isCenterModuleRenderable } from './centerStatePolicy';
+export type {
+  HubCollapseMode,
+  HubDensityPresentation,
+  HubDisclosureBand,
+  HubSurfaceKey,
+  HubSurfacePriority,
+} from './centerHubDensityPresentation';
+export {
+  buildHubDensityPresentation,
+  countHubPrimarySections,
+  deriveHubDisclosureBand,
+  hubSurfaceCollapseMode,
+  hubSurfaceIsRenderable,
+} from './centerHubDensityPresentation';
 
 export type CenterHomeHeaderSummary = CenterHeaderSummary;
 export type CenterHomeCitySummary = CenterCitySummary;
@@ -167,6 +186,7 @@ export type CenterHomePresentation = CenterHomeCoreSections & {
   miniCityFeed: MiniCityFeedPresentation;
   cityAgenda: import('@/core/periodGoals').HubPeriodGoalCardPresentation;
   hubGameplay: CenterHubGameplayPresentation;
+  hubDensity: HubDensityPresentation;
 };
 
 export type {
@@ -713,7 +733,7 @@ export function buildCenterHomePresentation(
     },
   );
 
-  return {
+  const assembled = {
     ...withCommandPanel,
     nextTargetHero: hubGameplay.nextTargetHero,
     nextActions: hubGameplay.nextActions,
@@ -728,6 +748,20 @@ export function buildCenterHomePresentation(
     cityAgenda: hubGameplay.cityAgenda,
     hubGameplay,
   };
+
+  const hubDensity = buildHubDensityPresentation({
+    presentation: assembled,
+    day,
+    maintenanceHubSignal: hubGameplay.maintenanceHubSignal,
+  });
+
+  return applyHubDensityToPresentation(
+    {
+      ...assembled,
+      hubDensity,
+    },
+    hubDensity,
+  );
 }
 
 export function centerHomeHasDuplicateModuleKeys(

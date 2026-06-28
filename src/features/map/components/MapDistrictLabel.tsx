@@ -6,11 +6,15 @@ import type { MapMarkerMotionModel } from '../utils/mapMotionPresentation';
 import { MapDistrictMotionOverlay } from '../utils/mapMarkerMotionHelper';
 import { mapPointToAbsoluteOverlayStyle } from '../utils/mapCoordinates';
 import type { CreviaMapDistrictLayout } from '../types/creviaMapTypes';
+import { mapUi } from '../utils/mapUiTokens';
 
 type Props = {
   district: CreviaMapDistrictLayout;
   motionModel?: MapMarkerMotionModel | null;
   reducedMotionMode?: boolean;
+  selected?: boolean;
+  traitLabel?: string;
+  emphasize?: boolean;
   onPress?: (districtId: CreviaMapDistrictLayout['id']) => void;
 };
 
@@ -26,12 +30,18 @@ export const MapDistrictLabel = memo(function MapDistrictLabel({
   district,
   motionModel = null,
   reducedMotionMode = false,
+  selected = false,
+  traitLabel,
+  emphasize = false,
   onPress,
 }: Props) {
   const LabelContainer = onPress ? Pressable : View;
+  const showTrait = Boolean(traitLabel?.trim()) && (selected || emphasize);
   const accessibilityLabel =
     motionModel?.accessibilityLabel ??
-    (onPress ? `${district.label} mahallesini ac` : undefined);
+    (onPress
+      ? `${district.label} mahallesi${traitLabel ? `, ${traitLabel}` : ''}`
+      : undefined);
 
   return (
     <View
@@ -39,6 +49,7 @@ export const MapDistrictLabel = memo(function MapDistrictLabel({
       style={[
         styles.anchor,
         mapPointToAbsoluteOverlayStyle(district.center),
+        selected && styles.anchorSelected,
       ]}>
       <MapDistrictMotionOverlay
         motionModel={motionModel}
@@ -48,15 +59,41 @@ export const MapDistrictLabel = memo(function MapDistrictLabel({
         onPress={onPress ? () => onPress(district.id) : undefined}
         accessibilityRole={onPress ? 'button' : undefined}
         accessibilityLabel={accessibilityLabel}
-        style={[styles.label, { borderColor: district.color }]}>
-        <Ionicons name={DISTRICT_ICON[district.id]} size={15} color={district.color} />
+        accessibilityState={{ selected }}
+        style={[
+          styles.label,
+          {
+            borderColor: selected ? mapUi.gold : district.color,
+            backgroundColor: selected ? 'rgba(255, 255, 255, 0.98)' : 'rgba(255, 255, 255, 0.9)',
+            opacity: emphasize || selected ? 1 : 0.82,
+          },
+          selected && styles.labelSelected,
+        ]}>
+        <Ionicons
+          name={DISTRICT_ICON[district.id]}
+          size={selected ? 16 : 15}
+          color={selected ? mapUi.tealDark : district.color}
+        />
         <Text
-          style={[styles.labelText, { color: district.labelTextColor ?? district.color }]}
+          style={[
+            styles.labelText,
+            {
+              color: selected ? mapUi.tealDark : (district.labelTextColor ?? district.color),
+              fontWeight: selected || emphasize ? '900' : '800',
+            },
+          ]}
           numberOfLines={1}
           selectable={false}>
           {district.label}
         </Text>
       </LabelContainer>
+      {showTrait ? (
+        <View style={styles.traitChip}>
+          <Text style={styles.traitText} numberOfLines={1}>
+            {traitLabel}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 });
@@ -65,6 +102,11 @@ const styles = StyleSheet.create({
   anchor: {
     transform: [{ translateX: -45 }, { translateY: -15 }],
     zIndex: 6,
+    alignItems: 'center',
+  },
+  anchorSelected: {
+    zIndex: 8,
+    transform: [{ translateX: -45 }, { translateY: -17 }, { scale: 1.04 }],
   },
   label: {
     minWidth: 90,
@@ -75,7 +117,6 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: 15,
     borderWidth: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     shadowColor: '#1C1C1E',
@@ -84,9 +125,31 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  labelSelected: {
+    borderWidth: 1.5,
+    shadowColor: mapUi.gold,
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    elevation: 4,
+  },
   labelText: {
     fontSize: 12,
-    fontWeight: '800',
     letterSpacing: 0,
+  },
+  traitChip: {
+    marginTop: 4,
+    maxWidth: 108,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: 'rgba(6, 22, 20, 0.82)',
+    borderWidth: 1,
+    borderColor: mapUi.goldBorder,
+  },
+  traitText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: mapUi.gold,
+    letterSpacing: 0.15,
   },
 });

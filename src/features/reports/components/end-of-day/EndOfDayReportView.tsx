@@ -1,4 +1,5 @@
 import { CompactInsightRow } from '@/components/game/CompactInsightRow';
+import { buildDistrictReplayFlavorLine, mapResultToneToPersonalityOutcome } from '@/core/districtPersonality';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { StyleSheet, Text, View } from 'react-native';
 import { useEffect, useMemo } from 'react';
@@ -116,10 +117,25 @@ import type { PilotReportContext } from '@/features/reports/utils/pilotReportPre
 import { buildEndOfDayReportViewModel } from '@/features/reports/utils/endOfDayReportPresentation';
 import { buildMemoryFollowUpPresentationContext } from '@/features/shared/utils/memoryFollowUpPresentationContext';
 import { buildPostDecisionCityReactionFromRecord } from '@/features/events/utils/postDecisionCityReactionPresentation';
-import { ReportEndDayCliffhangerSection } from '@/features/reports/components/end-of-day/ReportEndDayCliffhangerSection';
+import { ReportDayFlowTimeline } from '@/features/reports/components/end-of-day/ReportDayFlowTimeline';
+import { buildReportReplayPresentation } from '@/core/reportReplay';
+import {
+  buildAvoidLines,
+  selectVisibleReportStrategicInsights,
+  shouldShowReportMemoryTraceInsight,
+  shouldShowReportSocialEchoInsight,
+} from '@/core/presentationDedupe';
+import { selectActiveMaintenanceRuntimeItems } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeModel';
+import { buildMaintenanceEconomyReplayDescription } from '@/core/maintenanceBacklog/maintenanceEconomyModel';
+import {
+  buildPeriodGoalContextFromReport,
+  buildPeriodGoalPresentation,
+  deriveActivePeriodGoal,
+} from '@/core/periodGoals';
 import {
   buildEndDayCliffhangerPresentation,
 } from '@/features/reports/utils/endDayCliffhangerPresentation';
+import { ReportEndDayCliffhangerSection } from '@/features/reports/components/end-of-day/ReportEndDayCliffhangerSection';
 import type { useReportPilotCompletionSummary } from '@/features/pilot/hooks/usePilotCompletionSummary';
 import {
   buildFirstTenMinutesReportGuard,
@@ -1087,6 +1103,8 @@ export function EndOfDayReportView({
         maintenanceBacklogRuntime,
         socialPulseState,
         tomorrowRisk: tomorrowRiskPresentation.report,
+        lastDecisionDistrictId: lastDecisionForDay?.neighborhoodId ?? null,
+        lastDecisionDistrictName: lastDecisionForDay?.neighborhoodName ?? null,
       }),
     [
       report,
@@ -1101,6 +1119,8 @@ export function EndOfDayReportView({
       maintenanceBacklogRuntime,
       socialPulseState,
       tomorrowRiskPresentation.report,
+      lastDecisionForDay?.neighborhoodId,
+      lastDecisionForDay?.neighborhoodName,
     ],
   );
 
@@ -1156,6 +1176,193 @@ export function EndOfDayReportView({
     tomorrowPreviewBundle.summary.preview?.summary,
     tomorrowRiskPresentation.report,
   ]);
+
+  const dayFlowReplay = useMemo(() => {
+    const activeMaintenance = selectActiveMaintenanceRuntimeItems(
+      maintenanceBacklogRuntime ?? { items: [], attentionStreaks: {} },
+    );
+    const periodGoalContext = buildPeriodGoalContextFromReport({
+      day: report.day,
+      metrics: {
+        publicSatisfaction: metrics.publicSatisfaction,
+        staffMorale: metrics.staffMorale,
+        budget: metrics.budget,
+      },
+      maintenanceBacklogRuntime,
+      socialPulseState,
+      tomorrowRisk: tomorrowRiskPresentation.report,
+      selectedDistrictName: lastDecisionForDay?.neighborhoodName ?? null,
+      selectedDistrictId: lastDecisionForDay?.neighborhoodId ?? null,
+      decisionHistory: decisionHistory.map((record) => ({
+        day: record.day,
+        decisionLabel: record.decisionLabel,
+        eventTitle: record.eventTitle,
+      })),
+      warnings: report.warnings,
+    });
+    const periodGoal = buildPeriodGoalPresentation(
+      deriveActivePeriodGoal(periodGoalContext),
+      periodGoalContext,
+    );
+
+    const replayAvoidLines = [
+      model.districtMemoryInsightLine ?? '',
+      model.periodGoalImpactLine ?? '',
+      model.tomorrowPreparationLine ?? '',
+      model.managementStyleLine ?? '',
+      model.operationalTempoLine ?? '',
+      tomorrowRiskPresentation.report?.mainLine ?? '',
+      reportSocialEcho?.message ?? '',
+      reportDecisionMemory?.reportMemoryLine ?? '',
+    ].filter((line): line is string => Boolean(line));
+    const replayOutcome = mapResultToneToPersonalityOutcome(
+      model.successScore >= 70 ? 'positive' : model.successScore < 50 ? 'warning' : 'neutral',
+    );
+    const districtReplayBase = {
+      districtId: lastDecisionForDay?.neighborhoodId,
+      districtName: lastDecisionForDay?.neighborhoodName,
+      day: report.day,
+      publicSatisfaction: metrics.publicSatisfaction,
+      outcomeBand: replayOutcome,
+      avoidLines: replayAvoidLines,
+    };
+
+    return buildReportReplayPresentation({
+      day: report.day,
+      decision: lastDecisionForDay
+        ? {
+            eventTitle: lastDecisionForDay.eventTitle,
+            decisionLabel: lastDecisionForDay.decisionLabel,
+            neighborhoodName: lastDecisionForDay.neighborhoodName,
+            eventId: lastDecisionForDay.eventId,
+          }
+        : null,
+      cityReaction: reportDecisionMemory
+        ? {
+            headline: reportDecisionMemory.headline,
+            shortSummary: reportDecisionMemory.shortSummary,
+            reportMemoryLine: reportDecisionMemory.reportMemoryLine,
+            socialEchoLine: reportDecisionMemory.socialEcho?.line,
+            nextRiskHint: reportDecisionMemory.nextRiskHint,
+            tone: reportDecisionMemory.tone,
+          }
+        : null,
+      metrics: {
+        publicSatisfaction: metrics.publicSatisfaction,
+        staffMorale: metrics.staffMorale,
+        budget: metrics.budget,
+      },
+      socialEchoMessage: reportSocialEcho?.message ?? socialEchoForReport?.mention ?? null,
+      socialEchoTitle: reportSocialEcho?.title ?? null,
+      cityEchoLine: cityEchoReportLine,
+      decisionImpactLine: decisionImpactReportEcho,
+      maintenanceActiveCount: activeMaintenance.length,
+      maintenanceCriticalCount: activeMaintenance.filter((item) => item.severity === 'critical')
+        .length,
+      maintenanceEconomyReplayLine: maintenanceBacklogRuntime
+        ? buildMaintenanceEconomyReplayDescription(maintenanceBacklogRuntime)
+        : null,
+      periodGoalTitle: periodGoal.title,
+      periodGoalProgressLabel: periodGoal.progressLabel,
+      periodGoalImpactLine: model.periodGoalImpactLine,
+      managementStyleLine: model.managementStyleLine,
+      tomorrowRiskLine: tomorrowRiskPresentation.report?.mainLine ?? null,
+      tomorrowRiskSupportLine: tomorrowRiskPresentation.report?.supportLine ?? null,
+      tomorrowPreparationLine: model.tomorrowPreparationLine,
+      cliffhangerLine: endDayCliffhanger.visible
+        ? endDayCliffhanger.closingBridge.summary
+        : null,
+      operationalTempoLine: model.operationalTempoLine,
+      districtPersonalityCityImpactLine: buildDistrictReplayFlavorLine({
+        ...districtReplayBase,
+        replayKind: 'cityImpact',
+      }),
+      districtPersonalitySocialLine: buildDistrictReplayFlavorLine({
+        ...districtReplayBase,
+        replayKind: 'socialEcho',
+      }),
+      districtPersonalityMaintenanceLine:
+        activeMaintenance.length > 0
+          ? buildDistrictReplayFlavorLine({
+              ...districtReplayBase,
+              replayKind: 'maintenance',
+            })
+          : null,
+      avoidLines: replayAvoidLines,
+    });
+  }, [
+    cityEchoReportLine,
+    decisionHistory,
+    decisionImpactReportEcho,
+    endDayCliffhanger.closingBridge.summary,
+    endDayCliffhanger.visible,
+    lastDecisionForDay,
+    maintenanceBacklogRuntime,
+    metrics.budget,
+    metrics.publicSatisfaction,
+    metrics.staffMorale,
+    model.districtMemoryInsightLine,
+    model.managementStyleLine,
+    model.operationalTempoLine,
+    model.periodGoalImpactLine,
+    model.tomorrowPreparationLine,
+    report.day,
+    report.warnings,
+    reportDecisionMemory,
+    reportSocialEcho?.message,
+    reportSocialEcho?.title,
+    socialEchoForReport?.mention,
+    socialPulseState,
+    tomorrowRiskPresentation.report,
+  ]);
+
+  const reportInsightAvoidLines = useMemo(
+    () =>
+      buildAvoidLines(
+        dayFlowReplay.items.map((item) => item.title),
+        dayFlowReplay.items.map((item) => item.description),
+        model.tomorrowPreparationLine,
+        model.periodGoalImpactLine,
+        model.managementStyleLine,
+        model.operationalTempoLine,
+        tomorrowRiskPresentation.report?.mainLine,
+        tomorrowRiskPresentation.report?.supportLine,
+        reportSocialEcho?.message,
+        reportDecisionMemory?.reportMemoryLine,
+      ),
+    [
+      dayFlowReplay.items,
+      model.managementStyleLine,
+      model.operationalTempoLine,
+      model.periodGoalImpactLine,
+      model.tomorrowPreparationLine,
+      reportDecisionMemory?.reportMemoryLine,
+      reportSocialEcho?.message,
+      tomorrowRiskPresentation.report?.mainLine,
+      tomorrowRiskPresentation.report?.supportLine,
+    ],
+  );
+
+  const visibleStrategicInsights = useMemo(
+    () => selectVisibleReportStrategicInsights(model, reportInsightAvoidLines),
+    [model, reportInsightAvoidLines],
+  );
+
+  const showReportMemoryTrace = useMemo(
+    () =>
+      shouldShowReportMemoryTraceInsight(
+        reportDecisionMemory?.reportMemoryLine,
+        reportInsightAvoidLines,
+      ),
+    [reportDecisionMemory?.reportMemoryLine, reportInsightAvoidLines],
+  );
+
+  const showReportSocialEcho = useMemo(
+    () =>
+      reportSocialEcho &&
+      shouldShowReportSocialEchoInsight(reportSocialEcho.message, reportInsightAvoidLines),
+    [reportInsightAvoidLines, reportSocialEcho],
+  );
 
   const reportSystemsIntegration = useMemo(() => {
     const existingEchoLines: string[] = [
@@ -1480,6 +1687,12 @@ export function EndOfDayReportView({
         <ReportPrimaryImpactSection model={impactModel} />
       </Animated.View>
 
+      <ReportDayFlowTimeline
+        model={dayFlowReplay}
+        day={report.day}
+        reducedMotion={reducedMotion}
+      />
+
       {cityEchoReportLine || decisionImpactReportEcho ? (
         <CreviaAnimatedLine
           surface="report"
@@ -1496,7 +1709,7 @@ export function EndOfDayReportView({
         </CreviaAnimatedLine>
       ) : null}
 
-      {reportDecisionMemory?.reportMemoryLine ? (
+      {reportDecisionMemory?.reportMemoryLine && showReportMemoryTrace ? (
         <CompactInsightRow
           label="Bugünün izi"
           line={reportDecisionMemory.reportMemoryLine}
@@ -1505,7 +1718,7 @@ export function EndOfDayReportView({
         />
       ) : null}
 
-      {reportSocialEcho ? (
+      {showReportSocialEcho && reportSocialEcho ? (
         <CompactInsightRow
           label={reportSocialEcho.title}
           line={reportSocialEcho.message}
@@ -1630,7 +1843,7 @@ export function EndOfDayReportView({
         </View>
       ) : null}
 
-      {model.cityMemoryNote?.line ? (
+      {model.cityMemoryNote?.line && visibleStrategicInsights.has('cityMemory') ? (
         <CompactInsightRow
           label={model.cityMemoryNote.title ?? 'Şehir hafızası'}
           line={model.cityMemoryNote.line}
@@ -1639,7 +1852,7 @@ export function EndOfDayReportView({
         />
       ) : null}
 
-      {model.followUpActionHint?.line ? (
+      {model.followUpActionHint?.line && visibleStrategicInsights.has('followUpAction') ? (
         <CompactInsightRow
           label={model.followUpActionHint.title ?? 'Takip önerisi'}
           line={model.followUpActionHint.line}
@@ -1648,7 +1861,7 @@ export function EndOfDayReportView({
         />
       ) : null}
 
-      {model.followUpExecutionNote ? (
+      {model.followUpExecutionNote && visibleStrategicInsights.has('followUpExecution') ? (
         <CompactInsightRow
           label="Takip tamamlandi"
           line={model.followUpExecutionNote}
@@ -1657,7 +1870,7 @@ export function EndOfDayReportView({
         />
       ) : null}
 
-      {model.positiveComebackNote ? (
+      {model.positiveComebackNote && visibleStrategicInsights.has('positiveComeback') ? (
         <CompactInsightRow
           label="Toparlanma fırsatı"
           line={model.positiveComebackNote}
@@ -1666,7 +1879,7 @@ export function EndOfDayReportView({
         />
       ) : null}
 
-      {model.operationalTempoLine ? (
+      {model.operationalTempoLine && visibleStrategicInsights.has('operationalTempo') ? (
         <CompactInsightRow
           label="Operasyonel Tempo"
           line={model.operationalTempoLine}
@@ -1675,7 +1888,7 @@ export function EndOfDayReportView({
         />
       ) : null}
 
-      {model.tomorrowPreparationLine ? (
+      {model.tomorrowPreparationLine && visibleStrategicInsights.has('tomorrowPreparation') ? (
         <CompactInsightRow
           label="Yarına Hazırlık"
           line={model.tomorrowPreparationLine}
@@ -1684,7 +1897,7 @@ export function EndOfDayReportView({
         />
       ) : null}
 
-      {model.periodGoalImpactLine ? (
+      {model.periodGoalImpactLine && visibleStrategicInsights.has('periodGoalImpact') ? (
         <CompactInsightRow
           label="Şehir Gündemine Etki"
           line={model.periodGoalImpactLine}
@@ -1693,7 +1906,16 @@ export function EndOfDayReportView({
         />
       ) : null}
 
-      {model.managementStyleLine ? (
+      {model.districtMemoryInsightLine && visibleStrategicInsights.has('districtMemory') ? (
+        <CompactInsightRow
+          label="Mahalle Hafızası"
+          line={model.districtMemoryInsightLine}
+          tone="teal"
+          icon="layers-outline"
+        />
+      ) : null}
+
+      {model.managementStyleLine && visibleStrategicInsights.has('managementStyle') ? (
         <CompactInsightRow
           label="Bugünkü Yönetim Tarzı"
           line={model.managementStyleLine}
@@ -1702,7 +1924,7 @@ export function EndOfDayReportView({
         />
       ) : null}
 
-      {model.dominantStrategyNote ? (
+      {model.dominantStrategyNote && visibleStrategicInsights.has('dominantStrategy') ? (
         <CompactInsightRow
           label="Strateji notu"
           line={model.dominantStrategyNote}
@@ -1711,7 +1933,7 @@ export function EndOfDayReportView({
         />
       ) : null}
 
-      {model.districtNeglectRecoveryNote ? (
+      {model.districtNeglectRecoveryNote && visibleStrategicInsights.has('districtNeglectRecovery') ? (
         <CompactInsightRow
           label="Mahalle dengesi"
           line={model.districtNeglectRecoveryNote}
@@ -1720,7 +1942,7 @@ export function EndOfDayReportView({
         />
       ) : null}
 
-      {model.day8StrategicContentNote ? (
+      {model.day8StrategicContentNote && visibleStrategicInsights.has('day8Strategic') ? (
         <CompactInsightRow
           label="Stratejik odak"
           line={model.day8StrategicContentNote}
@@ -1729,7 +1951,7 @@ export function EndOfDayReportView({
         />
       ) : null}
 
-      {model.cityRhythmNote ? (
+      {model.cityRhythmNote && visibleStrategicInsights.has('cityRhythm') ? (
         <CompactInsightRow
           label="Günün ritmi"
           line={model.cityRhythmNote}

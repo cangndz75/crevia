@@ -18,6 +18,7 @@ import type {
   EceSocialSignal,
   EceTone,
 } from './eceToneTypes';
+import { lineDuplicatesAvoidLines } from '@/core/presentationDedupe';
 
 export const ECE_PHASE_LINE_MAX = 120;
 export const ECE_RESULT_REPORT_LINE_MAX = 140;
@@ -79,15 +80,7 @@ export function isDuplicateEceLine(
   avoidLines: string[] = [],
 ): boolean {
   if (!line?.trim()) return true;
-  const normalized = normalizeLine(line);
-  return avoidLines.some((avoid) => {
-    const other = normalizeLine(avoid);
-    if (!other) return false;
-    if (other === normalized) return true;
-    if (normalized.length >= 20 && other.includes(normalized.slice(0, 20))) return true;
-    if (other.length >= 20 && normalized.includes(other.slice(0, 20))) return true;
-    return false;
-  });
+  return lineDuplicatesAvoidLines(line, avoidLines);
 }
 
 function pickVariant(

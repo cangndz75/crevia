@@ -29,6 +29,8 @@ import {
   type DistrictPersonalityProfile,
 } from './districtPersonalityTypes';
 
+import { verifyDistrictPersonalityBindingScenario } from './verifyDistrictPersonalityBindingScenario';
+
 const REPO_ROOT = join(__dirname, '..', '..', '..');
 
 export type VerifyDistrictPersonalityOutcome = {
@@ -210,8 +212,13 @@ export function verifyDistrictPersonalityScenario(): VerifyDistrictPersonalityOu
   record(assert(checks, !readRepo('src/core/dayPipeline/dayPipelineOrchestrator.ts').includes('districtPersonality'), 'dayPipeline unchanged', 'dayPipeline imports districtPersonality'));
   record(assert(checks, !readRepo('src/core/eventVariety/eventGameplayVarietyModel.ts').includes('districtPersonality'), 'event selection/profile core unchanged', 'event variety core imports districtPersonality'));
 
-  checks.push('PASS Positive/comeback, neglect, and city rhythm mappings are documented foundation only');
-  checks.push('PASS No persist field, migration, marker, route, animation, or UI integration added');
+  const bindingOutcome = verifyDistrictPersonalityBindingScenario();
+  for (const line of bindingOutcome.checks) {
+    checks.push(line);
+    if (line.startsWith('FAIL')) ok = false;
+  }
+
+  checks.push('PASS District personality binding surfaces wired read-only');
 
   return { ok, warn: false, checks };
 }

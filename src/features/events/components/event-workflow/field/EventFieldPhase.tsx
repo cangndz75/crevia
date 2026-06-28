@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { buildAuthorityGameplayPresentationContext } from '@/core/authority/authorityGameplayUnlockModel';
+import { buildMaintenanceActionResultPresentation } from '@/core/maintenanceBacklog';
 import type { EventCard, EventDecision } from '@/core/models/EventCard';
 import type { PersonnelImpactPreview } from '@/core/personnel/personnelPresentation';
 import type { VehicleImpactPreview } from '@/core/vehicles/vehiclePresentation';
@@ -97,6 +98,9 @@ export function EventFieldPhase({
   const advisorState = useGameStore((s) => s.advisorState);
   const microDecisionState = useGameStore((s) => s.microDecisionState);
   const maintenanceBacklogRuntime = useGameStore((s) => s.maintenanceBacklogRuntime);
+  const applyMaintenanceAction = useGameStore((s) => s.applyMaintenanceAction);
+
+  const [maintenanceActionFeedback, setMaintenanceActionFeedback] = useState<string | null>(null);
 
   const [interactionState, setInteractionState] =
     useState<EventFieldInteractionState>('running');
@@ -239,6 +243,18 @@ export function EventFieldPhase({
     // Presentation-only helpers; gameplay navigation intentionally deferred.
   }, []);
 
+  const handleMaintenanceAction = useCallback(() => {
+    const action = presentation.resourcePulse.maintenanceAction;
+    if (!action?.enabled) return;
+    const applied = applyMaintenanceAction(action.itemId, action.actionKind);
+    if (!applied) return;
+    const updatedRuntime = useGameStore.getState().maintenanceBacklogRuntime;
+    const item = updatedRuntime.items.find((entry) => entry.id === action.itemId);
+    if (!item) return;
+    const result = buildMaintenanceActionResultPresentation(item, action.actionKind);
+    setMaintenanceActionFeedback(result.description);
+  }, [applyMaintenanceAction, presentation.resourcePulse.maintenanceAction]);
+
   const footerDisabled =
     interactionState !== 'completed' || completeDisabled || applying;
   const footerLoading = applying;
@@ -333,6 +349,8 @@ export function EventFieldPhase({
         <FieldResourcePulsePanel
           pulse={presentation.resourcePulse}
           reducedMotion={reducedMotion}
+          onMaintenanceAction={handleMaintenanceAction}
+          maintenanceActionFeedback={maintenanceActionFeedback}
         />
 
         <EventFieldMicroDecisionCard

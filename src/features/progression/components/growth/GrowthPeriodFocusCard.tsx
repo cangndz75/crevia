@@ -15,7 +15,7 @@ const CHIP_TONE_COLOR: Record<
 > = {
   positive: growth.mint,
   mixed: growth.gold,
-  warning: '#E8A84A',
+  warning: growth.gold,
   critical: '#D9755D',
   neutral: growth.textSoft,
   strategic: growth.mint,
@@ -28,7 +28,7 @@ export function GrowthPeriodFocusCard({ model }: GrowthPeriodFocusCardProps) {
     model.progressTone === 'critical'
       ? '#D9755D'
       : model.progressTone === 'warning'
-        ? '#E8A84A'
+        ? growth.gold
         : model.progressTone === 'positive'
           ? growth.mint
           : growth.textSoft;

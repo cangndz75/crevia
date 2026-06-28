@@ -1,7 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import type { MapDirectActionPresentation } from '@/core/mapDirectAction';
+import { MapDirectActionRow } from '@/features/map/components/MapDirectActionRow';
 import type {
   MapBottomPanelChip,
   MapBottomPanelPresentation,
@@ -19,6 +22,7 @@ type MapCompactBottomPanelProps = {
   onToggleExpand: () => void;
   onPrimaryPress: () => void;
   onSecondaryPress?: () => void;
+  onDirectActionPress?: (action: MapDirectActionPresentation) => void;
   onPrevious?: () => void;
   onNext?: () => void;
 };
@@ -33,15 +37,15 @@ function statusPillColors(tone: MapBottomPanelStatusTone) {
       };
     case 'urgent':
       return {
-        bg: 'rgba(239, 68, 68, 0.12)',
-        border: 'rgba(239, 68, 68, 0.24)',
-        dot: mapUi.liveDot,
+        bg: 'rgba(245, 158, 11, 0.12)',
+        border: 'rgba(245, 158, 11, 0.24)',
+        dot: mapUi.riskHigh,
       };
     case 'inspect':
       return {
         bg: 'rgba(245, 158, 11, 0.12)',
         border: 'rgba(245, 158, 11, 0.26)',
-        dot: '#F59E0B',
+        dot: mapUi.riskHigh,
       };
     case 'field':
       return {
@@ -59,7 +63,7 @@ function statusPillColors(tone: MapBottomPanelStatusTone) {
       return {
         bg: 'rgba(52, 211, 153, 0.12)',
         border: 'rgba(52, 211, 153, 0.24)',
-        dot: '#34D399',
+        dot: mapUi.liveDot,
       };
     default:
       return {
@@ -73,7 +77,7 @@ function statusPillColors(tone: MapBottomPanelStatusTone) {
 function chipAccent(tone: MapBottomPanelChip['tone']) {
   switch (tone) {
     case 'risk':
-      return '#F59E0B';
+      return mapUi.riskHigh;
     case 'status':
       return mapUi.teal;
     case 'crew':
@@ -89,7 +93,7 @@ function socialEchoAccent(tone: NonNullable<MapBottomPanelPresentation['socialEc
       return mapUi.teal;
     case 'warning':
     case 'critical':
-      return '#F59E0B';
+      return mapUi.riskHigh;
     case 'mixed':
       return mapUi.gold;
     default:
@@ -106,11 +110,41 @@ export function MapCompactBottomPanel({
   onToggleExpand,
   onPrimaryPress,
   onSecondaryPress,
+  onDirectActionPress,
   onPrevious,
   onNext,
 }: MapCompactBottomPanelProps) {
   const showNav = onPrevious && onNext;
   const pillColors = statusPillColors(panel.statusTone);
+  const contentOpacity = useRef(new Animated.Value(1)).current;
+  const contentTranslateY = useRef(new Animated.Value(0)).current;
+  const previousMarkerId = useRef(panel.markerId);
+
+  useEffect(() => {
+    if (previousMarkerId.current === panel.markerId) return;
+    previousMarkerId.current = panel.markerId;
+
+    if (reducedMotion) {
+      contentOpacity.setValue(1);
+      contentTranslateY.setValue(0);
+      return;
+    }
+
+    contentOpacity.setValue(0.72);
+    contentTranslateY.setValue(6);
+    Animated.parallel([
+      Animated.timing(contentOpacity, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.timing(contentTranslateY, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [contentOpacity, contentTranslateY, panel.markerId, reducedMotion]);
 
   return (
     <View style={[styles.shell, { bottom: bottomOffset, left: leftInset }]}>
@@ -147,11 +181,18 @@ export function MapCompactBottomPanel({
             ) : null}
           </View>
 
-          <View style={[styles.statusPill, { backgroundColor: pillColors.bg, borderColor: pillColors.border }]}>
-            <View style={[styles.statusDot, { backgroundColor: pillColors.dot }]} />
-            <Text style={styles.statusText} numberOfLines={1}>
-              {panel.statusLabel}
-            </Text>
+          <View style={styles.pillRow}>
+            <View style={styles.sourcePill}>
+              <Text style={styles.sourcePillText} numberOfLines={1}>
+                {panel.sourcePillLabel}
+              </Text>
+            </View>
+            <View style={[styles.statusPill, { backgroundColor: pillColors.bg, borderColor: pillColors.border }]}>
+              <View style={[styles.statusDot, { backgroundColor: pillColors.dot }]} />
+              <Text style={styles.statusText} numberOfLines={1}>
+                {panel.statusLabel}
+              </Text>
+            </View>
           </View>
 
           <Pressable
@@ -168,7 +209,14 @@ export function MapCompactBottomPanel({
           </Pressable>
         </View>
 
-        <View style={styles.content}>
+        <Animated.View
+          style={[
+            styles.content,
+            {
+              opacity: contentOpacity,
+              transform: [{ translateY: contentTranslateY }],
+            },
+          ]}>
           <Text style={styles.title} numberOfLines={2}>
             {panel.title}
           </Text>
@@ -215,7 +263,7 @@ export function MapCompactBottomPanel({
             ))}
           </View>
 
-          {expanded && panel.secondaryActionLabel ? (
+          {expanded && panel.secondaryActionLabel && !panel.actionBundle?.secondaryActions.length ? (
             <Pressable
               onPress={onSecondaryPress}
               style={({ pressed }) => [styles.secondaryPill, pressed && styles.pressed]}
@@ -223,6 +271,20 @@ export function MapCompactBottomPanel({
               <Ionicons name="layers-outline" size={13} color={mapUi.textSoft} />
               <Text style={styles.secondaryPillText}>{panel.secondaryActionLabel}</Text>
             </Pressable>
+          ) : null}
+
+          {panel.actionBundle && onDirectActionPress ? (
+            <MapDirectActionRow
+              bundle={{
+                ...panel.actionBundle,
+                primaryAction: undefined,
+                chips: panel.actionBundle.chips,
+                secondaryActions: panel.actionBundle.secondaryActions,
+              }}
+              compact
+              reducedMotion={reducedMotion}
+              onActionPress={onDirectActionPress}
+            />
           ) : null}
 
           {expanded ? (
@@ -234,7 +296,7 @@ export function MapCompactBottomPanel({
               ))}
             </View>
           ) : null}
-        </View>
+        </Animated.View>
 
         <View style={styles.footer}>
           <View style={styles.footerContext}>
@@ -252,14 +314,27 @@ export function MapCompactBottomPanel({
             accessibilityLabel={panel.primaryActionLabel}
             style={styles.ctaWrap}>
             <LinearGradient
-              colors={['#F0C14B', '#D8A72E', '#B8860B']}
+              colors={
+                panel.actionBundle?.primaryAction
+                  ? ['#0F766E', '#0D9488', '#14B8A6']
+                  : ['#F0C14B', '#D8A72E', '#B8860B']
+              }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.ctaBtn}>
-              <Text style={styles.ctaText} numberOfLines={1}>
+              <Text
+                style={[
+                  styles.ctaText,
+                  panel.actionBundle?.primaryAction ? styles.ctaTextTeal : null,
+                ]}
+                numberOfLines={1}>
                 {panel.primaryActionLabel}
               </Text>
-              <Ionicons name="arrow-forward" size={16} color="#0D3D38" />
+              <Ionicons
+                name="arrow-forward"
+                size={16}
+                color={panel.actionBundle?.primaryAction ? '#ECFDF5' : '#0D3D38'}
+              />
             </LinearGradient>
           </CreviaAnimatedPressable>
         </View>
@@ -324,6 +399,27 @@ const styles = StyleSheet.create({
     color: mapUi.textSoft,
     letterSpacing: 0.2,
   },
+  pillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 0,
+  },
+  sourcePill: {
+    maxWidth: 92,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(216, 167, 46, 0.1)',
+    borderWidth: 1,
+    borderColor: mapUi.goldBorder,
+  },
+  sourcePillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: mapUi.gold,
+    letterSpacing: 0.15,
+  },
   ghostIcon: {
     width: 28,
     height: 28,
@@ -339,7 +435,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderWidth: 1,
-    maxWidth: 108,
+    maxWidth: 88,
     flexShrink: 0,
   },
   statusDot: {
@@ -541,6 +637,9 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#0D3D38',
     letterSpacing: 0.15,
+  },
+  ctaTextTeal: {
+    color: '#ECFDF5',
   },
   pressed: {
     opacity: 0.88,

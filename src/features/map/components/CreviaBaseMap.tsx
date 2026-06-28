@@ -52,6 +52,8 @@ type Props = {
   operationMarkers?: readonly CreviaMapOperationMarker[];
   districtMotionMarkers?: readonly MapMarkerMotionModel[];
   reducedMotionMode?: boolean;
+  selectedDistrictId?: CreviaMapDistrictId | null;
+  districtTraitLabels?: Partial<Record<CreviaMapDistrictId, string>>;
   showControls?: boolean;
   style?: ViewStyle;
   onDistrictPress?: (districtId: CreviaMapDistrictId) => void;
@@ -173,6 +175,8 @@ export const CreviaBaseMap = forwardRef<CreviaBaseMapControls, Props>(
       operationMarkers = creviaBaseOperationMarkers,
       districtMotionMarkers = [],
       reducedMotionMode = false,
+      selectedDistrictId = null,
+      districtTraitLabels = {},
       showControls = false,
       style,
       onDistrictPress,
@@ -545,6 +549,9 @@ export const CreviaBaseMap = forwardRef<CreviaBaseMapControls, Props>(
                           district.id as CreviaMapDistrictId,
                         )}
                         reducedMotionMode={reducedMotionMode}
+                        selected={selectedDistrictId === district.id}
+                        traitLabel={districtTraitLabels[district.id as CreviaMapDistrictId]}
+                        emphasize={selectedDistrictId === district.id}
                         onPress={onDistrictPress}
                       />
                     ))}

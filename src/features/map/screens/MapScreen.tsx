@@ -26,6 +26,10 @@ import {
   buildPolishedActiveOperationMapCard,
 } from '@/core/activeOperationMapBinding';
 import { buildDistrictPersonalityProfile } from '@/core/districtPersonality';
+import { buildDistrictPersonalityMapContext } from '@/core/districtPersonality/districtPersonalityPresentation';
+import { selectActiveMaintenanceRuntimeItems } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeModel';
+import { deriveActivePeriodGoal, buildPeriodGoalPresentation } from '@/core/periodGoals/periodGoalModel';
+import type { PeriodGoalContextInput } from '@/core/periodGoals/periodGoalTypes';
 import { buildEventGameplayVarietyProfile } from '@/core/eventVariety/eventGameplayVarietyModel';
 import { buildMapGameplayBindings } from '@/core/mapGameplayBinding/mapGameplayBindingModel';
 import { buildMapGameplayRuntimeFeedback } from '@/core/mapGameplayBinding/mapGameplayRuntimeFeedbackModel';
@@ -180,6 +184,7 @@ export function MapScreen() {
   const microDecisionState = useGameStore((s) => s.microDecisionState);
   const crisisActionState = useGameStore((s) => s.crisisActionState);
   const operationalResources = useGameStore((s) => s.operationalResources);
+  const maintenanceBacklogRuntime = useGameStore((s) => s.maintenanceBacklogRuntime);
   const cityArchive = useGameStore((s) => s.cityArchive);
   const eventPool = useGameStore((s) => s.eventPool);
   const postPilotCatalog =
@@ -627,6 +632,52 @@ export function MapScreen() {
     ],
   );
 
+  const mapDirectActionExtras = useMemo(() => {
+    if (gameDay < 8) {
+      return {
+        periodGoalShortTitle: undefined as string | undefined,
+        districtPersonalitySignalLine: undefined as string | undefined,
+      };
+    }
+    const maintenanceActive = selectActiveMaintenanceRuntimeItems(maintenanceBacklogRuntime);
+    const periodGoalContext: PeriodGoalContextInput = {
+      day: gameDay,
+      maintenanceActiveCount: maintenanceActive.length,
+      maintenanceCriticalCount: maintenanceActive.filter((item) => item.severity === 'critical')
+        .length,
+      maintenanceStrainedCount: maintenanceActive.filter((item) => item.severity === 'strained')
+        .length,
+    };
+    const periodGoal = buildPeriodGoalPresentation(
+      deriveActivePeriodGoal(periodGoalContext),
+      periodGoalContext,
+    );
+    const districtProfile = buildDistrictPersonalityProfile({
+      districtId: primaryMapEvent?.neighborhoodId ?? focusDistrictId,
+      districtName: primaryMapEvent?.district,
+      day: gameDay,
+      unlockedPermissionIds: authorityState?.unlockedPermissionIds,
+      operationSignals,
+      resourceSignals: operationalResources,
+      activeTaskRouteSignals: activeTaskRoutePreview,
+    });
+    const districtMapContext = buildDistrictPersonalityMapContext(districtProfile);
+    return {
+      periodGoalShortTitle: periodGoal.shortTitle,
+      districtPersonalitySignalLine: districtMapContext.mapSignalLine,
+    };
+  }, [
+    activeTaskRoutePreview,
+    authorityState?.unlockedPermissionIds,
+    focusDistrictId,
+    gameDay,
+    maintenanceBacklogRuntime,
+    operationSignals,
+    operationalResources,
+    primaryMapEvent?.district,
+    primaryMapEvent?.neighborhoodId,
+  ]);
+
   const mapMotionPresentation = useMemo(() => {
     return buildMapMotionPresentation({
       day: gameDay,
@@ -985,6 +1036,9 @@ export function MapScreen() {
           mapMotionPresentation={mapMotionPresentation}
           mapReactionLiteModel={mapReactionLiteModel}
           recentDecisionRecord={decisionHistory.at(-1) ?? null}
+          maintenanceBacklogRuntime={maintenanceBacklogRuntime}
+          periodGoalShortTitle={mapDirectActionExtras.periodGoalShortTitle}
+          districtPersonalitySignalLine={mapDirectActionExtras.districtPersonalitySignalLine}
           onLayersPress={() => setLayerPanelOpen(true)}
           onDistrictSelect={handleDistrictSelect}
           onBackToOverview={handleBackToOverview}

@@ -15,7 +15,7 @@ const CHIP_TONE_COLOR: Record<
 > = {
   positive: growth.mint,
   mixed: growth.gold,
-  warning: '#E8A84A',
+  warning: growth.gold,
   neutral: growth.textSoft,
 };
 

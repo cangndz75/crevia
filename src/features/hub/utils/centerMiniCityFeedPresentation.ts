@@ -1,3 +1,5 @@
+import { buildDistrictFeedWatchCopy } from '@/core/districtPersonality';
+import { lineDuplicatesAvoidLines, normalizePresentationText } from '@/core/presentationDedupe';
 import type { CenterHomeCoreSections } from './centerHomePresentation';
 import type { MaintenanceHubSignal } from '@/core/maintenanceBacklog';
 import type {
@@ -65,14 +67,11 @@ const MAX_FEED_ITEMS = 3;
 const MAX_ITEMS_PER_DISTRICT = 2;
 
 function normalizeLine(value: string | null | undefined): string {
-  return value?.trim().toLowerCase().replace(/\s+/g, ' ') ?? '';
+  return normalizePresentationText(value);
 }
 
 function linesAreDuplicate(a: string | null | undefined, b: string | null | undefined): boolean {
-  const left = normalizeLine(a);
-  const right = normalizeLine(b);
-  if (!left || !right) return false;
-  return left === right || left.includes(right) || right.includes(left);
+  return lineDuplicatesAvoidLines(a, [b]);
 }
 
 function clampText(value: string | undefined, limit: number): string | undefined {
@@ -312,13 +311,23 @@ function buildDistrictWatchFeedItem(
   const name = districtFocus.districtName.trim();
   if (!name || isUnsafeFeedDistrictName(name)) return null;
 
-  const title = `${name} takipte.`;
-  const subtitle = clampText(
-    /yüksek|orta/i.test(risk)
-      ? 'Güven kırılgan, görünür takip fayda sağlar.'
-      : 'Küçük aksiyon fark yaratabilir.',
-    72,
-  );
+  const personalityCopy = buildDistrictFeedWatchCopy({
+    districtName: name,
+    day,
+    fragile: fragile,
+    outcomeBand: /yüksek|orta/i.test(risk) ? 'warning' : 'neutral',
+    avoidLines: [risk, trust],
+  });
+
+  const title = personalityCopy?.title ?? `${name} takipte.`;
+  const subtitle =
+    personalityCopy?.subtitle ??
+    clampText(
+      /yüksek|orta/i.test(risk)
+        ? 'Güven kırılgan, görünür takip fayda sağlar.'
+        : 'Küçük aksiyon fark yaratabilir.',
+      72,
+    );
 
   return {
     id: `feed-district-${normalizeLine(name)}`,

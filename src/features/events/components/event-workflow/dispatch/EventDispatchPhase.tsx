@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-n
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { buildAuthorityGameplayPresentationContext } from '@/core/authority/authorityGameplayUnlockModel';
+import { buildMaintenanceActionResultPresentation } from '@/core/maintenanceBacklog';
 import { calculateAssignmentCompatibility } from '@/core/assignments/assignmentEngine';
 import { buildAssignmentEngineInputFromGameStore } from '@/core/assignments/assignmentPresentation';
 import type { DecisionAffordabilityCheck } from '@/core/economy/economyAffordability';
@@ -96,6 +97,8 @@ export function EventDispatchPhase({
   const reducedMotion = useCreviaReducedMotion();
   const authorityState = useGameStore((s) => s.gameState.pilot.authorityState);
   const maintenanceBacklogRuntime = useGameStore((s) => s.maintenanceBacklogRuntime);
+  const applyMaintenanceAction = useGameStore((s) => s.applyMaintenanceAction);
+  const [maintenanceActionFeedback, setMaintenanceActionFeedback] = useState<string | null>(null);
   const [dispatchInteractionState, setDispatchInteractionState] =
     useState<EventDispatchInteractionState>('idle');
 
@@ -154,6 +157,18 @@ export function EventDispatchPhase({
       selectedPlanStrategyLabel,
     ],
   );
+
+  const handleMaintenanceAction = useCallback(() => {
+    const action = presentation.readiness.maintenanceAction;
+    if (!action?.enabled) return;
+    const applied = applyMaintenanceAction(action.itemId, action.actionKind);
+    if (!applied) return;
+    const updatedRuntime = useGameStore.getState().maintenanceBacklogRuntime;
+    const item = updatedRuntime.items.find((entry) => entry.id === action.itemId);
+    if (!item) return;
+    const result = buildMaintenanceActionResultPresentation(item, action.actionKind);
+    setMaintenanceActionFeedback(result.description);
+  }, [applyMaintenanceAction, presentation.readiness.maintenanceAction]);
 
   const quickDecisionIds = useMemo(
     () => quickActions.map((a) => a.decision.id),
@@ -279,6 +294,8 @@ export function EventDispatchPhase({
         <DispatchReadinessPanel
           readiness={presentation.readiness}
           reducedMotion={reducedMotion}
+          maintenanceActionFeedback={maintenanceActionFeedback}
+          onMaintenanceAction={handleMaintenanceAction}
         />
 
         <DispatchResourceSummaryCard
