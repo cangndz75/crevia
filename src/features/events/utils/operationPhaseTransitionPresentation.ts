@@ -46,6 +46,12 @@ export type OperationPhaseShellPresentation = {
   title: string;
   subtitle: string;
   phaseLabel: string;
+  statusSummary?: string;
+  metrics?: Array<{
+    label: string;
+    value: string;
+    tone: OperationPhaseBridgeChipTone;
+  }>;
 };
 
 export type OperationPhaseCtaPresentation = {
@@ -131,6 +137,95 @@ function riskBandLabel(risk: EventCard['riskLevel']): string {
       return 'Orta';
     default:
       return 'Düşük';
+  }
+}
+
+function buildPhaseStatusSummary(input: BuildOperationPhaseTransitionInput): string {
+  const event = input.event;
+  const risk = event ? riskBandLabel(event.riskLevel) : null;
+
+  switch (input.phase) {
+    case 'inspect':
+      return risk ? `Bilgi bekleniyor · Risk ${risk}` : 'Bilgi bekleniyor';
+    case 'plan': {
+      const planQuality =
+        input.planId === 'rapid_response'
+          ? 'hızlı'
+          : input.planId === 'long_term_fix'
+            ? 'önleyici'
+            : input.planId
+              ? 'dengeli'
+              : 'hazırlanıyor';
+      return input.planLabel
+        ? `${input.planLabel} · Plan ${planQuality}`
+        : 'Ekip seçilmedi · Plan hazırlanıyor';
+    }
+    case 'dispatch':
+      return `${input.dispatchStatus?.trim() || 'Ekip yönlendirilecek'} · ${input.teamStatus?.trim() || 'Rota kontrol'}`;
+    case 'field':
+      return input.riskLabel?.trim()
+        ? `Saha durumu izleniyor · ${input.riskLabel.trim()}`
+        : 'Saha durumu izleniyor';
+    case 'result':
+      return input.trustLabel?.trim()
+        ? `Güven ${input.trustLabel.trim()} · Rapor hazır`
+        : 'Sonuç hazırlanıyor';
+    default:
+      return 'Operasyon hazırlanıyor';
+  }
+}
+
+function buildPhaseHeaderMetrics(
+  input: BuildOperationPhaseTransitionInput,
+): OperationPhaseShellPresentation['metrics'] {
+  const event = input.event;
+  switch (input.phase) {
+    case 'inspect':
+      return [
+        {
+          label: 'Risk',
+          value: event ? riskBandLabel(event.riskLevel) : 'Bekliyor',
+          tone:
+            event?.riskLevel === 'critical' || event?.riskLevel === 'high'
+              ? 'warning'
+              : 'neutral',
+        },
+        {
+          label: 'Bilgi',
+          value: '0/3',
+          tone: 'mixed',
+        },
+      ];
+    case 'plan':
+      return [
+        {
+          label: 'Plan',
+          value: input.planLabel?.trim() || 'Seçilmedi',
+          tone: input.planLabel ? 'positive' : 'mixed',
+        },
+        {
+          label: 'Bedel',
+          value: input.planCostLabel?.trim() || 'Bekliyor',
+          tone: input.planCostLabel === 'Yüksek' ? 'warning' : 'neutral',
+        },
+      ];
+    case 'dispatch':
+      return [
+        { label: 'ETA', value: input.dispatchStatus?.trim() || 'Bekliyor', tone: 'mixed' },
+        { label: 'Ekip', value: input.teamStatus?.trim() || 'Hazır', tone: 'positive' },
+      ];
+    case 'field':
+      return [
+        { label: 'Müdahale', value: 'İzleniyor', tone: 'mixed' },
+        { label: 'Risk', value: input.riskLabel?.trim() || 'Azalıyor', tone: 'positive' },
+      ];
+    case 'result':
+      return [
+        { label: 'Güven', value: input.trustLabel?.trim() || 'Kayda geçti', tone: 'positive' },
+        { label: 'Rapor', value: 'Hazır', tone: 'neutral' },
+      ];
+    default:
+      return [];
   }
 }
 
@@ -349,7 +444,11 @@ export function buildOperationPhaseTransitionPresentation(
   input: BuildOperationPhaseTransitionInput,
 ): OperationPhaseTransitionPresentation {
   const progress = buildOperationPhaseProgressPresentation(input.phase);
-  const shell = buildOperationPhaseShellPresentation(input.phase);
+  const shell: OperationPhaseShellPresentation = {
+    ...buildOperationPhaseShellPresentation(input.phase),
+    statusSummary: buildPhaseStatusSummary(input),
+    metrics: buildPhaseHeaderMetrics(input),
+  };
 
   let bridge: OperationPhaseBridgePresentation | null = null;
   const event = input.event;

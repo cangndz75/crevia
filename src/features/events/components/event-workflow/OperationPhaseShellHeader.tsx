@@ -19,6 +19,8 @@ export function OperationPhaseShellHeader({
   reducedMotion = false,
 }: OperationPhaseShellHeaderProps) {
   const backInteractive = Boolean(onBack);
+  const metrics = shell.metrics?.slice(0, 2) ?? [];
+  const inspectHeader = shell.phaseKey === 'inspect';
 
   return (
     <CreviaMotionView
@@ -47,27 +49,42 @@ export function OperationPhaseShellHeader({
         <Text style={[styles.headerTitle, compact && styles.headerTitleCompact]}>
           {shell.title}
         </Text>
-        {shell.subtitle ? (
+        {!inspectHeader && (shell.statusSummary || shell.subtitle) ? (
           <Text style={styles.headerSubtitle} numberOfLines={1}>
-            {shell.subtitle}
+            {shell.statusSummary ?? shell.subtitle}
           </Text>
-        ) : (
+        ) : !inspectHeader ? (
           <View style={styles.headerAccent}>
             <View style={styles.headerAccentLine} />
             <Ionicons name="sparkles" size={10} color="#C58B18" />
             <View style={styles.headerAccentLine} />
           </View>
-        )}
+        ) : null}
       </View>
-      <View style={styles.resourceBadges}>
-        <View style={[styles.resourceBadge, styles.resourceBadgeMint]}>
-          <Ionicons name="diamond-outline" size={13} color={eventDetail.teal} />
-          <Text style={styles.resourceText}>1.250</Text>
-        </View>
-        <View style={[styles.resourceBadge, styles.resourceBadgeGold]}>
-          <Ionicons name="medal-outline" size={13} color="#B77713" />
-          <Text style={[styles.resourceText, styles.resourceTextGold]}>860</Text>
-        </View>
+      <View style={styles.metricBadges}>
+        {metrics.length > 0 ? (
+          metrics.map((metric) => (
+            <View
+              key={`${metric.label}:${metric.value}`}
+              style={[
+                styles.metricBadge,
+                metric.tone === 'warning' && styles.metricBadgeWarning,
+                metric.tone === 'positive' && styles.metricBadgePositive,
+              ]}>
+              <View style={styles.metricDot} />
+              <Text style={styles.metricValue} numberOfLines={1}>
+                {metric.value}
+              </Text>
+            </View>
+          ))
+        ) : (
+          <View style={styles.metricBadge}>
+            <View style={styles.metricDot} />
+            <Text style={styles.metricValue} numberOfLines={1}>
+              {shell.phaseLabel}
+            </Text>
+          </View>
+        )}
       </View>
     </CreviaMotionView>
   );
@@ -83,9 +100,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerIconButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
@@ -102,7 +119,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 21,
     lineHeight: 27,
     fontWeight: '900',
     color: eventDetail.textDark,
@@ -126,33 +143,42 @@ const styles = StyleSheet.create({
     borderRadius: 1,
     backgroundColor: '#D9A646',
   },
-  resourceBadges: {
-    flexDirection: 'row',
-    gap: 5,
+  metricBadges: {
+    alignItems: 'flex-end',
+    gap: 4,
+    width: 112,
   },
-  resourceBadge: {
+  metricBadge: {
+    maxWidth: 112,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 7,
-    paddingVertical: 5,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  resourceBadgeMint: {
+    gap: 5,
     backgroundColor: 'rgba(11, 107, 97, 0.08)',
     borderColor: 'rgba(11, 107, 97, 0.16)',
   },
-  resourceBadgeGold: {
-    backgroundColor: 'rgba(216, 167, 46, 0.12)',
+  metricBadgeWarning: {
+    backgroundColor: 'rgba(216, 167, 46, 0.13)',
     borderColor: 'rgba(216, 167, 46, 0.28)',
   },
-  resourceText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: eventDetail.tealDark,
+  metricBadgePositive: {
+    backgroundColor: 'rgba(73, 152, 110, 0.12)',
+    borderColor: 'rgba(73, 152, 110, 0.22)',
   },
-  resourceTextGold: {
-    color: '#B77713',
+  metricDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: eventDetail.teal,
+  },
+  metricValue: {
+    flexShrink: 1,
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '900',
+    color: eventDetail.tealDark,
   },
 });

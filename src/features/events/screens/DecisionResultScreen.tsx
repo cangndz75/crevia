@@ -50,25 +50,20 @@ import { buildEventResultViewModel } from '@/features/events/utils/eventResultPr
 import {
   buildEventResultRevealPresentation,
   type EventResultAction,
-  type EventResultSecondaryAction,
 } from '@/features/events/utils/eventResultRevealPresentation';
+import { OperationPhaseProgressRail } from '@/features/events/components/event-workflow/OperationPhaseProgressRail';
 import { buildPostDecisionCityReactionPresentation } from '@/features/events/utils/postDecisionCityReactionPresentation';
 import {
   ResultAdvisorCommentCard,
-  ResultCityImpactGrid,
-  ResultDistrictReactionCard,
+  ResultDecisionImpactPanel,
   ResultFinalActions,
-  ResultOutcomeHero,
+  ResultImpactSummaryStrip,
+  ResultNeighborhoodReactionPanel,
   ResultPhaseHeader,
-  ResultPhaseHeading,
-  ResultReportBridgeCard,
+  ResultRevealHeroPanel,
   ResultResourceCostCard,
-  ResultRevealItemCard,
-  ResultSecondaryActionsRow,
-  ResultSelectedPlanOutcomeCard,
+  ResultTomorrowRipplePanel,
 } from '@/features/events/components/result/ResultRevealMotionSections';
-import { OperationPhaseBridgeCard } from '@/features/events/components/event-workflow/OperationPhaseBridgeCard';
-import { OperationPhaseProgressRail } from '@/features/events/components/event-workflow/OperationPhaseProgressRail';
 import { selectLastDecisionResult, useGameStore } from '@/store/useGameStore';
 import { useGameStatus } from '@/store/gameSelectors';
 import { useAppTabBarHeight } from '@/ui/components/AnimatedTabBar';
@@ -549,37 +544,9 @@ export function DecisionResultScreen() {
     ],
   );
 
-  const [visibleRevealCount, setVisibleRevealCount] = useState(0);
   const [maintenanceActionFeedback, setMaintenanceActionFeedback] = useState<string | null>(null);
-
-  useEffect(() => {
-    const itemCount = revealPresentation.revealItems.length;
-    if (reducedMotion) {
-      setVisibleRevealCount(itemCount);
-      return;
-    }
-
-    setVisibleRevealCount(0);
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const stagger = revealPresentation.revealStaggerMs;
-
-    for (let index = 0; index < itemCount; index += 1) {
-      const timer = setTimeout(() => {
-        setVisibleRevealCount(index + 1);
-      }, stagger * (index + 1));
-      timers.push(timer);
-    }
-
-    return () => {
-      for (const timer of timers) {
-        clearTimeout(timer);
-      }
-    };
-  }, [
-    reducedMotion,
-    revealPresentation.revealItems.length,
-    revealPresentation.revealStaggerMs,
-  ]);
+  const revealSections = revealPresentation.revealSections;
+  const isOpenEndedReveal = revealSections.densityBand === 'openEnded';
 
   const goHub = useCallback(() => {
     playLightImpactHaptic();
@@ -609,26 +576,6 @@ export function DecisionResultScreen() {
       }
     },
     [goHub, goReports, router],
-  );
-
-  const handleSecondaryAction = useCallback(
-    (action: EventResultSecondaryAction) => {
-      if (!action.enabled) return;
-      playLightImpactHaptic();
-      switch (action.id) {
-        case 'view_map':
-          router.push('/map' as Href);
-          break;
-        case 'view_recent_impact':
-          router.replace('/' as Href);
-          break;
-        case 'open_note':
-          break;
-        default:
-          break;
-      }
-    },
-    [router],
   );
 
   const handleMaintenanceAction = useCallback(() => {
@@ -670,101 +617,54 @@ export function DecisionResultScreen() {
         />
 
         <Animated.View entering={FadeInUp.duration(260)} style={styles.resultShell}>
-          <ResultPhaseHeading
-            heading={revealPresentation.phaseHeading}
-            description={revealPresentation.phaseDescription}
-          />
-
-          {revealPresentation.phaseTransition.bridge ? (
-            <OperationPhaseBridgeCard
-              bridge={revealPresentation.phaseTransition.bridge}
-              reducedMotion={reducedMotion}
-              index={1}
-            />
-          ) : null}
-
           <View
             style={styles.revealSection}
             accessibilityLabel={revealPresentation.accessibilityLabel}>
-            <ResultOutcomeHero
-              outcome={revealPresentation.outcome}
-              reducedMotion={reducedMotion}
-            />
+            <ResultRevealHeroPanel sections={revealSections} reducedMotion={reducedMotion} />
+            <ResultImpactSummaryStrip sections={revealSections} reducedMotion={reducedMotion} />
+            <ResultNeighborhoodReactionPanel sections={revealSections} reducedMotion={reducedMotion} />
+            <ResultDecisionImpactPanel sections={revealSections} reducedMotion={reducedMotion} />
 
-            <ResultCityImpactGrid
-              section={revealPresentation.cityImpact}
-              reducedMotion={reducedMotion}
-            />
+            {isOpenEndedReveal && revealPresentation.resourceCost.maintenanceHint ? (
+              <ResultResourceCostCard
+                section={revealPresentation.resourceCost}
+                reducedMotion={reducedMotion}
+                onMaintenanceAction={handleMaintenanceAction}
+                maintenanceActionFeedback={maintenanceActionFeedback}
+              />
+            ) : null}
 
-            {revealPresentation.districtReaction ? (
-              <ResultDistrictReactionCard
-                reaction={revealPresentation.districtReaction}
+            <ResultTomorrowRipplePanel sections={revealSections} reducedMotion={reducedMotion} />
+
+            {isOpenEndedReveal ? (
+              <ResultAdvisorCommentCard
+                comment={revealPresentation.advisorComment}
                 reducedMotion={reducedMotion}
               />
             ) : null}
 
-            <ResultResourceCostCard
-              section={revealPresentation.resourceCost}
+            <ResultFinalActions
+              primary={revealPresentation.primaryCta}
+              secondary={revealPresentation.finalActions.filter(
+                (action) => action.id !== revealPresentation.primaryCta.id,
+              )}
+              onAction={handleResultAction}
               reducedMotion={reducedMotion}
-              onMaintenanceAction={handleMaintenanceAction}
-              maintenanceActionFeedback={maintenanceActionFeedback}
             />
-
-            {revealPresentation.selectedPlanOutcome ? (
-              <ResultSelectedPlanOutcomeCard
-                outcome={revealPresentation.selectedPlanOutcome}
-                reducedMotion={reducedMotion}
-              />
-            ) : null}
-
-            <View style={styles.revealList}>
-              {revealPresentation.revealItems
-                .slice(0, visibleRevealCount)
-                .map((item, index) => (
-                  <ResultRevealItemCard
-                    key={item.id}
-                    item={item}
-                    index={index}
-                    reducedMotion={reducedMotion}
-                  />
-                ))}
-            </View>
-
-            {visibleRevealCount >= revealPresentation.revealItems.length ? (
-              <>
-                <ResultAdvisorCommentCard
-                  comment={revealPresentation.advisorComment}
-                  reducedMotion={reducedMotion}
-                />
-                <ResultReportBridgeCard
-                  bridge={revealPresentation.reportBridge}
-                  reducedMotion={reducedMotion}
-                />
-                <ResultSecondaryActionsRow
-                  actions={revealPresentation.secondaryActions}
-                  onAction={handleSecondaryAction}
-                  reducedMotion={reducedMotion}
-                />
-                <ResultFinalActions
-                  primary={revealPresentation.primaryCta}
-                  secondary={revealPresentation.finalActions.slice(1)}
-                  onAction={handleResultAction}
-                  reducedMotion={reducedMotion}
-                />
-              </>
-            ) : null}
           </View>
 
-          <CreviaAnimatedCard
-            surface="decision_result"
-            index={1}
-            day={result.day ?? currentDay}
-            reducedMotion={reducedMotion}
-            motionKind="card_enter">
-            <EventResultImpactExplanationCard explanation={impactExplanation} compact />
-          </CreviaAnimatedCard>
+          {isOpenEndedReveal ? (
+            <CreviaAnimatedCard
+              surface="decision_result"
+              index={1}
+              day={result.day ?? currentDay}
+              reducedMotion={reducedMotion}
+              motionKind="card_enter">
+              <EventResultImpactExplanationCard explanation={impactExplanation} compact />
+            </CreviaAnimatedCard>
+          ) : null}
 
-          {showDomainResult ? (
+          {isOpenEndedReveal && showDomainResult ? (
             <EventDomainFocusStrip
               model={{
                 ...domainResultFocus.model,
@@ -775,31 +675,31 @@ export function DecisionResultScreen() {
             />
           ) : null}
 
-          {showResultCarryOver && !showDomainResult ? (
+          {isOpenEndedReveal && showResultCarryOver && !showDomainResult ? (
             <EventCarryOverHintCard memory={resultCarryOver} compact />
           ) : null}
 
-          {resultFatigueState ? (
+          {isOpenEndedReveal && resultFatigueState ? (
             <View style={styles.fatigueChipRow}>
               <ResourceFatigueStateChip model={resultFatigueState} />
             </View>
           ) : null}
 
-          {resultSystemsEcho?.visible ? (
+          {isOpenEndedReveal && resultSystemsEcho?.visible ? (
             <EventResultSystemsEchoStrip
               model={resultSystemsEcho}
               analyticsContext={resultSystemsAnalyticsContext}
             />
           ) : null}
 
-          {showMapBeforeAfter && mapBeforeAfterSummary?.impact ? (
+          {isOpenEndedReveal && showMapBeforeAfter && mapBeforeAfterSummary?.impact ? (
             <EventMapImpactSummaryCard
               impact={mapBeforeAfterSummary.impact}
               compact={(result.day ?? currentDay) <= 2}
             />
           ) : null}
 
-          {rewardComebackResult?.visible && rewardComebackResult.resultLine ? (
+          {isOpenEndedReveal && rewardComebackResult?.visible && rewardComebackResult.resultLine ? (
             <CreviaAnimatedChip
               surface="decision_result"
               index={2}

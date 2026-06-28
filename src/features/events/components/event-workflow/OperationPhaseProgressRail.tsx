@@ -26,22 +26,46 @@ export function OperationPhaseProgressRail({
       index={0}
       reducedMotion={reducedMotion}
       style={styles.wrap}>
-      <Text style={styles.phaseLabel} numberOfLines={1}>
-        {progress.phaseLabel}
-      </Text>
-      <View style={styles.dotRow}>
-        {progress.items.map((item) => (
-          <View
-            key={item.id}
-            style={[
-              styles.dot,
-              item.status === 'completed' && { backgroundColor: DOT_COLORS.completed },
-              item.status === 'active' && { backgroundColor: DOT_COLORS.active },
-              item.status === 'pending' && { backgroundColor: DOT_COLORS.pending },
-            ]}
-            accessibilityLabel={`${item.label} ${item.status}`}
-          />
-        ))}
+      <View style={styles.stepRow}>
+        {progress.items.map((item, index) => {
+          const active = item.status === 'active';
+          const completed = item.status === 'completed';
+          return (
+            <View key={item.id} style={styles.stepItem}>
+              <View
+                style={[
+                  styles.stepCircle,
+                  completed && styles.stepCircleCompleted,
+                  active && styles.stepCircleActive,
+                ]}
+                accessibilityLabel={`${item.label} ${item.status}`}>
+                <Text
+                  style={[
+                    styles.stepNumber,
+                    (active || completed) && styles.stepNumberActive,
+                  ]}>
+                  {index + 1}
+                </Text>
+              </View>
+              <Text
+                style={[
+                  styles.stepLabel,
+                  active && styles.stepLabelActive,
+                ]}
+                numberOfLines={1}>
+                {item.label}
+              </Text>
+              {index < progress.items.length - 1 ? (
+                <View
+                  style={[
+                    styles.stepConnector,
+                    completed && styles.stepConnectorDone,
+                  ]}
+                />
+              ) : null}
+            </View>
+          );
+        })}
       </View>
     </CreviaMotionView>
   );
@@ -50,22 +74,72 @@ export function OperationPhaseProgressRail({
 const styles = StyleSheet.create({
   wrap: {
     paddingHorizontal: eventDetail.screenPadding,
-    paddingBottom: 8,
-    gap: 6,
+    paddingBottom: 6,
   },
-  phaseLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: eventDetail.tealDark,
-  },
-  dotRow: {
+  stepRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
+    minHeight: 46,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  stepItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
+  },
+  stepCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(107, 125, 120, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(107, 125, 120, 0.18)',
+  },
+  stepCircleCompleted: {
+    backgroundColor: DOT_COLORS.completed,
+    borderColor: DOT_COLORS.completed,
+  },
+  stepCircleActive: {
+    backgroundColor: eventDetail.teal,
+    borderColor: '#FFFFFF',
+  },
+  stepNumber: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '900',
+    color: eventDetail.textMuted,
+  },
+  stepNumberActive: {
+    color: '#FFFFFF',
+  },
+  stepLabel: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 30,
+    maxWidth: 58,
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: '800',
+    color: eventDetail.textMuted,
+    textAlign: 'left',
+  },
+  stepLabelActive: {
+    color: eventDetail.tealDark,
+    fontWeight: '900',
+  },
+  stepConnector: {
+    flex: 1,
+    height: 2,
+    marginHorizontal: 5,
+    marginRight: 9,
+    borderRadius: 2,
+    backgroundColor: 'rgba(107, 125, 120, 0.20)',
+  },
+  stepConnectorDone: {
+    backgroundColor: DOT_COLORS.completed,
   },
 });

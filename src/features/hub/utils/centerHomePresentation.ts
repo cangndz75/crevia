@@ -83,6 +83,10 @@ import {
   buildHubDensityPresentation,
   type HubDensityPresentation,
 } from './centerHubDensityPresentation';
+import {
+  buildCenterHubGameFirstPresentation,
+  type CenterHubGameFirstPresentation,
+} from './centerHubGameFirstPresentation';
 
 export { isCenterModuleRenderable } from './centerStatePolicy';
 export type {
@@ -187,7 +191,15 @@ export type CenterHomePresentation = CenterHomeCoreSections & {
   cityAgenda: import('@/core/periodGoals').HubPeriodGoalCardPresentation;
   hubGameplay: CenterHubGameplayPresentation;
   hubDensity: HubDensityPresentation;
+  gameFirst: CenterHubGameFirstPresentation;
 };
+
+export type { CenterHubGameFirstPresentation } from './centerHubGameFirstPresentation';
+export {
+  buildCenterHubGameFirstPresentation,
+  gameFirstHasDuplicateCopy,
+  gameFirstWeakCtaCount,
+} from './centerHubGameFirstPresentation';
 
 export type {
   CenterNextActionsPresentation,
@@ -755,13 +767,18 @@ export function buildCenterHomePresentation(
     maintenanceHubSignal: hubGameplay.maintenanceHubSignal,
   });
 
-  return applyHubDensityToPresentation(
+  const withDensity = applyHubDensityToPresentation(
     {
       ...assembled,
       hubDensity,
     },
     hubDensity,
   );
+
+  return {
+    ...withDensity,
+    gameFirst: buildCenterHubGameFirstPresentation(withDensity),
+  };
 }
 
 export function centerHomeHasDuplicateModuleKeys(

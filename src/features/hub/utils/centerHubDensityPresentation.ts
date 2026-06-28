@@ -89,7 +89,7 @@ export function deriveHubDisclosureBand(day: number): HubDisclosureBand {
 }
 
 function isActiveOperationInProgress(
-  presentation: Omit<CenterHomePresentation, 'hubDensity'>,
+  presentation: Omit<CenterHomePresentation, 'hubDensity' | 'gameFirst'>,
 ): boolean {
   const target = presentation.activeTarget;
   return (
@@ -116,7 +116,7 @@ function isFallbackFeedOnly(feed: MiniCityFeedPresentation): boolean {
 
 function scoreHubSurfacePriority(
   key: HubSurfaceKey,
-  presentation: Omit<CenterHomePresentation, 'hubDensity'>,
+  presentation: Omit<CenterHomePresentation, 'hubDensity' | 'gameFirst'>,
   band: HubDisclosureBand,
   maintenanceSignal: MaintenanceHubSignal | null,
 ): HubSurfacePriority {
@@ -302,7 +302,7 @@ function applyAboveTheFoldGuard(
 }
 
 export function dedupeHubSurfaceMessages(
-  presentation: Omit<CenterHomePresentation, 'hubDensity'>,
+  presentation: Omit<CenterHomePresentation, 'hubDensity' | 'gameFirst'>,
   surfaces: HubSurfacePriority[],
   maintenanceSignal: MaintenanceHubSignal | null,
 ): {
@@ -405,7 +405,7 @@ function buildSurfaceMap(surfaces: HubSurfacePriority[]): Record<HubSurfaceKey, 
 }
 
 export type BuildHubDensityPresentationInput = {
-  presentation: Omit<CenterHomePresentation, 'hubDensity'>;
+  presentation: Omit<CenterHomePresentation, 'hubDensity' | 'gameFirst'>;
   day: number;
   maintenanceHubSignal?: MaintenanceHubSignal | null;
 };
@@ -479,9 +479,9 @@ function filterFeedItems(
 }
 
 export function applyHubDensityToPresentation(
-  presentation: CenterHomePresentation,
+  presentation: Omit<CenterHomePresentation, 'gameFirst'>,
   density: HubDensityPresentation,
-): CenterHomePresentation {
+): Omit<CenterHomePresentation, 'gameFirst'> {
   const feedItems = filterFeedItems(presentation.miniCityFeed, density);
   const miniCityFeed: MiniCityFeedPresentation = {
     ...presentation.miniCityFeed,

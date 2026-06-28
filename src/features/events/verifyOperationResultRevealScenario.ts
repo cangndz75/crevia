@@ -16,6 +16,8 @@ import {
   buildEventResultRevealPresentation,
   resultAdvisorDiffersFromFieldAdvisor,
 } from '@/features/events/utils/eventResultRevealPresentation';
+import { operationResultRevealSectionsHaveDuplicates } from '@/features/events/utils/operationResultRevealSectionsPresentation';
+import { buildPostDecisionCityReactionPresentation } from '@/features/events/utils/postDecisionCityReactionPresentation';
 import { buildEventFieldAdvisorComment } from '@/features/events/utils/eventFieldPhasePresentation';
 import {
   buildDecisionResultSnapshot,
@@ -222,6 +224,139 @@ export function verifyOperationResultRevealScenario(): VerifyOperationResultReve
     ),
     'selectedPlan context dolu',
     planModel.selectedPlanContext?.label ?? 'missing',
+  );
+
+  assert(
+    checks,
+    defaultModel.primaryCta.id === 'back_to_hub',
+    'primary CTA hub-first',
+    defaultModel.primaryCta.label,
+  );
+
+  assert(
+    checks,
+    Boolean(defaultModel.revealSections.hero.scoreLabel.trim()),
+    'reveal hero score label',
+    defaultModel.revealSections.hero.scoreLabel,
+  );
+
+  assert(
+    checks,
+    defaultModel.revealSections.impactSummary.chips.length >= 2 &&
+      defaultModel.revealSections.impactSummary.chips.length <= 3,
+    'impact chips bounded',
+    String(defaultModel.revealSections.impactSummary.chips.length),
+  );
+
+  assert(
+    checks,
+    defaultModel.revealSections.neighborhoodReaction.visibility === 'visible',
+    'neighborhood reaction visible',
+    defaultModel.revealSections.neighborhoodReaction.message.slice(0, 40),
+  );
+
+  assert(
+    checks,
+    defaultModel.revealSections.decisionImpact.visibility === 'visible',
+    'decision impact visible',
+    defaultModel.revealSections.decisionImpact.summaryLine.slice(0, 40),
+  );
+
+  assert(
+    checks,
+    !operationResultRevealSectionsHaveDuplicates(defaultModel.revealSections),
+    'reveal sections duplicate guard',
+  );
+
+  const day1Model = buildEventResultRevealPresentation({
+    snapshot: positive,
+    day: 1,
+    isDay1LearningEvent: true,
+    selectedPlanStrategyId: 'balanced_plan',
+  });
+  assert(checks, day1Model.revealSections.densityBand === 'day1', 'day1 density band');
+  assert(
+    checks,
+    day1Model.revealSections.impactSummary.chips.length <= 2,
+    'day1 impact chips capped',
+    String(day1Model.revealSections.impactSummary.chips.length),
+  );
+  assert(
+    checks,
+    day1Model.revealSections.decisionImpact.visibility === 'visible',
+    'day1 decision impact teaching',
+  );
+
+  const day8Model = buildEventResultRevealPresentation({
+    snapshot: positive,
+    day: 8,
+    selectedPlanStrategyId: 'long_term_fix',
+    cityReaction: buildPostDecisionCityReactionPresentation(positive),
+  });
+  assert(checks, day8Model.revealSections.densityBand === 'openEnded', 'day8 density band');
+  assert(
+    checks,
+    day8Model.revealSections.tomorrowRipple.visibility === 'visible',
+    'day8 tomorrow ripple',
+  );
+
+  const negativeSnapshot = buildPositiveSnapshot();
+  negativeSnapshot.resultTone = 'negative';
+  negativeSnapshot.metricChanges = negativeSnapshot.metricChanges.map((metric) =>
+    metric.key === 'publicSatisfaction'
+      ? { ...metric, delta: -4, isGood: false }
+      : metric.key === 'budget'
+        ? { ...metric, delta: -2200, isGood: false }
+        : metric,
+  );
+  const riskModel = buildEventResultRevealPresentation({
+    snapshot: negativeSnapshot,
+    day: 5,
+    selectedPlanStrategyId: 'rapid_response',
+  });
+  assert(
+    checks,
+    riskModel.revealSections.hero.tone.id !== defaultModel.revealSections.hero.tone.id,
+    'negative outcome tone distinct',
+    riskModel.revealSections.hero.tone.id,
+  );
+
+  const maintenanceModel = buildEventResultRevealPresentation({
+    snapshot: positive,
+    day: 8,
+    maintenanceBacklogRuntime: {
+      items: [
+        {
+          id: 'maint-1',
+          domain: 'vehicle',
+          severity: 'strained',
+          status: 'open',
+          createdDay: 6,
+          updatedDay: 8,
+          carryOverDays: 2,
+          sourceDedupeKey: 'maintenance:vehicle:strained',
+          lastReasonLabels: ['Araç bakımı gecikmesi'],
+          districtId: 'central',
+        },
+      ],
+      attentionStreaks: {},
+    },
+  });
+  const maintenanceSurfaced =
+    maintenanceModel.revealSections.impactSummary.chips.some((chip) => chip.id === 'readiness') ||
+    Boolean(maintenanceModel.resourceCost.maintenanceHint);
+  assert(checks, maintenanceSurfaced, 'maintenance/readiness surfaces when runtime active');
+
+  const hubAlignedReaction = buildPostDecisionCityReactionPresentation(positive);
+  const hubAlignedModel = buildEventResultRevealPresentation({
+    snapshot: positive,
+    day: 3,
+    cityReaction: hubAlignedReaction,
+  });
+  assert(
+    checks,
+    hubAlignedModel.revealSections.neighborhoodReaction.message.length > 0,
+    'hub/report aligned reaction',
   );
 
   assert(

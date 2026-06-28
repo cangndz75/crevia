@@ -50,15 +50,16 @@ import {
   type EventInspectInteractionState,
   type EventInspectRevealItem,
 } from "@/features/events/utils/eventInspectPhasePresentation";
-import { buildEventInspectLowerPresentation } from "@/features/events/utils/eventInspectLowerPresentation";
-import { EventInspectLowerSections } from "@/features/events/components/event-workflow/EventInspectLowerSections";
+import {
+  buildOperationWorkflowClarityPresentation,
+  type OperationInvestigationChecklistItem,
+  type OperationWorkflowAdvisorHint,
+  type OperationWorkflowClarityPresentation,
+  type OperationPrimaryCta,
+} from "@/features/events/utils/operationWorkflowClarityPresentation";
 import { OperationPhaseContentEnter } from "@/features/events/components/event-workflow/OperationPhaseContentEnter";
 import { OperationPhaseProgressRail } from "@/features/events/components/event-workflow/OperationPhaseProgressRail";
 import { OperationPhaseShellHeader } from "@/features/events/components/event-workflow/OperationPhaseShellHeader";
-import type {
-  InspectLowerActionKey,
-  InspectLowerPrimaryCta,
-} from "@/features/events/utils/eventInspectLowerPresentation";
 import { buildEventResultDistrictContextLine } from "@/features/events/utils/eventResultPresentation";
 import { buildInspectHeroChips } from "@/features/events/utils/eventWorkflowPresentation";
 import { OnboardingPhaseHint } from "@/features/onboarding/components/OnboardingPhaseHint";
@@ -267,23 +268,27 @@ export function EventInspectPhase({
   const planUnlocked =
     interactionState === "revealed" || confirmedCount >= SIGNALS.length;
 
-  const lowerPresentation = useMemo(
+  const clarity = useMemo(
     () =>
-      buildEventInspectLowerPresentation({
+      buildOperationWorkflowClarityPresentation({
         event,
         day: gameDay,
         interactionState,
         confirmedSignalIds: confirmedSignals,
+        findings: presentation.findings,
         advisorComment: presentation.advisorComment,
-        signalsComplete: planUnlocked,
+        phaseHeader: presentation.phaseTransition.shell,
+        isDay1LearningEvent,
       }),
     [
       confirmedSignals,
       event,
       gameDay,
       interactionState,
-      planUnlocked,
+      isDay1LearningEvent,
       presentation.advisorComment,
+      presentation.findings,
+      presentation.phaseTransition.shell,
     ],
   );
 
@@ -310,7 +315,7 @@ export function EventInspectPhase({
   }, []);
 
   const handleLowerActionPress = useCallback(
-    (actionKey: InspectLowerActionKey) => {
+    (actionKey: string) => {
       playLightImpactHaptic();
       switch (actionKey) {
         case 'scan_signal':
@@ -366,6 +371,17 @@ export function EventInspectPhase({
     setActiveModal({ type: "unlocked" });
   }, [revealInspection]);
 
+  const confirmNextMissingSignal = useCallback(() => {
+    const next = clarity.investigationChecklist.find(
+      (item) => item.status === 'waiting',
+    );
+    if (next) {
+      confirmSignal(next.id);
+      return;
+    }
+    confirmAllSignals();
+  }, [clarity.investigationChecklist, confirmAllSignals, confirmSignal]);
+
   useEffect(() => {
     if (interactionState !== "analyzing") return;
 
@@ -386,21 +402,25 @@ export function EventInspectPhase({
 
   const handleStickyPress = useCallback(() => {
     playLightImpactHaptic();
-    if (lowerPresentation.primaryCta.actionKey === 'go_to_plan') {
+    if (clarity.primaryCta.actionKey === 'go_to_plan') {
       onOpenPlanning();
       return;
     }
-    if (lowerPresentation.primaryCta.actionKey === 'complete_signals') {
-      confirmAllSignals();
+    if (
+      clarity.primaryCta.actionKey === 'verify_first' ||
+      clarity.primaryCta.actionKey === 'complete_missing' ||
+      clarity.primaryCta.actionKey === 'verify_critical'
+    ) {
+      confirmNextMissingSignal();
       return;
     }
     if (interactionState === "idle") {
       setInteractionState("analyzing");
     }
   }, [
-    confirmAllSignals,
+    clarity.primaryCta.actionKey,
+    confirmNextMissingSignal,
     interactionState,
-    lowerPresentation.primaryCta.actionKey,
     onOpenPlanning,
   ]);
 
@@ -424,7 +444,7 @@ export function EventInspectPhase({
         ]}
       >
         <OperationPhaseShellHeader
-          shell={presentation.phaseTransition.shell}
+          shell={clarity.phaseHeader}
           compact={compact}
           reducedMotion={reducedMotion}
         />
@@ -433,50 +453,38 @@ export function EventInspectPhase({
           reducedMotion={reducedMotion}
         />
         <OperationPhaseContentEnter reducedMotion={reducedMotion} index={2}>
-        <EventBriefCard
-          event={event}
-          categoryLabel={categoryLabel}
-          priorityLabel={getRiskLevelLabel(event.riskLevel)}
-          remainingLabel={shortRemainingLabel(heroChips.remaining)}
-          compact={compact}
-        />
-        {districtContextLine ? (
-          <Text style={styles.districtContext} numberOfLines={1}>
-            {districtContextLine}
-          </Text>
-        ) : null}
-        <MiniIncidentSceneCard
-          reducedMotion={reducedMotion}
-          onOpen={() => setActiveModal({ type: "incident" })}
-        />
-        <EventInspectLowerSections
-          lower={lowerPresentation}
-          reducedMotion={reducedMotion}
-          onSignalPress={(signalId) => {
-            const mapped = mapSignalIdToModal(signalId);
-            if (mapped) {
-              setActiveModal({ type: "signal", signalId: mapped });
-            }
-          }}
-          onEvidencePress={(evidenceId) => {
-            const mapped = mapEvidenceIdToSignal(evidenceId);
-            if (mapped) {
-              setActiveModal({ type: "signal", signalId: mapped });
-            }
-          }}
-          onRiskPress={(riskId) => {
-            setActiveModal({ type: "risk", riskId: mapRiskIdToModal(riskId) });
-          }}
-          onActionPress={handleLowerActionPress}
-        />
+          <InspectHeroBriefCard
+            brief={clarity.investigationBrief}
+            compact={compact}
+            reducedMotion={reducedMotion}
+          />
+          {districtContextLine && clarity.densityBand === 'strategic' ? (
+            <Text style={styles.districtContext} numberOfLines={1}>
+              {districtContextLine}
+            </Text>
+          ) : null}
+          <InvestigationChecklistCard
+            items={clarity.investigationChecklist}
+            verifiedCount={clarity.verifiedCount}
+            requiredCount={clarity.requiredCount}
+            onPressItem={(item) => {
+              if (item.status === 'waiting') {
+                confirmSignal(item.id);
+              } else if (item.status === 'verified') {
+                setActiveModal({ type: 'signal', signalId: item.id });
+              }
+            }}
+          />
+          <PlanningImpactCard presentation={clarity} />
+          <ClarityAdvisorCard hint={clarity.advisorHint} />
         </OperationPhaseContentEnter>
         {phaseHint ? <OnboardingPhaseHint text={phaseHint} /> : null}
       </ScrollView>
 
       <StickyUnlockBar
-        cta={lowerPresentation.primaryCta}
-        confirmedCount={planUnlocked ? SIGNALS.length : confirmedCount}
-        totalCount={SIGNALS.length}
+        cta={clarity.primaryCta}
+        confirmedCount={clarity.verifiedCount}
+        totalCount={clarity.requiredCount}
         loading={interactionState === "analyzing"}
         onPress={handleStickyPress}
       />
@@ -569,6 +577,400 @@ function InspectRevealFlow({
         </View>
       </View>
     </View>
+  );
+}
+
+function InspectHeroBriefCard({
+  brief,
+  compact,
+  reducedMotion,
+}: {
+  brief: OperationWorkflowClarityPresentation['investigationBrief'];
+  compact: boolean;
+  reducedMotion: boolean;
+}) {
+  return (
+    <CreviaMotionView
+      motionKind="card_enter"
+      surface="shared"
+      index={1}
+      style={styles.cardWrap}
+    >
+      <View style={[styles.inspectHeroCard, shadows.soft]}>
+        <InspectHeroVisual
+          variant={brief.heroVisualVariant}
+          markers={brief.markerItems}
+          reducedMotion={reducedMotion}
+        />
+        <LinearGradient
+          colors={["rgba(7, 35, 34, 0)", "rgba(7, 35, 34, 0.90)"]}
+          style={styles.inspectHeroOverlay}
+        />
+        <View style={styles.inspectHeroContent}>
+          <View style={styles.inspectHeroChipRow}>
+            <View style={styles.inspectHeroChip}>
+              <Ionicons name="location" size={12} color="#DDF4E8" />
+              <Text style={styles.inspectHeroChipText} numberOfLines={1}>
+                {brief.locationLabel}
+              </Text>
+            </View>
+            <View style={[styles.inspectHeroChip, styles.inspectHeroChipGold]}>
+              <Ionicons name="ellipse" size={7} color="#D9A646" />
+              <Text style={styles.inspectHeroChipGoldText} numberOfLines={1}>
+                {brief.priorityLabel}
+              </Text>
+            </View>
+          </View>
+          <Text
+            style={[styles.inspectHeroTitle, compact && styles.inspectHeroTitleCompact]}
+            numberOfLines={2}>
+            {brief.title}
+          </Text>
+          <Text style={styles.inspectHeroSubtitle} numberOfLines={1}>
+            {brief.heroSubtitle}
+          </Text>
+          <View style={styles.inspectHeroMetrics}>
+            <InspectHeroMetric
+              icon="help"
+              label={brief.missingInfoLabel}
+              value={brief.infoProgressLabel}
+              tone="teal"
+            />
+            <InspectHeroMetric
+              icon="analytics"
+              label="Plan kalitesi"
+              value={brief.planQualityLabel}
+              tone="blue"
+            />
+          </View>
+          <View style={styles.inspectHeroRiskLine}>
+            <Ionicons name="alert-circle" size={14} color="#F4D07B" />
+            <Text style={styles.inspectHeroRiskText} numberOfLines={2}>
+              {brief.riskLine}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </CreviaMotionView>
+  );
+}
+
+function InspectHeroMetric({
+  icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  tone: 'teal' | 'blue';
+}) {
+  return (
+    <View
+      style={[
+        styles.inspectHeroMetric,
+        tone === 'blue' && styles.inspectHeroMetricBlue,
+      ]}>
+      <View style={styles.inspectHeroMetricIcon}>
+        <Ionicons name={icon} size={15} color="#FFFFFF" />
+      </View>
+      <View style={styles.inspectHeroMetricCopy}>
+        <Text style={styles.inspectHeroMetricLabel} numberOfLines={1}>
+          {label}
+        </Text>
+        <Text style={styles.inspectHeroMetricValue} numberOfLines={1}>
+          {value}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function markerColor(tone: OperationWorkflowClarityPresentation['investigationBrief']['markerItems'][number]['tone']) {
+  if (tone === 'warning') return '#D95F50';
+  if (tone === 'gold') return '#D9A646';
+  return eventDetail.teal;
+}
+
+function InspectHeroVisual({
+  variant,
+  markers,
+  reducedMotion,
+}: {
+  variant: OperationWorkflowClarityPresentation['investigationBrief']['heroVisualVariant'];
+  markers: OperationWorkflowClarityPresentation['investigationBrief']['markerItems'];
+  reducedMotion: boolean;
+}) {
+  const isSchool = variant === 'school_cleaning';
+  const isContainer = variant === 'container_overflow';
+  const isLighting = variant === 'lighting_issue';
+
+  return (
+    <View style={styles.inspectHeroVisual}>
+      <LinearGradient
+        colors={["#DDF4E8", "#F7E3B9", "#183D3B"]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.95, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <Svg width="100%" height="100%" viewBox="0 0 340 230">
+        <Defs>
+          <SvgGradient id="heroShade" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#FFFFFF" stopOpacity="0.42" />
+            <Stop offset="1" stopColor="#0B2F30" stopOpacity="0.12" />
+          </SvgGradient>
+        </Defs>
+        <Rect x="0" y="0" width="340" height="230" fill="url(#heroShade)" />
+        <Circle cx="58" cy="42" r="28" fill="#F7C95F" opacity="0.45" />
+        <Path d="M0 72 C58 45 118 54 176 70 C232 86 284 72 340 48 V0 H0 Z" fill="#F8FCF2" opacity="0.72" />
+        <Path d="M0 150 C70 128 142 134 206 148 C262 160 304 150 340 132 V230 H0 Z" fill="#6AA484" />
+        <Path d="M0 172 C82 152 162 154 246 172 C286 180 318 177 340 168 V230 H0 Z" fill="#476A5B" />
+        <Path d="M28 178 C92 150 166 158 258 136" stroke="#DED3BA" strokeWidth="17" strokeLinecap="round" fill="none" />
+        <Path d="M30 177 C96 154 168 159 258 139" stroke="#F6EEE0" strokeWidth="9" strokeLinecap="round" fill="none" />
+        <G>
+          <Rect x="128" y={isSchool ? 58 : 72} width="124" height="72" rx="8" fill={isSchool ? "#F0C897" : "#E8D4AA"} />
+          <Path d="M122 60 L190 28 L258 60 Z" fill="#C66F43" />
+          <Rect x="178" y="95" width="22" height="35" rx="3" fill="#6D7F7D" />
+          {[145, 168, 210, 232].map((x) => (
+            <Rect key={x} x={x} y="75" width="15" height="14" rx="3" fill="#B9DBE1" opacity="0.95" />
+          ))}
+          {isSchool ? <Rect x="178" y="62" width="28" height="9" rx="3" fill="#2E9D99" /> : null}
+        </G>
+        <G opacity={isLighting ? 1 : 0.72}>
+          <Rect x="68" y="90" width="4" height="62" rx="2" fill="#284642" />
+          <Circle cx="70" cy="90" r="13" fill="#FFD98A" opacity={isLighting ? 0.46 : 0.24} />
+          <Circle cx="70" cy="90" r="5" fill="#FFE8A9" />
+        </G>
+        <G>
+          <Rect x="38" y="142" width="44" height="12" rx="5" fill="#365B55" />
+          <Rect x="43" y="130" width="34" height="12" rx="3" fill="#8B6B43" />
+          <Rect x="43" y="154" width="4" height="15" rx="2" fill="#284642" />
+          <Rect x="73" y="154" width="4" height="15" rx="2" fill="#284642" />
+        </G>
+        <G opacity={isContainer ? 1 : 0.88}>
+          <Rect x="244" y="150" width="38" height="30" rx="7" fill="#276E70" />
+          <Rect x="250" y="143" width="29" height="9" rx="4" fill="#4B8F8A" />
+          <Circle cx="252" cy="181" r="4" fill="#1E3432" />
+          <Circle cx="276" cy="181" r="4" fill="#1E3432" />
+          <Path d="M222 188 C238 177 262 190 292 180" stroke="#F1D2A1" strokeWidth="3" strokeDasharray="6 5" fill="none" />
+          <Circle cx="224" cy="186" r="4" fill="#D95F50" opacity="0.72" />
+          <Rect x="234" y="182" width="10" height="5" rx="2" fill="#F3E2BE" />
+        </G>
+        <G>
+          <Rect x="90" y="119" width="4" height="42" rx="2" fill="#355750" />
+          <Rect x="102" y="118" width="4" height="42" rx="2" fill="#355750" />
+          <Rect x="84" y="126" width="30" height="4" rx="2" fill="#355750" />
+          <Rect x="84" y="137" width="30" height="4" rx="2" fill="#355750" />
+          <Rect x="84" y="148" width="30" height="4" rx="2" fill="#355750" />
+        </G>
+      </Svg>
+      {markers.map((marker) => (
+        <InspectHeroMarker
+          key={marker.id}
+          marker={marker}
+          color={markerColor(marker.tone)}
+          reducedMotion={reducedMotion}
+        />
+      ))}
+    </View>
+  );
+}
+
+function InspectHeroMarker({
+  marker,
+  color,
+  reducedMotion,
+}: {
+  marker: OperationWorkflowClarityPresentation['investigationBrief']['markerItems'][number];
+  color: string;
+  reducedMotion: boolean;
+}) {
+  const pulse = useSharedValue(0);
+
+  useEffect(() => {
+    if (reducedMotion) return;
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1100 }),
+        withTiming(0, { duration: 1100 }),
+      ),
+      -1,
+      true,
+    );
+  }, [pulse, reducedMotion]);
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulse.value, [0, 1], [0.22, 0.46]),
+    transform: [{ scale: interpolate(pulse.value, [0, 1], [0.88, 1.18]) }],
+  }));
+
+  return (
+    <View
+      style={[
+        styles.inspectHeroMarker,
+        {
+          left: `${marker.x}%`,
+          top: `${marker.y}%`,
+        },
+      ]}>
+      <Animated.View
+        style={[
+          styles.inspectHeroMarkerPulse,
+          { backgroundColor: color },
+          pulseStyle,
+        ]}
+      />
+      <View style={[styles.inspectHeroMarkerCore, { backgroundColor: color }]}>
+        <Ionicons
+          name={marker.iconKey as keyof typeof Ionicons.glyphMap}
+          size={14}
+          color="#FFFFFF"
+        />
+      </View>
+    </View>
+  );
+}
+
+function checklistToneStyle(status: OperationInvestigationChecklistItem['status']) {
+  if (status === 'verified') return styles.checklistStatusVerified;
+  if (status === 'locked') return styles.checklistStatusLocked;
+  if (status === 'optional') return styles.checklistStatusOptional;
+  return styles.checklistStatusWaiting;
+}
+
+function checklistIconName(status: OperationInvestigationChecklistItem['status']) {
+  if (status === 'verified') return 'checkmark-circle' as const;
+  if (status === 'locked') return 'lock-closed-outline' as const;
+  if (status === 'optional') return 'ellipse-outline' as const;
+  return 'ellipse-outline' as const;
+}
+
+function InvestigationChecklistCard({
+  items,
+  verifiedCount,
+  requiredCount,
+  onPressItem,
+}: {
+  items: OperationInvestigationChecklistItem[];
+  verifiedCount: number;
+  requiredCount: number;
+  onPressItem: (item: OperationInvestigationChecklistItem) => void;
+}) {
+  return (
+    <CreviaMotionView
+      motionKind="card_enter"
+      surface="shared"
+      index={2}
+      style={styles.cardWrap}
+    >
+      <View style={[styles.checklistCard, shadows.soft]}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Doğrulanacak Bilgiler</Text>
+          <Text style={styles.sectionMeta}>{verifiedCount}/{requiredCount}</Text>
+        </View>
+        <View style={styles.checklistList}>
+          {items.map((item) => (
+            <Pressable
+              key={item.id}
+              onPress={() => onPressItem(item)}
+              disabled={item.status === 'locked' || item.status === 'optional'}
+              style={({ pressed }) => [
+                styles.checklistRow,
+                pressed && item.status !== 'locked' && styles.cardPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.title}: ${item.statusLabel}`}>
+              <Ionicons
+                name={checklistIconName(item.status)}
+                size={20}
+                color={item.status === 'verified' ? eventDetail.teal : 'rgba(107,125,120,0.62)'}
+              />
+              <View style={styles.checklistCopy}>
+                <View style={styles.checklistTitleRow}>
+                  <Text style={styles.checklistTitle} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  <View style={[styles.checklistStatus, checklistToneStyle(item.status)]}>
+                    <Text style={styles.checklistStatusText} numberOfLines={1}>
+                      {item.statusLabel}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.checklistBody} numberOfLines={2}>
+                  {item.body}
+                </Text>
+                <View style={styles.checklistImpactRow}>
+                  <Text style={styles.checklistImpact} numberOfLines={1}>
+                    Etki: {item.impactLabel}
+                  </Text>
+                  {item.ctaLabel ? (
+                    <Text style={styles.checklistInlineCta} numberOfLines={1}>
+                      {item.ctaLabel}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+    </CreviaMotionView>
+  );
+}
+
+function PlanningImpactCard({
+  presentation,
+}: {
+  presentation: OperationWorkflowClarityPresentation;
+}) {
+  return (
+    <CreviaMotionView
+      motionKind="card_enter"
+      surface="shared"
+      index={3}
+      style={styles.cardWrap}
+    >
+      <View style={[styles.planningImpactCard, shadows.soft]}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{presentation.planningImpact.title}</Text>
+          <Text style={styles.sectionMeta}>
+            {presentation.densityBand === 'day1_simple' ? 'Sade' : 'Stratejik'}
+          </Text>
+        </View>
+        {presentation.planningImpact.lines.map((line) => (
+          <View key={line} style={styles.impactLineRow}>
+            <View style={styles.impactDot} />
+            <Text style={styles.impactLineText} numberOfLines={2}>
+              {line}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </CreviaMotionView>
+  );
+}
+
+function ClarityAdvisorCard({ hint }: { hint: OperationWorkflowAdvisorHint }) {
+  return (
+    <CreviaMotionView
+      motionKind="line_appear"
+      surface="shared"
+      index={4}
+      style={styles.cardWrap}
+    >
+      <View style={[styles.clarityEceCard, shadows.soft]}>
+        <View style={styles.clarityEceAvatar}>
+          <Text style={styles.eceInitial}>E</Text>
+        </View>
+        <View style={styles.eceCopy}>
+          <Text style={styles.eceName}>{hint.title}</Text>
+          <Text style={styles.eceText} numberOfLines={3}>
+            {hint.text}
+          </Text>
+        </View>
+      </View>
+    </CreviaMotionView>
   );
 }
 
@@ -1110,7 +1512,7 @@ function StickyUnlockBar({
   loading,
   onPress,
 }: {
-  cta: InspectLowerPrimaryCta;
+  cta: OperationPrimaryCta;
   confirmedCount: number;
   totalCount: number;
   loading: boolean;
@@ -1142,7 +1544,11 @@ function StickyUnlockBar({
             {ready ? `${totalCount}/${totalCount} sinyal` : `${confirmedCount}/${totalCount} sinyal`}
           </Text>
           <Text style={styles.stickyProgressState}>
-            {loading ? "Taranıyor" : ready ? "Planlamaya hazır" : "Sinyaller toplanıyor"}
+            {loading
+              ? "Doğrulanıyor"
+              : ready
+                ? "Planlamaya hazır"
+                : cta.disabledReason ?? "Eksik bilgi var"}
           </Text>
           <View style={styles.stickyTrack}>
             <Animated.View style={[styles.stickyFill, fillStyle]} />
@@ -1164,7 +1570,7 @@ function StickyUnlockBar({
             {cta.label}
           </Text>
           <Ionicons
-            name={ready ? "arrow-forward" : "scan-outline"}
+            name={ready ? "arrow-forward" : "checkmark-circle-outline"}
             size={18}
             color={ready ? eventDetail.tealDark : "#FFFFFF"}
           />
@@ -1471,6 +1877,399 @@ const styles = StyleSheet.create({
   },
   cardWrap: {
     marginHorizontal: eventDetail.screenPadding,
+  },
+  inspectHeroCard: {
+    minHeight: 340,
+    borderRadius: 24,
+    overflow: "hidden",
+    backgroundColor: eventDetail.tealDark,
+    borderWidth: 1,
+    borderColor: "rgba(6,63,59,0.10)",
+  },
+  inspectHeroVisual: {
+    minHeight: 214,
+    backgroundColor: "#DDF4E8",
+  },
+  inspectHeroOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 112,
+    bottom: 0,
+  },
+  inspectHeroContent: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 14,
+    gap: 9,
+  },
+  inspectHeroChipRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  inspectHeroChip: {
+    maxWidth: 158,
+    minHeight: 28,
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(14, 104, 98, 0.72)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+  },
+  inspectHeroChipGold: {
+    maxWidth: 134,
+    backgroundColor: "rgba(255, 241, 201, 0.94)",
+    borderColor: "rgba(217,166,70,0.30)",
+  },
+  inspectHeroChipText: {
+    flexShrink: 1,
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: "900",
+    color: "#FFFFFF",
+  },
+  inspectHeroChipGoldText: {
+    flexShrink: 1,
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: "900",
+    color: "#9E6E0D",
+  },
+  inspectHeroTitle: {
+    fontSize: 21,
+    lineHeight: 25,
+    fontWeight: "900",
+    color: "#FFFFFF",
+    letterSpacing: 0,
+  },
+  inspectHeroTitleCompact: {
+    fontSize: 19,
+    lineHeight: 23,
+  },
+  inspectHeroSubtitle: {
+    marginTop: -4,
+    fontSize: 12,
+    lineHeight: 15,
+    fontWeight: "800",
+    color: "rgba(255,255,255,0.78)",
+  },
+  inspectHeroMetrics: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  inspectHeroMetric: {
+    flex: 1,
+    minHeight: 58,
+    minWidth: 0,
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    backgroundColor: "rgba(19, 126, 120, 0.90)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.13)",
+  },
+  inspectHeroMetricBlue: {
+    backgroundColor: "rgba(38, 74, 113, 0.90)",
+  },
+  inspectHeroMetricIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.18)",
+  },
+  inspectHeroMetricCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  inspectHeroMetricLabel: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: "800",
+    color: "rgba(255,255,255,0.76)",
+  },
+  inspectHeroMetricValue: {
+    marginTop: 2,
+    fontSize: 14,
+    lineHeight: 17,
+    fontWeight: "900",
+    color: "#FFFFFF",
+  },
+  inspectHeroRiskLine: {
+    minHeight: 32,
+    borderRadius: 13,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 7,
+    backgroundColor: "rgba(255,255,255,0.10)",
+  },
+  inspectHeroRiskText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.84)",
+  },
+  inspectHeroMarker: {
+    position: "absolute",
+    width: 32,
+    height: 32,
+    marginLeft: -16,
+    marginTop: -16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inspectHeroMarkerPulse: {
+    position: "absolute",
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+  },
+  inspectHeroMarkerCore: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+  },
+  clarityBriefCard: {
+    borderRadius: eventDetail.cardRadius,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(6,63,59,0.08)",
+    padding: 15,
+    gap: 12,
+  },
+  clarityBriefTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  clarityBriefIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: "#DDF4E8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  clarityBriefTitleBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  clarityBriefTitle: {
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: "900",
+    color: eventDetail.textDark,
+    letterSpacing: 0,
+  },
+  clarityBriefDistrict: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: eventDetail.textMuted,
+  },
+  clarityBriefMetrics: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  clarityBriefMetric: {
+    flex: 1,
+    minWidth: 0,
+    borderRadius: 13,
+    backgroundColor: "rgba(11,107,97,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(11,107,97,0.10)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  clarityMetricLabel: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: "800",
+    color: eventDetail.textMuted,
+  },
+  clarityMetricValue: {
+    marginTop: 2,
+    fontSize: 12,
+    lineHeight: 15,
+    fontWeight: "900",
+    color: eventDetail.tealDark,
+  },
+  clarityRiskLine: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 7,
+    borderRadius: 13,
+    backgroundColor: "#FFF8E3",
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
+  clarityRiskText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "700",
+    color: eventDetail.textDark,
+  },
+  checklistCard: {
+    borderRadius: eventDetail.cardRadius,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(6,63,59,0.08)",
+    padding: 13,
+    gap: 10,
+  },
+  checklistList: {
+    gap: 8,
+  },
+  checklistRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    borderRadius: 14,
+    backgroundColor: "#F8FBF6",
+    borderWidth: 1,
+    borderColor: "rgba(6,63,59,0.07)",
+    padding: 10,
+  },
+  checklistCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 5,
+  },
+  checklistTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  checklistTitle: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 13,
+    lineHeight: 16,
+    fontWeight: "900",
+    color: eventDetail.textDark,
+  },
+  checklistBody: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "600",
+    color: eventDetail.textMuted,
+  },
+  checklistStatus: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+  },
+  checklistStatusVerified: {
+    backgroundColor: "rgba(11,107,97,0.10)",
+    borderColor: "rgba(11,107,97,0.20)",
+  },
+  checklistStatusWaiting: {
+    backgroundColor: "#FFF8E3",
+    borderColor: "rgba(216,167,46,0.30)",
+  },
+  checklistStatusLocked: {
+    backgroundColor: "rgba(107,125,120,0.08)",
+    borderColor: "rgba(107,125,120,0.15)",
+  },
+  checklistStatusOptional: {
+    backgroundColor: "rgba(216,167,46,0.08)",
+    borderColor: "rgba(216,167,46,0.16)",
+  },
+  checklistStatusText: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: "900",
+    color: eventDetail.tealDark,
+  },
+  checklistImpactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  checklistImpact: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "800",
+    color: "#B77713",
+  },
+  checklistInlineCta: {
+    flexShrink: 1,
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "900",
+    color: eventDetail.tealDark,
+  },
+  planningImpactCard: {
+    borderRadius: eventDetail.cardRadius,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(6,63,59,0.08)",
+    padding: 13,
+    gap: 9,
+  },
+  impactLineRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  impactDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    marginTop: 5,
+    backgroundColor: eventDetail.teal,
+  },
+  impactLineText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "700",
+    color: eventDetail.textDark,
+  },
+  clarityEceCard: {
+    minHeight: 72,
+    borderRadius: eventDetail.cardRadius,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(216,167,46,0.22)",
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  clarityEceAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    backgroundColor: "#FFF1C9",
+    alignItems: "center",
+    justifyContent: "center",
   },
   briefCard: {
     minHeight: 124,

@@ -1,7 +1,7 @@
 import { CompactInsightRow } from '@/components/game/CompactInsightRow';
 import { buildDistrictReplayFlavorLine, mapResultToneToPersonalityOutcome } from '@/core/districtPersonality';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { useEffect, useMemo } from 'react';
 
 import {
@@ -55,6 +55,7 @@ import type { DailyReport } from '@/core/models/DailyReport';
 import type { GameMetrics } from '@/core/models/GameMetrics';
 import type { DailyXpReport } from '@/core/xp/xpReport';
 import { EndOfDayReportHero } from '@/features/reports/components/end-of-day/EndOfDayReportHero';
+import { DayEndCriticalDecisionSection } from '@/features/reports/components/end-of-day/DayEndCriticalDecisionSection';
 import { ReportPilotThemeSummary } from '@/features/reports/components/ReportPilotThemeSummary';
 import { EndOfDayReportMetaProgressSection } from '@/features/reports/components/end-of-day/EndOfDayReportMetaProgressSection';
 import { ReportAuthorityTrustCard } from '@/features/reports/components/end-of-day/premium/ReportAuthorityTrustCard';
@@ -113,6 +114,7 @@ import {
 import {
   buildReportHeaderModel,
 } from '@/features/reports/presentation/reportScreenPresentation';
+import { buildDayEndCriticalDecisionPresentation } from '@/features/reports/presentation/dayEndCriticalDecisionPresentation';
 import type { PilotReportContext } from '@/features/reports/utils/pilotReportPresentation';
 import { buildEndOfDayReportViewModel } from '@/features/reports/utils/endOfDayReportPresentation';
 import { buildMemoryFollowUpPresentationContext } from '@/features/shared/utils/memoryFollowUpPresentationContext';
@@ -159,6 +161,8 @@ type Props = {
   day1GoalsLine?: string | null;
   pilotReportContext: PilotReportContext | null;
   pilotCompletionSummary: ReturnType<typeof useReportPilotCompletionSummary>;
+  onShowDayFlow?: () => void;
+  onDayFlowLayout?: (event: LayoutChangeEvent) => void;
 };
 
 const ENTER = {
@@ -182,6 +186,8 @@ export function EndOfDayReportView({
   day1GoalsLine,
   pilotReportContext,
   pilotCompletionSummary,
+  onShowDayFlow,
+  onDayFlowLayout,
 }: Props) {
   const decisionHistory = useGameStore(selectDecisionHistory);
   const strategyHistory = useGameStore((s) => s.strategyHistory);
@@ -213,6 +219,7 @@ export function EndOfDayReportView({
   const socialPulseState = useGameStore((s) => s.socialPulseState);
   const eventPool = useGameStore((s) => s.eventPool);
   const neighborhoods = useGameStore((s) => s.neighborhoods);
+  const playerProgress = useGameStore((s) => s.playerProgress);
   const reducedMotion = useCreviaReducedMotion();
 
   const reportGuard = useMemo(
@@ -1124,6 +1131,18 @@ export function EndOfDayReportView({
     ],
   );
 
+  const criticalDecisionModel = useMemo(
+    () =>
+      buildDayEndCriticalDecisionPresentation({
+        day: report.day,
+        metrics,
+        decisionsToday: decisionHistory.filter((record) => record.day === report.day),
+        criticalDecision: lastDecisionForDay ?? null,
+        playerProgress,
+      }),
+    [decisionHistory, lastDecisionForDay, metrics, playerProgress, report.day],
+  );
+
   const endDayCliffhanger = useMemo(() => {
     const fatigueLine = reportFatigueState
       ? buildResourceFatiguePanelLine(reportFatigueState)
@@ -1687,11 +1706,19 @@ export function EndOfDayReportView({
         <ReportPrimaryImpactSection model={impactModel} />
       </Animated.View>
 
-      <ReportDayFlowTimeline
-        model={dayFlowReplay}
-        day={report.day}
+      <DayEndCriticalDecisionSection
+        model={criticalDecisionModel}
         reducedMotion={reducedMotion}
+        onShowDayFlow={onShowDayFlow}
       />
+
+      <View onLayout={onDayFlowLayout}>
+        <ReportDayFlowTimeline
+          model={dayFlowReplay}
+          day={report.day}
+          reducedMotion={reducedMotion}
+        />
+      </View>
 
       {cityEchoReportLine || decisionImpactReportEcho ? (
         <CreviaAnimatedLine

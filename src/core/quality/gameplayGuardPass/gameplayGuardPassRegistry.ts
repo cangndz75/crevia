@@ -21,7 +21,7 @@ export const GAMEPLAY_10_10_PRIORITY_PASSES: readonly GameplayGuardPassPriorityP
     order: 2,
     id: 'hub_game_first_density',
     title: 'Hub game-first density',
-    verifyScripts: ['verify:center-hub-density', 'verify:hub-portfolio-surface'],
+    verifyScripts: ['verify:center-hub-density', 'verify:hub-game-first-density', 'verify:hub-portfolio-surface'],
     targetDirs: ['src/features/hub', 'src/features/hub/utils'],
     primaryFiles: [
       'src/features/hub/components/HubReferenceHome.tsx',

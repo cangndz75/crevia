@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useMemo, type ComponentProps } from 'react';
+import { useCallback, useMemo, useRef, type ComponentProps } from 'react';
 import {
   Image,
+  type LayoutChangeEvent,
   Pressable,
   StyleSheet,
   Text,
+  type ScrollView,
   View,
 } from 'react-native';
 
@@ -180,6 +182,8 @@ function ReportEmpty({ onGoHub }: ReportEmptyProps) {
 
 export function ReportScreen() {
   const router = useRouter();
+  const reportScrollRef = useRef<ScrollView | null>(null);
+  const dayFlowOffsetRef = useRef(0);
   const report = useGameStore(selectLastDailyReport);
   const gameState = useGameStore((s) => s.gameState);
   const monetization = useGameStore((s) => s.monetization);
@@ -194,6 +198,17 @@ export function ReportScreen() {
     }
     goToHub(router);
   };
+
+  const onDayFlowLayout = useCallback((event: LayoutChangeEvent) => {
+    dayFlowOffsetRef.current = event.nativeEvent.layout.y;
+  }, []);
+
+  const onShowDayFlow = useCallback(() => {
+    reportScrollRef.current?.scrollTo({
+      y: Math.max(0, dayFlowOffsetRef.current - spacing.sm),
+      animated: true,
+    });
+  }, []);
 
   if (!report) {
     return <ReportEmpty onGoHub={onGoHub} />;
@@ -247,6 +262,7 @@ export function ReportScreen() {
 
   return (
     <GameScreenShell
+      scrollRef={reportScrollRef}
       headerVariant="none"
       backgroundColor="#F7F3EB"
       contentStyle={styles.content}>
@@ -259,6 +275,8 @@ export function ReportScreen() {
           day1GoalsLine={day1GoalsLine}
           pilotReportContext={pilotReportContext}
           pilotCompletionSummary={pilotCompletionSummary}
+          onShowDayFlow={onShowDayFlow}
+          onDayFlowLayout={onDayFlowLayout}
         />
       </View>
 

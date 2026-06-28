@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, type RefObject } from 'react';
 import { ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
 import {
   SafeAreaView,
@@ -32,6 +32,7 @@ type GameScreenShellProps = {
   screenTitle?: string;
   /** false ise alt sekme boşluğu kabuk tarafından eklenmez (iç scroll kendi padding'ini yönetir). */
   reserveTabBarInset?: boolean;
+  scrollRef?: RefObject<ScrollView | null>;
 };
 
 /**
@@ -50,6 +51,7 @@ export function GameScreenShell({
   backgroundColor = colors.background,
   screenTitle = 'Crevia',
   reserveTabBarInset = true,
+  scrollRef,
 }: GameScreenShellProps) {
   const tabBarHeight = useAppTabBarHeight();
   const bottomPadding = reserveTabBarInset
@@ -80,6 +82,7 @@ export function GameScreenShell({
       <View style={[styles.root, { backgroundColor }, style]}>
         {headerNode}
         <ScrollView
+          ref={scrollRef}
           style={styles.scroll}
           contentContainerStyle={paddedContent}
           showsVerticalScrollIndicator={false}
@@ -96,6 +99,7 @@ export function GameScreenShell({
         style={[styles.root, { backgroundColor }, style]}
         edges={safeEdges}>
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={paddedContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled">

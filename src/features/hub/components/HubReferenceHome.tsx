@@ -63,9 +63,8 @@ const palette = {
 } as const;
 
 type HeaderChip = CenterHomePresentation['headerSummary']['resourceChips'][number];
-type NextAction = CenterHomePresentation['nextActions']['actions'][number];
+type NextMove = CenterHomePresentation['gameFirst']['nextMoves']['moves'][number];
 type EventCardModel = CenterHomePresentation['neighborhoodEvents']['events'][number];
-type QuickCommand = CenterHomePresentation['quickCommands']['commands'][number];
 type RecentImpactTone = CenterHomePresentation['recentImpactSummary']['tone'];
 type MiniCityFeedItem = CenterHomePresentation['miniCityFeed']['items'][number];
 type MiniCityFeedTone = MiniCityFeedItem['tone'];
@@ -500,6 +499,19 @@ function TopInfoChips({
 }
 
 function resolveHeroCopy(presentation: CenterHomePresentation) {
+  const focus = presentation.gameFirst.todayFocus;
+  if (focus.visibility === 'visible') {
+    return {
+      eyebrow: focus.sectionTitle,
+      title: focus.goalSentence,
+      body: `${focus.whyImportant} ${focus.nextActionSentence}`.trim(),
+      route: focus.cta.route,
+      ctaLabel: focus.cta.label,
+      progress: focus.progressRatio ?? 0.2,
+      stageText: focus.stageLabel ? focus.stageLabel.toUpperCase() : 'AŞAMA 1/5',
+    };
+  }
+
   if (isCompletedTarget(presentation)) {
     return completedHeroFallback(presentation);
   }
@@ -635,6 +647,74 @@ function MainHero({
           </View>
         </RoutePressable>
       </View>
+    </View>
+  );
+}
+
+function ActiveOperationFocusCard({
+  presentation,
+  reducedMotion,
+}: {
+  presentation: CenterHomePresentation;
+  reducedMotion: boolean;
+}) {
+  const focus = presentation.gameFirst.activeOperationFocus;
+  if (focus.visibility !== 'visible' || !focus.operationName.trim()) return null;
+
+  const metaRows = [
+    focus.districtLabel ? { label: 'Mahalle', value: focus.districtLabel } : null,
+    focus.phaseLabel ? { label: 'Faz', value: focus.phaseLabel } : null,
+    focus.riskLabel ? { label: 'Risk', value: focus.riskLabel } : null,
+    focus.expectedImpact ? { label: 'Etki', value: focus.expectedImpact } : null,
+  ].filter((row): row is { label: string; value: string } => Boolean(row));
+
+  return (
+    <View style={styles.operationFocusCard}>
+      <View style={styles.operationFocusHeader}>
+        <Text style={styles.operationFocusEyebrow} numberOfLines={1}>
+          {focus.mode === 'active' ? 'Aktif Operasyon' : 'Operasyon Odağı'}
+        </Text>
+        {focus.mode === 'signal' ? (
+          <View style={styles.operationFocusModePill}>
+            <Text style={styles.operationFocusModeText} numberOfLines={1}>
+              Şehir Sinyali
+            </Text>
+          </View>
+        ) : null}
+      </View>
+      <Text style={styles.operationFocusTitle} numberOfLines={2}>
+        {focus.operationName}
+      </Text>
+      {focus.nextDecision ? (
+        <Text style={styles.operationFocusBody} numberOfLines={2}>
+          {focus.nextDecision}
+        </Text>
+      ) : null}
+      {metaRows.length > 0 ? (
+        <View style={styles.operationFocusMetaRow}>
+          {metaRows.slice(0, 3).map((row) => (
+            <View key={row.label} style={styles.operationFocusMetaChip}>
+              <Text style={styles.operationFocusMetaLabel} numberOfLines={1}>
+                {row.label}
+              </Text>
+              <Text style={styles.operationFocusMetaValue} numberOfLines={1}>
+                {row.value}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+      <RoutePressable
+        route={focus.cta.route}
+        disabled={!focus.cta.enabled}
+        reducedMotion={reducedMotion}
+        accessibilityLabel={focus.cta.label}
+        style={styles.operationFocusCta}>
+        <Text style={styles.operationFocusCtaText} numberOfLines={1}>
+          {focus.cta.label}
+        </Text>
+        <Ionicons name="arrow-forward" size={14} color="#101812" />
+      </RoutePressable>
     </View>
   );
 }
@@ -790,50 +870,33 @@ function resolveActionImage(index: number): ImageSource {
   return droneActionImage;
 }
 
-function resolveActionCategoryIcon(index: number): IconName {
-  if (index === 0) return 'train-outline';
-  if (index === 1) return 'leaf-outline';
-  return 'airplane-outline';
-}
-
-function ActionRewardRow({ action }: { action: NextAction }) {
-  const rewards = [
-    { icon: 'cash-outline' as IconName, value: action.rewardBudget, color: palette.green },
-    { icon: 'star' as IconName, value: action.rewardProgress, color: palette.gold },
-    { icon: 'diamond-outline' as IconName, value: action.rewardGem, color: palette.blue },
-  ].filter((item) => item.value);
-
-  if (rewards.length === 0) return null;
-
+function ImpactTagRow({ impactTag }: { impactTag?: string }) {
+  if (!impactTag?.trim()) return null;
   return (
-    <View style={styles.nextRewardRow}>
-      {rewards.map((reward) => (
-        <View key={reward.icon} style={styles.nextRewardChip}>
-          <Ionicons name={reward.icon} size={10} color={reward.color} />
-          <Text style={styles.nextRewardText} numberOfLines={1}>
-            {reward.value}
-          </Text>
-        </View>
-      ))}
+    <View style={styles.nextImpactTag}>
+      <Ionicons name="flash-outline" size={10} color={palette.mint} />
+      <Text style={styles.nextImpactTagText} numberOfLines={1}>
+        {impactTag}
+      </Text>
     </View>
   );
 }
 
-function NextActionCard({
-  action,
+function NextMoveCard({
+  move,
   index,
   reducedMotion,
 }: {
-  action: NextAction;
+  move: NextMove;
   index: number;
   reducedMotion: boolean;
 }) {
   return (
     <RoutePressable
-      route={action.routeKey}
-      disabled={action.disabled}
+      route={move.cta.route}
+      disabled={move.disabled}
       reducedMotion={reducedMotion}
-      accessibilityLabel={action.title}
+      accessibilityLabel={move.title}
       style={styles.nextActionCard}>
       <CenterHubImageFrame
         source={resolveActionImage(index)}
@@ -847,13 +910,23 @@ function NextActionCard({
         style={styles.nextActionOverlay}
       />
       <View style={styles.nextActionCategory}>
-        <Ionicons name={resolveActionCategoryIcon(index)} size={12} color={palette.text} />
+        <Ionicons name={resolveIconName(move.iconKey, 'ellipse-outline')} size={12} color={palette.text} />
       </View>
       <View style={styles.nextActionBottom}>
         <Text style={styles.nextActionTitle} numberOfLines={2}>
-          {action.title}
+          {move.title}
         </Text>
-        <ActionRewardRow action={action} />
+        {move.description ? (
+          <Text style={styles.nextMoveDescription} numberOfLines={2}>
+            {move.description}
+          </Text>
+        ) : null}
+        <ImpactTagRow impactTag={move.impactTag} />
+        {move.lockReason ? (
+          <Text style={styles.nextMoveLockReason} numberOfLines={1}>
+            {move.lockReason}
+          </Text>
+        ) : null}
       </View>
     </RoutePressable>
   );
@@ -867,48 +940,34 @@ function NextActionsRail({
   reducedMotion: boolean;
 }) {
   if (!hubSurfaceIsRenderable(presentation.hubDensity, 'quickActions')) return null;
-  if (presentation.nextActions.visibility !== 'visible') return null;
+  const nextMoves = presentation.gameFirst.nextMoves;
+  if (nextMoves.visibility !== 'visible') return null;
 
-  const actions = presentation.nextActions.actions.slice(0, 3);
-  if (actions.length === 0) return null;
+  const moves = nextMoves.moves.slice(0, 3);
+  if (moves.length === 0) return null;
 
   return (
     <View style={styles.sectionBlock}>
       <View style={styles.sectionHeaderBlock}>
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle} numberOfLines={1}>
-            Sıradaki Hamleler
+            {nextMoves.title}
           </Text>
-          <RoutePressable
-            route={presentation.recommendedPlan.cta?.route ?? presentation.activeTarget.cta.route}
-            reducedMotion={reducedMotion}
-            accessibilityLabel="Tümünü Gör"
-            style={styles.sectionLink}>
-            <Text style={styles.sectionLinkText} numberOfLines={1}>
-              Tümünü Gör
-            </Text>
-            <Ionicons name="chevron-forward" size={12} color={palette.gold} />
-          </RoutePressable>
         </View>
-        <Text style={styles.sectionSubtitle} numberOfLines={2}>
-          Şehrini geliştirmek için sıradaki adımları at.
-        </Text>
+        {nextMoves.subtitle ? (
+          <Text style={styles.sectionSubtitle} numberOfLines={2}>
+            {nextMoves.subtitle}
+          </Text>
+        ) : null}
       </View>
-      {actions.length > 0 ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.nextActionsScroller}>
-          {actions.map((action, index) => (
-            <NextActionCard
-              key={action.id}
-              action={action}
-              index={index}
-              reducedMotion={reducedMotion}
-            />
-          ))}
-        </ScrollView>
-      ) : null}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.nextActionsScroller}>
+        {moves.map((move, index) => (
+          <NextMoveCard key={move.id} move={move} index={index} reducedMotion={reducedMotion} />
+        ))}
+      </ScrollView>
     </View>
   );
 }
@@ -970,12 +1029,12 @@ function MiniCityFeedSection({
   presentation: CenterHomePresentation;
   reducedMotion: boolean;
 }) {
-  const feed = presentation.miniCityFeed;
-  if (feed.visibility !== 'visible') return null;
+  const pulse = presentation.gameFirst.cityPulse;
+  if (pulse.visibility !== 'visible') return null;
   if (!hubSurfaceIsRenderable(presentation.hubDensity, 'miniCityFeed')) return null;
 
-  const maxItems = presentation.hubDensity?.maxFeedItems ?? 3;
-  const items = feed.items.slice(0, maxItems);
+  const maxItems = presentation.hubDensity?.band === 'day1' ? 2 : 4;
+  const items = pulse.items.slice(0, maxItems);
   if (items.length === 0) return null;
 
   const compact = hubSurfaceCollapseMode(presentation.hubDensity, 'miniCityFeed') === 'compact';
@@ -989,24 +1048,40 @@ function MiniCityFeedSection({
       <View style={styles.feedHeader}>
         <View style={styles.feedHeaderCopy}>
           <Text style={styles.largeSectionTitle} numberOfLines={1}>
-            {feed.title}
+            {pulse.title}
           </Text>
           {!compact ? (
             <Text style={styles.cardSubtitle} numberOfLines={2}>
-              {feed.subtitle}
+              {pulse.subtitle}
             </Text>
           ) : null}
         </View>
         <View style={styles.feedStatusPill}>
           <LiveDot reducedMotion={reducedMotion} />
           <Text style={styles.feedStatusText} numberOfLines={1}>
-            {feed.statusPill}
+            {pulse.statusPill}
           </Text>
         </View>
       </View>
       <View style={[styles.feedItemList, compact ? styles.feedItemListCompact : undefined]}>
         {items.map((item) => (
-          <MiniCityFeedRow key={item.id} item={item} reducedMotion={reducedMotion} />
+          <MiniCityFeedRow
+            key={item.id}
+            item={{
+              id: item.id,
+              type: item.type,
+              title: item.message,
+              subtitle: item.detail,
+              sourceLabel: item.sourceLabel,
+              tone: item.tone,
+              iconKey: undefined,
+              priority: 1,
+              dedupeKey: item.id,
+              routeKey: item.routeKey,
+              actionKey: item.actionKey,
+            }}
+            reducedMotion={reducedMotion}
+          />
         ))}
       </View>
     </View>
@@ -1373,22 +1448,17 @@ function CityPulseAdvisorStrip({
   presentation: CenterHomePresentation;
   reducedMotion: boolean;
 }) {
-  const advisor = presentation.advisorMiniDirective;
-  const directive =
-    advisor.visibility === 'visible' && advisor.directive.trim()
-      ? advisor.directive
-      : presentation.strategicPulse.compact.advisorHint ??
-        'Baskı artıyor, ama fırsatlar da çoğalıyor. Doğru hamlelerle dengeyi lehimize çevirebiliriz.';
-  const route =
-    advisor.visibility === 'visible'
-      ? advisor.cta.route
-      : presentation.strategicPulse.compact.cta.route;
+  const advisor = presentation.gameFirst.advisor;
+  if (advisor.visibility !== 'visible' || !advisor.recommendation.trim()) return null;
+  if (!hubSurfaceIsRenderable(presentation.hubDensity, 'advisor')) return null;
+
+  const route = advisor.suggestedAction?.route ?? presentation.strategicPulse.compact.cta.route;
 
   return (
     <RoutePressable
       route={route}
       reducedMotion={reducedMotion}
-      accessibilityLabel={directive}
+      accessibilityLabel={advisor.recommendation}
       style={styles.pulseAdvisorStrip}>
       <View style={styles.pulseAdvisorAvatarWrap}>
         <Image source={hubAssets.advisorPortrait} style={styles.pulseAdvisorAvatar} contentFit="cover" />
@@ -1398,15 +1468,22 @@ function CityPulseAdvisorStrip({
       </View>
       <View style={styles.pulseAdvisorCopy}>
         <Text style={styles.pulseAdvisorTitle} numberOfLines={1}>
-          Ece&apos;nin Hızlı Yorumu
+          {advisor.advisorName}
         </Text>
         <Text style={styles.pulseAdvisorBody} numberOfLines={2}>
-          {directive}
+          {advisor.recommendation}
         </Text>
+        {advisor.riskWarning ? (
+          <Text style={styles.pulseAdvisorRisk} numberOfLines={1}>
+            {advisor.riskWarning}
+          </Text>
+        ) : null}
       </View>
-      <View style={styles.pulseAdvisorCta}>
-        <Ionicons name="arrow-forward" size={14} color={palette.text} />
-      </View>
+      {advisor.suggestedAction?.label ? (
+        <View style={styles.pulseAdvisorCta}>
+          <Ionicons name="arrow-forward" size={14} color={palette.text} />
+        </View>
+      ) : null}
     </RoutePressable>
   );
 }
@@ -1467,43 +1544,32 @@ function DistrictFocusCard({
   presentation: CenterHomePresentation;
   reducedMotion: boolean;
 }) {
-  const district = presentation.districtFocus;
-  if (district.visibility !== 'visible') return null;
-  if (presentation.hubDensity?.band === 'day1') return null;
-  if (
-    presentation.hubDensity &&
-    !hubSurfaceIsRenderable(presentation.hubDensity, 'lowerDashboard') &&
-    presentation.hubDensity.band !== 'early' &&
-    presentation.hubDensity.band !== 'mid'
-  ) {
-    return null;
-  }
-  const level = presentation.headerSummary.levelLabel?.replace('Sv. ', '') ?? '18';
+  const spotlight = presentation.gameFirst.districtSpotlight;
+  if (spotlight.visibility !== 'visible') return null;
+
   const footerStats = [
-    { label: 'Nüfus', value: district.populationLabel, icon: 'people-outline' as IconName },
-    { label: 'Ekonomi', value: '₺582K/s', icon: 'cash-outline' as IconName },
-    { label: 'Mutluluk', value: '%88', icon: 'happy-outline' as IconName },
-    { label: 'Güvenlik', value: '%94', icon: 'shield-checkmark-outline' as IconName },
-  ];
+    spotlight.trustBand ? { label: 'Güven', value: spotlight.trustBand, icon: 'shield-checkmark-outline' as IconName } : null,
+    spotlight.dominantIssue ? { label: 'Sorun', value: spotlight.dominantIssue, icon: 'alert-circle-outline' as IconName } : null,
+    spotlight.latestDevelopment ? { label: 'Son', value: spotlight.latestDevelopment, icon: 'pulse-outline' as IconName } : null,
+  ].filter((stat): stat is { label: string; value: string; icon: IconName } => Boolean(stat));
 
   return (
     <View style={styles.regionCard}>
       <View style={styles.regionHeader}>
         <Text style={styles.regionEyebrow} numberOfLines={1}>
-          Merkez Bölge
+          Mahalle Odağı
         </Text>
         <View style={styles.regionLevelBadge}>
           <Text style={styles.regionLevelText} numberOfLines={1}>
-            Seviye {level}
+            {spotlight.trustBand}
           </Text>
         </View>
       </View>
       <Text style={styles.regionTitle} numberOfLines={2}>
-        {district.districtName || 'Yenilikçi Kent Bölgesi'}
+        {spotlight.districtName}
       </Text>
       <Text style={styles.regionBody} numberOfLines={3}>
-        {district.opportunityLabel ||
-          'Teknoloji, inovasyon ve sürdürülebilir yaşamın buluştuğu şehir merkezi.'}
+        {spotlight.suggestedAction || spotlight.latestDevelopment || 'Mahalle sinyalleri takip ediliyor.'}
       </Text>
       <View style={styles.regionImageWrap}>
         <CenterHubImageFrame
@@ -1513,28 +1579,30 @@ function DistrictFocusCard({
         />
       </View>
       <RoutePressable
-        route={district.cta.route}
+        route={spotlight.cta.route}
         reducedMotion={reducedMotion}
-        accessibilityLabel={district.cta.label}
+        accessibilityLabel={spotlight.cta.label}
         style={styles.regionCta}>
         <Text style={styles.regionCtaText} numberOfLines={1}>
-          Bölgeyi Yönet
+          {spotlight.cta.label}
         </Text>
         <Ionicons name="arrow-forward" size={14} color="#101812" />
       </RoutePressable>
-      <View style={styles.regionFooterStats}>
-        {footerStats.map((stat) => (
-          <View key={stat.label} style={styles.regionFooterStat}>
-            <Ionicons name={stat.icon} size={11} color={palette.green} />
-            <Text style={styles.regionFooterLabel} numberOfLines={1}>
-              {stat.label}
-            </Text>
-            <Text style={styles.regionFooterValue} numberOfLines={1}>
-              {stat.value}
-            </Text>
-          </View>
-        ))}
-      </View>
+      {footerStats.length > 0 ? (
+        <View style={styles.regionFooterStats}>
+          {footerStats.map((stat) => (
+            <View key={stat.label} style={styles.regionFooterStat}>
+              <Ionicons name={stat.icon} size={11} color={palette.green} />
+              <Text style={styles.regionFooterLabel} numberOfLines={1}>
+                {stat.label}
+              </Text>
+              <Text style={styles.regionFooterValue} numberOfLines={1}>
+                {stat.value}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -1649,32 +1717,58 @@ function LiveDevelopments({
   );
 }
 
-function QuickCommandTile({
-  command,
+function ProgressionStrip({
+  presentation,
   reducedMotion,
 }: {
-  command: QuickCommand;
+  presentation: CenterHomePresentation;
   reducedMotion: boolean;
 }) {
+  const progression = presentation.gameFirst.progression;
+  if (progression.visibility !== 'visible') return null;
+
   return (
     <RoutePressable
-      route={command.routeKey}
-      disabled={command.disabled}
+      route={progression.cta?.route}
+      disabled={!progression.cta?.enabled}
+      preserveDisabledOpacity={!progression.cta?.route}
       reducedMotion={reducedMotion}
-      accessibilityLabel={command.title}
-      style={styles.commandTile}>
-      <Ionicons
-        name={resolveIconName(command.iconKey, command.disabled ? 'lock-closed-outline' : 'grid-outline')}
-        size={22}
-        color={command.accent === 'gold' ? palette.gold : palette.green}
-      />
-      <Text style={styles.commandTitle} numberOfLines={1}>
-        {command.title}
-      </Text>
-      {command.subtitle ? (
-        <Text style={styles.commandSubtitle} numberOfLines={2}>
-          {command.subtitle}
+      accessibilityLabel={progression.nextUnlockLabel}
+      style={styles.progressionStrip}>
+      <View style={styles.progressionCopy}>
+        <Text style={styles.progressionRank} numberOfLines={1}>
+          {progression.rankLabel}
         </Text>
+        <Text style={styles.progressionUnlock} numberOfLines={2}>
+          {progression.nextUnlockLabel}
+        </Text>
+        <View style={styles.progressionMetaRow}>
+          {progression.streakLabel ? (
+            <Text style={styles.progressionMeta} numberOfLines={1}>
+              {progression.streakLabel}
+            </Text>
+          ) : null}
+          {progression.periodGoalLabel ? (
+            <Text style={styles.progressionMeta} numberOfLines={1}>
+              {progression.periodGoalLabel}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+      {typeof progression.progressPercent === 'number' ? (
+        <View style={styles.progressionMeter}>
+          <Text style={styles.progressionMeterText} numberOfLines={1}>
+            %{progression.progressPercent}
+          </Text>
+          <View style={styles.progressionMeterTrack}>
+            <View
+              style={[
+                styles.progressionMeterFill,
+                { width: `${clampPercent(progression.progressPercent)}%` as `${number}%` },
+              ]}
+            />
+          </View>
+        </View>
       ) : null}
     </RoutePressable>
   );
@@ -1717,24 +1811,48 @@ function QuickCommandsGrid({
   presentation: CenterHomePresentation;
   reducedMotion: boolean;
 }) {
-  if (presentation.quickCommands.visibility !== 'visible') return null;
+  const quickActions = presentation.gameFirst.quickActions;
+  if (quickActions.visibility !== 'visible') return null;
   if (!hubSurfaceIsRenderable(presentation.hubDensity, 'quickActions')) return null;
 
-  const commands = presentation.quickCommands.commands.slice(0, 4);
+  const commands = quickActions.actions.slice(0, 4);
   if (commands.length === 0) return null;
 
   return (
     <View style={styles.darkCard}>
       <Text style={styles.largeSectionTitle} numberOfLines={1}>
-        Hızlı Komutlar
+        {quickActions.title}
       </Text>
-      {commands.length > 0 ? (
-        <View style={styles.commandsGrid}>
-          {commands.map((command) => (
-            <QuickCommandTile key={command.id} command={command} reducedMotion={reducedMotion} />
-          ))}
-        </View>
-      ) : null}
+      <View style={styles.commandsGrid}>
+        {commands.map((command) => (
+          <RoutePressable
+            key={command.id}
+            route={command.cta.route}
+            disabled={command.disabled}
+            reducedMotion={reducedMotion}
+            accessibilityLabel={command.title}
+            style={styles.commandTile}>
+            <Ionicons
+              name={resolveIconName(command.iconKey, command.disabled ? 'lock-closed-outline' : 'grid-outline')}
+              size={22}
+              color={command.accent === 'gold' ? palette.gold : palette.green}
+            />
+            <Text style={styles.commandTitle} numberOfLines={1}>
+              {command.title}
+            </Text>
+            {command.subtitle ? (
+              <Text style={styles.commandSubtitle} numberOfLines={2}>
+                {command.subtitle}
+              </Text>
+            ) : null}
+            {command.lockReason ? (
+              <Text style={styles.commandLockReason} numberOfLines={1}>
+                {command.lockReason}
+              </Text>
+            ) : null}
+          </RoutePressable>
+        ))}
+      </View>
     </View>
   );
 }
@@ -1778,29 +1896,35 @@ export function HubReferenceHome({ presentation, scrollFooter }: HubReferenceHom
           <MainHero presentation={presentation} reducedMotion={reducedMotion} />
         </CenterMotionEnter>
         <CenterMotionEnter index={2} {...motionProps}>
-          <ProgressImpactRow presentation={presentation} reducedMotion={reducedMotion} />
+          <ActiveOperationFocusCard presentation={presentation} reducedMotion={reducedMotion} />
         </CenterMotionEnter>
         <CenterMotionEnter index={3} {...motionProps}>
-          <NextActionsRail presentation={presentation} reducedMotion={reducedMotion} />
+          <ProgressImpactRow presentation={presentation} reducedMotion={reducedMotion} />
         </CenterMotionEnter>
         <CenterMotionEnter index={4} {...motionProps}>
-          <MiniCityFeedSection presentation={presentation} reducedMotion={reducedMotion} />
+          <NextActionsRail presentation={presentation} reducedMotion={reducedMotion} />
         </CenterMotionEnter>
         <CenterMotionEnter index={5} {...motionProps}>
+          <MiniCityFeedSection presentation={presentation} reducedMotion={reducedMotion} />
+        </CenterMotionEnter>
+        <CenterMotionEnter index={6} {...motionProps}>
+          <DistrictFocusCard presentation={presentation} reducedMotion={reducedMotion} />
+        </CenterMotionEnter>
+        <CenterMotionEnter index={7} {...motionProps}>
+          <ProgressionStrip presentation={presentation} reducedMotion={reducedMotion} />
+        </CenterMotionEnter>
+        <CenterMotionEnter index={8} {...motionProps}>
           <CityAgendaSection presentation={presentation} />
         </CenterMotionEnter>
         <MaintenanceSignalStrip presentation={presentation} />
-        <CenterMotionEnter index={6} {...motionProps}>
+        <CenterMotionEnter index={9} {...motionProps}>
           <CityPulseCard presentation={presentation} reducedMotion={reducedMotion} />
         </CenterMotionEnter>
-        <CenterMotionEnter index={7} {...motionProps}>
-          <DistrictFocusCard presentation={presentation} reducedMotion={reducedMotion} />
-        </CenterMotionEnter>
-        <CenterMotionEnter index={8} {...motionProps}>
+        <CenterMotionEnter index={10} {...motionProps}>
           <LiveDevelopments presentation={presentation} reducedMotion={reducedMotion} />
         </CenterMotionEnter>
         <UnlockPreviewStrip presentation={presentation} reducedMotion={reducedMotion} />
-        <CenterMotionEnter index={9} {...motionProps}>
+        <CenterMotionEnter index={11} {...motionProps}>
           <QuickCommandsGrid presentation={presentation} reducedMotion={reducedMotion} />
         </CenterMotionEnter>
         {scrollFooter ? <View style={styles.scrollFooter}>{scrollFooter}</View> : null}
@@ -2459,6 +2583,197 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     fontWeight: '900',
     color: palette.text,
+  },
+  nextMoveDescription: {
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: '700',
+    color: palette.muted,
+  },
+  nextImpactTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 2,
+  },
+  nextImpactTagText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '800',
+    color: palette.mint,
+  },
+  nextMoveLockReason: {
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '700',
+    color: palette.gold,
+  },
+  operationFocusCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: palette.strokeStrong,
+    backgroundColor: palette.panelSoft,
+    padding: 14,
+    gap: 8,
+  },
+  operationFocusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  operationFocusEyebrow: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '900',
+    color: palette.gold,
+    letterSpacing: 0.4,
+  },
+  operationFocusModePill: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: 'rgba(217,117,93,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(217,117,93,0.35)',
+  },
+  operationFocusModeText: {
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '800',
+    color: palette.red,
+  },
+  operationFocusTitle: {
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '900',
+    color: palette.text,
+  },
+  operationFocusBody: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '700',
+    color: palette.muted,
+  },
+  operationFocusMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  operationFocusMetaChip: {
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: palette.stroke,
+    gap: 1,
+    minWidth: 72,
+  },
+  operationFocusMetaLabel: {
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '700',
+    color: palette.faint,
+  },
+  operationFocusMetaValue: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '900',
+    color: palette.text,
+  },
+  operationFocusCta: {
+    marginTop: 2,
+    minHeight: CENTER_MIN_TOUCH_TARGET,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: palette.mint,
+  },
+  operationFocusCtaText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: '900',
+    color: '#101812',
+  },
+  progressionStrip: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: palette.stroke,
+    backgroundColor: palette.panel,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  progressionCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 3,
+  },
+  progressionRank: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '900',
+    color: palette.gold,
+  },
+  progressionUnlock: {
+    fontSize: 12,
+    lineHeight: 15,
+    fontWeight: '800',
+    color: palette.text,
+  },
+  progressionMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  progressionMeta: {
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: '700',
+    color: palette.muted,
+  },
+  progressionMeter: {
+    width: 58,
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  progressionMeterText: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '900',
+    color: palette.green,
+  },
+  progressionMeterTrack: {
+    width: '100%',
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+  },
+  progressionMeterFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: palette.green,
+  },
+  pulseAdvisorRisk: {
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: '700',
+    color: palette.red,
+  },
+  commandLockReason: {
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '700',
+    color: palette.gold,
   },
   nextRewardRow: {
     flexDirection: 'row',

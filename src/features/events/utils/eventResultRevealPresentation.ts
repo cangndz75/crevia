@@ -47,6 +47,10 @@ import {
   type EventPlanStrategyId,
 } from '@/features/events/utils/eventPlanPhasePresentation';
 import type { PostDecisionCityReactionPresentation } from '@/features/events/utils/postDecisionCityReactionPresentation';
+import {
+  buildOperationResultRevealSections,
+  type OperationResultRevealSections,
+} from './operationResultRevealSectionsPresentation';
 
 export type EventResultOutcomeBand = 'success' | 'partial' | 'mixed' | 'risk' | 'unknown';
 
@@ -237,6 +241,7 @@ export type EventResultRevealPresentation = {
   revealStaggerMs: number;
   revealTotalMs: number;
   phaseTransition: OperationPhaseTransitionPresentation;
+  revealSections: OperationResultRevealSections;
 };
 
 export type BuildEventResultRevealPresentationInput = {
@@ -1249,17 +1254,17 @@ function buildFinalActions(
 ): EventResultAction[] {
   const actions: EventResultAction[] = [
     {
-      id: 'open_report',
-      label: 'Raporu Gör',
-      route: '/reports',
-      actionKey: 'open_report',
-      enabled: true,
-    },
-    {
       id: 'back_to_hub',
       label: 'Merkeze Dön',
       route: '/',
       actionKey: 'back_to_hub',
+      enabled: true,
+    },
+    {
+      id: 'open_report',
+      label: 'Raporu Gör',
+      route: '/reports',
+      actionKey: 'open_report',
       enabled: true,
     },
   ];
@@ -1319,12 +1324,24 @@ export function buildEventResultRevealPresentation(
   const secondaryActions = buildSecondaryActions();
   const showAuthority = Boolean(input.authorityProgressLine?.trim());
   const finalActions = buildFinalActions(input.showNextDayAction ?? false, showAuthority);
-  const primaryCta = finalActions[0] ?? {
-    id: 'open_report',
-    label: 'Raporu Gör',
-    route: '/reports',
-    actionKey: 'open_report',
-    enabled: true,
+  const primaryCtaBase =
+    finalActions.find((action) => action.id === 'back_to_hub' && action.enabled) ??
+    finalActions.find((action) => action.enabled) ??
+    {
+      id: 'back_to_hub',
+      label: 'Merkeze Dön',
+      route: '/',
+      actionKey: 'back_to_hub',
+      enabled: true,
+    };
+  const primaryCta: EventResultAction = {
+    ...primaryCtaBase,
+    label:
+      primaryCtaBase.id === 'back_to_hub'
+        ? day <= 1
+          ? 'Merkeze Dön'
+          : 'Gün Sonuna Geç'
+        : primaryCtaBase.label,
   };
 
   const phaseDescription =
@@ -1353,6 +1370,20 @@ export function buildEventResultRevealPresentation(
     avoidSummaries: [advisorComment.text, reportBridge.summary, districtReaction?.message ?? ''],
   });
 
+  const revealSections = buildOperationResultRevealSections({
+    snapshot: input.snapshot,
+    outcome,
+    impactCards,
+    resourceCost,
+    day,
+    eventCategory: input.event?.category ?? null,
+    strategyId: input.selectedPlanStrategyId,
+    cityReaction: input.cityReaction,
+    socialEcho: input.socialEcho,
+    advisorLine: advisorComment.text,
+    reportSummary: reportBridge.summary,
+  });
+
   return {
     title: phaseTransition.shell.title,
     subtitle: phaseTransition.shell.subtitle,
@@ -1378,6 +1409,7 @@ export function buildEventResultRevealPresentation(
       ? OPERATION_MOTION_RESULT_REDUCED_MS
       : OPERATION_MOTION_RESULT_TOTAL_MS,
     phaseTransition,
+    revealSections,
   };
 }
 
@@ -1409,8 +1441,8 @@ export function auditEventResultRevealPresentation(
   if (!model.advisorComment.toneLabel.trim()) {
     issues.push('advisorComment toneLabel empty');
   }
-  if (!model.primaryCta.label.trim() || model.primaryCta.id !== 'open_report') {
-    issues.push('primaryCta should be open_report');
+  if (!model.primaryCta.label.trim() || !model.primaryCta.enabled) {
+    issues.push('primaryCta invalid');
   }
   if (model.secondaryActions.length < 3) {
     issues.push('secondaryActions incomplete');
@@ -1458,6 +1490,20 @@ export function auditEventResultRevealPresentation(
   }
 
   if (model.revealTotalMs < 0) issues.push('invalid revealTotalMs');
+
+  if (!model.revealSections.hero.title.trim()) issues.push('reveal hero empty');
+  if (model.revealSections.impactSummary.chips.length < 2) {
+    issues.push('impact chips below minimum');
+  }
+  if (model.revealSections.impactSummary.chips.length > 3) {
+    issues.push('impact chips above maximum');
+  }
+  if (
+    model.revealSections.densityBand === 'day1' &&
+    model.revealSections.impactSummary.chips.length > 2
+  ) {
+    issues.push('day1 impact chips not capped');
+  }
 
   return issues;
 }

@@ -20,6 +20,7 @@ import type {
   EventResultSelectedPlanOutcome,
   EventResultSelectedPlanContext,
 } from '@/features/events/utils/eventResultRevealPresentation';
+import type { OperationResultRevealSections } from '@/features/events/utils/operationResultRevealSectionsPresentation';
 import { CreviaMotionView } from '@/shared/motion';
 import { CreviaAnimatedPressable } from '@/core/animations/CreviaAnimatedPressable';
 import { shadows } from '@/ui/theme/shadows';
@@ -131,6 +132,251 @@ function resolveIcon(iconKey: string): IconName {
     'arrow-forward': 'arrow-forward',
   };
   return known[iconKey] ?? 'ellipse-outline';
+}
+
+const REVEAL_ACCENT: Record<
+  OperationResultRevealSections['hero']['tone']['accent'],
+  { color: string; bg: string; border: string }
+> = {
+  positive: {
+    color: eventDetail.success,
+    bg: 'rgba(62, 158, 106, 0.12)',
+    border: 'rgba(62, 158, 106, 0.24)',
+  },
+  mixed: {
+    color: eventDetail.tealDark,
+    bg: 'rgba(11, 107, 97, 0.10)',
+    border: 'rgba(11, 107, 97, 0.20)',
+  },
+  warning: {
+    color: eventDetail.orange,
+    bg: 'rgba(199, 137, 37, 0.12)',
+    border: 'rgba(199, 137, 37, 0.28)',
+  },
+  gold: {
+    color: '#C58B18',
+    bg: 'rgba(216, 167, 46, 0.14)',
+    border: 'rgba(216, 167, 46, 0.28)',
+  },
+  neutral: {
+    color: eventDetail.teal,
+    bg: 'rgba(11, 107, 97, 0.08)',
+    border: 'rgba(11, 107, 97, 0.16)',
+  },
+};
+
+type ResultRevealHeroPanelProps = {
+  sections: OperationResultRevealSections;
+  reducedMotion?: boolean;
+};
+
+export function ResultRevealHeroPanel({
+  sections,
+  reducedMotion = false,
+}: ResultRevealHeroPanelProps) {
+  const { hero } = sections;
+  const accent = REVEAL_ACCENT[hero.tone.accent];
+
+  return (
+    <CreviaMotionView
+      motionKind="result_emphasis"
+      surface="decision_result"
+      index={0}
+      reducedMotion={reducedMotion}
+      intensity="highlighted"
+      style={[styles.revealHeroCard, shadows.soft, { borderColor: accent.border }]}>
+      <View style={styles.revealHeroTop}>
+        <View style={[styles.revealEmblem, { backgroundColor: accent.bg, borderColor: accent.border }]}>
+          <Ionicons name={resolveIcon(hero.iconKey)} size={28} color={accent.color} />
+        </View>
+        <View style={styles.revealHeroCopy}>
+          <View style={[styles.revealBadgePill, { backgroundColor: accent.bg }]}>
+            <Text style={[styles.revealBadgeText, { color: accent.color }]} numberOfLines={1}>
+              {hero.badgeLabel}
+            </Text>
+          </View>
+          <Text style={styles.revealHeroTitle} numberOfLines={2}>
+            {hero.title}
+          </Text>
+          <View style={styles.revealHeroMetaRow}>
+            <Ionicons name="location-outline" size={12} color={eventDetail.teal} />
+            <Text style={styles.revealHeroMeta} numberOfLines={1}>
+              {hero.districtName} · {hero.operationLabel}
+            </Text>
+          </View>
+        </View>
+      </View>
+      <View style={[styles.revealScoreBand, { backgroundColor: accent.bg, borderColor: accent.border }]}>
+        <Text style={[styles.revealScoreLabel, { color: accent.color }]} numberOfLines={1}>
+          {hero.scoreLabel}
+        </Text>
+        <Text style={styles.revealStatusLabel} numberOfLines={1}>
+          {hero.statusLabel}
+        </Text>
+      </View>
+    </CreviaMotionView>
+  );
+}
+
+type ResultImpactSummaryStripProps = {
+  sections: OperationResultRevealSections;
+  reducedMotion?: boolean;
+};
+
+export function ResultImpactSummaryStrip({
+  sections,
+  reducedMotion = false,
+}: ResultImpactSummaryStripProps) {
+  return (
+    <CreviaMotionView
+      motionKind="chip_appear"
+      surface="decision_result"
+      index={1}
+      reducedMotion={reducedMotion}
+      style={styles.impactSummaryStrip}>
+      {sections.impactSummary.chips.map((chip, index) => {
+        const toneColor = ITEM_TONE[chip.tone === 'positive' ? 'positive' : chip.tone];
+        return (
+          <View key={chip.id} style={[styles.impactSummaryChip, index > 0 ? styles.impactSummaryChipSpaced : undefined]}>
+            <View style={styles.impactSummaryChipHead}>
+              <Ionicons name={resolveIcon(chip.iconKey)} size={14} color={toneColor} />
+              <Text style={styles.impactSummaryChipLabel} numberOfLines={1}>
+                {chip.label}
+              </Text>
+            </View>
+            <Text style={[styles.impactSummaryChipValue, { color: toneColor }]} numberOfLines={1}>
+              {chip.valueText}
+            </Text>
+            {chip.hint ? (
+              <Text style={styles.impactSummaryChipHint} numberOfLines={2}>
+                {chip.hint}
+              </Text>
+            ) : null}
+          </View>
+        );
+      })}
+    </CreviaMotionView>
+  );
+}
+
+type ResultNeighborhoodReactionPanelProps = {
+  sections: OperationResultRevealSections;
+  reducedMotion?: boolean;
+};
+
+export function ResultNeighborhoodReactionPanel({
+  sections,
+  reducedMotion = false,
+}: ResultNeighborhoodReactionPanelProps) {
+  const reaction = sections.neighborhoodReaction;
+  if (reaction.visibility !== 'visible') return null;
+
+  return (
+    <CreviaMotionView
+      motionKind="card_enter"
+      surface="decision_result"
+      index={2}
+      reducedMotion={reducedMotion}
+      style={[styles.neighborhoodPanel, shadows.soft]}>
+      <Text style={styles.sectionTitle}>Mahalle Tepkisi</Text>
+      <Text style={styles.neighborhoodHeadline} numberOfLines={1}>
+        {reaction.headline}
+      </Text>
+      <Text style={styles.neighborhoodMessage} numberOfLines={3}>
+        {reaction.message}
+      </Text>
+      <View style={styles.neighborhoodTagRow}>
+        {reaction.tags.map((tag) => (
+          <View
+            key={tag.id}
+            style={[
+              styles.neighborhoodTag,
+              { backgroundColor: `${DISTRICT_TONE[tag.tone]}18`, borderColor: `${DISTRICT_TONE[tag.tone]}40` },
+            ]}>
+            <Text style={[styles.neighborhoodTagText, { color: DISTRICT_TONE[tag.tone] }]} numberOfLines={1}>
+              {tag.label}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </CreviaMotionView>
+  );
+}
+
+type ResultDecisionImpactPanelProps = {
+  sections: OperationResultRevealSections;
+  reducedMotion?: boolean;
+};
+
+export function ResultDecisionImpactPanel({
+  sections,
+  reducedMotion = false,
+}: ResultDecisionImpactPanelProps) {
+  const block = sections.decisionImpact;
+  if (block.visibility !== 'visible') return null;
+
+  return (
+    <CreviaMotionView
+      motionKind="card_enter"
+      surface="decision_result"
+      index={3}
+      reducedMotion={reducedMotion}
+      style={[styles.decisionImpactPanel, shadows.soft]}>
+      <View style={styles.decisionImpactHeader}>
+        <Text style={styles.sectionTitle}>{block.headline}</Text>
+        {block.planLabel ? (
+          <View style={styles.planOutcomeTag}>
+            <Text style={styles.planOutcomeTagText} numberOfLines={1}>
+              {block.planLabel}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+      <Text style={styles.decisionImpactSummary} numberOfLines={2}>
+        {block.summaryLine}
+      </Text>
+      {block.impactLines.map((line) => (
+        <View key={line} style={styles.decisionImpactLineRow}>
+          <Ionicons name="arrow-forward" size={11} color={eventDetail.teal} />
+          <Text style={styles.decisionImpactLine} numberOfLines={2}>
+            {line}
+          </Text>
+        </View>
+      ))}
+    </CreviaMotionView>
+  );
+}
+
+type ResultTomorrowRipplePanelProps = {
+  sections: OperationResultRevealSections;
+  reducedMotion?: boolean;
+};
+
+export function ResultTomorrowRipplePanel({
+  sections,
+  reducedMotion = false,
+}: ResultTomorrowRipplePanelProps) {
+  const ripple = sections.tomorrowRipple;
+  if (ripple.visibility !== 'visible' || !ripple.summaryLine.trim()) return null;
+
+  return (
+    <CreviaMotionView
+      motionKind="card_enter"
+      surface="decision_result"
+      index={4}
+      reducedMotion={reducedMotion}
+      style={[styles.tomorrowRipplePanel, shadows.soft]}>
+      <Text style={styles.sectionTitle}>{ripple.headline}</Text>
+      <Text style={styles.tomorrowRippleSummary} numberOfLines={2}>
+        {ripple.summaryLine}
+      </Text>
+      {ripple.hubHint ? (
+        <Text style={styles.tomorrowRippleHint} numberOfLines={2}>
+          {ripple.hubHint}
+        </Text>
+      ) : null}
+    </CreviaMotionView>
+  );
 }
 
 type ResultPhaseHeaderProps = {
@@ -1266,5 +1512,211 @@ const styles = StyleSheet.create({
   },
   ctaDisabled: {
     opacity: 0.6,
+  },
+  revealHeroCard: {
+    backgroundColor: '#FFFDF7',
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 14,
+    gap: 12,
+    minWidth: 0,
+  },
+  revealHeroTop: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+    minWidth: 0,
+  },
+  revealEmblem: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  revealHeroCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
+  },
+  revealBadgePill: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  revealBadgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  revealHeroTitle: {
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: '900',
+    color: eventDetail.textDark,
+  },
+  revealHeroMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minWidth: 0,
+  },
+  revealHeroMeta: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '700',
+    color: eventDetail.teal,
+  },
+  revealScoreBand: {
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  revealScoreLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  revealStatusLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: eventDetail.textMuted,
+    flexShrink: 0,
+  },
+  impactSummaryStrip: {
+    flexDirection: 'row',
+    gap: 8,
+    minWidth: 0,
+  },
+  impactSummaryChip: {
+    flex: 1,
+    minWidth: 0,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(6, 63, 59, 0.08)',
+    backgroundColor: eventDetail.card,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    gap: 3,
+  },
+  impactSummaryChipSpaced: {},
+  impactSummaryChipHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  impactSummaryChipLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: eventDetail.textMuted,
+  },
+  impactSummaryChipValue: {
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  impactSummaryChipHint: {
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: '600',
+    color: eventDetail.textMuted,
+  },
+  neighborhoodPanel: {
+    backgroundColor: eventDetail.card,
+    borderRadius: eventDetail.smallRadius,
+    padding: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(6, 63, 59, 0.06)',
+    minWidth: 0,
+  },
+  neighborhoodHeadline: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: eventDetail.tealDark,
+  },
+  neighborhoodMessage: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
+    color: eventDetail.textDark,
+  },
+  neighborhoodTagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 2,
+  },
+  neighborhoodTag: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  neighborhoodTagText: {
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  decisionImpactPanel: {
+    backgroundColor: '#F8FCFA',
+    borderRadius: eventDetail.smallRadius,
+    padding: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(31, 107, 94, 0.14)',
+    minWidth: 0,
+  },
+  decisionImpactHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    minWidth: 0,
+  },
+  decisionImpactSummary: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
+    color: eventDetail.textDark,
+  },
+  decisionImpactLineRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    minWidth: 0,
+  },
+  decisionImpactLine: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600',
+    color: eventDetail.textMuted,
+  },
+  tomorrowRipplePanel: {
+    backgroundColor: '#F4FBF8',
+    borderRadius: eventDetail.smallRadius,
+    padding: 12,
+    gap: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(31, 107, 94, 0.16)',
+    minWidth: 0,
+  },
+  tomorrowRippleSummary: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
+    color: '#2A5C56',
+  },
+  tomorrowRippleHint: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600',
+    color: eventDetail.textMuted,
   },
 });
