@@ -43,6 +43,17 @@ import {
   getPlanStrategyLabel,
   type EventPlanStrategyId,
 } from '@/features/events/utils/eventPlanPhasePresentation';
+import {
+  buildOperationFieldDecisionImpact,
+  buildOperationFieldLivePresentation,
+  type OperationFieldDecisionImpact,
+  type OperationFieldLivePresentation,
+} from '@/features/events/utils/operationFieldLivePresentation';
+import { buildOperationFieldProgressModel } from '@/features/events/utils/operationFieldProgressModel';
+import {
+  buildOperationFieldSignalsPresentation,
+  type OperationFieldSignalsPresentation,
+} from '@/features/events/utils/operationFieldSignalPresentation';
 
 export type EventFieldOperationStatus =
   | 'ready'
@@ -226,6 +237,9 @@ export type EventFieldPhasePresentation = {
   phaseDescription: string;
   operationStatus: EventFieldOperationStatus;
   statusHero: EventFieldStatusHero;
+  liveOperation: OperationFieldLivePresentation;
+  fieldSignals: OperationFieldSignalsPresentation;
+  decisionImpact: OperationFieldDecisionImpact;
   selectedPlan: EventFieldSelectedPlanSummary;
   assignmentEffect: EventFieldAssignmentEffect;
   resourceRows: EventFieldResourceRow[];
@@ -240,6 +254,7 @@ export type EventFieldPhasePresentation = {
   autoComplete: EventFieldAutoCompletePolicy;
   accessibilityLabel: string;
   phaseTransition: OperationPhaseTransitionPresentation;
+  isDay1Simplified: boolean;
 };
 
 export type BuildEventFieldPhasePresentationInput = {
@@ -981,6 +996,45 @@ export function buildEventFieldPhasePresentation(
   const resourcePulse = buildResourcePulse(input, assignmentEffect, selectedPlan);
   const fieldFeedback = buildFieldFeedback(selectedPlan, assignmentEffect, interactionState);
   const firstImpact = buildFirstImpact(input, selectedPlan, assignmentEffect);
+  const isDay1Simplified =
+    Boolean(input.isDay1LearningEvent) || (input.day ?? input.event.day ?? 1) === 1;
+  const progressModel = buildOperationFieldProgressModel({
+    interactionState,
+    timelineStepIndex,
+    helperTextOverride: timeline.helperText,
+  });
+  const liveOperation = buildOperationFieldLivePresentation({
+    event: input.event,
+    selectedPlan,
+    assignmentEffect,
+    interactionState,
+    progress: progressModel,
+    helperTextOverride: timeline.helperText,
+  });
+  const fieldSignals = buildOperationFieldSignalsPresentation({
+    event: input.event,
+    assignment: input.assignment,
+    selectedPlan,
+    assignmentEffect,
+    interactionState,
+    progressStageId: progressModel.currentStageId,
+    day: input.day,
+    isDay1LearningEvent: input.isDay1LearningEvent,
+    maintenanceHintText: resourcePulse.maintenanceHint?.text,
+    maintenanceHintTone: resourcePulse.maintenanceHint?.tone,
+    recentVarietyProfiles: input.recentVarietyProfiles,
+    avoidLines: [
+      statusHero.summary,
+      liveOperation.summary,
+      timeline.helperText ?? '',
+    ],
+  });
+  const decisionImpact = buildOperationFieldDecisionImpact({
+    selectedPlan,
+    assignmentEffect,
+    day: input.day,
+    isDay1LearningEvent: input.isDay1LearningEvent,
+  });
   const advisorComment = buildEventFieldAdvisorComment(
     input,
     assignmentEffect,
@@ -1015,6 +1069,9 @@ export function buildEventFieldPhasePresentation(
       'Ekip sahada. Müdahalenin ilk etkilerini ve kalan riskleri takip et.',
     operationStatus: resolveOperationStatus(interactionState),
     statusHero,
+    liveOperation,
+    fieldSignals,
+    decisionImpact,
     selectedPlan,
     assignmentEffect,
     resourceRows,
@@ -1032,7 +1089,8 @@ export function buildEventFieldPhasePresentation(
       reducedMotionDurationMs: OPERATION_MOTION_FIELD_REDUCED_MS,
     },
     phaseTransition,
-    accessibilityLabel: `${input.event.title} sahada operasyon, ${selectedPlan.label}, ${timeline.helperText ?? ''}`,
+    isDay1Simplified,
+    accessibilityLabel: `${input.event.title} sahada operasyon, ${selectedPlan.label}, ${liveOperation.statusLabel}, ${timeline.helperText ?? ''}`,
   };
 }
 
@@ -1072,6 +1130,13 @@ export function auditEventFieldPhasePresentation(
   }
   if (!model.statusHero.eventTitle.trim() || !model.statusHero.summary.trim()) {
     issues.push('statusHero incomplete');
+  }
+  if (!model.liveOperation.summary.trim()) issues.push('liveOperation summary empty');
+  if (!model.liveOperation.statusLabel.trim()) issues.push('liveOperation status empty');
+  if (model.fieldSignals.items.length < 1) issues.push('fieldSignals empty');
+  if (!model.decisionImpact.body.trim()) issues.push('decisionImpact body empty');
+  if (model.liveOperation.progress.stages.length !== 4) {
+    issues.push('liveOperation progress stages must be 4');
   }
   if (model.fieldFeedback.items.length < 2) issues.push('fieldFeedback too short');
   if (model.firstImpact.items.length < 3) issues.push('firstImpact incomplete');

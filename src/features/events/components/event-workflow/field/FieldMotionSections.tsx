@@ -15,6 +15,11 @@ import type {
   EventFieldStatusHero,
   EventFieldTimelineStep,
 } from '@/features/events/utils/eventFieldPhasePresentation';
+import type {
+  OperationFieldDecisionImpact,
+  OperationFieldLivePresentation,
+} from '@/features/events/utils/operationFieldLivePresentation';
+import type { OperationFieldSignalsPresentation } from '@/features/events/utils/operationFieldSignalPresentation';
 import { CreviaMotionView } from '@/shared/motion';
 import { shadows } from '@/ui/theme/shadows';
 
@@ -313,6 +318,196 @@ export function FieldProgressStepper({
 
 /** @deprecated use FieldProgressStepper */
 export const FieldTimelineList = FieldProgressStepper;
+
+type FieldLiveOperationCardProps = {
+  hero: EventFieldStatusHero;
+  live: OperationFieldLivePresentation;
+  reducedMotion?: boolean;
+};
+
+export function FieldLiveOperationCard({
+  hero,
+  live,
+  reducedMotion = false,
+}: FieldLiveOperationCardProps) {
+  const riskColor = TONE_COLOR[live.riskTendencyTone];
+  const outcomeColor = TONE_COLOR[live.outcomeDirectionTone];
+  const teamColor = TONE_COLOR[live.teamStatusTone];
+
+  return (
+    <CreviaMotionView
+      motionKind="card_enter"
+      surface="shared"
+      index={2}
+      reducedMotion={reducedMotion}
+      style={[styles.liveCard, shadows.soft, { borderLeftColor: PLAN_TONE_BORDER[hero.tone] }]}>
+      <View style={styles.heroHeader}>
+        <Text style={styles.heroSectionTitle} numberOfLines={1}>
+          {live.title}
+        </Text>
+        <View style={styles.livePill}>
+          <View style={styles.livePillDot} />
+          <Text style={styles.livePillText} numberOfLines={1}>
+            {live.livePillLabel}
+          </Text>
+        </View>
+      </View>
+
+      <Text style={styles.heroEventTitle} numberOfLines={2}>
+        {hero.eventTitle}
+      </Text>
+      <View style={styles.heroMetaRow}>
+        <Ionicons name="location-outline" size={12} color={eventDetail.teal} />
+        <Text style={styles.heroMetaText} numberOfLines={1}>
+          {hero.districtName}
+        </Text>
+        <Text style={styles.heroMetaDivider}>·</Text>
+        <Text style={styles.heroMetaText} numberOfLines={1}>
+          {hero.selectedPlanLabel}
+        </Text>
+      </View>
+
+      <Text style={styles.heroStatusLabel} numberOfLines={1}>
+        {live.statusLabel}
+      </Text>
+      <Text style={styles.heroSummary} numberOfLines={3}>
+        {live.summary}
+      </Text>
+
+      <View style={styles.liveProgressTrack}>
+        <View style={[styles.liveProgressFill, { width: `${live.progress.progressPercent}%` }]} />
+      </View>
+
+      <View style={styles.liveStageRow}>
+        {live.progress.stages.map((stage) => {
+          const color =
+            stage.state === 'done'
+              ? eventDetail.success
+              : stage.state === 'current'
+                ? eventDetail.tealDark
+                : eventDetail.textMuted;
+          return (
+            <View key={stage.id} style={styles.liveStageChip}>
+              <View style={[styles.liveStageDot, { backgroundColor: color }]} />
+              <Text
+                style={[
+                  styles.liveStageLabel,
+                  stage.state === 'current' && styles.liveStageLabelCurrent,
+                ]}
+                numberOfLines={1}>
+                {stage.label}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+
+      <View style={styles.liveMetricRow}>
+        <View style={[styles.liveMetricPill, { backgroundColor: `${teamColor}14` }]}>
+          <Ionicons name="people-outline" size={11} color={teamColor} />
+          <Text style={[styles.liveMetricText, { color: teamColor }]} numberOfLines={1}>
+            {live.teamStatusLabel}
+          </Text>
+        </View>
+        <View style={[styles.liveMetricPill, { backgroundColor: `${riskColor}14` }]}>
+          <Ionicons name="pulse-outline" size={11} color={riskColor} />
+          <Text style={[styles.liveMetricText, { color: riskColor }]} numberOfLines={1}>
+            {live.riskTendencyLabel}
+          </Text>
+        </View>
+        <View style={[styles.liveMetricPill, { backgroundColor: `${outcomeColor}14` }]}>
+          <Ionicons name="compass-outline" size={11} color={outcomeColor} />
+          <Text style={[styles.liveMetricText, { color: outcomeColor }]} numberOfLines={1}>
+            {live.outcomeDirectionLabel}
+          </Text>
+        </View>
+      </View>
+    </CreviaMotionView>
+  );
+}
+
+type FieldSignalsStripProps = {
+  signals: OperationFieldSignalsPresentation;
+  reducedMotion?: boolean;
+};
+
+export function FieldSignalsStrip({ signals, reducedMotion = false }: FieldSignalsStripProps) {
+  if (signals.items.length === 0) return null;
+
+  return (
+    <CreviaMotionView
+      motionKind="card_enter"
+      surface="shared"
+      index={3}
+      reducedMotion={reducedMotion}
+      style={[styles.signalsCard, shadows.soft]}>
+      <Text style={styles.sectionTitle} numberOfLines={1}>
+        {signals.title}
+      </Text>
+      <View style={styles.signalsList}>
+        {signals.items.map((item, index) => {
+          const color = TONE_COLOR[item.tone];
+          return (
+            <CreviaMotionView
+              key={item.id}
+              motionKind="chip_appear"
+              surface="shared"
+              index={index}
+              reducedMotion={reducedMotion}
+              style={styles.signalRow}>
+              <View style={[styles.feedbackSourcePill, { backgroundColor: `${color}14` }]}>
+                <Ionicons name={resolveIcon(item.iconKey)} size={11} color={color} />
+                <Text style={[styles.feedbackSourceText, { color }]} numberOfLines={1}>
+                  {item.sourceLabel}
+                </Text>
+              </View>
+              <Text style={styles.signalMessage} numberOfLines={2}>
+                {item.message}
+              </Text>
+            </CreviaMotionView>
+          );
+        })}
+      </View>
+    </CreviaMotionView>
+  );
+}
+
+type FieldDecisionImpactCardProps = {
+  impact: OperationFieldDecisionImpact;
+  reducedMotion?: boolean;
+};
+
+export function FieldDecisionImpactCard({
+  impact,
+  reducedMotion = false,
+}: FieldDecisionImpactCardProps) {
+  const color = TONE_COLOR[impact.tone];
+
+  return (
+    <CreviaMotionView
+      motionKind="card_enter"
+      surface="shared"
+      index={4}
+      reducedMotion={reducedMotion}
+      style={[styles.decisionImpactCard, shadows.soft, { borderLeftColor: color }]}>
+      <View style={styles.decisionImpactHeader}>
+        <Ionicons name={resolveIcon(impact.iconKey)} size={14} color={color} />
+        <Text style={styles.sectionTitle} numberOfLines={1}>
+          {impact.title}
+        </Text>
+      </View>
+      <Text style={styles.decisionImpactPlan} numberOfLines={1}>
+        {impact.planLabel}
+      </Text>
+      <Text style={[styles.decisionImpactEffect, { color }]} numberOfLines={1}>
+        {impact.effectLine}
+      </Text>
+      <Text style={styles.decisionImpactBody} numberOfLines={3}>
+        {impact.body}
+      </Text>
+    </CreviaMotionView>
+  );
+}
 
 type FieldFeedbackListProps = {
   feedback: EventFieldFeedbackPresentation;
@@ -802,6 +997,125 @@ const styles = StyleSheet.create({
     color: eventDetail.tealDark,
   },
   heroSummary: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '600',
+    color: eventDetail.textMuted,
+  },
+  liveCard: {
+    marginHorizontal: eventDetail.screenPadding,
+    backgroundColor: eventDetail.card,
+    borderRadius: eventDetail.smallRadius,
+    padding: 14,
+    gap: 8,
+    borderLeftWidth: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(6, 63, 59, 0.06)',
+  },
+  liveProgressTrack: {
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: eventDetail.mintSoft,
+    overflow: 'hidden',
+    marginTop: 2,
+  },
+  liveProgressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: eventDetail.teal,
+  },
+  liveStageRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  liveStageChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    maxWidth: '48%',
+  },
+  liveStageDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+  },
+  liveStageLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: eventDetail.textMuted,
+    flexShrink: 1,
+  },
+  liveStageLabelCurrent: {
+    color: eventDetail.tealDark,
+    fontWeight: '800',
+  },
+  liveMetricRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 2,
+  },
+  liveMetricPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    maxWidth: '100%',
+  },
+  liveMetricText: {
+    fontSize: 10,
+    fontWeight: '800',
+    flexShrink: 1,
+  },
+  signalsCard: {
+    marginHorizontal: eventDetail.screenPadding,
+    backgroundColor: eventDetail.card,
+    borderRadius: eventDetail.smallRadius,
+    padding: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(6, 63, 59, 0.06)',
+  },
+  signalsList: {
+    gap: 8,
+  },
+  signalRow: {
+    gap: 4,
+  },
+  signalMessage: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '600',
+    color: eventDetail.textDark,
+  },
+  decisionImpactCard: {
+    marginHorizontal: eventDetail.screenPadding,
+    backgroundColor: eventDetail.card,
+    borderRadius: eventDetail.smallRadius,
+    padding: 12,
+    gap: 6,
+    borderLeftWidth: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(6, 63, 59, 0.06)',
+  },
+  decisionImpactHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  decisionImpactPlan: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: eventDetail.textDark,
+  },
+  decisionImpactEffect: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  decisionImpactBody: {
     fontSize: 12,
     lineHeight: 17,
     fontWeight: '600',

@@ -8,6 +8,9 @@ import {
   fieldAdvisorDiffersFromDispatchAdvisor,
   mapMicroDecisionCardToFieldPresentation,
 } from '@/features/events/utils/eventFieldPhasePresentation';
+import { fieldRiskAlignsWithPreviewEffects } from '@/features/events/utils/operationFieldLivePresentation';
+import { buildOperationFieldProgressModel } from '@/features/events/utils/operationFieldProgressModel';
+import { buildOperationFieldSignalsPresentation } from '@/features/events/utils/operationFieldSignalPresentation';
 import { buildEventDispatchAdvisorComment } from '@/features/events/utils/eventDispatchPhasePresentation';
 import {
   getPlanStrategyLabel,
@@ -144,6 +147,25 @@ export function verifyOperationFieldLiveScenario(): VerifyOperationFieldLiveOutc
     timelineStepIndex: 4,
     reducedMotion: true,
     day: 2,
+  });
+
+  const day1Model = buildEventFieldPhasePresentation({
+    event: sampleEvent({ day: 1 }),
+    assignment,
+    selectedPlanStrategyId: 'balanced_plan',
+    interactionState: 'running',
+    timelineStepIndex: 1,
+    day: 1,
+    isDay1LearningEvent: true,
+  });
+
+  const day8Model = buildEventFieldPhasePresentation({
+    event: sampleEvent({ day: 8, riskLevel: 'high' }),
+    assignment: sampleAssignment({ compatibilityLabel: 'Zayıf uyum', compatibilityScore: 42 }),
+    selectedPlanStrategyId: 'rapid_response',
+    interactionState: 'running',
+    timelineStepIndex: 2,
+    day: 8,
   });
 
   const auditIssues = auditEventFieldPhasePresentation(runningModel);
@@ -287,6 +309,162 @@ export function verifyOperationFieldLiveScenario(): VerifyOperationFieldLiveOutc
     ),
     'Ece dispatch yorumunu birebir tekrar etmez',
     'ok',
+  );
+
+  assert(
+    checks,
+    runningModel.liveOperation.summary.trim().length > 0,
+    'liveOperation summary dolu',
+    runningModel.liveOperation.summary.slice(0, 48),
+  );
+  assert(
+    checks,
+    runningModel.liveOperation.progress.stages.length === 4,
+    'canlı ilerleme 4 aşama',
+    String(runningModel.liveOperation.progress.stages.length),
+  );
+  assert(
+    checks,
+    runningModel.fieldSignals.items.length >= 2,
+    'saha sinyalleri en az 2',
+    String(runningModel.fieldSignals.items.length),
+  );
+  assert(
+    checks,
+    runningModel.decisionImpact.body.trim().length > 0,
+    'karar etkisi kartı dolu',
+    runningModel.decisionImpact.planLabel,
+  );
+  assert(
+    checks,
+    !runningModel.liveOperation.summary.toLowerCase().includes('lütfen bekleyin'),
+    'statik bekleme metni yok',
+    'ok',
+  );
+
+  assert(
+    checks,
+    day1Model.isDay1Simplified,
+    'Day 1 sade mod aktif',
+    String(day1Model.isDay1Simplified),
+  );
+  assert(
+    checks,
+    day1Model.fieldSignals.items.length <= 2,
+    'Day 1 en fazla 2 sinyal',
+    String(day1Model.fieldSignals.items.length),
+  );
+  assert(
+    checks,
+    day1Model.fieldSignals.title === 'Saha Sinyalleri',
+    'Day 1 sinyal başlığı sade',
+    day1Model.fieldSignals.title,
+  );
+
+  assert(
+    checks,
+    !day8Model.isDay1Simplified,
+    'Day 8+ zengin mod',
+    String(day8Model.isDay1Simplified),
+  );
+  assert(
+    checks,
+    day8Model.fieldSignals.items.length === 3,
+    'Day 8+ 3 saha sinyali',
+    String(day8Model.fieldSignals.items.length),
+  );
+  assert(
+    checks,
+    day8Model.fieldSignals.title === 'Saha Güncellemeleri',
+    'Day 8+ güncelleme başlığı',
+    day8Model.fieldSignals.title,
+  );
+
+  const signalMessages = day8Model.fieldSignals.items.map((item) => item.message);
+  assert(
+    checks,
+    new Set(signalMessages.map((m) => m.toLowerCase())).size === signalMessages.length,
+    'saha sinyalleri duplicate yok',
+    signalMessages.join(' | ').slice(0, 60),
+  );
+
+  assert(
+    checks,
+    fieldRiskAlignsWithPreviewEffects({
+      riskTendency: runningModel.liveOperation.riskTendency,
+      previewRisk: event.previewEffects?.risk ?? 0,
+      assignmentBand: runningModel.assignmentEffect.scoreBand,
+    }),
+    'risk eğilimi preview ile uyumlu',
+    runningModel.liveOperation.riskTendencyLabel,
+  );
+
+  const highRiskLowBand = buildEventFieldPhasePresentation({
+    event: sampleEvent({ riskLevel: 'critical', previewEffects: { publicSatisfaction: -4, risk: 2, xp: 0 } }),
+    assignment: sampleAssignment({ compatibilityLabel: 'Zayıf uyum' }),
+    selectedPlanStrategyId: 'rapid_response',
+    interactionState: 'running',
+    timelineStepIndex: 2,
+    day: 5,
+  });
+  assert(
+    checks,
+    highRiskLowBand.liveOperation.riskTendency === 'increasing' ||
+      highRiskLowBand.liveOperation.riskTendency === 'stable',
+    'yüksek riskte ön sinyal verilir',
+    highRiskLowBand.liveOperation.riskTendencyLabel,
+  );
+  assert(
+    checks,
+    highRiskLowBand.liveOperation.outcomeDirectionTone !== 'positive' ||
+      highRiskLowBand.liveOperation.riskTendency === 'decreasing',
+    'yüksek riskte çelişkili olumlu yön yok',
+    highRiskLowBand.liveOperation.outcomeDirectionLabel,
+  );
+
+  const progressStages = buildOperationFieldProgressModel({
+    interactionState: 'completed',
+    timelineStepIndex: 2,
+  });
+  assert(
+    checks,
+    progressStages.currentStageId === 'preparing_result',
+    'completed → sonuç hazırlanıyor',
+    progressStages.currentStageId,
+  );
+
+  const rapidSignals = buildOperationFieldSignalsPresentation({
+    event,
+    assignment,
+    selectedPlan: runningModel.selectedPlan,
+    assignmentEffect: runningModel.assignmentEffect,
+    interactionState: 'running',
+    progressStageId: 'intervening',
+    day: 2,
+    avoidLines: [],
+  });
+  const longTermModel = buildEventFieldPhasePresentation({
+    event,
+    assignment,
+    selectedPlanStrategyId: 'long_term_fix',
+    interactionState: 'running',
+    timelineStepIndex: 1,
+    day: 2,
+  });
+  const rapidMessages = rapidSignals.items.map((item) => item.message.toLowerCase());
+  const longTermMessages = longTermModel.fieldSignals.items.map((item) => item.message.toLowerCase());
+  assert(
+    checks,
+    rapidMessages.some((line) => line.includes('hız')) ||
+      rapidMessages.some((line) => line.includes('tempo')),
+    'hızlı plan sinyali farklı',
+    rapidMessages[0] ?? 'missing',
+  );
+  assert(
+    checks,
+    longTermMessages.some((line) => line.includes('kalıcı') || line.includes('önleyici') || line.includes('düzenli')),
+    'kalıcı plan sinyali farklı',
+    longTermMessages[0] ?? 'missing',
   );
 
   assert(

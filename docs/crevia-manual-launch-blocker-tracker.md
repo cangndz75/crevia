@@ -31,6 +31,20 @@ Kaynak: `src/core/manualLaunchTracker/manualLaunchTrackerConstants.ts` → `MANU
 
 Çalıştır: `npm run verify:manual-launch-tracker`
 
+### 5a. Verify script’lerin beklediği kanıtlar
+
+| Script | Otomatik PASS için | Manuel kanıt (gerçek cihaz) |
+|--------|-------------------|----------------------------|
+| `verify:real-device-playtest` | Plan (16 senaryo), docs, gözlem şablonları, `completedObservationCount=0` | 16 senaryo × cihaz profili gözlem sheet’leri |
+| `verify:manual-launch-tracker` | 51 blocker pending, `verifiedEvidence=0`, fake PASS guard | Round 1 (20 test) + 136 evidence kaydı — screenshot/video/build_log |
+| `verify:release-candidate` | Gameplay verify referansları PASS, manual blocker ayrı, `verifiedEvidence=0` | EAS build, IAP sandbox, store, privacy URL, device matrix |
+
+**Evidence şablonu:** `docs/crevia-real-device-qa-evidence-round-1.md` — iOS/Android ayrı tablolar, 20 akış checklist, JSON attach formatı.
+
+**Evidence depo:** `docs/evidence/ios/`, `docs/evidence/android/` (bkz. `docs/evidence/README.md`)
+
+Blocker kapatma kuralları: `manualLaunchEvidenceConstants.ts` → `BLOCKER_EVIDENCE_CLOSE_REQUIREMENTS` (ör. IAP → `purchase_log` verified, Sentry → `dashboard_event` verified).
+
 ## 6. IAP / RevenueCat checklist
 
 - [ ] RevenueCat public keys (EAS)

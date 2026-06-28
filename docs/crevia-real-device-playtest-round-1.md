@@ -6,6 +6,8 @@ Soft Launch Readiness Review Aşama 1 sonucu: **internal_device_test → proceed
 
 Otomatik plan doğrulama: `npm run verify:real-device-playtest`
 
+**QA evidence şablonu (iOS/Android checklist + attach format):** `docs/crevia-real-device-qa-evidence-round-1.md`
+
 ## Cihaz matrisi
 
 | Profil | Gereksinim | Not |

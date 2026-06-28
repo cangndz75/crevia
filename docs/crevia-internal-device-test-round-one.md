@@ -95,6 +95,8 @@ DSN yoksa test `skipped` — PASS verilmez.
 
 ## 9. Evidence attach formatı
 
+Tam alan listesi ve iOS/Android tabloları: **`docs/crevia-real-device-qa-evidence-round-1.md`**
+
 Manuel attach (repo dışı veya `docs/evidence/` — **gerçek dosya olmadan tracker verified olmaz**):
 
 ```json
@@ -103,19 +105,24 @@ Manuel attach (repo dışı veya `docs/evidence/` — **gerçek dosya olmadan tr
   "testCaseId": "day8_pack_origin_event_appears",
   "blockerId": "day8_pack_origin_event_smoke",
   "platform": "ios",
+  "deviceName": "iPhone 15",
+  "osVersion": "iOS 18.2",
   "buildProfile": "internal",
   "appVersion": "1.0.0",
-  "buildNumber": "23",
+  "buildNumber": "42",
+  "testDate": "2026-06-28",
+  "tester": "QA — Ada",
+  "result": "pass",
   "evidenceType": "screenshot",
   "evidenceLocation": "docs/evidence/ios/day8-pack-origin.png",
   "evidenceSummary": "Day 8 pack-origin event visible with player-facing chip.",
-  "testerNote": "iPhone 15, internal build 23",
+  "testerNote": "iPhone 15, internal build 42",
   "status": "attached",
   "fakePassGuard": true
 }
 ```
 
-Alanlar: `testCaseId`, `platform`, `buildProfile`, `appVersion`, `buildNumber`, `evidenceType`, `evidenceLocation`, `evidenceSummary`, `testerNote`, `verifiedBy`, `verifiedAt`.
+Alanlar: `testCaseId`, `platform`, `deviceName`, `osVersion`, `buildProfile`, `appVersion`, `buildNumber`, `testDate`, `tester`, `result`, `evidenceType`, `evidenceLocation`, `evidenceSummary`, `testerNote`, `verifiedBy`, `verifiedAt`.
 
 **Önemli:** Yukarıdaki örnek şablondur. Repo’da dosya yoksa tracker `missing` kalır. `attached` ≠ blocker done; `verified` gerekir.
 

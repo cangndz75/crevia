@@ -24,6 +24,7 @@ import {
 } from './manualLaunchEvidenceConstants';
 import {
   MANUAL_LAUNCH_ROUND_ONE_DOCS_PATH,
+  MANUAL_LAUNCH_QA_EVIDENCE_DOCS_PATH,
   MANUAL_LAUNCH_ROUND_ONE_TEST_CASE_IDS,
 } from './manualLaunchRoundOneConstants';
 import { roundOneTestPassesWithoutEvidence } from './manualLaunchRoundOneAudit';
@@ -95,7 +96,10 @@ export function verifyManualLaunchTrackerScenario(): VerifyManualLaunchTrackerOu
   record(
     assert(
       checks,
-      audit.overallStatus === 'ready_for_internal_device_test' || audit.overallStatus === 'blocked_for_public_launch',
+      audit.overallStatus === 'ready_for_internal_device_test' ||
+        audit.overallStatus === 'blocked_for_public_launch' ||
+        (audit.overallStatus === 'blocked' &&
+          audit.internalDeviceTestDecision === 'proceed_internal_device_test'),
       'Overall status allows internal test path',
     ),
   );
@@ -231,6 +235,15 @@ export function verifyManualLaunchTrackerScenario(): VerifyManualLaunchTrackerOu
       checks,
       readRepo(MANUAL_LAUNCH_ROUND_ONE_DOCS_PATH).includes('Evidence attach format'),
       'Evidence attach format in Round 1 docs',
+    ),
+  );
+  record(assert(checks, existsSync(join(REPO_ROOT, MANUAL_LAUNCH_QA_EVIDENCE_DOCS_PATH)), 'QA evidence template doc exists'));
+  record(
+    assert(
+      checks,
+      readRepo(MANUAL_LAUNCH_QA_EVIDENCE_DOCS_PATH).includes('deviceName') &&
+        readRepo(MANUAL_LAUNCH_QA_EVIDENCE_DOCS_PATH).includes('## 4. iOS evidence'),
+      'QA evidence template iOS/Android format',
     ),
   );
   record(assert(checks, audit.roundOne.verifiedEvidence === 0, 'Round 1 verifiedEvidence 0'));

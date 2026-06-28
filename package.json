@@ -340,6 +340,7 @@
     "verify:map-marker-feedback": "npx tsx scripts/verify-map-marker-feedback.ts",
     "verify:final-ui-visual-unification": "npx tsx scripts/verify-final-ui-visual-unification.ts",
     "analyze:final-ui-visual-unification": "npx tsx scripts/analyze-final-ui-visual-unification.ts",
+    "verify:gameplay-guard-pass": "npx tsx scripts/verify-gameplay-guard-pass.ts",
     "verify:gameplay-loop-qa": "npx tsx scripts/verify-gameplay-loop-qa.ts",
     "analyze:gameplay-loop-qa": "npx tsx scripts/analyze-gameplay-loop-qa.ts",
     "analyze:build-prep": "npx tsx scripts/analyze-build-prep.ts",

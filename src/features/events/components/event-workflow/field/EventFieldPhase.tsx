@@ -22,13 +22,12 @@ import { FieldWorkflowFooter } from '@/features/events/components/event-workflow
 import { EventFieldMicroDecisionCard } from '@/features/events/components/event-workflow/field/EventFieldMicroDecisionCard';
 import {
   FieldAdvisorCommentCard,
-  FieldFeedbackList,
-  FieldFirstImpactPanel,
+  FieldDecisionImpactCard,
+  FieldLiveOperationCard,
+  FieldSignalsStrip,
   FieldPhaseHeading,
-  FieldProgressStepper,
   FieldResourcePulsePanel,
   FieldSecondaryActionsRow,
-  FieldStatusHeroCard,
 } from '@/features/events/components/event-workflow/field/FieldMotionSections';
 import { OnboardingPhaseHint } from '@/features/onboarding/components/OnboardingPhaseHint';
 import { OperationPhaseBridgeCard } from '@/features/events/components/event-workflow/OperationPhaseBridgeCard';
@@ -265,16 +264,17 @@ export function EventFieldPhase({
 
   const footerSummary = useMemo(() => {
     if (interactionState === 'completed') {
-      return `${presentation.selectedPlan.label} · operasyon tamamlandı`;
+      return `${presentation.selectedPlan.label} · ${presentation.liveOperation.outcomeDirectionLabel}`;
     }
     if (interactionState === 'paused_for_decision') {
       return 'Mikro karar bekleniyor';
     }
-    return `${presentation.selectedPlan.label} · ${presentation.timeline.helperText ?? 'Saha sinyali izleniyor'}`;
+    return `${presentation.selectedPlan.label} · ${presentation.liveOperation.statusLabel}`;
   }, [
     interactionState,
+    presentation.liveOperation.outcomeDirectionLabel,
+    presentation.liveOperation.statusLabel,
     presentation.selectedPlan.label,
-    presentation.timeline.helperText,
   ]);
 
   const compact = width < 370;
@@ -328,29 +328,20 @@ export function EventFieldPhase({
         ) : null}
 
         <OperationPhaseContentEnter reducedMotion={reducedMotion} index={3}>
-        <FieldStatusHeroCard hero={presentation.statusHero} reducedMotion={reducedMotion} />
-
-        <FieldProgressStepper
-          timeline={presentation.timeline}
-          operationStatus={presentation.operationStatus}
+        <FieldLiveOperationCard
+          hero={presentation.statusHero}
+          live={presentation.liveOperation}
           reducedMotion={reducedMotion}
         />
 
-        <FieldFeedbackList
-          feedback={presentation.fieldFeedback}
+        <FieldSignalsStrip
+          signals={presentation.fieldSignals}
           reducedMotion={reducedMotion}
         />
 
-        <FieldFirstImpactPanel
-          impact={presentation.firstImpact}
+        <FieldDecisionImpactCard
+          impact={presentation.decisionImpact}
           reducedMotion={reducedMotion}
-        />
-
-        <FieldResourcePulsePanel
-          pulse={presentation.resourcePulse}
-          reducedMotion={reducedMotion}
-          onMaintenanceAction={handleMaintenanceAction}
-          maintenanceActionFeedback={maintenanceActionFeedback}
         />
 
         <EventFieldMicroDecisionCard
@@ -359,16 +350,27 @@ export function EventFieldPhase({
           cardModel={microDecisionCardModel}
         />
 
-        <FieldAdvisorCommentCard
-          comment={presentation.advisorComment}
-          reducedMotion={reducedMotion}
-        />
+        {!presentation.isDay1Simplified ? (
+          <>
+            <FieldResourcePulsePanel
+              pulse={presentation.resourcePulse}
+              reducedMotion={reducedMotion}
+              onMaintenanceAction={handleMaintenanceAction}
+              maintenanceActionFeedback={maintenanceActionFeedback}
+            />
 
-        <FieldSecondaryActionsRow
-          actions={presentation.actions}
-          reducedMotion={reducedMotion}
-          onActionPress={handleSecondaryAction}
-        />
+            <FieldAdvisorCommentCard
+              comment={presentation.advisorComment}
+              reducedMotion={reducedMotion}
+            />
+
+            <FieldSecondaryActionsRow
+              actions={presentation.actions}
+              reducedMotion={reducedMotion}
+              onActionPress={handleSecondaryAction}
+            />
+          </>
+        ) : null}
         </OperationPhaseContentEnter>
       </ScrollView>
 

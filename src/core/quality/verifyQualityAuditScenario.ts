@@ -155,8 +155,8 @@ export function verifyQualityAuditScenario(): VerifyQualityAuditOutcome {
 
   assert(
     checks,
-    getExpectedSaveVersionForCurrentBuild() === 27,
-    'currentSaveVersion 27',
+    getExpectedSaveVersionForCurrentBuild() === SAVE_VERSION,
+    'currentSaveVersion matches runtime SAVE_VERSION',
     String(SAVE_VERSION),
   );
   assert(

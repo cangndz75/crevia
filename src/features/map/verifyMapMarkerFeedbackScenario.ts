@@ -277,9 +277,9 @@ export function verifyMapMarkerFeedbackScenario(): {
   const persistSource = readRepo('src/store/gamePersist.ts');
   assert(
     checks,
-    persistSource.includes('export const SAVE_VERSION: number = 29'),
-    'SAVE_VERSION bumped in gamePersist',
-    'SAVE_VERSION migration',
+    assertVerifySaveVersionPolicy(persistSource),
+    'gamePersist SAVE_VERSION matches policy',
+    `SAVE_VERSION=${SAVE_VERSION}`,
   );
 
   const cityMapCard = readRepo('src/features/map/components/CityMapCard.tsx');

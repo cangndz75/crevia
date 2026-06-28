@@ -5,6 +5,9 @@ import type {
 
 export const REAL_DEVICE_PLAYTEST_DOCS_PATH = 'docs/crevia-real-device-playtest-round-1.md';
 
+/** Round 1 QA evidence template — iOS/Android checklist + attach format. */
+export const REAL_DEVICE_QA_EVIDENCE_DOCS_PATH = 'docs/crevia-real-device-qa-evidence-round-1.md';
+
 export const REAL_DEVICE_PLAYTEST_MIN_AREAS = 12;
 export const REAL_DEVICE_PLAYTEST_MIN_SCENARIOS = 16;
 

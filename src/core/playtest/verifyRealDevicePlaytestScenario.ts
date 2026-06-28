@@ -14,6 +14,7 @@ import { SAVE_VERSION } from '@/store/gamePersist';
 import {
   REAL_DEVICE_PLAYTEST_BLOCKER_CATEGORIES,
   REAL_DEVICE_PLAYTEST_DOCS_PATH,
+  REAL_DEVICE_QA_EVIDENCE_DOCS_PATH,
   REAL_DEVICE_PLAYTEST_MIN_AREAS,
   REAL_DEVICE_PLAYTEST_MIN_SCENARIOS,
   REAL_DEVICE_PLAYTEST_RISK_TAXONOMY,
@@ -165,6 +166,28 @@ export function verifyRealDevicePlaytestScenario(): VerifyRealDevicePlaytestOutc
   ok = assert(checks, doc.includes('video') || doc.includes('Video'), 'Docs video requirements', 'Missing video') && ok;
   ok = assert(checks, doc.includes('blocker'), 'Docs blocker classification', 'Missing blocker section') && ok;
 
+  const qaEvidenceDoc = readRepo(REAL_DEVICE_QA_EVIDENCE_DOCS_PATH);
+  ok = assert(checks, qaEvidenceDoc.length > 0, 'QA evidence template exists', 'Missing QA evidence doc') && ok;
+  ok =
+    assert(checks, qaEvidenceDoc.includes('## 4. iOS evidence'), 'QA template iOS section', 'Missing iOS section') &&
+    ok;
+  ok =
+    assert(
+      checks,
+      qaEvidenceDoc.includes('## 5. Android evidence'),
+      'QA template Android section',
+      'Missing Android section',
+    ) && ok;
+  ok =
+    assert(checks, qaEvidenceDoc.includes('deviceName'), 'QA template deviceName field', 'Missing deviceName') &&
+    ok;
+  ok =
+    assert(checks, qaEvidenceDoc.includes('maintenance_action'), 'QA template maintenance action', 'Missing maintenance') &&
+    ok;
+  ok =
+    assert(checks, qaEvidenceDoc.includes('map_marker_selection'), 'QA template map marker', 'Missing map marker') &&
+    ok;
+
   const launchReview = runSoftLaunchReadinessReview({ mode: 'launch_candidate' });
   ok =
     assert(
@@ -194,7 +217,7 @@ export function verifyRealDevicePlaytestScenario(): VerifyRealDevicePlaytestOutc
   ok = assert(checks, verifyQualityAuditScenario().ok, 'verify:quality-audit compatible', 'Quality audit broken') && ok;
   ok = assert(checks, verifyPerformanceSelectorPassTwoScenario().ok, 'verify:performance-selector-pass-two compatible', 'Perf pass two broken') && ok;
 
-  ok = assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION 23', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
+  ok = assert(checks, isCurrentSaveVersion(SAVE_VERSION), 'SAVE_VERSION matches policy', `SAVE_VERSION=${SAVE_VERSION}`) && ok;
 
   const persist = readRepo('src/store/gamePersist.ts');
   ok =

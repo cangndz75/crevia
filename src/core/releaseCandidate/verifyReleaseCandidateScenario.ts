@@ -18,6 +18,7 @@ import {
   RELEASE_CANDIDATE_NON_GOALS,
   RELEASE_CANDIDATE_PROTECTED_PATHS,
 } from './releaseCandidateConstants';
+import { MANUAL_LAUNCH_QA_EVIDENCE_DOCS_PATH } from '@/core/manualLaunchTracker/manualLaunchRoundOneConstants';
 import { runReleaseCandidateAudit } from './releaseCandidateAudit';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
@@ -91,7 +92,7 @@ export function verifyReleaseCandidateScenario(): VerifyReleaseCandidateOutcome 
   record(assert(checks, existsSync(join(REPO_ROOT, 'src/core/uiDensity/verifyUiDensityScenario.ts')), 'ui-density verify module'));
   record(assert(checks, summarizeCrashSdkStatus().codeIntegrationPass, 'crash code integration PASS reference'));
   record(assert(checks, isAnalyticsSchemaCodeHealthy(), 'analytics schema PASS reference'));
-  record(assert(checks, SAVE_VERSION === RELEASE_CANDIDATE_EXPECTED_SAVE_VERSION, 'SAVE_VERSION 23'));
+  record(assert(checks, SAVE_VERSION === RELEASE_CANDIDATE_EXPECTED_SAVE_VERSION, 'SAVE_VERSION matches policy'));
 
   for (const rel of RELEASE_CANDIDATE_PROTECTED_PATHS) {
     record(assert(checks, !readRepo(rel).includes('releaseCandidate'), `Protected file clean: ${rel}`));
@@ -194,6 +195,7 @@ export function verifyReleaseCandidateScenario(): VerifyReleaseCandidateOutcome 
   record(assert(checks, audit.releaseBoard.length >= 10, 'Release readiness board present'));
   record(assert(checks, audit.nonGoalsConfirmed.length >= RELEASE_CANDIDATE_NON_GOALS.length, 'Non-goals confirmed'));
   record(assert(checks, existsSync(join(REPO_ROOT, RELEASE_CANDIDATE_DOCS_PATH)), 'Release candidate docs exist'));
+  record(assert(checks, existsSync(join(REPO_ROOT, MANUAL_LAUNCH_QA_EVIDENCE_DOCS_PATH)), 'QA evidence template doc exists'));
   record(assert(checks, readRepo('package.json').includes('verify:release-candidate'), 'package.json script'));
   record(assert(checks, NO_NEW_SYSTEM_FREEZE_REGISTERED_CORE_DIRS.includes('src/core/releaseCandidate'), 'Freeze registry includes releaseCandidate'));
   record(assert(checks, existsSync(join(REPO_ROOT, 'src/core/manualLaunchTracker/manualLaunchTrackerAudit.ts')), 'manualLaunchTracker integration'));

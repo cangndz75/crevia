@@ -1,3 +1,5 @@
+import { SAVE_VERSION } from '@/store/gamePersist';
+
 import { REAL_DEVICE_PLAYTEST_AREA_LABELS } from './realDevicePlaytestConstants';
 import {
   buildAllObservationTemplates,
@@ -91,7 +93,7 @@ export function buildRealDevicePlaytestConsoleSummary(
     `Plan present: ${summary.planPresent} | Docs present: ${summary.docsPresent}`,
     `Launch candidate ready: ${summary.launchCandidateReady} (manual results required)`,
     `IAP purchase smoke: separate phase (${plan.iapPurchaseSmokeSeparatePhase})`,
-    `SAVE_VERSION: 23`,
+    `SAVE_VERSION: ${SAVE_VERSION}`,
     '',
     '--- Device profiles ---',
     ...plan.deviceProfiles.map((p) => `  • ${p.label}`),

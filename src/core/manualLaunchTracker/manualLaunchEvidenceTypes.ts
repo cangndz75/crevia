@@ -21,6 +21,13 @@ export type ManualLaunchEvidencePlatform =
   | 'dashboard'
   | 'store_console';
 
+export type ManualLaunchEvidenceResult =
+  | 'pass'
+  | 'fail'
+  | 'blocked'
+  | 'skipped'
+  | 'pending';
+
 export type ManualLaunchEvidenceLogEntry = {
   evidenceId: string;
   blockerId?: string;
@@ -35,6 +42,11 @@ export type ManualLaunchEvidenceLogEntry = {
   buildProfile?: string;
   appVersion?: string;
   buildNumber?: string;
+  deviceName?: string;
+  osVersion?: string;
+  testDate?: string;
+  tester?: string;
+  result?: ManualLaunchEvidenceResult;
   notes?: string;
   fakePassGuard: true;
 };

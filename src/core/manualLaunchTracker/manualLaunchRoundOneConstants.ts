@@ -8,6 +8,9 @@ export const MANUAL_LAUNCH_ROUND_ONE_ID = 'round_1_internal_device_playtest';
 
 export const MANUAL_LAUNCH_ROUND_ONE_DOCS_PATH = 'docs/crevia-internal-device-test-round-one.md';
 
+/** Round 1 QA evidence template — iOS/Android tables + attach JSON format. */
+export const MANUAL_LAUNCH_QA_EVIDENCE_DOCS_PATH = 'docs/crevia-real-device-qa-evidence-round-1.md';
+
 export const MANUAL_LAUNCH_ROUND_ONE_SCOPES: ManualLaunchTestRoundScope[] = [
   {
     id: 'build_readiness',
@@ -488,10 +491,16 @@ export const MANUAL_LAUNCH_EVIDENCE_ATTACH_EXAMPLE = {
   evidenceType: 'screenshot' as const,
   status: 'attached' as const,
   platform: 'ios' as const,
+  deviceName: 'iPhone 15',
+  osVersion: 'iOS 18.2',
   buildProfile: 'internal',
   appVersion: '1.0.0',
-  buildNumber: '23',
+  buildNumber: '42',
+  testDate: '2026-06-28',
+  tester: 'QA — Ada',
+  result: 'pass' as const,
   evidenceLocation: 'docs/evidence/ios/day8-pack-origin.png',
   evidenceSummary: 'Day 8 pack-origin event visible with player-facing chip.',
+  notes: 'Full checklist: docs/crevia-real-device-qa-evidence-round-1.md',
   fakePassGuard: true as const,
 };
