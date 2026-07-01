@@ -26,6 +26,7 @@ import {
   type MapMarkerMotionModel,
   type MapMotionPresentationResult,
 } from './utils/mapMotionPresentation';
+import { buildDistrictMapVisualStateMap } from '@/core/map/mapDistrictVisualState';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..');
 const EXPECTED_SAVE_VERSION = EXPECTED_SAVE_VERSION_FOR_VERIFY;
@@ -513,11 +514,57 @@ export function verifyMapMotionScenario(): VerifyMapMotionOutcome {
   );
 
   const mapScreen = readRepo('src/features/map/screens/MapScreen.tsx');
+  const cityMapCard = readRepo('src/features/map/components/CityMapCard.tsx');
   record(assert(checks, mapScreen.includes('buildMapMotionPresentation'), 'MapScreen composes map motion read-only'));
+  record(assert(checks, mapScreen.includes('buildDistrictMapVisualStateMap'), 'MapScreen binds district visual states'));
+  record(assert(checks, cityMapCard.includes('MapDistrictVisualStateStrip'), 'CityMapCard shows visual state strip'));
+  record(assert(checks, cityMapCard.includes('districtVisualStateMap'), 'CityMapCard receives visual state map'));
   record(assert(checks, existsSync(join(REPO_ROOT, 'src/features/map/utils/mapMarkerMotionHelper.tsx')), 'Marker animation helper exists'));
   record(assert(checks, existsSync(join(REPO_ROOT, 'scripts/analyze-map-motion.ts')), 'package analyzer script exists'));
   record(assert(checks, existsSync(join(REPO_ROOT, 'scripts/verify-map-motion.ts')), 'package verify script exists'));
   record(assert(checks, existsSync(join(REPO_ROOT, 'docs/crevia-map-motion-marker-animation-pass.md')), 'docs next pass noted'));
+
+  const visualMap = buildDistrictMapVisualStateMap({
+    day: 8,
+    focusDistrictId: 'cumhuriyet',
+    districtNeglectRecovery: pipeline.districtNeglectRecovery,
+  });
+  record(
+    assert(
+      checks,
+      visualMap.statusChips.length >= 0 && Object.keys(visualMap.byDistrict).length >= 0,
+      'District visual state map builder',
+    ),
+  );
+  const visualMotion = buildMapMotionPresentation({
+    day: 8,
+    districtVisualStateMap: {
+      ...visualMap,
+      highlightDistrictIds: ['cumhuriyet'],
+      statusChips: visualMap.statusChips,
+      byDistrict: {
+        ...visualMap.byDistrict,
+        cumhuriyet: {
+          districtId: 'cumhuriyet',
+          state: 'recovery_started',
+          tone: 'recovery',
+          chipLabel: 'Toparlanıyor',
+          shortLine: 'Mahalle toparlanma penceresinde.',
+          priority: 78,
+          pulse: false,
+          glow: true,
+          routeHint: false,
+        },
+      },
+    },
+  });
+  record(
+    assert(
+      checks,
+      visualMotion.markers.some((marker) => marker.label === 'Toparlanıyor'),
+      'Visual state feeds motion labels',
+    ),
+  );
 
   if (checks.some((line) => line.startsWith('WARN'))) {
     warn = true;

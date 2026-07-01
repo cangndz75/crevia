@@ -33,6 +33,12 @@ import {
   buildEndOfDayReplayTimelinePresentation,
   type EndOfDayReplayTimelinePresentation,
 } from './endOfDayReplayTimelinePresentation';
+import {
+  buildEndOfDayManagerStyleSurface,
+  type EndOfDayManagerStyleSurface,
+} from './endOfDayManagerStylePresentation';
+import type { DominantStrategyDetectorResult } from '@/core/dominantStrategyDetector/dominantStrategyDetectorTypes';
+import type { StrategyHistoryStateV1 } from '@/core/strategyHistory/strategyHistoryTypes';
 
 export type ClosureOutcomeChip = {
   key: string;
@@ -69,6 +75,7 @@ export type EndOfDayReportClosurePresentation = {
   eceClosing: EndOfDayEceClosingPresentation;
   replayTimeline: EndOfDayReplayTimelinePresentation;
   readinessMemory: ReadinessReportMemoryPresentation;
+  managerStyle: EndOfDayManagerStyleSurface;
   primaryCtaLabel: string;
   secondaryCtaLabels: string[];
   collectStrings: () => string[];
@@ -101,6 +108,17 @@ export type BuildEndOfDayReportClosureInput = {
   hideScoreRing?: boolean;
   avoidLines?: string[];
   maintenanceBacklogRuntime?: MaintenanceBacklogRuntimeState | null;
+  strategyHistory?: StrategyHistoryStateV1 | null;
+  dominantStrategy?: DominantStrategyDetectorResult | null;
+  dominantStrategyNote?: string | null;
+  districtNeglectRecoveryNote?: string | null;
+  positiveComebackNote?: string | null;
+  decisionHistory?: Array<{
+    day: number;
+    decisionLabel: string;
+    eventTitle: string;
+  }>;
+  showManagerStyleCta?: boolean;
 };
 
 const MAX_OUTCOME_CHIPS = 4;
@@ -330,6 +348,30 @@ export function buildEndOfDayReportClosurePresentation(
     socialPressure: (input.socialPulseScore ?? input.metrics.publicSatisfaction) < 50,
   });
 
+  const managerStyle = buildEndOfDayManagerStyleSurface({
+    day: input.day,
+    metrics: input.metrics,
+    decisionsToday: input.decisionsToday,
+    criticalDecision: input.criticalDecision,
+    decisionHistory: input.decisionHistory,
+    strategyHistory: input.strategyHistory,
+    dominantStrategy: input.dominantStrategy,
+    dominantStrategyNote: input.dominantStrategyNote,
+    managementStyleLine: input.managementStyleLine,
+    districtNeglectRecoveryNote: input.districtNeglectRecoveryNote,
+    positiveComebackNote: input.positiveComebackNote,
+    tomorrowFocusLine: tomorrowFocus.focusLine,
+    socialPulseScore: input.socialPulseScore,
+    showStyleDetailCta: input.showManagerStyleCta ?? !isDay1,
+    avoidLines: [
+      ...avoid,
+      decisionStory.decisionSentence,
+      neighborhoodPulse.headline,
+      tomorrowFocus.focusLine,
+      eceClosing.line,
+    ],
+  });
+
   const outcomeChips = isDay1
     ? buildOutcomeChips(
         input.metrics,
@@ -373,6 +415,14 @@ export function buildEndOfDayReportClosurePresentation(
       tomorrowFocus.riskTag,
       eceClosing.line,
       readinessMemory.closureLine,
+      managerStyle.summary,
+      managerStyle.styleLabel,
+      managerStyle.advisorLine,
+      managerStyle.positiveReinforcement,
+      managerStyle.recoveryNote,
+      managerStyle.dominantWarning?.message,
+      ...managerStyle.behaviorSignals.map((s) => `${s.label} ${s.value}`),
+      ...managerStyle.impactChips.map((c) => `${c.label} ${c.value}`),
       ...replayTimeline.items.map((i) => `${i.title} ${i.impactChip}`),
       closingTone.ctaSubtext,
     ].filter((s): s is string => Boolean(s?.trim()));
@@ -394,6 +444,7 @@ export function buildEndOfDayReportClosurePresentation(
       ? { ...replayTimeline, items: replayTimeline.items.slice(0, 3) }
       : replayTimeline,
     readinessMemory,
+    managerStyle,
     primaryCtaLabel: 'Yeni Güne Başla',
     secondaryCtaLabels: isDay1
       ? ['Merkeze Dön']

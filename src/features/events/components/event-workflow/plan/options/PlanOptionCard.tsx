@@ -15,6 +15,7 @@ import type { PlanOptionPresentation } from '@/features/events/utils/eventPlanOp
 import { shadows } from '@/ui/theme/shadows';
 
 import { PlanOptionStatsRow } from './PlanOptionStatsRow';
+import { DecisionExpectedImpactPanel } from './DecisionExpectedImpactPanel';
 import { ContextFitBadgeView } from './ContextFitBadgeView';
 import { ReadinessFitChipView } from './ReadinessFitChipView';
 import { PlanOptionTradeoffStrip, TradeoffChipRow } from './PlanOptionTradeoffStrip';
@@ -211,6 +212,10 @@ export function PlanOptionCard({
                 {option.depth.maintenanceEconomyHint}
               </Text>
             ) : null}
+            <DecisionExpectedImpactPanel
+              model={option.depth.expectedImpact}
+              selected={option.selected}
+            />
             <PlanOptionTradeoffStrip
               meter={option.depth.tradeoffMeter}
               selected={option.selected}

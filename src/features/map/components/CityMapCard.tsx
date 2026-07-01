@@ -21,6 +21,9 @@ import { getNeighborhoodMapCharacterLine } from '@/core/neighborhoodIdentity/nei
 import type { OperationalResourcesState } from '@/core/operationalResources/operationalResourceTypes';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import { MapActiveOperationActionCard } from '@/features/map/components/MapActiveOperationActionCard';
+import type { DistrictMapVisualStateMap } from '@/core/map/mapDistrictVisualState';
+import { pickDistrictMapVisualState } from '@/core/map/mapDistrictVisualState';
+import { MapDistrictVisualStateStrip } from '@/features/map/components/MapDistrictVisualStateStrip';
 import { MapCompactBottomPanel } from '@/features/map/components/MapCompactBottomPanel';
 import { MapControlStack } from '@/features/map/components/MapControlStack';
 import { MapDirectActionRow } from '@/features/map/components/MapDirectActionRow';
@@ -85,6 +88,7 @@ type Props = {
   mapGameplayPresentation?: MapGameplayPresentation | null;
   operationalResources?: OperationalResourcesState;
   mapMotionPresentation?: MapMotionPresentationResult | null;
+  districtVisualStateMap?: DistrictMapVisualStateMap | null;
   mapReactionLiteModel?: MapReactionLiteModel | null;
   recentDecisionRecord?: DecisionRecord | null;
   maintenanceBacklogRuntime?: MaintenanceBacklogRuntimeState | null;
@@ -105,6 +109,9 @@ export function CityMapCard({
   gameDay,
   journalMotionCue,
   bubbleMotionCue,
+  reactionHighlightDistrictIds,
+  reactionMotionCues,
+  operationScopeMotionDistrictIds,
   reducedMotionMode = false,
   activeOperationCard = null,
   activeOperationBinding = null,
@@ -112,6 +119,7 @@ export function CityMapCard({
   operationalResources,
   activeEvents,
   mapMotionPresentation = null,
+  districtVisualStateMap = null,
   mapReactionLiteModel = null,
   recentDecisionRecord = null,
   maintenanceBacklogRuntime = null,
@@ -287,6 +295,19 @@ export function CityMapCard({
     [mapActionCallbacks, router, selectedMarker],
   );
 
+  const selectedDistrictOnMap = useMemo(
+    () => resolveCreviaDistrictIdFromMarker(selectedMarker),
+    [selectedMarker],
+  );
+
+  const selectedDistrictVisualState = useMemo(
+    () =>
+      selectedDistrictOnMap
+        ? pickDistrictMapVisualState(districtVisualStateMap, selectedDistrictOnMap)
+        : null,
+    [districtVisualStateMap, selectedDistrictOnMap],
+  );
+
   const bottomPanel = useMemo(() => {
     if (!selectedMarker) return null;
     const panel = buildMapBottomPanelPresentation(selectedMarker, {
@@ -323,10 +344,13 @@ export function CityMapCard({
     );
     const primaryActionLabel =
       actionBundle.primaryAction?.label ?? panel.primaryActionLabel;
+    const districtRecoveryLine = selectedDistrictVisualState?.shortLine;
     return {
       ...panel,
-      tacticalMicroLine: tacticalMotion.tacticalMicroLine,
-      layerHintLine: tacticalMotion.layerHints[0]?.label,
+      tacticalMicroLine:
+        districtRecoveryLine ??
+        tacticalMotion.tacticalMicroLine,
+      layerHintLine: selectedDistrictVisualState?.chipLabel ?? tacticalMotion.layerHints[0]?.label,
       primaryActionLabel,
       primaryRoute:
         actionBundle.primaryAction?.targetRouteKey?.startsWith('/')
@@ -349,6 +373,7 @@ export function CityMapCard({
     recentDecisionRecord,
     selectedMarker,
     selectedMarkerIndex,
+    selectedDistrictVisualState,
     tacticalMotion.layerHints,
     tacticalMotion.tacticalMicroLine,
   ]);
@@ -377,10 +402,18 @@ export function CityMapCard({
     focusMarker(navigableMarkers[nextIndex]!.id);
   }, [focusMarker, navigableMarkers, selectedMarkerIndex]);
 
-  const selectedDistrictOnMap = useMemo(
-    () => resolveCreviaDistrictIdFromMarker(selectedMarker),
-    [selectedMarker],
-  );
+  const highlightDistrictIds = useMemo(() => {
+    const ids = new Set<MapDistrictId>([
+      ...(reactionHighlightDistrictIds ?? []),
+      ...(operationScopeMotionDistrictIds ?? []),
+      ...(districtVisualStateMap?.highlightDistrictIds ?? []),
+    ]);
+    return [...ids];
+  }, [
+    districtVisualStateMap?.highlightDistrictIds,
+    operationScopeMotionDistrictIds,
+    reactionHighlightDistrictIds,
+  ]);
 
   const districtTraitLabels = useMemo(
     () => buildDistrictTraitLabelMap(displayMarkers),
@@ -464,11 +497,20 @@ export function CityMapCard({
           mode="fullscreen"
           contentFit="cover"
           districtMotionMarkers={mapMotionPresentation?.markers}
+          districtVisualStateMap={districtVisualStateMap}
+          highlightDistrictIds={highlightDistrictIds}
           reducedMotionMode={reducedMotionMode}
           selectedDistrictId={selectedDistrictOnMap}
           districtTraitLabels={districtTraitLabels}
           onDistrictPress={handleDistrictPress}
         />
+
+        {!isDetail ? (
+          <MapDistrictVisualStateStrip
+            model={districtVisualStateMap}
+            topOffset={headerTop + 52}
+          />
+        ) : null}
 
         {!isDetail && presentation ? (
           <MapGameplayMarkerLayer

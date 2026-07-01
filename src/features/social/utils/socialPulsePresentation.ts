@@ -12,6 +12,7 @@ import {
   normalizeMapDistrictId,
   resolveDistrictAccentColor,
 } from '@/core/districts/districtIdentityPresentation';
+import { buildDistrictLiveBehaviorSignal } from '@/core/districtPersonality';
 import { buildEventDomainFocusModel } from '@/core/events/eventDomainPresentation';
 import type { EventCard } from '@/core/models/EventCard';
 import type { OperationSignalsState } from '@/core/operations/operationSignalTypes';
@@ -376,9 +377,21 @@ export function buildHotSocialTopicModel(
   };
 
   const districtId = resolveDistrictIdFromHotTopic(safe);
-  const contextLine = districtId
+  const identityContextLine = districtId
     ? buildDistrictEventContextLine(districtId)
     : undefined;
+  const behaviorContextLine = districtId
+    ? buildDistrictLiveBehaviorSignal({
+        districtId,
+        districtName: getDistrictIdentity(districtId).name,
+        outcomeBand:
+          safe.severity === 'critical' || safe.severity === 'high'
+            ? 'warning'
+            : 'neutral',
+        avoidLines: [identityContextLine ?? '', safe.title ?? ''].filter(Boolean),
+      })?.socialPressureLine
+    : undefined;
+  const contextLine = behaviorContextLine ?? identityContextLine;
   const tone = hotTopicTone(safe);
 
   return {

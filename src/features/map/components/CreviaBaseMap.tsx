@@ -32,6 +32,8 @@ import type {
 } from '../types/creviaMapTypes';
 import { MapDistrictLabel } from './MapDistrictLabel';
 import { MapOperationMarker } from './MapOperationMarker';
+import type { DistrictMapVisualStateMap } from '@/core/map/mapDistrictVisualState';
+import { pickDistrictMapVisualState } from '@/core/map/mapDistrictVisualState';
 import type { MapMarkerMotionModel } from '../utils/mapMotionPresentation';
 import { pickDistrictMotionModel } from '../utils/mapMarkerMotionHelper';
 
@@ -51,6 +53,8 @@ type Props = {
   districts?: readonly CreviaMapDistrictLayout[];
   operationMarkers?: readonly CreviaMapOperationMarker[];
   districtMotionMarkers?: readonly MapMarkerMotionModel[];
+  districtVisualStateMap?: DistrictMapVisualStateMap | null;
+  highlightDistrictIds?: readonly CreviaMapDistrictId[];
   reducedMotionMode?: boolean;
   selectedDistrictId?: CreviaMapDistrictId | null;
   districtTraitLabels?: Partial<Record<CreviaMapDistrictId, string>>;
@@ -174,6 +178,8 @@ export const CreviaBaseMap = forwardRef<CreviaBaseMapControls, Props>(
       districts = creviaDistrictLayout,
       operationMarkers = creviaBaseOperationMarkers,
       districtMotionMarkers = [],
+      districtVisualStateMap = null,
+      highlightDistrictIds = [],
       reducedMotionMode = false,
       selectedDistrictId = null,
       districtTraitLabels = {},
@@ -507,6 +513,11 @@ export const CreviaBaseMap = forwardRef<CreviaBaseMapControls, Props>(
       return map;
     }, [districtMotionMarkers, visibleMarkers]);
 
+    const highlightSet = useMemo(
+      () => new Set(highlightDistrictIds),
+      [highlightDistrictIds],
+    );
+
     const ready = imageSize.width > 0 && imageSize.height > 0;
 
     return (
@@ -540,21 +551,33 @@ export const CreviaBaseMap = forwardRef<CreviaBaseMapControls, Props>(
                     accessibilityIgnoresInvertColors
                   />
                   <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                    {districts.map((district) => (
-                      <MapDistrictLabel
-                        key={district.id}
-                        district={district}
-                        motionModel={pickDistrictMotionModel(
-                          districtMotionMarkers,
-                          district.id as CreviaMapDistrictId,
-                        )}
-                        reducedMotionMode={reducedMotionMode}
-                        selected={selectedDistrictId === district.id}
-                        traitLabel={districtTraitLabels[district.id as CreviaMapDistrictId]}
-                        emphasize={selectedDistrictId === district.id}
-                        onPress={onDistrictPress}
-                      />
-                    ))}
+                    {districts.map((district) => {
+                      const districtId = district.id as CreviaMapDistrictId;
+                      const visualState = pickDistrictMapVisualState(
+                        districtVisualStateMap,
+                        districtId,
+                      );
+                      const emphasized =
+                        selectedDistrictId === district.id ||
+                        highlightSet.has(districtId) ||
+                        Boolean(visualState && visualState.state !== 'stable');
+                      return (
+                        <MapDistrictLabel
+                          key={district.id}
+                          district={district}
+                          motionModel={pickDistrictMotionModel(
+                            districtMotionMarkers,
+                            districtId,
+                          )}
+                          visualState={visualState}
+                          reducedMotionMode={reducedMotionMode}
+                          selected={selectedDistrictId === district.id}
+                          traitLabel={districtTraitLabels[districtId]}
+                          emphasize={emphasized}
+                          onPress={onDistrictPress}
+                        />
+                      );
+                    })}
                     {visibleMarkers.map((marker) => (
                       <MapOperationMarker
                         key={marker.id}

@@ -1,4 +1,7 @@
-import { buildDistrictFeedWatchCopy } from '@/core/districtPersonality';
+import {
+  buildDistrictFeedWatchCopy,
+  buildDistrictLiveBehaviorSignal,
+} from '@/core/districtPersonality';
 import { lineDuplicatesAvoidLines, normalizePresentationText } from '@/core/presentationDedupe';
 import type { CenterHomeCoreSections } from './centerHomePresentation';
 import type { MaintenanceHubSignal } from '@/core/maintenanceBacklog';
@@ -318,9 +321,24 @@ function buildDistrictWatchFeedItem(
     outcomeBand: /yüksek|orta/i.test(risk) ? 'warning' : 'neutral',
     avoidLines: [risk, trust],
   });
+  const watchOutcome = /orta/i.test(risk) || risk.toLocaleLowerCase('tr-TR').includes('ksek')
+    ? 'warning'
+    : 'neutral';
+  const liveBehavior = buildDistrictLiveBehaviorSignal({
+    districtName: name,
+    day,
+    outcomeBand: watchOutcome,
+    avoidLines: [
+      personalityCopy?.title ?? '',
+      personalityCopy?.subtitle ?? '',
+      risk,
+      trust,
+    ].filter(Boolean),
+  });
 
   const title = personalityCopy?.title ?? `${name} takipte.`;
   const subtitle =
+    clampText(liveBehavior?.cityAgendaLine, 72) ??
     personalityCopy?.subtitle ??
     clampText(
       /yüksek|orta/i.test(risk)

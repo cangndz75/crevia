@@ -152,6 +152,7 @@ export type CenterGameFirstQuickActionItem = {
   accent: 'green' | 'gold' | 'sage' | 'amber';
   disabled?: boolean;
   lockReason?: string;
+  actionKey?: string;
   cta: CenterHubAction;
 };
 
@@ -917,6 +918,7 @@ function buildQuickActions(
       accent: command.accent,
       disabled: command.disabled,
       lockReason: command.unlockLabel,
+      actionKey: command.actionKey,
       cta: strengthenCta(
         command.title,
         'Komutu çalıştır',

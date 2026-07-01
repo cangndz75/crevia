@@ -1348,6 +1348,17 @@ export function EndOfDayReportView({
       periodGoalProgress: Boolean(model.periodGoalImpactLine),
       replayInput: reportReplayContextInput,
       hideScoreRing: reportGuard.hideMetaProgressHeavy,
+      strategyHistory,
+      dominantStrategy: memoryFollowUpContext.dominantStrategyDetector,
+      dominantStrategyNote: model.dominantStrategyNote,
+      districtNeglectRecoveryNote: model.districtNeglectRecoveryNote,
+      positiveComebackNote: model.positiveComebackNote,
+      decisionHistory: decisionHistory.map((record) => ({
+        day: record.day,
+        decisionLabel: record.decisionLabel,
+        eventTitle: record.eventTitle,
+      })),
+      showManagerStyleCta: true,
       avoidLines: [
         ...(model.tomorrowNotes ?? []),
         model.oneMoreDayCard?.line ?? '',
@@ -1362,11 +1373,15 @@ export function EndOfDayReportView({
     endDayCliffhanger.tomorrowRisk.suggestedFocus,
     lastDecisionForDay,
     maintenanceBacklogRuntime,
+    memoryFollowUpContext,
     metrics,
+    model.districtNeglectRecoveryNote,
+    model.dominantStrategyNote,
     model.eceStrategyLine?.text,
     model.managementStyleLine,
     model.oneMoreDayCard?.line,
     model.periodGoalImpactLine,
+    model.positiveComebackNote,
     model.successScore,
     model.tomorrowNotes,
     model.tomorrowPreparationLine,
@@ -1379,6 +1394,7 @@ export function EndOfDayReportView({
     reportSocialEcho?.message,
     socialEchoForReport?.mention,
     socialPulseScore,
+    strategyHistory,
     tomorrowRiskPresentation.report,
   ]);
 
@@ -1778,6 +1794,7 @@ export function EndOfDayReportView({
         day={report.day}
         reducedMotion={reducedMotion}
         onDayFlowLayout={onDayFlowLayout}
+        onManagerStyleCta={onShowDayFlow}
       />
 
       <ReportReplayMemoryPrimaryFlow

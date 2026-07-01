@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+
+import { playLightImpactHaptic } from '@/core/feedback/hapticFeedback';
 
 import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import { DEFAULT_PILOT_DISTRICT_ID } from '@/core/models/DistrictProfile';
@@ -25,7 +27,10 @@ import {
   buildActiveOperationMapBinding,
   buildPolishedActiveOperationMapCard,
 } from '@/core/activeOperationMapBinding';
-import { buildDistrictPersonalityProfile } from '@/core/districtPersonality';
+import {
+  buildDistrictLiveBehaviorSignal,
+  buildDistrictPersonalityProfile,
+} from '@/core/districtPersonality';
 import { buildDistrictPersonalityMapContext } from '@/core/districtPersonality/districtPersonalityPresentation';
 import { selectActiveMaintenanceRuntimeItems } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeModel';
 import { deriveActivePeriodGoal, buildPeriodGoalPresentation } from '@/core/periodGoals/periodGoalModel';
@@ -34,6 +39,10 @@ import { buildEventGameplayVarietyProfile } from '@/core/eventVariety/eventGamep
 import { buildMapGameplayBindings } from '@/core/mapGameplayBinding/mapGameplayBindingModel';
 import { buildMapGameplayRuntimeFeedback } from '@/core/mapGameplayBinding/mapGameplayRuntimeFeedbackModel';
 import { buildMapDistrictIntelligenceModel } from '@/core/map/mapDistrictIntelligencePresentation';
+import {
+  buildDistrictMapVisualStateMap,
+  type DistrictMapVisualStateMap,
+} from '@/core/map/mapDistrictVisualState';
 import {
   buildDistrictReportCardFullModel,
   buildDistrictReportCardMapPresentation,
@@ -91,6 +100,9 @@ import { mapUi } from '@/features/map/utils/mapUiTokens';
 import { LayerPanel } from '../components/LayerPanel';
 import { MapGuideModal } from '../components/MapGuideModal';
 import { MapHeroPanel } from '../components/MapHeroPanel';
+import { MapObservationOverlay } from '../components/observation';
+import { useMapObservationController } from '../hooks/useMapObservationController';
+import { buildMapObservationPresentationModel } from '../presentation/mapObservationPresentation';
 import {
   DEFAULT_MAP_DISTRICT_ID,
   MAP_DISTRICT_IDS,
@@ -113,6 +125,8 @@ import type {
 } from '../types/map';
 
 export function MapScreen() {
+  const router = useRouter();
+  const { observe } = useLocalSearchParams<{ observe?: string | string[] }>();
   const reducedMotionMode = useReduceMotionPreference();
   const selectedDistrictId: PilotDistrictId =
     useGameStore(selectSelectedPilotDistrictId) ?? DEFAULT_PILOT_DISTRICT_ID;
@@ -662,9 +676,18 @@ export function MapScreen() {
       activeTaskRouteSignals: activeTaskRoutePreview,
     });
     const districtMapContext = buildDistrictPersonalityMapContext(districtProfile);
+    const liveBehaviorSignal = buildDistrictLiveBehaviorSignal({
+      districtId: districtProfile.districtId,
+      districtName: districtProfile.districtName,
+      profile: districtProfile,
+      day: gameDay,
+      outcomeBand: primaryMapEvent ? 'warning' : 'neutral',
+      avoidLines: [districtMapContext.mapSignalLine],
+    });
     return {
       periodGoalShortTitle: periodGoal.shortTitle,
-      districtPersonalitySignalLine: districtMapContext.mapSignalLine,
+      districtPersonalitySignalLine:
+        liveBehaviorSignal?.mapChip ?? districtMapContext.mapSignalLine,
     };
   }, [
     activeTaskRoutePreview,
@@ -676,34 +699,6 @@ export function MapScreen() {
     operationalResources,
     primaryMapEvent?.district,
     primaryMapEvent?.neighborhoodId,
-  ]);
-
-  const mapMotionPresentation = useMemo(() => {
-    return buildMapMotionPresentation({
-      day: gameDay,
-      reducedMotion: reducedMotionMode,
-      focusDistrictId,
-      activeOperationBinding: activeOperationMapContext?.binding,
-      mapGameplayBindings:
-        mapGameplayRuntimeFeedback?.enrichedBindings ??
-        activeOperationMapContext?.mapGameplayBindings,
-      mapGameplayRuntimeFeedback,
-      day8StrategicContent: postPilotMemoryFollowUpContext?.day8StrategicContent,
-      districtNeglectRecovery: postPilotMemoryFollowUpContext?.districtNeglectRecovery,
-      positiveComeback: postPilotMemoryFollowUpContext?.positiveComeback,
-      cityMemoryVisibility: postPilotMemoryFollowUpContext?.cityMemoryVisibility,
-      activeTaskRoute: activeTaskRoutePreview,
-      mapPresenceViewModel,
-    });
-  }, [
-    activeOperationMapContext,
-    activeTaskRoutePreview,
-    focusDistrictId,
-    gameDay,
-    mapGameplayRuntimeFeedback,
-    mapPresenceViewModel,
-    postPilotMemoryFollowUpContext,
-    reducedMotionMode,
   ]);
 
   const postPilotMapContextLine = useMemo(() => {
@@ -899,6 +894,60 @@ export function MapScreen() {
     showPostPilotMapChrome,
   ]);
 
+  const districtVisualStateMap = useMemo((): DistrictMapVisualStateMap => {
+    return buildDistrictMapVisualStateMap({
+      day: gameDay,
+      focusDistrictId,
+      districtNeglectRecovery: postPilotMemoryFollowUpContext?.districtNeglectRecovery,
+      mapReactionLiteModel,
+      activeOperationBinding: activeOperationMapContext?.binding,
+      existingLines: [
+        mapDistrictReportCard?.primaryLine ?? '',
+        mapDistrictReportCard?.recentEffectLine ?? '',
+        mainOperationScopeHintLine ?? '',
+      ].filter(Boolean),
+    });
+  }, [
+    activeOperationMapContext?.binding,
+    focusDistrictId,
+    gameDay,
+    mainOperationScopeHintLine,
+    mapDistrictReportCard?.primaryLine,
+    mapDistrictReportCard?.recentEffectLine,
+    mapReactionLiteModel,
+    postPilotMemoryFollowUpContext?.districtNeglectRecovery,
+  ]);
+
+  const mapMotionPresentation = useMemo(() => {
+    return buildMapMotionPresentation({
+      day: gameDay,
+      reducedMotion: reducedMotionMode,
+      focusDistrictId,
+      activeOperationBinding: activeOperationMapContext?.binding,
+      mapGameplayBindings:
+        mapGameplayRuntimeFeedback?.enrichedBindings ??
+        activeOperationMapContext?.mapGameplayBindings,
+      mapGameplayRuntimeFeedback,
+      day8StrategicContent: postPilotMemoryFollowUpContext?.day8StrategicContent,
+      districtNeglectRecovery: postPilotMemoryFollowUpContext?.districtNeglectRecovery,
+      districtVisualStateMap,
+      positiveComeback: postPilotMemoryFollowUpContext?.positiveComeback,
+      cityMemoryVisibility: postPilotMemoryFollowUpContext?.cityMemoryVisibility,
+      activeTaskRoute: activeTaskRoutePreview,
+      mapPresenceViewModel,
+    });
+  }, [
+    activeOperationMapContext,
+    activeTaskRoutePreview,
+    districtVisualStateMap,
+    focusDistrictId,
+    gameDay,
+    mapGameplayRuntimeFeedback,
+    mapPresenceViewModel,
+    postPilotMemoryFollowUpContext,
+    reducedMotionMode,
+  ]);
+
   const rewardComebackMapPresentation = useMemo(() => {
     if (gameDay <= 2) return null;
     return buildRewardComebackMapPresentation({
@@ -991,6 +1040,63 @@ export function MapScreen() {
     setActiveLayers((prev) => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
+  const observationModel = useMemo(
+    () =>
+      buildMapObservationPresentationModel({
+        activeEvent: primaryMapEvent,
+        activeOperationCard: activeOperationMapCard,
+        focusDistrictId,
+      }),
+    [activeOperationMapCard, focusDistrictId, primaryMapEvent],
+  );
+
+  const canStartObservation = Boolean(primaryMapEvent) && mapViewMode === 'overview';
+
+  const observation = useMapObservationController({
+    model: observationModel,
+    reducedMotion: reducedMotionMode,
+    canObserve: canStartObservation,
+  });
+
+  const observeParamRequested = useMemo(() => {
+    const value = Array.isArray(observe) ? observe[0] : observe;
+    return value === '1' || value === 'true';
+  }, [observe]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!observeParamRequested) return;
+      router.setParams({ observe: undefined } as never);
+      observation.beginObservation();
+    }, [observeParamRequested, observation.beginObservation, router]),
+  );
+
+  const handleApplyObservationRecommendation = useCallback(() => {
+    playLightImpactHaptic();
+    observation.dismissResultSheet();
+    const route = observationModel.applyRecommendationRoute ?? '/events';
+    router.push(route as never);
+  }, [observation, observationModel.applyRecommendationRoute, router]);
+
+  const handleFocusObservationArea = useCallback(() => {
+    const eventDistrictId = primaryMapEvent?.neighborhoodId;
+    if (eventDistrictId && MAP_DISTRICT_IDS.includes(eventDistrictId as MapDistrictId)) {
+      handleDistrictSelect(eventDistrictId as MapDistrictId);
+    } else {
+      handleDistrictSelect(observationModel.targetDistrictId);
+    }
+    if (mapGameplayPresentation?.defaultSelectedMarkerId) {
+      setSelectedPinId(mapGameplayPresentation.defaultSelectedMarkerId);
+    }
+    observation.dismissResultSheet();
+  }, [
+    handleDistrictSelect,
+    mapGameplayPresentation?.defaultSelectedMarkerId,
+    observation,
+    observationModel.targetDistrictId,
+    primaryMapEvent?.neighborhoodId,
+  ]);
+
   return (
     <GameScreenShell
       scrollable={false}
@@ -1034,6 +1140,7 @@ export function MapScreen() {
           mapGameplayPresentation={mapGameplayPresentation}
           operationalResources={operationalResources}
           mapMotionPresentation={mapMotionPresentation}
+          districtVisualStateMap={districtVisualStateMap}
           mapReactionLiteModel={mapReactionLiteModel}
           recentDecisionRecord={decisionHistory.at(-1) ?? null}
           maintenanceBacklogRuntime={maintenanceBacklogRuntime}
@@ -1046,6 +1153,21 @@ export function MapScreen() {
             setSelectedPinId((current) => (current === pinId ? null : pinId));
           }}
         />
+        {observation.isOverlayVisible ? (
+          <MapObservationOverlay
+            model={observationModel}
+            mode={observation.mode}
+            confidence={observation.confidence}
+            scanningPhase={observation.scanningPhase}
+            showResultSheet={observation.showResultSheet}
+            pinsRevealed={observation.pinsRevealed}
+            energyRemaining={observation.energyRemaining}
+            reducedMotion={reducedMotionMode}
+            onApplyRecommendation={handleApplyObservationRecommendation}
+            onFocusMap={handleFocusObservationArea}
+            onDismissResult={observation.dismissResultSheet}
+          />
+        ) : null}
       </View>
 
       <LayerPanel

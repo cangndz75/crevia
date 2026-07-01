@@ -15,6 +15,7 @@ import { buildEndOfDayNeighborhoodPulsePresentation } from '@/features/reports/p
 import { buildEndOfDayTradeoffBalancePresentation } from '@/features/reports/presentation/closure/endOfDayTradeoffBalancePresentation';
 import { buildEndOfDayTomorrowFocusPresentation } from '@/features/reports/presentation/closure/endOfDayTomorrowFocusPresentation';
 import { buildEndOfDayReplayTimelinePresentation } from '@/features/reports/presentation/closure/endOfDayReplayTimelinePresentation';
+import { buildEndOfDayManagerStyleSurface } from '@/features/reports/presentation/closure/endOfDayManagerStylePresentation';
 import { reportPresentationContainsBannedWords } from '@/features/reports/utils/endOfDayReportPresentation';
 
 function readRepo(rel: string): string {
@@ -79,6 +80,13 @@ export function verifyEndOfDayReportClosureScenario(): VerifyEndOfDayReportClosu
       !day1Closure.decisionStory.playerStyleTag,
       'Day 1 player style gizli',
       'Day 1 style tag görünür',
+    ) && ok;
+  ok =
+    assert(
+      checks,
+      day1Closure.managerStyle.visible && day1Closure.managerStyle.status === 'no_history',
+      'Day 1 manager style no_history kartı',
+      `Day 1 manager style ${day1Closure.managerStyle.status}`,
     ) && ok;
   ok =
     assert(
@@ -156,6 +164,15 @@ export function verifyEndOfDayReportClosureScenario(): VerifyEndOfDayReportClosu
   ok =
     assert(
       checks,
+      day8Closure.managerStyle.visible &&
+        day8Closure.managerStyle.styleLabel.length > 0 &&
+        day8Closure.managerStyle.behaviorSignals.length >= 1,
+      'Day 8+ manager style kartı + davranış sinyali',
+      'Manager style eksik',
+    ) && ok;
+  ok =
+    assert(
+      checks,
       day8Closure.tomorrowFocus.visible && day8Closure.tomorrowFocus.focusLine.length > 10,
       'Yarın tek odak üretilir',
       'Tomorrow focus eksik',
@@ -207,11 +224,13 @@ export function verifyEndOfDayReportClosureScenario(): VerifyEndOfDayReportClosu
     ) && ok;
 
   const reportView = readRepo('src/features/reports/components/end-of-day/EndOfDayReportView.tsx');
+  const closureFlow = readRepo('src/features/reports/components/end-of-day/closure/EndOfDayClosurePrimaryFlow.tsx');
   ok =
     assert(
       checks,
       reportView.includes('EndOfDayClosurePrimaryFlow') &&
-        reportView.includes('buildEndOfDayReportClosurePresentation'),
+        reportView.includes('buildEndOfDayReportClosurePresentation') &&
+        closureFlow.includes('EndOfDayManagerStyleCard'),
       'EndOfDayReportView closure flow bağlı',
       'View wiring eksik',
     ) && ok;
@@ -247,6 +266,32 @@ export function verifyEndOfDayReportClosureScenario(): VerifyEndOfDayReportClosu
 
   const tomorrow = buildEndOfDayTomorrowFocusPresentation({ day: 5, tomorrowNotes: ['Yarın bakım kontrolü'] });
   ok = assert(checks, tomorrow.focusLine.includes('bakım'), 'Tomorrow focus kaynaklardan türetilir', 'Focus hatalı') && ok;
+
+  const earlyStyle = buildEndOfDayManagerStyleSurface({
+    day: 5,
+    metrics: baseMetrics(),
+    decisionsToday: [
+      {
+        id: 'd5-1',
+        day: 5,
+        eventId: 'evt-1',
+        eventTitle: 'Saha',
+        decisionId: 'dec-1',
+        decisionLabel: 'Hızlı müdahale',
+        createdAt: new Date().toISOString(),
+        appliedEffects: { publicSatisfaction: 2, budget: -800 },
+        appliedCosts: {},
+      },
+    ],
+    showStyleDetailCta: true,
+  });
+  ok =
+    assert(
+      checks,
+      earlyStyle.status === 'early_signal' && earlyStyle.styleLabel.length > 0,
+      'Gün 1-7 erken sinyal manager style',
+      `early style ${earlyStyle.status}`,
+    ) && ok;
 
   const failCount = checks.filter((c) => c.startsWith('✗')).length;
   return { ok, checks, failCount };

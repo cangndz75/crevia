@@ -176,7 +176,7 @@ export const MapDistrictMotionOverlay = memo(function MapDistrictMotionOverlay({
   if (!motionModel || motionModel.intensity === 'none') return null;
 
   const color = resolveMapMotionAccentColor(motionModel.kind);
-  const badge = motionModel.portfolioBadgeLabel ?? motionBadgeLabel(motionModel.kind);
+  const badge = motionModel.label ?? motionModel.portfolioBadgeLabel ?? motionBadgeLabel(motionModel.kind);
   const showPulse = motionModel.pulse && !reducedMotionMode;
   const showStaticEmphasis = motionModel.reducedMotionFallback || reducedMotionMode;
   const showGlow = motionModel.glow && !showStaticEmphasis;

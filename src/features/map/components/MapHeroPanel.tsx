@@ -10,6 +10,7 @@ import type { PilotDistrictId } from '@/core/models/DistrictProfile';
 import type { OperationalResourcesState } from '@/core/operationalResources/operationalResourceTypes';
 import type { VehicleState } from '@/core/vehicles/vehicleTypes';
 import type { MapReactionLiteModel } from '@/core/mapReactions/mapReactionTypes';
+import type { DistrictMapVisualStateMap } from '@/core/map/mapDistrictVisualState';
 import { CityMapCard } from '@/features/map/components/CityMapCard';
 import type { MapGameplayPresentation } from '@/features/map/utils/mapGameplayPresentation';
 import type { MapMotionPresentationResult } from '@/features/map/utils/mapMotionPresentation';
@@ -48,6 +49,7 @@ type Props = {
   mapGameplayPresentation?: MapGameplayPresentation | null;
   operationalResources?: OperationalResourcesState;
   mapMotionPresentation?: MapMotionPresentationResult | null;
+  districtVisualStateMap?: DistrictMapVisualStateMap | null;
   mapReactionLiteModel?: MapReactionLiteModel | null;
   recentDecisionRecord?: DecisionRecord | null;
   maintenanceBacklogRuntime?: MaintenanceBacklogRuntimeState | null;

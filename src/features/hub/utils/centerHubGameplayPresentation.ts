@@ -1,4 +1,7 @@
 import type { CenterHomeCoreSections } from './centerHomePresentation';
+import {
+  buildMissionObserveHubPresentation,
+} from '@/features/map/presentation/mapObservationPresentation';
 import type { DecisionRecord } from '@/core/models/DecisionRecord';
 import {
   buildHubReadinessSnapshotFromPresentation,
@@ -422,6 +425,25 @@ function collectNextActionCandidates(presentation: CenterHomeCoreSections): Cent
 function collectQuickCommandCandidates(presentation: CenterHomeCoreSections): CenterActionCandidate[] {
   const candidates: CenterActionCandidate[] = [];
   const commandPanel = presentation.operationFocus.commandPanel;
+  const observeHub = buildMissionObserveHubPresentation({ presentation });
+
+  candidates.push(
+    enrichCenterActionCandidate({
+      id: 'mission-observe-area',
+      source: 'operationCommandPanel',
+      placement: 'quickCommand',
+      label: observeHub.title,
+      subtitle: observeHub.subtitle,
+      iconKey: observeHub.iconKey,
+      actionKey: observeHub.actionKey,
+      routeKey: observeHub.disabled ? undefined : observeHub.route,
+      canonicalKey: 'mission.observe',
+      priority: 94,
+      disabled: observeHub.disabled,
+      unlockLabel: observeHub.disabledReason,
+      accent: 'sage',
+    }),
+  );
 
   presentation.quickActions.items.forEach((item, index) => {
     candidates.push(
@@ -510,7 +532,7 @@ function resolveNextActionRewardPreview(
   if (/atık|geri dönüşüm|waste|environment|çevre/.test(label) || candidate.actionFamily === 'environment') {
     return { rewardBudget: '+2.000', rewardProgress: '+120', rewardGem: '+15' };
   }
-  if (/denetim|drone|uçuş|scan|sinyal/.test(label) || candidate.actionFamily === 'signal') {
+  if (/denetim|gözlem|gozlem|scan|sinyal/.test(label) || candidate.actionFamily === 'signal') {
     return { rewardBudget: '+1.500', rewardProgress: '+100', rewardGem: '+10' };
   }
   if (candidate.source === 'activeTarget') {
@@ -560,7 +582,10 @@ function buildQuickCommandsPresentation(
     collectQuickCommandCandidates(presentation),
     usedKeys,
     usedFamilies,
-  ).filter((item) => !item.disabled && item.routeKey);
+  ).filter(
+    (item) =>
+      item.actionKey === 'mission_observe_area' || (!item.disabled && Boolean(item.routeKey)),
+  );
 
   const activeTiles: CenterQuickCommandTile[] = selected.map((candidate) => ({
     id: candidate.id,
@@ -572,6 +597,8 @@ function buildQuickCommandsPresentation(
     actionFamily: candidate.actionFamily,
     actionKey: candidate.actionKey,
     routeKey: candidate.routeKey,
+    disabled: candidate.disabled,
+    unlockLabel: candidate.unlockLabel,
   }));
 
   let lockedTeaser: CenterQuickCommandTile | undefined;

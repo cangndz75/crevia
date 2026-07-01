@@ -61,6 +61,8 @@ export type DistrictNeglectRecoverySignal = {
   title: string;
   line: string;
   shortLine?: string;
+  behaviorLine?: string;
+  behaviorChip?: string;
   neglectScore: number;
   recoveryScore: number;
   neglectBand: DistrictNeglectBand;
@@ -145,4 +147,6 @@ export type DistrictNeglectRecoveryContributionDraft = {
   marksSocialSource?: boolean;
   personalityNeglectBoost?: boolean;
   personalityRecoveryBoost?: boolean;
+  personalityBehaviorLine?: string;
+  personalityBehaviorChip?: string;
 };

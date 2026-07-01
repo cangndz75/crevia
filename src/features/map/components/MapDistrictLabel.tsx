@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import type { DistrictMapVisualStateItem } from '@/core/map/mapDistrictVisualState';
 import type { MapMarkerMotionModel } from '../utils/mapMotionPresentation';
 import { MapDistrictMotionOverlay } from '../utils/mapMarkerMotionHelper';
 import { mapPointToAbsoluteOverlayStyle } from '../utils/mapCoordinates';
@@ -11,11 +12,21 @@ import { mapUi } from '../utils/mapUiTokens';
 type Props = {
   district: CreviaMapDistrictLayout;
   motionModel?: MapMarkerMotionModel | null;
+  visualState?: DistrictMapVisualStateItem | null;
   reducedMotionMode?: boolean;
   selected?: boolean;
   traitLabel?: string;
   emphasize?: boolean;
   onPress?: (districtId: CreviaMapDistrictLayout['id']) => void;
+};
+
+const VISUAL_TONE_COLOR: Record<DistrictMapVisualStateItem['tone'], string> = {
+  stable: mapUi.textSecondary,
+  risk: mapUi.riskHigh,
+  recovery: mapUi.gold,
+  active: mapUi.tealDark,
+  social: '#5A7BA8',
+  neutral: mapUi.teal,
 };
 
 const DISTRICT_ICON: Record<CreviaMapDistrictLayout['id'], keyof typeof Ionicons.glyphMap> = {
@@ -29,6 +40,7 @@ const DISTRICT_ICON: Record<CreviaMapDistrictLayout['id'], keyof typeof Ionicons
 export const MapDistrictLabel = memo(function MapDistrictLabel({
   district,
   motionModel = null,
+  visualState = null,
   reducedMotionMode = false,
   selected = false,
   traitLabel,
@@ -37,6 +49,8 @@ export const MapDistrictLabel = memo(function MapDistrictLabel({
 }: Props) {
   const LabelContainer = onPress ? Pressable : View;
   const showTrait = Boolean(traitLabel?.trim()) && (selected || emphasize);
+  const showVisualChip = Boolean(visualState?.chipLabel) && visualState?.state !== 'stable';
+  const visualColor = visualState ? VISUAL_TONE_COLOR[visualState.tone] : mapUi.teal;
   const accessibilityLabel =
     motionModel?.accessibilityLabel ??
     (onPress
@@ -91,6 +105,13 @@ export const MapDistrictLabel = memo(function MapDistrictLabel({
         <View style={styles.traitChip}>
           <Text style={styles.traitText} numberOfLines={1}>
             {traitLabel}
+          </Text>
+        </View>
+      ) : null}
+      {showVisualChip ? (
+        <View style={[styles.visualChip, { borderColor: `${visualColor}55`, backgroundColor: `${visualColor}14` }]}>
+          <Text style={[styles.visualChipText, { color: visualColor }]} numberOfLines={1}>
+            {visualState!.chipLabel}
           </Text>
         </View>
       ) : null}
@@ -151,5 +172,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: mapUi.gold,
     letterSpacing: 0.15,
+  },
+  visualChip: {
+    marginTop: 4,
+    maxWidth: 118,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  visualChipText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.1,
   },
 });

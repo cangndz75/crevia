@@ -219,6 +219,34 @@ export function verifyDecisionTradeoffDepthScenario(): {
     'operation portfolio conflict signal',
     day8Rapid.portfolioConflictHint ?? 'missing',
   );
+  assert(
+    checks,
+    day8Rapid.expectedImpact.visibleCount >= 3,
+    'day8 expected impact min 3 dimensions',
+    String(day8Rapid.expectedImpact.visibleCount),
+  );
+  assert(
+    checks,
+    day8Rapid.expectedImpact.lines.some((line) => line.label === 'Güven'),
+    'expected impact trust line',
+  );
+  assert(
+    checks,
+    day8Rapid.expectedImpact.title === 'Beklenen Etki',
+    'expected impact title',
+  );
+  assert(
+    checks,
+    !day8Rapid.expectedImpact.disclaimer.toLowerCase().includes('kesin'),
+    'no guaranteed copy',
+  );
+  assert(
+    checks,
+    readRepo('src/features/events/components/event-workflow/plan/options/PlanOptionCard.tsx').includes(
+      'DecisionExpectedImpactPanel',
+    ),
+    'PlanOptionCard renders expected impact panel',
+  );
 
   const fitCriticalRapid = comparePlanStrategyFit(
     'rapid_response',

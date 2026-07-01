@@ -21,6 +21,10 @@ import {
   buildArchetypeOutcomePreview,
   buildPlanOutcomePreview,
 } from '@/features/events/utils/decisionOutcomePreviewModel';
+import {
+  buildDecisionExpectedImpactPreview,
+  expectedImpactToTradeoffMeter,
+} from '@/features/events/utils/decisionPreviewDimensionsModel';
 import { buildMaintenanceEconomyPlanHint } from '@/core/maintenanceBacklog/maintenanceEconomySurfaceBridge';
 import type { MaintenanceBacklogRuntimeState } from '@/core/maintenanceBacklog/maintenanceBacklogRuntimeTypes';
 import { buildOperationReadinessSnapshot } from '@/core/operationReadiness/operationReadinessModel';
@@ -162,6 +166,12 @@ function simplifyForDay1<T extends PlanOptionDepthPresentation | DecisionOptionD
   return {
     ...depth,
     tradeoffMeter: depth.tradeoffMeter.slice(0, 2),
+    expectedImpact: {
+      ...depth.expectedImpact,
+      lines: depth.expectedImpact.lines.slice(0, 3),
+      visibleCount: Math.min(depth.expectedImpact.visibleCount, 3),
+      sideEffectLine: null,
+    },
     longTermEffect: '',
     riskWarning: null,
     contextFitBadge: null,
@@ -245,6 +255,12 @@ export function buildPlanOptionDepthPresentation(
   const copy = ARCHETYPE_COPY[archetypeId];
   const densityBand = resolveDensityBand(input.day, input.isDay1LearningEvent);
   const chips = buildChips(copy);
+  const expectedImpact = buildDecisionExpectedImpactPreview({
+    event: input.event,
+    archetypeId,
+    strategyId: input.strategy.id,
+    densityBand,
+  });
 
   const depth: PlanOptionDepthPresentation = {
     archetypeId,
@@ -259,7 +275,7 @@ export function buildPlanOptionDepthPresentation(
       day: input.day,
       operationsToday: input.operationsToday,
     }),
-    tradeoffMeter: copy.meter,
+    tradeoffMeter: expectedImpactToTradeoffMeter(expectedImpact),
     opportunityCost: buildPlanOpportunityCost(input.strategy.id),
     outcomePreview: buildPlanOutcomePreview(input.strategy.id),
     decisionMemoryChip: buildDecisionMemoryChip({
@@ -286,6 +302,7 @@ export function buildPlanOptionDepthPresentation(
       operationsToday: input.operationsToday,
     }),
     readinessFitBadge: buildReadinessFitChipForPlan(input, densityBand),
+    expectedImpact,
   };
 
   if (densityBand === 'day1') {
@@ -311,6 +328,12 @@ export function buildDecisionOptionDepthPresentation(
   const copy = ARCHETYPE_COPY[archetypeId];
   const densityBand = resolveDensityBand(input.day, input.isDay1LearningEvent);
   const chips = buildChips(copy);
+  const expectedImpact = buildDecisionExpectedImpactPreview({
+    event: input.event,
+    archetypeId,
+    decision: input.decision,
+    densityBand,
+  });
 
   const depth: DecisionOptionDepthPresentation = {
     archetypeId,
@@ -324,7 +347,7 @@ export function buildDecisionOptionDepthPresentation(
       event: input.event,
       day: input.day,
     }),
-    tradeoffMeter: copy.meter,
+    tradeoffMeter: expectedImpactToTradeoffMeter(expectedImpact),
     opportunityCost: buildArchetypeOpportunityCost(archetypeId),
     outcomePreview: buildArchetypeOutcomePreview(archetypeId),
     decisionMemoryChip: buildDecisionMemoryChip({
@@ -339,6 +362,7 @@ export function buildDecisionOptionDepthPresentation(
       archetypeId,
       avoidLines: input.avoidLines,
     }),
+    expectedImpact,
   };
 
   if (densityBand === 'day1') {
@@ -359,6 +383,8 @@ export function auditPlanOptionDepthPresentation(
   if (!depth.opportunityCost.trim()) issues.push('opportunityCost empty');
   if (!depth.outcomePreview.trim()) issues.push('outcomePreview empty');
   if (depth.tradeoffMeter.length < 2) issues.push('tradeoffMeter too short');
+  if (depth.expectedImpact.visibleCount < 2) issues.push('expectedImpact too short');
+  if (!depth.expectedImpact.title.includes('Beklenen')) issues.push('expectedImpact title');
 
   const blob = [
     depth.benefitChip.label,

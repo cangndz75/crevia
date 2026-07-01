@@ -143,7 +143,7 @@ function eventCopyForDomain(domain: ReturnType<typeof normalizeEventDomain>, see
       { title: 'Pazar Akışı Dengede', imageKey: 'city' as const, accent: 'teal' as const },
     ],
     safety: [
-      { title: 'Drone Devriyesi Tamamlandı', imageKey: 'safe' as const, accent: 'teal' as const },
+      { title: 'Saha Gözü Taraması Tamamlandı', imageKey: 'safe' as const, accent: 'teal' as const },
       { title: 'Güvenlik Devriyesi Aktif', imageKey: 'city' as const, accent: 'teal' as const },
     ],
     economy: [

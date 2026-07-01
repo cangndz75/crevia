@@ -1,4 +1,5 @@
 import { pickSurfaceCopy } from '@/core/contentVarietyQuality';
+import { buildDistrictLiveBehaviorSignal } from '@/core/districtPersonality';
 import {
   DISTRICT_NEGLECT_RECOVERY_CONFLICT_COPY,
   DISTRICT_NEGLECT_RECOVERY_COPY,
@@ -101,9 +102,20 @@ function criterionBand(profile: Record<string, unknown>, criterionId: string): s
 }
 
 function hasLivePersonalitySource(profile: Record<string, unknown>): boolean {
-  const sourceKinds = asArray(profile.sourceKinds).map(asString).filter(Boolean);
+  const sourceKinds = [
+    ...asArray(profile.sourceKinds).map(asString).filter(Boolean),
+    ...asArray(profile.criteria).flatMap((criterion) =>
+      isRecord(criterion) ? asArray(criterion.sourceKinds).map(asString).filter(Boolean) : [],
+    ),
+  ];
   if (sourceKinds.length === 0) return false;
-  if (sourceKinds.length === 1 && sourceKinds[0] === 'design_baseline') return false;
+  if (
+    sourceKinds.every(
+      (kind) => kind === 'design_baseline' || kind === 'district_identity',
+    )
+  ) {
+    return false;
+  }
   return sourceIdsFromUnknown(profile).length > 0;
 }
 
@@ -123,6 +135,8 @@ type DistrictAccumulator = {
   hasSocialSource: boolean;
   personalityNeglectBoost: boolean;
   personalityRecoveryBoost: boolean;
+  personalityBehaviorLine?: string;
+  personalityBehaviorChip?: string;
   maxPriority: number;
   maxConfidence: DistrictNeglectRecoveryConfidence;
 };
@@ -154,6 +168,8 @@ function getAccumulator(
     hasSocialSource: false,
     personalityNeglectBoost: false,
     personalityRecoveryBoost: false,
+    personalityBehaviorLine: undefined,
+    personalityBehaviorChip: undefined,
     maxPriority: 0,
     maxConfidence: 'low',
   };
@@ -178,6 +194,12 @@ function mergeDraft(map: Map<string, DistrictAccumulator>, draft: DistrictNeglec
   if (draft.marksSocialSource) acc.hasSocialSource = true;
   if (draft.personalityNeglectBoost) acc.personalityNeglectBoost = true;
   if (draft.personalityRecoveryBoost) acc.personalityRecoveryBoost = true;
+  if (draft.personalityBehaviorLine && !acc.personalityBehaviorLine) {
+    acc.personalityBehaviorLine = draft.personalityBehaviorLine;
+  }
+  if (draft.personalityBehaviorChip && !acc.personalityBehaviorChip) {
+    acc.personalityBehaviorChip = draft.personalityBehaviorChip;
+  }
   if (typeof draft.priority === 'number') {
     acc.maxPriority = Math.max(acc.maxPriority, draft.priority);
   }
@@ -485,6 +507,13 @@ function adaptDistrictPersonality(input: DistrictNeglectRecoveryInput): District
     const districtId = asString(profile.districtId);
     const districtName = asString(profile.districtName);
     if (criterionBand(profile, 'neglect_risk') === 'high') {
+      const behavior = buildDistrictLiveBehaviorSignal({
+        districtId,
+        districtName,
+        profile: profile as never,
+        day: input.day,
+        outcomeBand: 'warning',
+      });
       drafts.push({
         districtId,
         districtName,
@@ -492,12 +521,21 @@ function adaptDistrictPersonality(input: DistrictNeglectRecoveryInput): District
         sourceKinds: ['district_personality'],
         neglectDelta: 10,
         personalityNeglectBoost: true,
+        personalityBehaviorLine: behavior?.neglectRecoveryLine,
+        personalityBehaviorChip: behavior?.mapChip,
         confidence: 'low',
         priority: 40,
         requiresLiveSource: true,
       });
     }
     if (criterionBand(profile, 'recovery_potential') === 'high') {
+      const behavior = buildDistrictLiveBehaviorSignal({
+        districtId,
+        districtName,
+        profile: profile as never,
+        day: input.day,
+        outcomeBand: 'positive',
+      });
       drafts.push({
         districtId,
         districtName,
@@ -505,12 +543,21 @@ function adaptDistrictPersonality(input: DistrictNeglectRecoveryInput): District
         sourceKinds: ['district_personality'],
         recoveryDelta: 10,
         personalityRecoveryBoost: true,
+        personalityBehaviorLine: behavior?.neglectRecoveryLine,
+        personalityBehaviorChip: behavior?.mapChip,
         confidence: 'low',
         priority: 40,
         requiresLiveSource: true,
       });
     }
     if (criterionBand(profile, 'trust_fragility') === 'high') {
+      const behavior = buildDistrictLiveBehaviorSignal({
+        districtId,
+        districtName,
+        profile: profile as never,
+        day: input.day,
+        outcomeBand: 'warning',
+      });
       drafts.push({
         districtId,
         districtName,
@@ -518,6 +565,8 @@ function adaptDistrictPersonality(input: DistrictNeglectRecoveryInput): District
         sourceKinds: ['district_personality'],
         neglectDelta: 8,
         personalityNeglectBoost: true,
+        personalityBehaviorLine: behavior?.neglectRecoveryLine,
+        personalityBehaviorChip: behavior?.mapChip,
         marksTrustSource: true,
         confidence: 'low',
         priority: 38,
@@ -654,6 +703,10 @@ function buildSignalFromAccumulator(
     title: clampLine(DISTRICT_NEGLECT_RECOVERY_KIND_TITLES[kind], DISTRICT_NEGLECT_RECOVERY_TITLE_MAX),
     line,
     shortLine: clampLine(line, DISTRICT_NEGLECT_RECOVERY_SHORT_MAX),
+    behaviorLine: acc.personalityBehaviorLine
+      ? clampLine(acc.personalityBehaviorLine, DISTRICT_NEGLECT_RECOVERY_LINE_MAX)
+      : undefined,
+    behaviorChip: acc.personalityBehaviorChip,
     neglectScore,
     recoveryScore,
     neglectBand,

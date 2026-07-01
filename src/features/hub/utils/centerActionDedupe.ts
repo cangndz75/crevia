@@ -59,6 +59,9 @@ export const ACTION_TAXONOMY: Record<string, { canonical: string; family: string
   inspect_area: { canonical: 'inspection.open', family: 'inspection' },
   open_operations: { canonical: 'inspection.open', family: 'inspection' },
 
+  mission_observe_area: { canonical: 'mission.observe', family: 'signal' },
+  observe_area: { canonical: 'mission.observe', family: 'signal' },
+
   open_operation: { canonical: 'operation.open', family: 'operation' },
   start_operation: { canonical: 'operation.open', family: 'operation' },
   continue_operation: { canonical: 'operation.open', family: 'operation' },
@@ -82,6 +85,7 @@ const CANONICAL_LABELS: Record<string, string> = {
   'team.status': 'Ekip Durumu',
   'signal.scan': 'Sinyal Tara',
   'signal.open': 'Sinyal İncele',
+  'mission.observe': 'Bölgeyi Gözlemle',
   'resource.allocate': 'Kaynak Ayır',
   'inspection.open': 'Denetim Aç',
   'operation.open': 'Operasyona Git',

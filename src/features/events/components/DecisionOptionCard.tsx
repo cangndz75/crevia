@@ -17,6 +17,7 @@ import { DecisionPriorityFitChip } from '@/features/events/components/DecisionPr
 import { DecisionRiskChip } from '@/features/events/components/DecisionRiskChip';
 import { DecisionStrategyChip } from '@/features/events/components/DecisionStrategyChip';
 import { DecisionTradeoffLine } from '@/features/events/components/DecisionTradeoffLine';
+import { DecisionExpectedImpactPanel } from '@/features/events/components/event-workflow/plan/options/DecisionExpectedImpactPanel';
 import type { DecisionAffordabilityCheck } from '@/core/economy/economyAffordability';
 import { formatSourceWithLabel } from '@/core/economy/economyFormatter';
 import { selectAuthorityPermissionPreviewForDecision } from '@/core/authority/authorityPermissionPreview';
@@ -319,6 +320,14 @@ export function DecisionOptionCard({
           <Text style={styles.memoryWarning} numberOfLines={2}>
             {presentation.depth.dominantStrategyWarning}
           </Text>
+        ) : null}
+
+        {variant !== 'quick' ? (
+          <DecisionExpectedImpactPanel
+            model={presentation.depth.expectedImpact}
+            selected={selected}
+            compact={variantConfig.compactPadding}
+          />
         ) : null}
 
         {!insufficient && presentation.primaryImpacts.length > 0 ? (

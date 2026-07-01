@@ -7,3 +7,4 @@ export * from './districtPersonalityBindingTypes';
 export * from './districtPersonalityBindingConstants';
 export * from './districtPersonalityBindingModel';
 export * from './districtPersonalityBindingPresentation';
+export * from './districtLiveBehaviorPresentation';

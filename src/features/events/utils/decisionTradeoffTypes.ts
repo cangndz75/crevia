@@ -15,6 +15,31 @@ export type DecisionTradeoffDimensionId =
   | 'patience'
   | 'tomorrow_risk';
 
+export type DecisionPreviewDimensionId =
+  | 'trust'
+  | 'risk'
+  | 'resource'
+  | 'social_pressure'
+  | 'team_capacity';
+
+export type DecisionPreviewImpactTone = 'positive' | 'negative' | 'warning' | 'neutral';
+
+export type DecisionPreviewImpactLine = {
+  id: DecisionPreviewDimensionId;
+  label: string;
+  valueText: string;
+  tone: DecisionPreviewImpactTone;
+  visible: boolean;
+};
+
+export type DecisionExpectedImpactPreview = {
+  title: string;
+  disclaimer: string;
+  lines: DecisionPreviewImpactLine[];
+  sideEffectLine: string | null;
+  visibleCount: number;
+};
+
 export type DecisionTradeoffDensityBand = 'day1' | 'openEnded';
 
 export type ContextFitBadgeTone =
@@ -69,6 +94,7 @@ export type PlanOptionDepthPresentation = {
   dominantStrategyWarning: string | null;
   portfolioConflictHint: string | null;
   maintenanceEconomyHint: string | null;
+  expectedImpact: DecisionExpectedImpactPreview;
 };
 
 export type DecisionOptionDepthPresentation = {
@@ -85,6 +111,7 @@ export type DecisionOptionDepthPresentation = {
   outcomePreview: string;
   decisionMemoryChip: string | null;
   dominantStrategyWarning: string | null;
+  expectedImpact: DecisionExpectedImpactPreview;
 };
 
 export const PLAN_STRATEGY_TO_ARCHETYPE: Record<EventPlanStrategyId, DecisionArchetypeId> = {

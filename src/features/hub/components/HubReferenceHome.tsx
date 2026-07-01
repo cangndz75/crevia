@@ -32,10 +32,8 @@ import {
 import {
   hubBandAllowsLiveDevelopments,
   hubSectionIsHidden,
-  HUB_DENSITY_LIMITS,
   resolveHubFeedItemCap,
   resolveHubNextMovesCap,
-  resolveHubQuickActionsCap,
 } from '@/features/hub/utils/centerHubDensityPolicy';
 import { CenterMotionEnter } from '@/features/hub/components/CenterMotionEnter';
 import { CENTER_COMPACT_BREAKPOINT, CENTER_MIN_TOUCH_TARGET } from '@/features/hub/utils/centerLayoutTokens';
@@ -88,6 +86,50 @@ type RecentImpactTone = CenterHomePresentation['recentImpactSummary']['tone'];
 type MiniCityFeedItem = CenterHomePresentation['miniCityFeed']['items'][number];
 type MiniCityFeedTone = MiniCityFeedItem['tone'];
 type IconName = keyof typeof Ionicons.glyphMap;
+
+type SecondSectionMove = {
+  id: string;
+  actionId: string;
+  title: string;
+  description: string;
+  category: string;
+  status: 'available' | 'active' | 'completed' | 'locked' | 'insufficient_resource' | 'cooldown';
+  statusLabel: string;
+  disabledReason?: string;
+  cost: string;
+  reward: string;
+  estimatedEffect: string;
+  duration: string;
+  targetDistrict: string;
+  metrics: string[];
+  ctaLabel: string;
+  icon: IconName;
+  accent: 'gold' | 'green' | 'amber';
+  route?: string;
+  disabled?: boolean;
+};
+
+type SecondSectionCommand = {
+  id: string;
+  actionId: string;
+  title: string;
+  subtitle: string;
+  icon: IconName;
+  route?: string;
+  disabled?: boolean;
+  badge?: string;
+};
+
+type TopMissionAction = {
+  id: string;
+  actionId: string;
+  title: string;
+  subtitle: string;
+  icon: IconName;
+  route?: string;
+  disabled?: boolean;
+  badge?: string;
+};
 
 type HubReferenceHomeProps = {
   presentation: CenterHomePresentation;
@@ -448,6 +490,10 @@ function TopInfoChips({
   const streakCurrent = Math.max(1, reward.today.dayIndex);
   const streakTotal = Math.max(7, reward.days.length || 7);
   const streakProgress = clampPercent((streakCurrent / streakTotal) * 100);
+  const trustChip =
+    presentation.headerSummary.resourceChips.find((chip) => chip.id === 'satisfaction') ??
+    presentation.headerSummary.resourceChips.find((chip) => chip.id === 'authority');
+  const trustValue = trustChip?.valueText ?? 'Stabil';
 
   return (
     <View style={styles.topInfoRow}>
@@ -498,6 +544,25 @@ function TopInfoChips({
           </View>
         </View>
       </RoutePressable>
+
+      <View style={styles.infoChip}>
+        <View style={styles.infoIconBoxGreen}>
+          <Ionicons name="shield-checkmark-outline" size={14} color={palette.teal} />
+        </View>
+        <View style={styles.infoCopy}>
+          <Text style={styles.infoTitle} numberOfLines={1}>
+            Güven Seviyesi
+          </Text>
+          <Text style={styles.infoSubtitle} numberOfLines={1}>
+            {trustValue} Stabil
+          </Text>
+          <View style={styles.trendSparkline}>
+            <View style={styles.trendSegmentFlat} />
+            <View style={styles.trendSegmentRise} />
+            <View style={styles.trendSegmentFlat} />
+          </View>
+        </View>
+      </View>
     </View>
   );
 }
@@ -610,12 +675,25 @@ function MainHero({
 }) {
   const hero = resolveHeroCopy(presentation);
   const operationMeta = presentation.gameFirst.todayFocus.operationMeta;
+  const focus = presentation.gameFirst.activeOperationFocus;
+  const primaryImpact = presentation.activeTarget.impactPreview[0];
+  const riskLabel =
+    operationMeta?.riskLabel ??
+    focus.riskLabel ??
+    (presentation.activeTarget.priority === 'urgent' || presentation.activeTarget.priority === 'high'
+      ? 'Yüksek'
+      : 'Kontrollü');
+  const districtLabel =
+    operationMeta?.districtLabel ?? focus.districtLabel ?? presentation.headerSummary.displayCityName;
+  const expectedImpact =
+    focus.expectedImpact ?? primaryImpact?.valueText ?? presentation.activeTarget.reward?.valueText ?? 'Yüksek';
 
   const metaRows = [
-    operationMeta?.districtLabel ? { label: 'Mahalle', value: operationMeta.districtLabel } : null,
-    operationMeta?.phaseLabel ? { label: 'Faz', value: operationMeta.phaseLabel } : null,
-    operationMeta?.riskLabel ? { label: 'Risk', value: operationMeta.riskLabel } : null,
-  ].filter((row): row is { label: string; value: string } => Boolean(row));
+    { icon: 'time-outline' as IconName, label: 'Süre', value: operationMeta?.phaseLabel ?? hero.stageText },
+    { icon: 'trending-up-outline' as IconName, label: 'Tahmini Etki', value: expectedImpact },
+    { icon: 'warning-outline' as IconName, label: 'Risk', value: riskLabel },
+    { icon: 'location-outline' as IconName, label: 'Mahalle', value: districtLabel },
+  ];
 
   return (
     <View style={styles.heroCard}>
@@ -632,14 +710,32 @@ function MainHero({
       <View style={styles.mapGridOne} />
       <View style={styles.mapGridTwo} />
       <HeroNetworkOverlay />
+      <View style={styles.heroRiskPill}>
+        <Ionicons name="alert-circle" size={11} color="#FFD2C4" />
+        <Text style={styles.heroRiskText} numberOfLines={1}>
+          RİSK {riskLabel.toUpperCase()}
+        </Text>
+      </View>
+      <View style={styles.heroLocationPill}>
+        <Ionicons name="location" size={10} color={palette.gold} />
+        <Text style={styles.heroLocationText} numberOfLines={1}>
+          {districtLabel}
+        </Text>
+      </View>
+      <View style={styles.heroRadarCore}>
+        <View style={styles.heroRadarRingLarge} />
+        <View style={styles.heroRadarRingSmall} />
+        <Ionicons name="warning" size={24} color="#FFE8D6" />
+      </View>
 
       <View style={styles.heroCopy}>
         <View style={styles.heroEyebrowPill}>
+          <Ionicons name="radio-outline" size={10} color={palette.gold} />
           <Text style={styles.heroEyebrow} numberOfLines={1}>
             {hero.eyebrow}
           </Text>
         </View>
-        <Text style={styles.heroTitle} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.82}>
+        <Text style={styles.heroTitle} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.82}>
           {hero.title}
         </Text>
         <Text style={styles.heroBody} numberOfLines={operationMeta ? 2 : 3}>
@@ -649,6 +745,7 @@ function MainHero({
           <View style={styles.heroMetaRow}>
             {metaRows.map((row) => (
               <View key={row.label} style={styles.heroMetaChip}>
+                <Ionicons name={row.icon} size={10} color={palette.goldLight} />
                 <Text style={styles.heroMetaLabel} numberOfLines={1}>
                   {row.label}
                 </Text>
@@ -664,6 +761,7 @@ function MainHero({
           reducedMotion={reducedMotion}
           accessibilityLabel={hero.ctaLabel}
           style={styles.heroCta}>
+          <Ionicons name="flash" size={16} color="#1A2818" />
           <Text style={styles.heroCtaText} numberOfLines={1}>
             {hero.ctaLabel}
           </Text>
@@ -1002,6 +1100,535 @@ function NextActionsRail({
           <NextMoveCard key={move.id} move={move} index={index} reducedMotion={reducedMotion} />
         ))}
       </ScrollView>
+    </View>
+  );
+}
+
+function secondSectionRouteFallback(presentation: CenterHomePresentation): string | undefined {
+  return (
+    presentation.gameFirst.primaryCta.route ??
+    presentation.gameFirst.todayFocus.cta.route ??
+    presentation.activeTarget.cta.route ??
+    '/events'
+  );
+}
+
+function buildSecondSectionMoves(presentation: CenterHomePresentation): SecondSectionMove[] {
+  const route = secondSectionRouteFallback(presentation);
+  const targetDistrict =
+    presentation.gameFirst.todayFocus.operationMeta?.districtLabel ??
+    presentation.gameFirst.activeOperationFocus.districtLabel ??
+    presentation.headerSummary.displayCityName;
+  const fallback: SecondSectionMove[] = [
+    {
+      id: 'patrol-boost',
+      actionId: 'strengthen_patrol',
+      title: 'Devriye Güçlendir',
+      description: 'Riskli noktalarda devriye sıklığını artırarak bölgede güvenliği sağlamlaştır.',
+      category: 'Stratejik güven hamlesi',
+      status: 'available',
+      statusLabel: 'AVAILABLE',
+      cost: 'Maliyet orta',
+      reward: 'Güven +12',
+      estimatedEffect: 'Risk baskısı azalır',
+      duration: '30dk',
+      targetDistrict,
+      metrics: ['Güven +12%', 'Süre 30dk'],
+      ctaLabel: 'DEVREYE AL',
+      icon: 'shield-checkmark-outline',
+      accent: 'gold',
+      route,
+    },
+    {
+      id: 'route-optimize',
+      actionId: 'optimize_waste_route',
+      title: 'Atık Rotasını Optimize Et',
+      description: 'Toplama rotalarını optimize ederek yakıt tasarrufu sağla ve daha fazla atığa ulaş.',
+      category: 'Kaynak/verimlilik hamlesi',
+      status: 'available',
+      statusLabel: 'AVAILABLE',
+      cost: 'Maliyet orta',
+      reward: 'Kaynak +8',
+      estimatedEffect: 'Operasyon süresi azalır',
+      duration: '20dk',
+      targetDistrict,
+      metrics: ['Kaynak +8%', 'Süre 20dk'],
+      ctaLabel: 'OPTİMİZE ET',
+      icon: 'git-branch-outline',
+      accent: 'green',
+      route,
+    },
+    {
+      id: 'logistics-upgrade',
+      actionId: 'upgrade_logistics_center',
+      title: 'Lojistik Merkezi Yükselt',
+      description: 'Malzeme akışını hızlandırarak açılış süresini kısalt.',
+      category: 'Açılım / büyüme hamlesi',
+      status: 'locked',
+      statusLabel: 'AÇILIM ŞARTI',
+      disabledReason: 'Açılım şartı',
+      cost: 'Maliyet yüksek',
+      reward: '+1000 YS, +100 XP',
+      estimatedEffect: 'Kalıcı kapasite avantajı',
+      duration: 'Uzun',
+      targetDistrict,
+      metrics: ['+1000 YS', '+100 XP'],
+      ctaLabel: 'AÇILIM ŞARTI',
+      icon: 'cube-outline',
+      accent: 'amber',
+      route,
+      disabled: true,
+    },
+  ];
+
+  return fallback;
+}
+
+function buildSecondSectionCommands(presentation: CenterHomePresentation): SecondSectionCommand[] {
+  const route = secondSectionRouteFallback(presentation);
+  return [
+    {
+      id: 'quick-route-optimization',
+      actionId: 'quick_route_optimization',
+      title: 'Rota Optimizasyonu',
+      subtitle: 'Toplama rotalarını verimli hale getir.',
+      icon: 'git-branch-outline',
+      route,
+    },
+    {
+      id: 'quick-resource-transfer',
+      actionId: 'quick_resource_transfer',
+      title: 'Kaynak Transferi',
+      subtitle: 'Yoğun bölgeye kaynak aktar.',
+      icon: 'swap-horizontal-outline',
+      route,
+    },
+    {
+      id: 'quick-public-communication',
+      actionId: 'quick_public_communication',
+      title: 'Halkla İletişim',
+      subtitle: 'Mahalle sakinlerine duyuru gönder.',
+      icon: 'megaphone-outline',
+      route,
+      badge: '3',
+    },
+    {
+      id: 'quick-report-risk',
+      actionId: 'quick_report_risk',
+      title: 'Risk Bildir',
+      subtitle: 'Yeni risk noktasını işaretle.',
+      icon: 'warning-outline',
+      route,
+    },
+  ];
+}
+
+function SecondSectionHeader({
+  icon,
+  title,
+  subtitle,
+  live,
+}: {
+  icon: IconName;
+  title: string;
+  subtitle?: string;
+  live?: boolean;
+}) {
+  return (
+    <View style={styles.secondSectionHeader}>
+      <View style={styles.secondSectionTitleWrap}>
+        <View style={styles.secondSectionIcon}>
+          <Ionicons name={icon} size={14} color={palette.gold} />
+        </View>
+        <View style={styles.secondSectionCopy}>
+          <Text style={styles.secondSectionTitle} numberOfLines={1}>
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text style={styles.secondSectionSubtitle} numberOfLines={2}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+      {live ? (
+        <View style={styles.cityAgendaLivePill}>
+          <View style={styles.cityAgendaLiveDot} />
+          <Text style={styles.cityAgendaLiveText} numberOfLines={1}>
+            CANLI
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.secondSectionInfoButton}>
+          <Ionicons name="information" size={12} color={palette.gold} />
+        </View>
+      )}
+    </View>
+  );
+}
+
+function CenterNextMoveMissionCard({
+  move,
+  index,
+  reducedMotion,
+}: {
+  move: SecondSectionMove;
+  index: number;
+  reducedMotion: boolean;
+}) {
+  const source = resolveActionImage(index);
+  return (
+    <RoutePressable
+      route={move.route}
+      disabled={move.disabled}
+      reducedMotion={reducedMotion}
+      accessibilityLabel={`${move.title}. ${move.ctaLabel}`}
+      style={styles.secondMoveCard}>
+      <CenterHubImageFrame
+        source={source}
+        style={styles.secondMoveImage}
+        gradientColors={['#164F49', '#0B2D2B', '#061716']}
+        vignette={false}
+      />
+      <LinearGradient
+        colors={['rgba(5,13,14,0.08)', 'rgba(5,13,14,0.56)', 'rgba(5,13,14,0.96)']}
+        locations={[0, 0.42, 1]}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <View style={styles.secondMoveBadgeRow}>
+        <View style={styles.secondMoveIconBadge}>
+          <Ionicons name={move.icon} size={17} color={move.accent === 'green' ? palette.mint : palette.gold} />
+        </View>
+        <View
+          style={[
+            styles.secondMoveStatusChip,
+            move.status === 'locked' || move.status === 'insufficient_resource'
+              ? styles.secondMoveStatusChipMuted
+              : undefined,
+          ]}>
+          <Text style={styles.secondMoveStatusText} numberOfLines={1}>
+            {move.statusLabel}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.secondMoveIllustration}>
+        <View style={styles.secondMoveOrbit} />
+        <Ionicons name={move.icon} size={34} color="rgba(255,248,231,0.72)" />
+      </View>
+      <View style={styles.secondMoveBody}>
+        <Text style={styles.secondMoveTitle} numberOfLines={2}>
+          {move.title}
+        </Text>
+        <Text style={styles.secondMoveCategory} numberOfLines={1}>
+          {move.category}
+        </Text>
+        <Text style={styles.secondMoveDescription} numberOfLines={3}>
+          {move.description}
+        </Text>
+        <View style={styles.secondMoveMetricRow}>
+          {[move.targetDistrict, move.estimatedEffect, move.cost, move.duration].slice(0, 4).map((metric) => (
+            <View key={metric} style={styles.secondMoveMetricChip}>
+              <Text style={styles.secondMoveMetricText} numberOfLines={1}>
+                {metric}
+              </Text>
+            </View>
+          ))}
+        </View>
+        {move.reward ? (
+          <Text style={styles.secondMoveRewardText} numberOfLines={1}>
+            {move.reward}
+          </Text>
+        ) : null}
+        <View style={[styles.secondMoveCta, move.disabled ? styles.secondMoveCtaDisabled : undefined]}>
+          <Text style={styles.secondMoveCtaText} numberOfLines={1}>
+            {move.ctaLabel}
+          </Text>
+          <Ionicons name="chevron-forward" size={12} color="#1A2818" />
+        </View>
+      </View>
+    </RoutePressable>
+  );
+}
+
+function CenterNextMovesCarousel({
+  presentation,
+  reducedMotion,
+}: {
+  presentation: CenterHomePresentation;
+  reducedMotion: boolean;
+}) {
+  const moves = buildSecondSectionMoves(presentation);
+  return (
+    <View style={styles.secondSectionBlock}>
+      <SecondSectionHeader
+        icon="navigate-circle-outline"
+        title="SIRADAKİ HAMLELER"
+        subtitle="Mahalleni güçlendirmek için stratejik adımlar at."
+      />
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        decelerationRate="fast"
+        snapToInterval={158}
+        contentContainerStyle={styles.secondMovesScroller}>
+        {moves.map((move, index) => (
+          <CenterNextMoveMissionCard
+            key={move.id}
+            move={move}
+            index={index}
+            reducedMotion={reducedMotion}
+          />
+        ))}
+      </ScrollView>
+      <View style={styles.secondCarouselDots}>
+        {moves.map((move, index) => (
+          <View
+            key={`${move.id}-dot`}
+            style={[styles.secondCarouselDot, index === 0 ? styles.secondCarouselDotActive : undefined]}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function CenterQuickCommandCard({
+  command,
+  reducedMotion,
+}: {
+  command: SecondSectionCommand;
+  reducedMotion: boolean;
+}) {
+  return (
+    <RoutePressable
+      route={command.route}
+      disabled={command.disabled}
+      reducedMotion={reducedMotion}
+      accessibilityLabel={`${command.title}. ${command.subtitle}`}
+      style={styles.secondCommandCard}>
+      <View style={styles.secondCommandIcon}>
+        <Ionicons name={command.icon} size={20} color={palette.teal} />
+      </View>
+      <View style={styles.secondCommandCopy}>
+        <Text style={styles.secondCommandTitle} numberOfLines={1}>
+          {command.title}
+        </Text>
+        <Text style={styles.secondCommandSubtitle} numberOfLines={1}>
+          {command.subtitle}
+        </Text>
+      </View>
+      {command.badge ? (
+        <View style={styles.secondCommandBadge}>
+          <Text style={styles.secondCommandBadgeText} numberOfLines={1}>
+            {command.badge}
+          </Text>
+        </View>
+      ) : null}
+      <Ionicons name="chevron-forward" size={13} color={palette.gold} />
+    </RoutePressable>
+  );
+}
+
+function CenterSecondQuickCommandsGrid({
+  presentation,
+  reducedMotion,
+}: {
+  presentation: CenterHomePresentation;
+  reducedMotion: boolean;
+}) {
+  const commands = buildSecondSectionCommands(presentation);
+  return (
+    <View style={styles.secondSectionBlock}>
+      <SecondSectionHeader icon="flash" title="HIZLI KOMUTLAR" />
+      <View style={styles.secondCommandGrid}>
+        {commands.map((command) => (
+          <CenterQuickCommandCard
+            key={command.id}
+            command={command}
+            reducedMotion={reducedMotion}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function CenterBonusChestCard({
+  presentation,
+  reducedMotion,
+}: {
+  presentation: CenterHomePresentation;
+  reducedMotion: boolean;
+}) {
+  const reward = presentation.dailyReward;
+  const today = Math.max(1, reward.today.dayIndex);
+  const total = Math.max(7, reward.days.length || 7);
+  const progress = clampPercent((today / total) * 100);
+  const progressLabel = `${Math.round(progress)} / 100`;
+  const rewardLabel =
+    reward.primaryReward?.valueText ??
+    reward.nextBigReward?.valueText ??
+    '+1500 YS, +150 XP';
+  const route = secondSectionRouteFallback(presentation);
+  const bonusStateLabel =
+    reward.claimState === 'claimed'
+      ? 'ALINDI'
+      : reward.claimState === 'available'
+        ? 'SANDIĞI AÇ'
+        : progress >= 100
+          ? 'SANDIĞI AÇ'
+          : 'HEDEFLERİ GÖR';
+  const bonusDisabled = reward.claimState === 'claimed';
+
+  return (
+    <View style={styles.secondSectionBlock}>
+      <RoutePressable
+        route={route}
+        disabled={bonusDisabled}
+        reducedMotion={reducedMotion}
+        accessibilityLabel="Bonus Sandığı"
+        style={styles.bonusChestCard}>
+        <LinearGradient
+          colors={['rgba(15, 82, 75, 0.98)', 'rgba(7, 35, 35, 0.99)', 'rgba(4, 20, 20, 1)']}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View style={styles.bonusChestCopy}>
+          <Text style={styles.bonusChestEyebrow} numberOfLines={1}>
+            BONUS SANDIĞI
+          </Text>
+          <Text style={styles.bonusChestBody} numberOfLines={2}>
+            Görevleri tamamla, sandığı doldur, büyük ödülleri kazan!
+          </Text>
+          <View style={styles.bonusProgressHeader}>
+            <Text style={styles.bonusProgressText} numberOfLines={1}>
+              {progressLabel}
+            </Text>
+            <Text style={styles.bonusRewardText} numberOfLines={1}>
+              {rewardLabel}
+            </Text>
+          </View>
+          <View style={styles.bonusProgressTrack}>
+            <View style={[styles.bonusProgressFill, { width: `${progress}%` as `${number}%` }]} />
+          </View>
+          <View style={styles.bonusCta}>
+            <Text style={styles.bonusCtaText} numberOfLines={1}>
+              {bonusStateLabel}
+            </Text>
+            <Ionicons name="chevron-forward" size={12} color="#1A2818" />
+          </View>
+        </View>
+        <View style={styles.bonusChestVisual}>
+          <View style={styles.bonusChestGlow} />
+          <Ionicons name="gift" size={54} color={palette.goldLight} />
+          <View style={styles.bonusChestSpark}>
+            <Ionicons name="sparkles" size={14} color={palette.heroText} />
+          </View>
+        </View>
+      </RoutePressable>
+    </View>
+  );
+}
+
+function CenterCityAgendaCard({
+  presentation,
+  reducedMotion,
+}: {
+  presentation: CenterHomePresentation;
+  reducedMotion: boolean;
+}) {
+  const pulse = presentation.gameFirst.cityPulse;
+  const primary = pulse.items[0];
+  const district =
+    presentation.gameFirst.todayFocus.operationMeta?.districtLabel ??
+    presentation.gameFirst.activeOperationFocus.districtLabel ??
+    presentation.headerSummary.displayCityName;
+  const title = primary?.message ?? 'Cumhuriyet’te yük artıyor';
+  const detail =
+    primary?.detail ??
+    'Son 30 dakikada şüpheli hareketlilikte %28 artış gözlendi. Ekiplerin teyakkuzda olması önerilir.';
+  const route = primary?.routeKey ?? secondSectionRouteFallback(presentation);
+
+  return (
+    <View style={styles.secondSectionBlock}>
+      <SecondSectionHeader icon="business-outline" title="ŞEHİR GÜNDEMİ" live />
+      <RoutePressable
+        route={route}
+        reducedMotion={reducedMotion}
+        accessibilityLabel={title}
+        style={styles.cityAgendaFeatureCard}>
+        <LinearGradient
+          colors={['rgba(15, 82, 75, 0.96)', 'rgba(6, 33, 34, 0.98)', 'rgba(4, 18, 20, 1)']}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View style={styles.cityAgendaRadar}>
+          <View style={styles.cityAgendaRadarRingLarge} />
+          <View style={styles.cityAgendaRadarRingSmall} />
+          <View style={styles.cityAgendaRadarCore} />
+        </View>
+        <View style={styles.cityAgendaLocationChip}>
+          <Ionicons name="location" size={10} color={palette.gold} />
+          <Text style={styles.cityAgendaLocationText} numberOfLines={1}>
+            {district}
+          </Text>
+        </View>
+        <View style={styles.cityAgendaFeatureCopy}>
+          <Text style={styles.cityAgendaFeatureTitle} numberOfLines={2}>
+            {title}
+          </Text>
+          <Text style={styles.cityAgendaFeatureBody} numberOfLines={3}>
+            {detail}
+          </Text>
+          <View style={styles.cityAgendaMetricRow}>
+            <View style={styles.cityAgendaMetricChip}>
+              <Text style={styles.cityAgendaMetricLabel} numberOfLines={1}>
+                Risk Seviyesi
+              </Text>
+              <Text style={styles.cityAgendaMetricValue} numberOfLines={1}>
+                Yüksek
+              </Text>
+            </View>
+            <View style={styles.cityAgendaMetricChip}>
+              <Text style={styles.cityAgendaMetricLabel} numberOfLines={1}>
+                Hareketlilik
+              </Text>
+              <Text style={styles.cityAgendaMetricValue} numberOfLines={1}>
+                %28 ↑
+              </Text>
+            </View>
+            <View style={styles.cityAgendaMetricChip}>
+              <Text style={styles.cityAgendaMetricLabel} numberOfLines={1}>
+                Güncelleme
+              </Text>
+              <Text style={styles.cityAgendaMetricValue} numberOfLines={1}>
+                2 dk önce
+              </Text>
+            </View>
+          </View>
+          <View style={styles.cityAgendaCta}>
+            <Text style={styles.cityAgendaCtaText} numberOfLines={1}>
+              DETAYI GÖRÜNTÜLE
+            </Text>
+            <Ionicons name="chevron-forward" size={13} color={palette.heroText} />
+          </View>
+        </View>
+      </RoutePressable>
+    </View>
+  );
+}
+
+function CenterSecondSection({
+  presentation,
+  reducedMotion,
+}: {
+  presentation: CenterHomePresentation;
+  reducedMotion: boolean;
+}) {
+  return (
+    <View style={styles.centerSecondSection}>
+      <CenterNextMovesCarousel presentation={presentation} reducedMotion={reducedMotion} />
+      <CenterSecondQuickCommandsGrid presentation={presentation} reducedMotion={reducedMotion} />
+      <CenterBonusChestCard presentation={presentation} reducedMotion={reducedMotion} />
+      <CenterCityAgendaCard presentation={presentation} reducedMotion={reducedMotion} />
     </View>
   );
 }
@@ -1556,7 +2183,7 @@ function HubCompactPulseAdvisorStrip({
           route={advisor.suggestedAction?.route}
           reducedMotion={reducedMotion}
           accessibilityLabel={advisor.recommendation}
-          style={styles.compactAdvisorStrip}>
+          style={styles.centerAdvisorCard}>
           <View style={styles.pulseAdvisorAvatarWrap}>
             <Image source={hubAssets.advisorPortrait} style={styles.pulseAdvisorAvatar} contentFit="cover" />
             <View style={styles.pulseAdvisorSparkle}>
@@ -1577,6 +2204,14 @@ function HubCompactPulseAdvisorStrip({
                 </Text>
               </View>
             ) : null}
+          </View>
+          <View style={styles.advisorRewardBadge}>
+            <Text style={styles.advisorRewardValue} numberOfLines={1}>
+              +6
+            </Text>
+            <Text style={styles.advisorRewardLabel} numberOfLines={1}>
+              GÜVEN
+            </Text>
           </View>
           {advisor.suggestedAction?.label ? (
             <View style={styles.pulseAdvisorCta}>
@@ -1948,6 +2583,69 @@ function UnlockPreviewStrip({
   );
 }
 
+function buildTopMissionActions(presentation: CenterHomePresentation): TopMissionAction[] {
+  const source = presentation.gameFirst.quickActions.actions;
+  const route = secondSectionRouteFallback(presentation);
+  const mapRoute =
+    source.find((action) => /map|drone|observe|scan/i.test(action.cta.route ?? action.actionKey ?? ''))?.cta.route ??
+    '/risks';
+  const observeCandidate = source.find(
+    (action) =>
+      action.actionKey === 'mission_observe_area' ||
+      action.cta.actionKey === 'mission_observe_area' ||
+      /observe=1/i.test(action.cta.route ?? ''),
+  );
+  const missionFallback: TopMissionAction[] = [
+    {
+      id: 'mission-assign-team',
+      actionId: 'mission_assign_team',
+      title: 'Ekip Yönlendir',
+      subtitle: 'Aktif hedefe ekip gönder',
+      icon: 'people-outline',
+      route,
+    },
+    {
+      id: 'mission-scan-signal',
+      actionId: 'mission_scan_signal',
+      title: 'Sinyal Tara',
+      subtitle: 'Görev riskini doğrula',
+      icon: 'locate-outline',
+      route,
+    },
+    {
+      id: 'mission-open-crisis-note',
+      actionId: 'mission_open_crisis_note',
+      title: 'Kriz Notu',
+      subtitle: 'Saha raporunu aç',
+      icon: 'clipboard-outline',
+      route,
+      badge: '3',
+    },
+    {
+      id: 'mission-open-drone-view',
+      actionId: 'mission_observe_area',
+      title: 'Bölgeyi Gözlemle',
+      subtitle: 'Drone destekli risk doğrulama',
+      icon: 'scan-outline',
+      route: mapRoute.includes('observe=1') ? mapRoute : '/risks?observe=1',
+    },
+  ];
+
+  return missionFallback.map((item, index) => {
+    const candidate =
+      item.actionId === 'mission_observe_area'
+        ? observeCandidate
+        : source[index];
+    return {
+      ...item,
+      route: candidate?.cta.route ?? item.route,
+      disabled:
+        candidate?.disabled ??
+        (item.actionId === 'mission_observe_area' && !observeCandidate),
+    };
+  });
+}
+
 function QuickCommandsGrid({
   presentation,
   reducedMotion,
@@ -1959,43 +2657,47 @@ function QuickCommandsGrid({
   if (quickActions.visibility !== 'visible') return null;
   if (!hubSurfaceIsRenderable(presentation.hubDensity, 'quickActions')) return null;
 
-  const cap = resolveHubQuickActionsCap(presentation.hubDensity?.band ?? 'day1');
-  const commands = quickActions.actions.slice(0, cap);
-  const overflowCount = quickActions.actions.length - commands.length;
-  if (commands.length === 0) return null;
+  const commands = buildTopMissionActions(presentation);
 
   return (
-    <View style={styles.lightCard}>
-      <Text style={styles.sectionTitle} numberOfLines={1}>
-        {quickActions.title}
-      </Text>
-      <View style={styles.quickActionChipRow}>
-        {commands.map((command) => (
-          <RoutePressable
-            key={command.id}
-            route={command.cta.route}
-            disabled={command.disabled}
-            reducedMotion={reducedMotion}
-            accessibilityLabel={command.title}
-            style={styles.quickActionChip}>
+    <View style={styles.quickActionGameGrid}>
+      {commands.map((command) => (
+        <RoutePressable
+          key={command.id}
+          route={command.route}
+          disabled={command.disabled}
+          reducedMotion={reducedMotion}
+          accessibilityLabel={`${command.title}. ${command.subtitle}`}
+          style={styles.quickActionGameTile}>
+          <LinearGradient
+            colors={['rgba(16,78,72,0.96)', 'rgba(6,35,34,0.98)']}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <View style={styles.quickActionGameIcon}>
             <Ionicons
-              name={resolveIconName(command.iconKey, command.disabled ? 'lock-closed-outline' : 'grid-outline')}
-              size={14}
-              color={command.accent === 'gold' ? palette.gold : palette.teal}
+              name={command.disabled ? 'lock-closed-outline' : command.icon}
+              size={24}
+              color={palette.gold}
             />
-            <Text style={styles.quickActionChipText} numberOfLines={1}>
+          </View>
+          <View style={styles.quickActionGameCopy}>
+            <Text style={styles.quickActionGameTitle} numberOfLines={1}>
               {command.title}
             </Text>
-          </RoutePressable>
-        ))}
-        {overflowCount > 0 ? (
-          <View style={styles.quickActionOverflowChip}>
-            <Text style={styles.quickActionOverflowText} numberOfLines={1}>
-              {HUB_DENSITY_LIMITS.quickActionsOverflowLabel}
+            <Text style={styles.quickActionGameSubtitle} numberOfLines={1}>
+              {command.subtitle}
             </Text>
           </View>
-        ) : null}
-      </View>
+          {command.badge ? (
+            <View style={styles.quickActionAlertBadge}>
+              <Text style={styles.quickActionAlertText} numberOfLines={1}>
+                {command.badge}
+              </Text>
+            </View>
+          ) : null}
+          <Ionicons name="chevron-forward" size={15} color={palette.goldLight} />
+        </RoutePressable>
+      ))}
     </View>
   );
 }
@@ -2044,7 +2746,7 @@ export function HubReferenceHome({ presentation, scrollFooter }: HubReferenceHom
           <MainHero presentation={presentation} reducedMotion={reducedMotion} />
         </CenterMotionEnter>
         <CenterMotionEnter index={2} {...motionProps}>
-          <ActiveOperationFocusCard presentation={presentation} reducedMotion={reducedMotion} />
+          <QuickCommandsGrid presentation={presentation} reducedMotion={reducedMotion} />
         </CenterMotionEnter>
         <CenterMotionEnter index={3} {...motionProps}>
           <HubCompactPulseAdvisorStrip presentation={presentation} reducedMotion={reducedMotion} />
@@ -2060,32 +2762,29 @@ export function HubReferenceHome({ presentation, scrollFooter }: HubReferenceHom
           </View>
 
           <CenterMotionEnter index={4} {...motionProps}>
-            <NextActionsRail presentation={presentation} reducedMotion={reducedMotion} />
+            <CenterSecondSection presentation={presentation} reducedMotion={reducedMotion} />
           </CenterMotionEnter>
           <CenterMotionEnter index={5} {...motionProps}>
-            <QuickCommandsGrid presentation={presentation} reducedMotion={reducedMotion} />
-          </CenterMotionEnter>
-          <CenterMotionEnter index={6} {...motionProps}>
             <ProgressionStrip presentation={presentation} reducedMotion={reducedMotion} />
           </CenterMotionEnter>
-          <CenterMotionEnter index={7} {...motionProps}>
+          <CenterMotionEnter index={6} {...motionProps}>
             <DistrictFocusCard presentation={presentation} reducedMotion={reducedMotion} />
           </CenterMotionEnter>
-          <CenterMotionEnter index={8} {...motionProps}>
+          <CenterMotionEnter index={7} {...motionProps}>
             <ProgressImpactRow presentation={presentation} reducedMotion={reducedMotion} />
           </CenterMotionEnter>
-          <CenterMotionEnter index={9} {...motionProps}>
+          <CenterMotionEnter index={8} {...motionProps}>
             <MiniCityFeedSection presentation={presentation} reducedMotion={reducedMotion} />
           </CenterMotionEnter>
-          <CenterMotionEnter index={10} {...motionProps}>
+          <CenterMotionEnter index={9} {...motionProps}>
             <CityAgendaSection presentation={presentation} />
           </CenterMotionEnter>
           <MaintenanceSignalStrip presentation={presentation} />
-          <CenterMotionEnter index={11} {...motionProps}>
+          <CenterMotionEnter index={10} {...motionProps}>
             <CityPulseCard presentation={presentation} reducedMotion={reducedMotion} />
           </CenterMotionEnter>
           {hubBandAllowsLiveDevelopments(densityBand) ? (
-            <CenterMotionEnter index={12} {...motionProps}>
+            <CenterMotionEnter index={11} {...motionProps}>
               <LiveDevelopments presentation={presentation} reducedMotion={reducedMotion} />
             </CenterMotionEnter>
           ) : null}
@@ -2286,6 +2985,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(216, 167, 46, 0.18)',
   },
+  infoIconBoxGreen: {
+    width: 26,
+    height: 26,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(7, 86, 79, 0.12)',
+  },
   infoCopy: {
     flex: 1,
     minWidth: 0,
@@ -2344,6 +3051,25 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: palette.gold,
   },
+  trendSparkline: {
+    height: 8,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  trendSegmentFlat: {
+    width: 14,
+    height: 2,
+    borderRadius: 999,
+    backgroundColor: 'rgba(216, 167, 46, 0.55)',
+  },
+  trendSegmentRise: {
+    width: 18,
+    height: 2,
+    borderRadius: 999,
+    backgroundColor: palette.gold,
+    transform: [{ rotate: '-14deg' }],
+  },
   liveBonusText: {
     fontSize: 12,
     lineHeight: 14,
@@ -2351,7 +3077,7 @@ const styles = StyleSheet.create({
     color: palette.green,
   },
   heroCard: {
-    height: 252,
+    height: 286,
     borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1.5,
@@ -2401,6 +3127,77 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(147,232,189,0.35)',
   },
+  heroRiskPill: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    minHeight: 24,
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(130, 35, 28, 0.74)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 143, 112, 0.45)',
+  },
+  heroRiskText: {
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '900',
+    color: '#FFD2C4',
+  },
+  heroLocationPill: {
+    position: 'absolute',
+    right: 16,
+    top: 92,
+    maxWidth: 122,
+    minHeight: 26,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(5,13,14,0.66)',
+    borderWidth: 1,
+    borderColor: 'rgba(216,177,83,0.34)',
+  },
+  heroLocationText: {
+    flexShrink: 1,
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: '800',
+    color: palette.heroText,
+  },
+  heroRadarCore: {
+    position: 'absolute',
+    right: 62,
+    top: 70,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(210, 76, 58, 0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 208, 180, 0.45)',
+  },
+  heroRadarRingLarge: {
+    position: 'absolute',
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 125, 96, 0.30)',
+  },
+  heroRadarRingSmall: {
+    position: 'absolute',
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 208, 180, 0.26)',
+  },
   heroCopy: {
     position: 'absolute',
     left: 14,
@@ -2413,6 +3210,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: 'rgba(216,177,83,0.16)',
     borderWidth: 1,
     borderColor: 'rgba(216,177,83,0.32)',
@@ -2425,14 +3225,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   heroTitle: {
-    maxWidth: '78%',
-    fontSize: 28,
-    lineHeight: 31,
+    maxWidth: '74%',
+    fontSize: 25,
+    lineHeight: 28,
     fontWeight: '900',
     color: palette.heroText,
   },
   heroBody: {
-    maxWidth: '88%',
+    maxWidth: '78%',
     fontSize: 11,
     lineHeight: 16,
     fontWeight: '600',
@@ -2444,14 +3244,18 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   heroMetaChip: {
+    width: '48%',
+    flexGrow: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 4,
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.18)',
-    gap: 1,
-    minWidth: 68,
+    minWidth: 0,
   },
   heroMetaLabel: {
     fontSize: 8,
@@ -2460,6 +3264,8 @@ const styles = StyleSheet.create({
     color: palette.heroMuted,
   },
   heroMetaValue: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 10,
     lineHeight: 12,
     fontWeight: '900',
@@ -2467,21 +3273,24 @@ const styles = StyleSheet.create({
   },
   heroCta: {
     alignSelf: 'stretch',
-    minHeight: 44,
+    minHeight: 52,
     borderRadius: 12,
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 10,
     backgroundColor: palette.gold,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.28)',
   },
   heroCtaText: {
+    flex: 1,
     fontSize: 13,
     lineHeight: 16,
     fontWeight: '900',
     color: '#1A2818',
+    textAlign: 'center',
   },
   heroCtaIcon: {
     width: 28,
@@ -3047,6 +3856,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  centerAdvisorCard: {
+    minHeight: 72,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: palette.strokeGold,
+    backgroundColor: palette.panelWarm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    ...gameUi.shadow.soft,
+  },
+  advisorRewardBadge: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(7, 86, 79, 0.92)',
+    borderWidth: 1,
+    borderColor: 'rgba(216, 167, 46, 0.38)',
+    flexShrink: 0,
+  },
+  advisorRewardValue: {
+    fontSize: 14,
+    lineHeight: 16,
+    fontWeight: '900',
+    color: palette.heroText,
+    fontVariant: ['tabular-nums'],
+  },
+  advisorRewardLabel: {
+    fontSize: 7,
+    lineHeight: 9,
+    fontWeight: '900',
+    color: palette.goldLight,
+  },
   compactAdvisorReasonChip: {
     alignSelf: 'flex-start',
     borderRadius: 999,
@@ -3066,6 +3912,557 @@ const styles = StyleSheet.create({
   scrollDepthZone: {
     gap: 12,
     paddingTop: 2,
+  },
+  centerSecondSection: {
+    gap: 20,
+  },
+  secondSectionBlock: {
+    gap: 10,
+  },
+  secondSectionHeader: {
+    minHeight: 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  secondSectionTitleWrap: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  secondSectionIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(216, 167, 46, 0.14)',
+    borderWidth: 1,
+    borderColor: palette.strokeGold,
+    flexShrink: 0,
+  },
+  secondSectionCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  secondSectionTitle: {
+    fontSize: 15,
+    lineHeight: 18,
+    fontWeight: '900',
+    color: palette.text,
+    letterSpacing: 0.4,
+  },
+  secondSectionSubtitle: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '700',
+    color: palette.muted,
+  },
+  secondSectionInfoButton: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.panelWarm,
+    borderWidth: 1,
+    borderColor: palette.strokeGold,
+    flexShrink: 0,
+  },
+  secondMovesScroller: {
+    gap: 11,
+    paddingRight: 12,
+  },
+  secondMoveCard: {
+    width: 154,
+    height: 248,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1.25,
+    borderColor: 'rgba(216, 167, 46, 0.42)',
+    backgroundColor: '#061716',
+    ...gameUi.shadow.hero,
+  },
+  secondMoveImage: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.74,
+  },
+  secondMoveBadgeRow: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    zIndex: 2,
+  },
+  secondMoveIconBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(5,13,14,0.74)',
+    borderWidth: 1,
+    borderColor: 'rgba(216, 167, 46, 0.34)',
+  },
+  secondMoveStatusChip: {
+    maxWidth: 76,
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(216, 167, 46, 0.20)',
+    borderWidth: 1,
+    borderColor: 'rgba(216, 167, 46, 0.38)',
+  },
+  secondMoveStatusChipMuted: {
+    backgroundColor: 'rgba(104, 116, 110, 0.22)',
+    borderColor: 'rgba(216, 167, 46, 0.22)',
+  },
+  secondMoveStatusText: {
+    fontSize: 7,
+    lineHeight: 9,
+    fontWeight: '900',
+    color: palette.goldLight,
+  },
+  secondMoveIllustration: {
+    position: 'absolute',
+    top: 48,
+    left: 0,
+    right: 0,
+    height: 74,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondMoveOrbit: {
+    position: 'absolute',
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 1,
+    borderColor: 'rgba(147,232,189,0.25)',
+    backgroundColor: 'rgba(147,232,189,0.06)',
+  },
+  secondMoveBody: {
+    position: 'absolute',
+    left: 11,
+    right: 11,
+    bottom: 11,
+    gap: 7,
+  },
+  secondMoveTitle: {
+    fontSize: 15,
+    lineHeight: 18,
+    fontWeight: '900',
+    color: palette.heroText,
+  },
+  secondMoveCategory: {
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: '800',
+    color: palette.goldLight,
+  },
+  secondMoveDescription: {
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '700',
+    color: palette.heroMuted,
+  },
+  secondMoveMetricRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 5,
+  },
+  secondMoveMetricChip: {
+    borderRadius: 999,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    backgroundColor: 'rgba(147,232,189,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(147,232,189,0.22)',
+    maxWidth: '100%',
+  },
+  secondMoveMetricText: {
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '900',
+    color: palette.mint,
+  },
+  secondMoveRewardText: {
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: '900',
+    color: palette.goldLight,
+  },
+  secondMoveCta: {
+    minHeight: 32,
+    borderRadius: 11,
+    paddingHorizontal: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: palette.gold,
+  },
+  secondMoveCtaDisabled: {
+    backgroundColor: 'rgba(216, 167, 46, 0.34)',
+  },
+  secondMoveCtaText: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '900',
+    color: '#1A2818',
+  },
+  secondCarouselDots: {
+    height: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  secondCarouselDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(104, 116, 110, 0.28)',
+  },
+  secondCarouselDotActive: {
+    width: 18,
+    backgroundColor: palette.gold,
+  },
+  secondCommandGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 9,
+  },
+  secondCommandCard: {
+    width: '48.5%',
+    minHeight: 62,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: palette.strokeGold,
+    backgroundColor: palette.panelWarm,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    ...gameUi.shadow.soft,
+  },
+  secondCommandIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(7, 86, 79, 0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(7, 86, 79, 0.16)',
+    flexShrink: 0,
+  },
+  secondCommandCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  secondCommandTitle: {
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: '900',
+    color: palette.text,
+  },
+  secondCommandSubtitle: {
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '700',
+    color: palette.muted,
+  },
+  secondCommandBadge: {
+    position: 'absolute',
+    right: 18,
+    top: 6,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#D94C3A',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 248, 231, 0.62)',
+  },
+  secondCommandBadgeText: {
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '900',
+    color: palette.heroText,
+  },
+  bonusChestCard: {
+    minHeight: 176,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1.25,
+    borderColor: 'rgba(216, 167, 46, 0.42)',
+    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    ...gameUi.shadow.hero,
+  },
+  bonusChestCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 8,
+    zIndex: 1,
+  },
+  bonusChestEyebrow: {
+    fontSize: 15,
+    lineHeight: 18,
+    fontWeight: '900',
+    color: palette.goldLight,
+    letterSpacing: 0.4,
+  },
+  bonusChestBody: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '700',
+    color: palette.heroMuted,
+  },
+  bonusProgressHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  bonusProgressText: {
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: '900',
+    color: palette.heroText,
+    fontVariant: ['tabular-nums'],
+  },
+  bonusRewardText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '900',
+    color: palette.mint,
+    textAlign: 'right',
+  },
+  bonusProgressTrack: {
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
+  },
+  bonusProgressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: palette.gold,
+  },
+  bonusCta: {
+    alignSelf: 'flex-start',
+    minHeight: 36,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: palette.gold,
+  },
+  bonusCtaText: {
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: '900',
+    color: '#1A2818',
+  },
+  bonusChestVisual: {
+    width: 96,
+    height: 116,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(216, 167, 46, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(216, 167, 46, 0.25)',
+    flexShrink: 0,
+  },
+  bonusChestGlow: {
+    position: 'absolute',
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    backgroundColor: 'rgba(216, 167, 46, 0.12)',
+  },
+  bonusChestSpark: {
+    position: 'absolute',
+    right: 12,
+    top: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(216, 167, 46, 0.24)',
+  },
+  cityAgendaLivePill: {
+    minHeight: 26,
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(212, 76, 58, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(212, 76, 58, 0.28)',
+    flexShrink: 0,
+  },
+  cityAgendaLiveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#D94C3A',
+  },
+  cityAgendaLiveText: {
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: '900',
+    color: '#D94C3A',
+  },
+  cityAgendaFeatureCard: {
+    minHeight: 236,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1.25,
+    borderColor: 'rgba(216, 167, 46, 0.36)',
+    padding: 14,
+    ...gameUi.shadow.hero,
+  },
+  cityAgendaRadar: {
+    position: 'absolute',
+    right: 18,
+    top: 24,
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cityAgendaRadarRingLarge: {
+    position: 'absolute',
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 91, 0.30)',
+  },
+  cityAgendaRadarRingSmall: {
+    position: 'absolute',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 91, 0.42)',
+  },
+  cityAgendaRadarCore: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(217, 76, 58, 0.78)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 220, 204, 0.62)',
+  },
+  cityAgendaLocationChip: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    maxWidth: 130,
+    minHeight: 24,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(5,13,14,0.62)',
+    borderWidth: 1,
+    borderColor: 'rgba(216, 167, 46, 0.30)',
+    zIndex: 2,
+  },
+  cityAgendaLocationText: {
+    flexShrink: 1,
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: '800',
+    color: palette.heroText,
+  },
+  cityAgendaFeatureCopy: {
+    flex: 1,
+    minWidth: 0,
+    maxWidth: '76%',
+    gap: 10,
+    zIndex: 1,
+  },
+  cityAgendaFeatureTitle: {
+    fontSize: 19,
+    lineHeight: 23,
+    fontWeight: '900',
+    color: palette.heroText,
+  },
+  cityAgendaFeatureBody: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
+    color: palette.heroMuted,
+  },
+  cityAgendaMetricRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  cityAgendaMetricChip: {
+    borderRadius: 11,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    maxWidth: '100%',
+  },
+  cityAgendaMetricLabel: {
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '800',
+    color: palette.heroMuted,
+  },
+  cityAgendaMetricValue: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '900',
+    color: palette.heroText,
+  },
+  cityAgendaCta: {
+    minHeight: 40,
+    borderRadius: 13,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(7, 86, 79, 0.92)',
+    borderWidth: 1,
+    borderColor: 'rgba(147, 232, 189, 0.20)',
+  },
+  cityAgendaCtaText: {
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: '900',
+    color: palette.heroText,
   },
   scrollDepthDivider: {
     flexDirection: 'row',
@@ -3143,6 +4540,73 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
+  quickActionGameGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 9,
+    minWidth: 0,
+  },
+  quickActionGameTile: {
+    width: '48.5%',
+    minHeight: 78,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(216, 167, 46, 0.34)',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    ...gameUi.shadow.soft,
+  },
+  quickActionGameIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(216, 167, 46, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(216, 167, 46, 0.25)',
+    flexShrink: 0,
+  },
+  quickActionGameCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  quickActionGameTitle: {
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: '900',
+    color: palette.heroText,
+  },
+  quickActionGameSubtitle: {
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '700',
+    color: palette.heroMuted,
+  },
+  quickActionAlertBadge: {
+    position: 'absolute',
+    right: 22,
+    top: 7,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#D94C3A',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 232, 214, 0.55)',
+  },
+  quickActionAlertText: {
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: '900',
+    color: '#FFF8E7',
+  },
   quickActionChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3165,6 +4629,16 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 8,
+    backgroundColor: palette.panelLift,
+  },
+  quickActionOverflowTile: {
+    width: '48.5%',
+    minHeight: 78,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: palette.strokeGold,
     backgroundColor: palette.panelLift,
   },
   quickActionOverflowText: {

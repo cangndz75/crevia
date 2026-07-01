@@ -35,8 +35,11 @@ function isSafeText(text: string): boolean {
 }
 
 function toCardModel(signal: DistrictNeglectRecoverySignal): DistrictNeglectRecoveryCardModel | null {
-  if (!isSafeText(`${signal.title} ${signal.line}`)) return null;
-  const line = clampLine(signal.line, DISTRICT_NEGLECT_RECOVERY_LINE_MAX);
+  const displayLine = signal.behaviorLine && isSafeText(signal.behaviorLine)
+    ? signal.behaviorLine
+    : signal.line;
+  if (!isSafeText(`${signal.title} ${displayLine}`)) return null;
+  const line = clampLine(displayLine, DISTRICT_NEGLECT_RECOVERY_LINE_MAX);
   const shortLine = signal.shortLine
     ? clampLine(signal.shortLine, DISTRICT_NEGLECT_RECOVERY_SHORT_MAX)
     : undefined;
@@ -45,7 +48,7 @@ function toCardModel(signal: DistrictNeglectRecoverySignal): DistrictNeglectReco
     title: signal.title,
     line,
     shortLine,
-    badgeLabel: DISTRICT_NEGLECT_RECOVERY_KIND_BADGES[signal.kind],
+    badgeLabel: signal.behaviorChip ?? DISTRICT_NEGLECT_RECOVERY_KIND_BADGES[signal.kind],
     districtName: signal.districtName,
     neglectLabel: DISTRICT_NEGLECT_RECOVERY_NEGLECT_LABELS[signal.neglectBand],
     recoveryLabel: DISTRICT_NEGLECT_RECOVERY_RECOVERY_LABELS[signal.recoveryBand],
@@ -91,9 +94,12 @@ export function buildReportDistrictNeglectRecoveryNote(
 ): string | null {
   const signal = result?.reportSignal;
   if (!signal || signal.isFallback || result?.day === 1) return null;
-  if (duplicates(signal.line, existingLines)) return null;
-  if (!isSafeText(signal.line)) return null;
-  return clampLine(signal.line, DISTRICT_NEGLECT_RECOVERY_LINE_MAX);
+  const line = signal.behaviorLine && isSafeText(signal.behaviorLine)
+    ? signal.behaviorLine
+    : signal.line;
+  if (duplicates(line, existingLines)) return null;
+  if (!isSafeText(line)) return null;
+  return clampLine(line, DISTRICT_NEGLECT_RECOVERY_LINE_MAX);
 }
 
 export function buildHubDistrictNeglectRecoveryHint(
@@ -102,9 +108,12 @@ export function buildHubDistrictNeglectRecoveryHint(
 ): string | null {
   const signal = result?.hubSignal;
   if (!signal || signal.isFallback || (result?.day ?? 1) <= 1) return null;
-  if (duplicates(signal.line, existingLines)) return null;
-  if (!isSafeText(signal.line)) return null;
-  return clampLine(signal.line, DISTRICT_NEGLECT_RECOVERY_LINE_MAX);
+  const line = signal.behaviorLine && isSafeText(signal.behaviorLine)
+    ? signal.behaviorLine
+    : signal.line;
+  if (duplicates(line, existingLines)) return null;
+  if (!isSafeText(line)) return null;
+  return clampLine(line, DISTRICT_NEGLECT_RECOVERY_LINE_MAX);
 }
 
 export function buildMapDistrictNeglectRecoveryHint(
@@ -113,9 +122,12 @@ export function buildMapDistrictNeglectRecoveryHint(
 ): string | null {
   const signal = result?.mapSignal;
   if (!signal || signal.isFallback || (result?.day ?? 1) <= 1) return null;
-  if (duplicates(signal.line, existingLines)) return null;
-  if (!isSafeText(signal.line)) return null;
-  return clampLine(signal.line, DISTRICT_NEGLECT_RECOVERY_LINE_MAX);
+  const line = signal.behaviorLine && isSafeText(signal.behaviorLine)
+    ? signal.behaviorLine
+    : signal.line;
+  if (duplicates(line, existingLines)) return null;
+  if (!isSafeText(line)) return null;
+  return clampLine(line, DISTRICT_NEGLECT_RECOVERY_LINE_MAX);
 }
 
 export function buildEceDistrictNeglectRecoveryLine(
@@ -126,10 +138,13 @@ export function buildEceDistrictNeglectRecoveryLine(
   if (!signal || signal.isFallback || signal.confidence === 'low' || (result?.day ?? 1) <= 1) {
     return null;
   }
-  if (duplicates(signal.line, existingLines)) return null;
-  if (!isSafeText(signal.line)) return null;
+  const line = signal.behaviorLine && isSafeText(signal.behaviorLine)
+    ? signal.behaviorLine
+    : signal.line;
+  if (duplicates(line, existingLines)) return null;
+  if (!isSafeText(line)) return null;
   const district = signal.districtName ? `${signal.districtName}: ` : '';
-  return clampLine(`${district}${signal.line}`, DISTRICT_NEGLECT_RECOVERY_LINE_MAX);
+  return clampLine(`${district}${line}`, DISTRICT_NEGLECT_RECOVERY_LINE_MAX);
 }
 
 export function buildPortfolioDistrictNeglectRecoverySignal(
@@ -138,9 +153,12 @@ export function buildPortfolioDistrictNeglectRecoverySignal(
 ): string | null {
   const signal = result?.portfolioSignal;
   if (!signal || signal.isFallback || (result?.day ?? 1) <= 1) return null;
-  if (duplicates(signal.line, existingLines)) return null;
-  if (!isSafeText(signal.line)) return null;
-  return clampLine(signal.line, DISTRICT_NEGLECT_RECOVERY_LINE_MAX);
+  const line = signal.behaviorLine && isSafeText(signal.behaviorLine)
+    ? signal.behaviorLine
+    : signal.line;
+  if (duplicates(line, existingLines)) return null;
+  if (!isSafeText(line)) return null;
+  return clampLine(line, DISTRICT_NEGLECT_RECOVERY_LINE_MAX);
 }
 
 export function buildFollowUpDistrictNeglectRecoverySeed(

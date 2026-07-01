@@ -1,3 +1,4 @@
+import { EndOfDayManagerStyleCard } from '@/features/reports/components/end-of-day/closure/EndOfDayManagerStyleCard';
 import type { EndOfDayReportClosurePresentation } from '@/features/reports/presentation/closure/endOfDayReportClosurePresentation';
 import { EndOfDayClosureHero } from '@/features/reports/components/end-of-day/closure/EndOfDayClosureHero';
 import { EndOfDayDecisionStoryCard } from '@/features/reports/components/end-of-day/closure/EndOfDayDecisionStoryCard';
@@ -17,6 +18,7 @@ type Props = {
   day: number;
   reducedMotion?: boolean;
   onDayFlowLayout?: (event: import('react-native').LayoutChangeEvent) => void;
+  onManagerStyleCta?: () => void;
 };
 
 export function EndOfDayClosurePrimaryFlow({
@@ -25,6 +27,7 @@ export function EndOfDayClosurePrimaryFlow({
   day,
   reducedMotion,
   onDayFlowLayout,
+  onManagerStyleCta,
 }: Props) {
   const replayModel = buildReportReplayPresentation(replayInput);
   const timelineItems = closure.replayTimeline.items;
@@ -39,6 +42,11 @@ export function EndOfDayClosurePrimaryFlow({
     <View style={styles.stack}>
       <EndOfDayClosureHero model={closure.hero} reducedMotion={reducedMotion} />
       <EndOfDayOutcomeSummary chips={closure.outcomeChips} reducedMotion={reducedMotion} />
+      <EndOfDayManagerStyleCard
+        model={closure.managerStyle}
+        reducedMotion={reducedMotion}
+        onCtaPress={onManagerStyleCta}
+      />
       <EndOfDayDecisionStoryCard model={closure.decisionStory} reducedMotion={reducedMotion} />
       <EndOfDayNeighborhoodPulseCard model={closure.neighborhoodPulse} reducedMotion={reducedMotion} />
       <EndOfDayTradeoffBalanceCard model={closure.tradeoffBalance} reducedMotion={reducedMotion} />

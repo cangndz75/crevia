@@ -3,6 +3,10 @@ import type { CreviaActiveTaskRouteUiModel } from '@/core/activeTaskRoutes/activ
 import type { CityMemoryVisibilityResult } from '@/core/cityMemoryVisibility/cityMemoryVisibilityTypes';
 import type { Day8StrategicContentResult } from '@/core/day8StrategicContent/day8StrategicContentTypes';
 import type { DistrictNeglectRecoveryResult } from '@/core/districtNeglectRecovery/districtNeglectRecoveryTypes';
+import type {
+  DistrictMapVisualState,
+  DistrictMapVisualStateMap,
+} from '@/core/map/mapDistrictVisualState';
 import type { MapGameplayBinding } from '@/core/mapGameplayBinding/mapGameplayBindingTypes';
 import type { MapGameplayRuntimeFeedbackResult } from '@/core/mapGameplayBinding/mapGameplayRuntimeFeedbackTypes';
 import type { MapPresenceViewModel } from '@/core/mapPresence/mapPresenceTypes';
@@ -83,6 +87,7 @@ export type MapMotionPresentationInput = {
   activeTaskRoute?: CreviaActiveTaskRouteUiModel | null;
   mapPresenceViewModel?: MapPresenceViewModel | null;
   mapGameplayRuntimeFeedback?: MapGameplayRuntimeFeedbackResult | null;
+  districtVisualStateMap?: DistrictMapVisualStateMap | null;
 };
 
 export const MAP_MOTION_MAX_ANIMATED = 5;
@@ -335,6 +340,60 @@ function collectFromDay8(
     sourceKinds: ['day8_strategic_content'],
     priority: clampPriority(Math.max(candidate.priority, 88)),
   });
+}
+
+function visualStateToMotionKind(state: DistrictMapVisualState): MapMarkerMotionKind {
+  switch (state) {
+    case 'intervention_active':
+      return 'active_operation';
+    case 'recovery_started':
+    case 'trust_recovering':
+      return 'district_recovery';
+    case 'neglect_building':
+    case 'risk_rising':
+      return 'district_neglect';
+    case 'route_pressure':
+      return 'route_pressure';
+    case 'social_pressure':
+      return 'social_trust';
+    default:
+      return 'idle';
+  }
+}
+
+function collectFromDistrictVisualStates(
+  drafts: Map<string, MotionDraft>,
+  visualMap: DistrictMapVisualStateMap | null | undefined,
+): void {
+  if (!visualMap?.byDistrict) return;
+
+  for (const item of Object.values(visualMap.byDistrict)) {
+    if (!item || item.state === 'stable') continue;
+    const kind = visualStateToMotionKind(item.state);
+    if (kind === 'idle') continue;
+
+    const strong =
+      item.state === 'risk_rising' ||
+      item.state === 'intervention_active' ||
+      item.priority >= 90;
+    pushDraft(drafts, {
+      districtId: item.districtId,
+      kind,
+      intensity: strong ? 'strong' : item.glow ? 'medium' : 'subtle',
+      pulse: item.pulse,
+      glow: item.glow,
+      routeHint: item.routeHint,
+      label: item.chipLabel,
+      accessibilityLabel: districtMotionLabel(
+        item.districtId,
+        undefined,
+        item.shortLine.toLowerCase(),
+      ),
+      sourceIds: uniqueStrings([`visual_state_${item.state}`, item.districtId]),
+      sourceKinds: ['district_neglect_recovery'],
+      priority: clampPriority(item.priority),
+    });
+  }
 }
 
 function collectFromDistrictNeglectRecovery(
@@ -735,7 +794,11 @@ export function buildMapMotionPresentation(
   collectFromActiveOperation(drafts, input.activeOperationBinding);
   collectFromMapGameplayBindings(drafts, input.mapGameplayBindings);
   collectFromDay8(drafts, input.day8StrategicContent);
-  collectFromDistrictNeglectRecovery(drafts, input.districtNeglectRecovery);
+  if (input.districtVisualStateMap) {
+    collectFromDistrictVisualStates(drafts, input.districtVisualStateMap);
+  } else {
+    collectFromDistrictNeglectRecovery(drafts, input.districtNeglectRecovery);
+  }
   collectFromPositiveComeback(drafts, input.positiveComeback);
   collectFromCityMemory(drafts, input.cityMemoryVisibility);
   collectFromActiveTaskRoute(drafts, input.activeTaskRoute);

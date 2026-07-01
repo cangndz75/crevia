@@ -1,4 +1,5 @@
 import {
+  buildDistrictLiveBehaviorSignal,
   buildDistrictMemoryReportInsight,
   mapResultToneToPersonalityOutcome,
 } from '@/core/districtPersonality';
@@ -966,7 +967,28 @@ export function buildEndOfDayReportViewModel(params: {
       ...tomorrowNotes,
     ].filter((line): line is string => Boolean(line)),
   });
-  const districtMemoryInsightLine = districtMemoryInsight?.line ?? null;
+  const districtLiveBehaviorSignal = report.day <= 1
+    ? null
+    : buildDistrictLiveBehaviorSignal({
+        districtId: lastDecisionDistrictId,
+        districtName: lastDecisionDistrictName,
+        day: report.day,
+        publicSatisfaction: metrics.publicSatisfaction,
+        outcomeBand: mapResultToneToPersonalityOutcome(
+          successScore >= 70 ? 'positive' : successScore < 50 ? 'warning' : 'neutral',
+        ),
+        avoidLines: [
+          districtMemoryInsight?.line ?? '',
+          periodGoalImpactLine ?? '',
+          tomorrowPreparationLine ?? '',
+          operationalTempoLine ?? '',
+          managementStyleLine ?? '',
+          cityMemoryNote?.line ?? '',
+          ...tomorrowNotes,
+        ].filter((line): line is string => Boolean(line)),
+      });
+  const districtMemoryInsightLine =
+    districtLiveBehaviorSignal?.reportLine ?? districtMemoryInsight?.line ?? null;
 
   return {
     day: report.day,
